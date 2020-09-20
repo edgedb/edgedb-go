@@ -1,0 +1,9 @@
+---
+version: "3.7"
+
+services:
+  edgedb:
+    image: edgedb/edgedb:latest
+    ports:
+      - "5656:5656"
+      - "8888:8888"
