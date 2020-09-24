@@ -1,101 +1,36 @@
 package message
 
-import (
-	"github.com/fmoor/edgedb-golang/edgedb/protocol"
-)
-
+// Message types sent by server
 const (
-	// PrepareType https://edgedb.com/docs/internals/protocol/messages#prepare
-	PrepareType         = 0x50
-	CmdCmpltType        = 0x43
-	CmdDataDescType     = 0x54
-	DescStmtType        = 0x44
-	PrepareCmpltType    = 0x31
-	RdyForCmdType       = 0x5a
-	ServerKeyDataType   = 0x4b
-	ServerHandshakeType = 0x76
-	SyncType            = 0x53
-	ErrorResponseType   = 0x45
-	ExecuteType         = 0x45
-	DataType            = 0x44
-
-	// IO Formats
-	BinaryFormat       = 0x62
-	JSONFormat         = 0x6a
-	JSONElementsFormat = 0x4a
-
-	// Cardinalities
-	NoResult = 0x6e
-	One      = 0x6f
-	Many     = 0x6d
-
-	// Aspects
-	DataDescription = 0x54
+	AuthenticationOK       = 0x52
+	CommandComplete        = 0x43
+	CommandDataDescription = 0x54
+	Data                   = 0x44
+	DumpBlock              = 0x3d
+	DumpHeader             = 0x40
+	ErrorResponse          = 0x45
+	LogMessage             = 0x4c
+	ParameterStatus        = 0x53
+	PrepareComplete        = 0x31
+	ReadyForCommand        = 0x5a
+	RestoreReady           = 0x2b
+	ServerHandshake        = 0x76
+	ServerKeyData          = 0x4b
 )
 
-// Messages
-var SyncMsg Message = FromBytes([]byte{SyncType, 0, 0, 0, 0})
-
-// Params ...
-type Params map[string]string
-
-// Message for the edgedb server
-type Message struct {
-	buf []byte
-}
-
-// Make creates a new message
-func Make(mType uint8) Message {
-	return Message{[]byte{mType, 0, 0, 0, 0}}
-}
-
-func FromBytes(bts []byte) Message {
-	return Message{bts}
-}
-
-// PushUint8 appends a byte to the message
-func (m *Message) PushUint8(value uint8) {
-	m.buf = append(m.buf, value)
-}
-
-// PushUint16 appends a uint16 value to the message
-func (m *Message) PushUint16(value uint16) {
-	protocol.PushUint16(&m.buf, value)
-}
-
-// PushUint32 appends a uint32 value to the message
-func (m *Message) PushUint32(value uint32) {
-	tmp := make([]byte, 4)
-	protocol.PutUint32(tmp, value)
-	m.buf = append(m.buf, tmp...)
-}
-
-// PushString appends a 32bit-length prefixed string to the message
-func (m *Message) PushString(str string) {
-	m.PushUint32(uint32(len(str)))
-	m.buf = append(m.buf, str...)
-}
-
-// PushBytes appends 32bit-length prefixed bytes to the message
-func (m *Message) PushBytes(bts []byte) {
-	m.PushUint32(uint32(len(bts)))
-	m.buf = append(m.buf, bts...)
-}
-
-// PushParams appends parameters to the message
-func (m *Message) PushParams(params map[string]string) {
-	m.PushUint16(uint16(len(params)))
-	for key, val := range params {
-		m.PushString(key)
-		m.PushString(val)
-	}
-}
-
-// ToBytes returns the full message as bytes
-func (m *Message) ToBytes() []byte {
-	out := make([]byte, len(m.buf))
-	copy(out, m.buf)
-	length := uint32(len(out[1:]))
-	protocol.PutUint32(out[1:5], length)
-	return out
-}
+// Message types sent by client
+const (
+	ClientHandshake   = 0x56
+	DescribeStatement = 0x44
+	Dump              = 0x3e
+	Execute           = 0x45
+	ExecuteScript     = 0x51
+	Flush             = 0x48
+	OptimisticExecute = 0x4f
+	Prepare           = 0x50
+	Restore           = 0x3c
+	RestoreBlock      = 0x3d
+	RestoreEOF        = 0x2e
+	Sync              = 0x53
+	Terminate         = 0x58
+)

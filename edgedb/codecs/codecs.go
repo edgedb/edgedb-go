@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	setType = iota
+	setType = iota // todo implement
 	objectType
 	baseScalarType
-	scalarType
+	scalarType // todo implement
 	tupleType
-	nameTupleType
+	nameTupleType // todo implement
 	arrayType
-	enumType
+	enumType // todo implement
 )
 
 // CodecLookup ...
@@ -31,7 +31,7 @@ type Decoder interface {
 // Get a decoder
 func Get(bts *[]byte) CodecLookup {
 	lookup := CodecLookup{}
-	decoders := []Decoder{}
+	codecs := []Decoder{}
 
 	for len(*bts) > 0 {
 		descriptorType := protocol.PopUint8(bts)
@@ -39,17 +39,17 @@ func Get(bts *[]byte) CodecLookup {
 
 		switch descriptorType {
 		case objectType:
-			lookup[id] = popObjectCodec(bts, id, decoders)
+			lookup[id] = popObjectCodec(bts, id, codecs)
 		case baseScalarType:
 			lookup[id] = &BaseScalarCodec{id}
 		case tupleType:
-			lookup[id] = popTupleCodec(bts, id, decoders)
+			lookup[id] = popTupleCodec(bts, id, codecs)
 		case arrayType:
-			lookup[id] = popArrayCodec(bts, id, decoders)
+			lookup[id] = popArrayCodec(bts, id, codecs)
 		default:
 			panic(fmt.Sprintf("unknown descriptor type %x:\n% x\n", descriptorType, bts))
 		}
-		decoders = append(decoders, lookup[id])
+		codecs = append(codecs, lookup[id])
 	}
 	return lookup
 }
@@ -60,13 +60,13 @@ func popObjectCodec(bts *[]byte, id protocol.UUID, codecs []Decoder) Decoder {
 	elmCount := int(protocol.PopUint16(bts))
 	for i := 0; i < elmCount; i++ {
 		flags := protocol.PopUint8(bts)
-		name, _ := protocol.PopString(bts)
+		name := protocol.PopString(bts)
 		index := protocol.PopUint16(bts)
 
 		field := objectField{
-			isImplicit:     0 != flags&0b1,
-			isLinkProperty: 0 != flags&0b10,
-			isLink:         0 != flags&0b100,
+			isImplicit:     flags&0b1 != 0,
+			isLinkProperty: flags&0b10 != 0,
+			isLink:         flags&0b100 != 0,
 			name:           name,
 			codec:          codecs[index],
 		}
@@ -117,11 +117,9 @@ func (b *BaseScalarCodec) Decode(bts *[]byte) interface{} {
 		protocol.PopUint32(bts) // data length
 		return protocol.PopUUID(bts)
 	case "00000000-0000-0000-0000-0000-00000101":
-		val, _ := protocol.PopString(bts)
-		return val
+		return protocol.PopString(bts)
 	case "00000000-0000-0000-0000-0000-00000102":
-		val, _ := protocol.PopBytes(bts)
-		return val
+		return protocol.PopBytes(bts)
 	case "00000000-0000-0000-0000-0000-00000103":
 		protocol.PopUint32(bts) // data length
 		return int16(protocol.PopUint16(bts))

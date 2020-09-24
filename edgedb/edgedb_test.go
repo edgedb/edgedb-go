@@ -54,7 +54,8 @@ var testCases = []testCase{
 }
 
 func TestQueries(t *testing.T) {
-	edb, _ := Connect("edgedb")
+	options := ConnConfig{"edgedb", "edgedb"}
+	edb, _ := Connect(options)
 	defer edb.Close()
 
 	for _, query := range testCases {

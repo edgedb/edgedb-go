@@ -7,9 +7,10 @@ import (
 	"io"
 	"net"
 
+	"github.com/fmoor/edgedb-golang/edgedb/cardinality"
 	"github.com/fmoor/edgedb-golang/edgedb/codecs"
+	"github.com/fmoor/edgedb-golang/edgedb/format"
 	"github.com/fmoor/edgedb-golang/edgedb/message"
-	"github.com/fmoor/edgedb-golang/edgedb/payload"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 )
 
@@ -19,11 +20,18 @@ type Conn struct {
 	secret []byte
 }
 
+// ConnConfig options for configuring a connection
+type ConnConfig struct {
+	Database string
+	User     string
+	// todo support authentication etc.
+}
+
 // Close the db connection
 func (edb *Conn) Close() error {
 	// todo adjust return value if close returns an error
 	defer edb.conn.Close()
-	buf := []byte{0x58, 0, 0, 0, 0}
+	buf := []byte{message.Terminate, 0, 0, 0, 4}
 	if _, err := edb.conn.Write(buf); err != nil {
 		return fmt.Errorf("error while terminating: %v", err)
 	}
@@ -31,11 +39,11 @@ func (edb *Conn) Close() error {
 }
 
 func (edb *Conn) writeAndRead(bts []byte) []byte {
-	// buf := bts
-	// for len(buf) > 0 {
-	// 	msg := protocol.PopMessage(&buf)
-	// 	fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
-	// }
+	buf := bts
+	for len(buf) > 0 {
+		msg := protocol.PopMessage(&buf)
+		fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
+	}
 
 	if _, err := edb.conn.Write(bts); err != nil {
 		panic(err)
@@ -53,60 +61,62 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 		rcv = append(rcv, tmp[:n]...)
 	}
 
-	// buf = rcv
-	// for len(buf) > 0 {
-	// 	msg := protocol.PopMessage(&buf)
-	// 	// fmt.Printf("read message %q:\n% x\n", msg[0], msg)
-	// }
+	buf = rcv
+	for len(buf) > 0 {
+		msg := protocol.PopMessage(&buf)
+		fmt.Printf("read message %q:\n% x\n", msg[0], msg)
+	}
 
 	return rcv
 }
 
 // Query the database
 func (edb *Conn) Query(query string) (interface{}, error) {
-	msg := message.Make(message.PrepareType)
-	msg.PushUint16(0) // no headers
-	msg.PushUint8(message.BinaryFormat)
-	msg.PushUint8(message.Many)
-	msg.PushBytes([]byte{}) // no statement name
-	msg.PushString(query)
+	msg := []byte{message.Prepare, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0) // no headers
+	protocol.PushUint8(&msg, format.Binary)
+	protocol.PushUint8(&msg, cardinality.Many)
+	protocol.PushBytes(&msg, []byte{}) // no statement name
+	protocol.PushString(&msg, query)
+	protocol.PutMsgLength(msg)
 
-	pyld := payload.Make(msg.ToBytes())
-	pyld.Push(message.SyncMsg.ToBytes())
+	pyld := msg
+	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv := edb.writeAndRead(pyld.ToBytes())
+	rcv := edb.writeAndRead(pyld)
 	var resultDescriptorID protocol.UUID
 
 	for len(rcv) > 4 {
 		bts := protocol.PopMessage(&rcv)
 
 		switch protocol.PopUint8(&bts) {
-		case message.PrepareCmpltType:
+		case message.PrepareComplete:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint16(&bts) // number of headers, assume 0
 			protocol.PopUint8(&bts)  // cardianlity
 			protocol.PopUUID(&bts)   // argument type id
 			resultDescriptorID = protocol.PopUUID(&bts)
-		case message.RdyForCmdType:
+		case message.ReadyForCommand:
 			break
-		case message.ErrorResponseType:
+		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
 			protocol.PopUint32(&bts) // code
-			message, _ := protocol.PopString(&bts)
+			message := protocol.PopString(&bts)
 			panic(message)
 		}
 	}
 
-	msg = message.Make(message.DescStmtType)
-	msg.PushUint16(0)   // no headers
-	msg.PushUint8(0x54) // aspect DataDescription
-	msg.PushUint32(0)   // no statement name
+	msg = []byte{message.DescribeStatement, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0)   // no headers
+	protocol.PushUint8(&msg, 0x54) // aspect DataDescription
+	protocol.PushUint32(&msg, 0)   // no statement name
+	protocol.PutMsgLength(msg)
 
-	pyld = payload.Make(msg.ToBytes())
-	pyld.Push(message.SyncMsg.ToBytes())
+	pyld = msg
+	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv = edb.writeAndRead(pyld.ToBytes())
+	rcv = edb.writeAndRead(pyld)
 
 	decoderLookup := codecs.CodecLookup{}
 
@@ -114,36 +124,37 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 		bts := protocol.PopMessage(&rcv)
 
 		switch protocol.PopUint8(&bts) {
-		case message.CmdDataDescType:
-			protocol.PopUint32(&bts)                 // message length
-			protocol.PopUint16(&bts)                 // number of headers is always 0
-			protocol.PopUint8(&bts)                  // cardianlity
-			protocol.PopUUID(&bts)                   // argument descriptor ID
-			protocol.PopBytes(&bts)                  // argument descriptor
-			protocol.PopUUID(&bts)                   // output descriptor ID
-			descriptor, _ := protocol.PopBytes(&bts) // argument descriptor
+		case message.CommandDataDescription:
+			protocol.PopUint32(&bts)              // message length
+			protocol.PopUint16(&bts)              // number of headers is always 0
+			protocol.PopUint8(&bts)               // cardianlity
+			protocol.PopUUID(&bts)                // argument descriptor ID
+			protocol.PopBytes(&bts)               // argument descriptor
+			protocol.PopUUID(&bts)                // output descriptor ID
+			descriptor := protocol.PopBytes(&bts) // argument descriptor
 
 			for k, v := range codecs.Get(&descriptor) {
 				decoderLookup[k] = v
 			}
-		case message.ErrorResponseType:
+		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
 			protocol.PopUint32(&bts) // code
-			message, _ := protocol.PopString(&bts)
+			message := protocol.PopString(&bts)
 			panic(message)
 		}
 	}
 
-	msg = message.Make(message.ExecuteType)
-	msg.PushUint16(0)                 // no headers
-	msg.PushBytes([]byte{})           // no statement name
-	msg.PushBytes([]byte{0, 0, 0, 0}) // no argument data
+	msg = []byte{message.Execute, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0)                 // no headers
+	protocol.PushBytes(&msg, []byte{})           // no statement name
+	protocol.PushBytes(&msg, []byte{0, 0, 0, 0}) // no argument data
+	protocol.PutMsgLength(msg)
 
-	pyld = payload.Make(msg.ToBytes())
-	pyld.Push(message.SyncMsg.ToBytes())
+	pyld = msg
+	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv = edb.writeAndRead(pyld.ToBytes())
+	rcv = edb.writeAndRead(pyld)
 
 	decoder := decoderLookup[resultDescriptorID]
 	out := []interface{}{}
@@ -152,19 +163,19 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 		bts := protocol.PopMessage(&rcv)
 
 		switch protocol.PopUint8(&bts) {
-		case message.DataType:
+		case message.Data:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint16(&bts) // number of data elements (always 1)
 			out = append(out, decoder.Decode(&bts))
-		case message.CmdCmpltType:
+		case message.CommandComplete:
 			continue
-		case message.RdyForCmdType:
+		case message.ReadyForCommand:
 			continue
-		case message.ErrorResponseType:
+		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
 			protocol.PopUint32(&bts) // code
-			message, _ := protocol.PopString(&bts)
+			message := protocol.PopString(&bts)
 			panic(message)
 		}
 	}
@@ -172,23 +183,25 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 }
 
 // Connect to a database
-func Connect(db string) (edb Conn, err error) {
+func Connect(config ConnConfig) (edb *Conn, err error) {
 	conn, err := net.Dial("tcp", "127.0.0.1:5656")
 	if err != nil {
 		return edb, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}
-	edb = Conn{conn, nil}
+	edb = &Conn{conn, nil}
 
-	msg := message.Make(0x56)
-	msg.PushUint16(0) // major version
-	msg.PushUint16(8) // minor version
-	msg.PushParams(message.Params{
-		"user":     "edgedb",
-		"database": db,
-	})
-	msg.PushUint16(0) // no extensions
+	msg := []byte{message.ClientHandshake, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0) // major version
+	protocol.PushUint16(&msg, 8) // minor version
+	protocol.PushUint16(&msg, 2) // number of parameters
+	protocol.PushString(&msg, "database")
+	protocol.PushString(&msg, config.Database)
+	protocol.PushString(&msg, "user")
+	protocol.PushString(&msg, config.User)
+	protocol.PushUint16(&msg, 0) // no extensions
+	protocol.PutMsgLength(msg)
 
-	rcv := edb.writeAndRead(msg.ToBytes())
+	rcv := edb.writeAndRead(msg)
 
 	var secret []byte
 
@@ -196,18 +209,18 @@ func Connect(db string) (edb Conn, err error) {
 		bts := protocol.PopMessage(&rcv)
 
 		switch protocol.PopUint8(&bts) {
-		case message.ServerHandshakeType:
+		case message.ServerHandshake:
 			// todo close the connection if protocol version can't be supported
 			// https://edgedb.com/docs/internals/protocol/overview#connection-phase
-		case message.ServerKeyDataType:
+		case message.ServerKeyData:
 			secret = bts[5:]
-		case message.RdyForCmdType:
-			return Conn{conn, secret}, nil
-		case message.ErrorResponseType:
+		case message.ReadyForCommand:
+			return &Conn{conn, secret}, nil
+		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
 			protocol.PopUint32(&bts) // code
-			message, _ := protocol.PopString(&bts)
+			message := protocol.PopString(&bts)
 			panic(message)
 		}
 	}
@@ -215,7 +228,8 @@ func Connect(db string) (edb Conn, err error) {
 }
 
 func main() {
-	edb, err := Connect("edgedb")
+	options := ConnConfig{"edgedb", "edgedb"}
+	edb, err := Connect(options)
 	if err != nil {
 		fmt.Println(err)
 		return

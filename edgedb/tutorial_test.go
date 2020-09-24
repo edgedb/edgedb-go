@@ -12,7 +12,8 @@ import (
 )
 
 func TestCreateDB(t *testing.T) {
-	edb, err := Connect("edgedb")
+	options := ConnConfig{"edgedb", "edgedb"}
+	edb, err := Connect(options)
 	assert.Nil(t, err)
 	defer edb.Close()
 
@@ -27,11 +28,12 @@ func TestCreateDB(t *testing.T) {
 	}()
 	assert.Equal(t, []interface{}{}, result)
 
-	edb2, err := Connect(dbName)
+	options = ConnConfig{dbName, "edgedb"}
+	edb2, err := Connect(options)
 	assert.Nil(t, err)
 	defer edb2.Close()
 
-	withDB := func(fun func(t *testing.T, edb Conn)) func(t *testing.T) {
+	withDB := func(fun func(t *testing.T, edb *Conn)) func(t *testing.T) {
 		return func(t *testing.T) {
 			fun(t, edb2)
 		}
@@ -41,7 +43,7 @@ func TestCreateDB(t *testing.T) {
 	t.Run("insert movie", withDB(testInsertMovie))
 }
 
-func testMigration(t *testing.T, edb Conn) {
+func testMigration(t *testing.T, edb *Conn) {
 	result, err := edb.Query(`
 		START MIGRATION TO {
 			module default {
@@ -78,7 +80,7 @@ func testMigration(t *testing.T, edb Conn) {
 	assert.Equal(t, []interface{}{"default::Movie", "default::Person"}, result)
 }
 
-func testInsertMovie(t *testing.T, edb Conn) {
+func testInsertMovie(t *testing.T, edb *Conn) {
 	result, err := edb.Query(`
 		INSERT Movie {
 			title := 'Blade Runner 2049',

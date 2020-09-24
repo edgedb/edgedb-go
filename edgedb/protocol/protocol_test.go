@@ -22,17 +22,15 @@ func TestPopUint32(t *testing.T) {
 
 func TestPopBytes(t *testing.T) {
 	bts := []byte{0, 0, 0, 1, 32, 2}
-	val, n := PopBytes(&bts)
+	val := PopBytes(&bts)
 	assert.Equal(t, []byte{32}, val)
-	assert.Equal(t, 5, n)
 	assert.Equal(t, []byte{2}, bts)
 }
 
 func TestPopString(t *testing.T) {
 	bts := []byte{0, 0, 0, 3, 102, 111, 111}
-	str, n := PopString(&bts)
+	str := PopString(&bts)
 	assert.Equal(t, "foo", str)
-	assert.Equal(t, 7, n)
 	assert.Equal(t, []byte{}, bts)
 }
 
