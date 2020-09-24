@@ -7,11 +7,12 @@ import (
 	"io"
 	"net"
 
-	"github.com/fmoor/edgedb-golang/edgedb/cardinality"
-	"github.com/fmoor/edgedb-golang/edgedb/codecs"
-	"github.com/fmoor/edgedb-golang/edgedb/format"
-	"github.com/fmoor/edgedb-golang/edgedb/message"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
+	"github.com/fmoor/edgedb-golang/edgedb/protocol/aspect"
+	"github.com/fmoor/edgedb-golang/edgedb/protocol/cardinality"
+	"github.com/fmoor/edgedb-golang/edgedb/protocol/codecs"
+	"github.com/fmoor/edgedb-golang/edgedb/protocol/format"
+	"github.com/fmoor/edgedb-golang/edgedb/protocol/message"
 )
 
 // Conn client
@@ -108,9 +109,9 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 	}
 
 	msg = []byte{message.DescribeStatement, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0)   // no headers
-	protocol.PushUint8(&msg, 0x54) // aspect DataDescription
-	protocol.PushUint32(&msg, 0)   // no statement name
+	protocol.PushUint16(&msg, 0) // no headers
+	protocol.PushUint8(&msg, aspect.DataDescription)
+	protocol.PushUint32(&msg, 0) // no statement name
 	protocol.PutMsgLength(msg)
 
 	pyld = msg
