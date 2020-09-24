@@ -133,7 +133,7 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 			protocol.PopUUID(&bts)                // output descriptor ID
 			descriptor := protocol.PopBytes(&bts) // argument descriptor
 
-			for k, v := range codecs.Get(&descriptor) {
+			for k, v := range codecs.Pop(&descriptor) {
 				decoderLookup[k] = v
 			}
 		case message.ErrorResponse:

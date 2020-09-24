@@ -25,11 +25,12 @@ type CodecLookup map[protocol.UUID]Decoder
 
 // Decoder interface
 type Decoder interface {
+	// todo Encode(*[]byte, interface{})
 	Decode(*[]byte) interface{}
 }
 
-// Get a decoder
-func Get(bts *[]byte) CodecLookup {
+// Pop a decoder
+func Pop(bts *[]byte) CodecLookup {
 	lookup := CodecLookup{}
 	codecs := []Decoder{}
 
