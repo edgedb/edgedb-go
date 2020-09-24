@@ -1,5 +1,7 @@
 package main
 
+// todo add context
+
 import (
 	"fmt"
 	"io"
@@ -11,14 +13,14 @@ import (
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 )
 
-// EdgeDB client
-type EdgeDB struct {
+// Conn client
+type Conn struct {
 	conn   io.ReadWriteCloser
 	secret []byte
 }
 
 // Close the db connection
-func (edb *EdgeDB) Close() error {
+func (edb *Conn) Close() error {
 	// todo adjust return value if close returns an error
 	defer edb.conn.Close()
 	buf := []byte{0x58, 0, 0, 0, 0}
@@ -28,12 +30,12 @@ func (edb *EdgeDB) Close() error {
 	return nil
 }
 
-func (edb *EdgeDB) writeAndRead(bts []byte) []byte {
-	buf := bts
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
-	}
+func (edb *Conn) writeAndRead(bts []byte) []byte {
+	// buf := bts
+	// for len(buf) > 0 {
+	// 	msg := protocol.PopMessage(&buf)
+	// 	fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
+	// }
 
 	if _, err := edb.conn.Write(bts); err != nil {
 		panic(err)
@@ -51,17 +53,17 @@ func (edb *EdgeDB) writeAndRead(bts []byte) []byte {
 		rcv = append(rcv, tmp[:n]...)
 	}
 
-	buf = rcv
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		fmt.Printf("read message %q:\n% x\n", msg[0], msg)
-	}
+	// buf = rcv
+	// for len(buf) > 0 {
+	// 	msg := protocol.PopMessage(&buf)
+	// 	// fmt.Printf("read message %q:\n% x\n", msg[0], msg)
+	// }
 
 	return rcv
 }
 
 // Query the database
-func (edb *EdgeDB) Query(query string) (interface{}, error) {
+func (edb *Conn) Query(query string) (interface{}, error) {
 	msg := message.Make(message.PrepareType)
 	msg.PushUint16(0) // no headers
 	msg.PushUint8(message.BinaryFormat)
@@ -106,7 +108,7 @@ func (edb *EdgeDB) Query(query string) (interface{}, error) {
 
 	rcv = edb.writeAndRead(pyld.ToBytes())
 
-	decoderLookup := codecs.DecoderLookup{}
+	decoderLookup := codecs.CodecLookup{}
 
 	for len(rcv) > 4 {
 		bts := protocol.PopMessage(&rcv)
@@ -144,7 +146,7 @@ func (edb *EdgeDB) Query(query string) (interface{}, error) {
 	rcv = edb.writeAndRead(pyld.ToBytes())
 
 	decoder := decoderLookup[resultDescriptorID]
-	out := "Set{ "
+	out := []interface{}{}
 
 	for len(rcv) > 0 {
 		bts := protocol.PopMessage(&rcv)
@@ -153,7 +155,7 @@ func (edb *EdgeDB) Query(query string) (interface{}, error) {
 		case message.DataType:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint16(&bts) // number of data elements (always 1)
-			out += " " + decoder.Decode(&bts)
+			out = append(out, decoder.Decode(&bts))
 		case message.CmdCmpltType:
 			continue
 		case message.RdyForCmdType:
@@ -166,24 +168,23 @@ func (edb *EdgeDB) Query(query string) (interface{}, error) {
 			panic(message)
 		}
 	}
-	out += " }"
 	return out, nil
 }
 
 // Connect to a database
-func Connect() (edb EdgeDB, err error) {
+func Connect(db string) (edb Conn, err error) {
 	conn, err := net.Dial("tcp", "127.0.0.1:5656")
 	if err != nil {
 		return edb, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}
-	edb = EdgeDB{conn, nil}
+	edb = Conn{conn, nil}
 
 	msg := message.Make(0x56)
 	msg.PushUint16(0) // major version
 	msg.PushUint16(8) // minor version
 	msg.PushParams(message.Params{
 		"user":     "edgedb",
-		"database": "edgedb",
+		"database": db,
 	})
 	msg.PushUint16(0) // no extensions
 
@@ -201,7 +202,7 @@ func Connect() (edb EdgeDB, err error) {
 		case message.ServerKeyDataType:
 			secret = bts[5:]
 		case message.RdyForCmdType:
-			return EdgeDB{conn, secret}, nil
+			return Conn{conn, secret}, nil
 		case message.ErrorResponseType:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
@@ -214,7 +215,7 @@ func Connect() (edb EdgeDB, err error) {
 }
 
 func main() {
-	edb, err := Connect()
+	edb, err := Connect("edgedb")
 	if err != nil {
 		fmt.Println(err)
 		return

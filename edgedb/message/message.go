@@ -1,8 +1,6 @@
 package message
 
 import (
-	"fmt"
-
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 )
 
@@ -99,6 +97,5 @@ func (m *Message) ToBytes() []byte {
 	copy(out, m.buf)
 	length := uint32(len(out[1:]))
 	protocol.PutUint32(out[1:5], length)
-	fmt.Printf("wrote message %q:\n% x\n", out[0], out)
 	return out
 }

@@ -1,8 +1,10 @@
 package codecs
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 )
@@ -18,17 +20,17 @@ const (
 	enumType
 )
 
-// DecoderLookup ...
-type DecoderLookup map[protocol.UUID]Decoder
+// CodecLookup ...
+type CodecLookup map[protocol.UUID]Decoder
 
 // Decoder interface
 type Decoder interface {
-	Decode(*[]byte) string
+	Decode(*[]byte) interface{}
 }
 
 // Get a decoder
-func Get(bts *[]byte) DecoderLookup {
-	lookup := DecoderLookup{}
+func Get(bts *[]byte) CodecLookup {
+	lookup := CodecLookup{}
 	decoders := []Decoder{}
 
 	for len(*bts) > 0 {
@@ -39,7 +41,7 @@ func Get(bts *[]byte) DecoderLookup {
 		case objectType:
 			lookup[id] = popObjectCodec(bts, id, decoders)
 		case baseScalarType:
-			lookup[id] = getBaseScalarCodec(id)
+			lookup[id] = &BaseScalarCodec{id}
 		case tupleType:
 			lookup[id] = popTupleCodec(bts, id, decoders)
 		case arrayType:
@@ -49,7 +51,6 @@ func Get(bts *[]byte) DecoderLookup {
 		}
 		decoders = append(decoders, lookup[id])
 	}
-	fmt.Println(lookup)
 	return lookup
 }
 
@@ -90,136 +91,105 @@ type objectField struct {
 }
 
 // Decode an object from bytes
-func (c *Object) Decode(bts *[]byte) string {
+func (c *Object) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	elmCount := int(protocol.PopInt32(bts))
-	out := "{"
+	out := map[string]interface{}{}
 	for i := 0; i < elmCount; i++ {
-		if i > 0 {
-			out += ", "
-		}
 		protocol.PopUint32(bts) // reserved
 		field := c.fields[i]
-		out += field.name + ": "
-		out += field.codec.Decode(bts)
+		if field.name == "__tid__" {
+			field.codec.Decode(bts)
+		} else {
+			out[field.name] = field.codec.Decode(bts)
+		}
 	}
-	return out + "}"
+	return out
 }
 
-func getBaseScalarCodec(uuid protocol.UUID) Decoder {
-	switch uuid {
+type BaseScalarCodec struct {
+	id protocol.UUID
+}
+
+func (b *BaseScalarCodec) Decode(bts *[]byte) interface{} {
+	switch b.id {
 	case "00000000-0000-0000-0000-0000-00000100":
-		return &UUID{}
+		protocol.PopUint32(bts) // data length
+		return protocol.PopUUID(bts)
 	case "00000000-0000-0000-0000-0000-00000101":
-		return &String{}
+		val, _ := protocol.PopString(bts)
+		return val
 	case "00000000-0000-0000-0000-0000-00000102":
-		return &Bytes{}
+		val, _ := protocol.PopBytes(bts)
+		return val
 	case "00000000-0000-0000-0000-0000-00000103":
-		return &Int16{}
+		protocol.PopUint32(bts) // data length
+		return int16(protocol.PopUint16(bts))
 	case "00000000-0000-0000-0000-0000-00000104":
-		return &Int32{}
+		protocol.PopUint32(bts) // data length
+		return protocol.PopInt32(bts)
 	case "00000000-0000-0000-0000-0000-00000105":
-		return &Int64{}
+		protocol.PopUint32(bts) // data length
+		return protocol.PopInt64(bts)
 	case "00000000-0000-0000-0000-0000-00000106":
-		return &Float32{}
+		protocol.PopUint32(bts) // data length
+		bits := protocol.PopUint32(bts)
+		return math.Float32frombits(bits)
 	case "00000000-0000-0000-0000-0000-00000107":
-		return &Float64{}
+		protocol.PopUint32(bts) // data length
+		bits := protocol.PopUint64(bts)
+		return math.Float64frombits(bits)
 	case "00000000-0000-0000-0000-0000-00000108":
 		panic("decimal type not implemented")
 	case "00000000-0000-0000-0000-0000-00000109":
-		return &Bool{}
+		protocol.PopUint32(bts) // data length
+		val := protocol.PopUint8(bts)
+		if val > 1 {
+			panic(fmt.Sprintf("invalid bool byte, must be 0 or 1, got: %x", val))
+		}
+		return val != 0
+	case "00000000-0000-0000-0000-0000-0000010a":
+		protocol.PopUint32(bts) // data length
+		val := protocol.PopInt64(bts)
+		return time.Unix(0, 1_000*(val+946_684_800_000_000)).UTC()
+	case "00000000-0000-0000-0000-0000-0000010b":
+		// todo this should return a date and time without a timezone
+		protocol.PopUint32(bts) // data length
+		val := protocol.PopInt64(bts)
+		return time.Unix(0, 1_000*(val+946_684_800_000_000)).UTC()
+	case "00000000-0000-0000-0000-0000-0000010c":
+		// todo this should return a date without a time or timezone
+		protocol.PopUint32(bts) // data length
+		val := protocol.PopInt32(bts)
+		delta, _ := time.ParseDuration(fmt.Sprintf("%vh", 24*val))
+		location, _ := time.LoadLocation("UTC")
+		return time.Date(2000, 1, 1, 0, 0, 0, 0, location).Add(delta)
+	case "00000000-0000-0000-0000-0000-0000010d":
+		// todo this should probably return a different type
+		protocol.PopUint32(bts) // data length
+		val := protocol.PopInt64(bts)
+		str := fmt.Sprintf("%vus", val)
+		duration, _ := time.ParseDuration(str)
+		return duration
+	case "00000000-0000-0000-0000-0000-0000010e":
+		protocol.PopUint32(bts) // data length
+		microSeconds := protocol.PopInt64(bts)
+		protocol.PopUint32(bts) // reserved
+		protocol.PopUint32(bts) // reserved
+		duration, _ := time.ParseDuration(fmt.Sprintf("%vus", microSeconds))
+		return duration
+	case "00000000-0000-0000-0000-0000-0000010f":
+		n := protocol.PopUint32(bts) // data length
+		protocol.PopUint8(bts)       // json format, always 1
+		var val interface{}
+		json.Unmarshal((*bts)[:n-1], &val)
+		*bts = (*bts)[n-1:]
+		return val
 	case "00000000-0000-0000-0000-0000-00000110":
 		panic("bigint type not implemented")
 	default:
-		panic(fmt.Sprintf("unknown base scalar type descriptor: %v", uuid))
+		panic(fmt.Sprintf("unknown base scalar type descriptor: %v", b.id))
 	}
-}
-
-// UUID decoder
-type UUID struct{}
-
-// Decode a uuid from bytes
-func (s *UUID) Decode(bts *[]byte) string {
-	id := protocol.PopUUID(bts)
-	return fmt.Sprintf("%q", id)
-}
-
-// String decoder
-type String struct{}
-
-// Decode a utf-8 string from bytes
-func (s *String) Decode(bts *[]byte) string {
-	str, _ := protocol.PopString(bts)
-	return fmt.Sprintf("%q", str)
-}
-
-// Bytes decoder
-type Bytes struct{}
-
-// Decode bytes from bytes
-func (s *Bytes) Decode(bts *[]byte) string {
-	str, _ := protocol.PopBytes(bts)
-	return fmt.Sprintf("b%q", str)
-}
-
-// Int16 decoder
-type Int16 struct{}
-
-// Decode int16
-func (c *Int16) Decode(bts *[]byte) string {
-	protocol.PopUint32(bts) // data length
-	return fmt.Sprintf("%v", int16(protocol.PopUint16(bts)))
-}
-
-// Int32 decoder
-type Int32 struct{}
-
-// Decode int32
-func (c *Int32) Decode(bts *[]byte) string {
-	protocol.PopUint32(bts) // data length
-	return fmt.Sprintf("%v", protocol.PopInt32(bts))
-}
-
-// Int64 decoder
-type Int64 struct{}
-
-// Decode int64 from bytes
-func (c *Int64) Decode(bts *[]byte) string {
-	protocol.PopUint32(bts) // data length
-	return fmt.Sprintf("%v", protocol.PopInt64(bts))
-}
-
-// Float32 decoder
-type Float32 struct{}
-
-// Decode float32 from bytes
-func (c *Float32) Decode(bts *[]byte) string {
-	protocol.PopUint32(bts) // data length
-	bits := protocol.PopUint32(bts)
-	return fmt.Sprintf("%v", math.Float32frombits(bits))
-}
-
-// Float64 decoder
-type Float64 struct{}
-
-// Decode float64 from bytes
-func (c *Float64) Decode(bts *[]byte) string {
-	protocol.PopUint32(bts) // data length
-	bits := protocol.PopUint64(bts)
-	return fmt.Sprintf("%v", math.Float64frombits(bits))
-}
-
-// Bool decoder
-type Bool struct{}
-
-// Decode bool from bytes
-func (c *Bool) Decode(bts *[]byte) string {
-	protocol.PopUint32(bts) // data length
-	val := protocol.PopUint8(bts)
-	if val > 1 {
-		panic(fmt.Sprintf("invalid bool byte must be 00 or 01, got: %x", val))
-	}
-	return fmt.Sprintf("%v", val != 0)
 }
 
 func popTupleCodec(bts *[]byte, id protocol.UUID, codecs []Decoder) Decoder {
@@ -239,18 +209,15 @@ type Tuple struct {
 }
 
 // Decode a tuple from bytes
-func (t *Tuple) Decode(bts *[]byte) string {
+func (t *Tuple) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	elmCount := int(protocol.PopInt32(bts))
-	out := "("
+	out := []interface{}{}
 	for i := 0; i < elmCount; i++ {
-		if i > 0 {
-			out += ", "
-		}
 		protocol.PopUint32(bts) // reserved
-		out += t.fields[i].Decode(bts)
+		out = append(out, t.fields[i].Decode(bts))
 	}
-	return out + ")"
+	return out
 }
 
 func popArrayCodec(bts *[]byte, id protocol.UUID, codecs []Decoder) Decoder {
@@ -268,7 +235,7 @@ type Array struct {
 }
 
 // Decode and array from bytes
-func (a *Array) Decode(bts *[]byte) string {
+func (a *Array) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	dimensions := []dimension{}
 	dimCount := int(protocol.PopInt32(bts)) // number of dimensions
@@ -283,14 +250,11 @@ func (a *Array) Decode(bts *[]byte) string {
 	for _, dim := range dimensions {
 		elmCount += int(dim.upper - dim.lower + 1)
 	}
-	out := "["
+	out := []interface{}{}
 	for i := 0; i < elmCount; i++ {
-		if i > 0 {
-			out += ", "
-		}
-		out += a.child.Decode(bts)
+		out = append(out, a.child.Decode(bts))
 	}
-	return out + "]"
+	return out
 }
 
 type dimension struct {
