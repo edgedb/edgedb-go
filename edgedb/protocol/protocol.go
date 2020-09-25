@@ -45,12 +45,10 @@ func PopUint64(bts *[]byte) uint64 {
 	return val
 }
 
-func PopInt32(bts *[]byte) int32 {
-	return int32(PopUint32(bts))
-}
-
-func PopInt64(bts *[]byte) int64 {
-	return int64(PopUint64(bts))
+func PushUint64(bts *[]byte, val uint64) {
+	tmp := make([]byte, 8)
+	binary.BigEndian.PutUint64(tmp, val)
+	*bts = append(*bts, tmp...)
 }
 
 func PopBytes(bts *[]byte) []byte {

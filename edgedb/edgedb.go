@@ -1,6 +1,6 @@
 package main
 
-// todo add context
+// todo add context.Context
 
 import (
 	"fmt"
@@ -30,19 +30,19 @@ type ConnConfig struct {
 
 // Close the db connection
 func (edb *Conn) Close() error {
-	// todo adjust return value if close returns an error
+	// todo adjust return value if edb.conn.Close() close returns an error
 	defer edb.conn.Close()
-	buf := []byte{message.Terminate, 0, 0, 0, 4}
-	if _, err := edb.conn.Write(buf); err != nil {
+	msg := []byte{message.Terminate, 0, 0, 0, 4}
+	if _, err := edb.conn.Write(msg); err != nil {
 		return fmt.Errorf("error while terminating: %v", err)
 	}
 	return nil
 }
 
 func (edb *Conn) writeAndRead(bts []byte) []byte {
-	buf := bts
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
+	tmp := bts
+	for len(tmp) > 0 {
+		msg := protocol.PopMessage(&tmp)
 		fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
 	}
 
@@ -62,17 +62,21 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 		rcv = append(rcv, tmp[:n]...)
 	}
 
-	buf = rcv
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
+	tmp = rcv
+	for len(tmp) > 0 {
+		msg := protocol.PopMessage(&tmp)
 		fmt.Printf("read message %q:\n% x\n", msg[0], msg)
 	}
 
 	return rcv
 }
 
-// Query the database
 func (edb *Conn) Query(query string) (interface{}, error) {
+	return edb.QueryWithArgs(query, map[string]interface{}{})
+}
+
+// Query the database
+func (edb *Conn) QueryWithArgs(query string, args map[string]interface{}) (interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, format.Binary)
@@ -83,20 +87,21 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+	var argumentCodecID protocol.UUID
+	var resultCodecID protocol.UUID
 
 	rcv := edb.writeAndRead(pyld)
-	var resultDescriptorID protocol.UUID
-
 	for len(rcv) > 4 {
 		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
 
-		switch protocol.PopUint8(&bts) {
+		switch mType {
 		case message.PrepareComplete:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint16(&bts) // number of headers, assume 0
-			protocol.PopUint8(&bts)  // cardianlity
-			protocol.PopUUID(&bts)   // argument type id
-			resultDescriptorID = protocol.PopUUID(&bts)
+			protocol.PopUint32(&bts)                 // message length
+			protocol.PopUint16(&bts)                 // number of headers, assume 0
+			protocol.PopUint8(&bts)                  // cardianlity
+			argumentCodecID = protocol.PopUUID(&bts) // argument type id
+			resultCodecID = protocol.PopUUID(&bts)   // result type id
 		case message.ReadyForCommand:
 			break
 		case message.ErrorResponse:
@@ -119,23 +124,27 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 
 	rcv = edb.writeAndRead(pyld)
 
-	decoderLookup := codecs.CodecLookup{}
+	codecLookup := codecs.CodecLookup{}
 
 	for len(rcv) > 4 {
 		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
 
-		switch protocol.PopUint8(&bts) {
+		switch mType {
 		case message.CommandDataDescription:
 			protocol.PopUint32(&bts)              // message length
 			protocol.PopUint16(&bts)              // number of headers is always 0
 			protocol.PopUint8(&bts)               // cardianlity
 			protocol.PopUUID(&bts)                // argument descriptor ID
-			protocol.PopBytes(&bts)               // argument descriptor
-			protocol.PopUUID(&bts)                // output descriptor ID
 			descriptor := protocol.PopBytes(&bts) // argument descriptor
+			for k, v := range codecs.Pop(&descriptor) {
+				codecLookup[k] = v
+			}
+			protocol.PopUUID(&bts)               // result descriptor ID
+			descriptor = protocol.PopBytes(&bts) // argument descriptor
 
 			for k, v := range codecs.Pop(&descriptor) {
-				decoderLookup[k] = v
+				codecLookup[k] = v
 			}
 		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
@@ -146,28 +155,30 @@ func (edb *Conn) Query(query string) (interface{}, error) {
 		}
 	}
 
+	argumentCodec := codecLookup[argumentCodecID]
+	resultCodec := codecLookup[resultCodecID]
+
 	msg = []byte{message.Execute, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0)                 // no headers
-	protocol.PushBytes(&msg, []byte{})           // no statement name
-	protocol.PushBytes(&msg, []byte{0, 0, 0, 0}) // no argument data
+	protocol.PushUint16(&msg, 0)       // no headers
+	protocol.PushBytes(&msg, []byte{}) // no statement name
+	argumentCodec.Encode(&msg, args)
 	protocol.PutMsgLength(msg)
 
 	pyld = msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
 	rcv = edb.writeAndRead(pyld)
-
-	decoder := decoderLookup[resultDescriptorID]
 	out := []interface{}{}
 
 	for len(rcv) > 0 {
 		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
 
-		switch protocol.PopUint8(&bts) {
+		switch mType {
 		case message.Data:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint16(&bts) // number of data elements (always 1)
-			out = append(out, decoder.Decode(&bts))
+			out = append(out, resultCodec.Decode(&bts))
 		case message.CommandComplete:
 			continue
 		case message.ReadyForCommand:
