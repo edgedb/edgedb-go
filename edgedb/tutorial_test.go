@@ -1,5 +1,5 @@
 // queries taken from https://www.edgedb.com/docs/tutorial/createdb/
-package main
+package edgedb
 
 import (
 	"fmt"

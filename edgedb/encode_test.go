@@ -1,7 +1,8 @@
-package main
+package edgedb
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,10 +20,20 @@ var encodeTestCases = []encodeTestCase{
 	encodeTestCase{"SELECT <int16>$val", int16(1), []interface{}{int16(1)}},
 	encodeTestCase{"SELECT <int32>$val", int32(1), []interface{}{int32(1)}},
 	encodeTestCase{"SELECT <int64>$val", int64(1), []interface{}{int64(1)}},
-	encodeTestCase{"SELECT <float64>$val", float64(1), []interface{}{float64(1)}},
 	encodeTestCase{"SELECT <float32>$val", float32(1), []interface{}{float32(1)}},
+	encodeTestCase{"SELECT <float64>$val", float64(1), []interface{}{float64(1)}},
 	encodeTestCase{"SELECT <str>$val", "hello", []interface{}{"hello"}},
 	encodeTestCase{"SELECT <bytes>$val", []uint8{1, 2, 3}, []interface{}{[]uint8{1, 2, 3}}},
+	encodeTestCase{
+		"SELECT <datetime>$val",
+		time.Date(1970, 1, 2, 3, 4, 5, 6_000, time.UTC),
+		[]interface{}{time.Date(1970, 1, 2, 3, 4, 5, 6_000, time.UTC)},
+	},
+	encodeTestCase{
+		"SELECT <duration>$val",
+		time.Duration(3600000000),
+		[]interface{}{time.Duration(3600000000)},
+	},
 	encodeTestCase{
 		"SELECT <array<int64>>$val",
 		[]interface{}{int64(1), int64(2), int64(3)},

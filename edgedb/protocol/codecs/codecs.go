@@ -167,7 +167,7 @@ func (c *UUID) Decode(bts *[]byte) interface{} {
 
 // Encode UUID
 func (c *UUID) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	panic("not implemented, todo")
 }
 
 // String codec
@@ -306,12 +306,19 @@ type DateTime struct{}
 func (c *DateTime) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	val := int64(protocol.PopUint64(bts))
-	return time.Unix(0, 1_000*(val+946_684_800_000_000)).UTC()
+	seconds := val / 1_000_000
+	microseconds := val % 1_000_000
+	return time.Unix(946_684_800+seconds, 1_000*microseconds).UTC()
 }
 
 // Encode date time
 func (c *DateTime) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	date := val.(time.Time)
+	seconds := date.Unix() - 946_684_800
+	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
+	microseconds := seconds*1_000_000 + nanoseconds/1_000
+	protocol.PushUint32(bts, 8) // data length
+	protocol.PushUint64(bts, uint64(microseconds))
 }
 
 // LocalDateTime codec
@@ -327,7 +334,7 @@ func (c *LocalDateTime) Decode(bts *[]byte) interface{} {
 
 // Encode local date time
 func (c *LocalDateTime) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	panic("not implemented, todo")
 }
 
 // LocalDate codec
@@ -351,7 +358,7 @@ func (c *LocalDate) Decode(bts *[]byte) interface{} {
 
 // Encode local date
 func (c *LocalDate) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	panic("not implemented, todo")
 }
 
 // LocalTime codec
@@ -372,7 +379,7 @@ func (c *LocalTime) Decode(bts *[]byte) interface{} {
 
 // Encode local time
 func (c *LocalTime) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	panic("not implemented, todo")
 }
 
 // Duration codec
@@ -381,19 +388,19 @@ type Duration struct{}
 // Decode duration
 func (c *Duration) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
-	microSeconds := int64(protocol.PopUint64(bts))
+	microseconds := int64(protocol.PopUint64(bts))
 	protocol.PopUint32(bts) // reserved
 	protocol.PopUint32(bts) // reserved
-	duration, err := time.ParseDuration(fmt.Sprintf("%vus", microSeconds))
-	if err != nil {
-		panic(err)
-	}
-	return duration
+	return time.Duration(microseconds * 1_000)
 }
 
 // Encode a duration
 func (c *Duration) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	duration := val.(time.Duration)
+	protocol.PushUint32(bts, 16) // data length
+	protocol.PushUint64(bts, uint64(duration/1_000))
+	protocol.PushUint32(bts, 0) // reserved
+	protocol.PushUint32(bts, 0) // reserved
 }
 
 // JSON codec
@@ -414,7 +421,7 @@ func (c *JSON) Decode(bts *[]byte) interface{} {
 
 // Encode json
 func (c *JSON) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented")
+	panic("not implemented, todo")
 }
 
 func popTupleCodec(bts *[]byte, id protocol.UUID, codecs []DecodeEncoder) DecodeEncoder {

@@ -1,4 +1,4 @@
-package main
+package edgedb
 
 // todo add context.Context
 
@@ -40,11 +40,11 @@ func (edb *Conn) Close() error {
 }
 
 func (edb *Conn) writeAndRead(bts []byte) []byte {
-	tmp := bts
-	for len(tmp) > 0 {
-		msg := protocol.PopMessage(&tmp)
-		fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
-	}
+	// tmp := bts
+	// for len(tmp) > 0 {
+	// 	msg := protocol.PopMessage(&tmp)
+	// 	fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
+	// }
 
 	if _, err := edb.conn.Write(bts); err != nil {
 		panic(err)
@@ -62,11 +62,11 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 		rcv = append(rcv, tmp[:n]...)
 	}
 
-	tmp = rcv
-	for len(tmp) > 0 {
-		msg := protocol.PopMessage(&tmp)
-		fmt.Printf("read message %q:\n% x\n", msg[0], msg)
-	}
+	// tmp = rcv
+	// for len(tmp) > 0 {
+	// 	msg := protocol.PopMessage(&tmp)
+	// 	fmt.Printf("read message %q:\n% x\n", msg[0], msg)
+	// }
 
 	return rcv
 }
@@ -237,16 +237,4 @@ func Connect(config ConnConfig) (edb *Conn, err error) {
 		}
 	}
 	return edb, nil
-}
-
-func main() {
-	options := ConnConfig{"edgedb", "edgedb"}
-	edb, err := Connect(options)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer edb.Close()
-	result, _ := edb.Query(`SELECT sys::Database{name, id, builtin};`)
-	fmt.Println(result)
 }

@@ -73,7 +73,6 @@ func PushString(bts *[]byte, val string) {
 	*bts = append(*bts, val...)
 }
 
-// todo move to edgedb package
 type UUID string
 
 func PopUUID(bts *[]byte) UUID {
