@@ -34,6 +34,10 @@ func PopUint32(bts *[]byte) uint32 {
 	return val
 }
 
+func PeekUint32(bts *[]byte) uint32 {
+	return binary.BigEndian.Uint32(*bts)
+}
+
 func PushUint32(bts *[]byte, val uint32) {
 	tmp := make([]byte, 4)
 	binary.BigEndian.PutUint32(tmp, val)

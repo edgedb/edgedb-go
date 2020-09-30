@@ -8,6 +8,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestDecodeSet(t *testing.T) {
+	bts := []byte{
+		0, 0, 0, 0x38, // data length
+		0, 0, 0, 1, // dimension count
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 0x14, // reserved
+		0, 0, 0, 3, // dimension.upper
+		0, 0, 0, 1, // dimension.lower
+		// element 0
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 3, // int64
+		// element 1
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 5, // int64
+		// element 2
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 8, // int64
+	}
+
+	result := (&Set{&Int64{}}).Decode(&bts)
+	expected := types.Set{int64(3), int64(5), int64(8)}
+
+	assert.Equal(t, expected, result)
+	assert.Equal(t, []byte{}, bts)
+}
+
 func TestDecodeObject(t *testing.T) {
 	codec := &Object{[]objectField{
 		objectField{false, false, false, "a", &String{}},
@@ -15,7 +41,7 @@ func TestDecodeObject(t *testing.T) {
 	}}
 
 	bts := []byte{
-		0, 0, 0, 32, // data length
+		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // element count
 		// field 0
 		0, 0, 0, 0, // reserved

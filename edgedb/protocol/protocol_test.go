@@ -45,6 +45,14 @@ func TestPopUint32(t *testing.T) {
 	assert.Equal(t, []byte{}, bts)
 }
 
+func TestPeekUint32(t *testing.T) {
+	bts := []byte{1, 2, 3, 4}
+	result := PeekUint32(&bts)
+
+	assert.Equal(t, uint32(0x1020304), result)
+	assert.Equal(t, []byte{1, 2, 3, 4}, bts)
+}
+
 func TestPushUint32(t *testing.T) {
 	bts := []byte{}
 	PushUint32(&bts, 0x1020304)

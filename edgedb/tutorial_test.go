@@ -1,4 +1,3 @@
-// queries taken from https://www.edgedb.com/docs/tutorial/createdb/
 package edgedb
 
 import (
@@ -9,45 +8,40 @@ import (
 
 	"github.com/fmoor/edgedb-golang/edgedb/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCreateDB(t *testing.T) {
-	options := ConnConfig{"edgedb", "edgedb"}
-	edb, err := Connect(options)
-	assert.Nil(t, err)
-	defer edb.Close()
+type Person struct {
+	FirstName string `edgedb:"first_name"`
+	LastName  string `edgedb:"last_name"`
+}
+
+type Movie struct {
+	Title    string   `edgedb:"title"`
+	Year     int64    `edgedb:"year"`
+	Director Person   `edgedb:"director"`
+	Actors   []Person `edgedb:"actors"`
+}
+
+func TestTutorial(t *testing.T) {
+	opts := ConnConfig{"edgedb", "edgedb"}
+	conn0, _ := Connect(opts)
+	defer conn0.Close()
 
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	result := []interface{}{}
-	err = edb.Query("CREATE DATABASE "+dbName+";", &result)
-	assert.Nil(t, err)
+	err := conn0.Query("CREATE DATABASE "+dbName+";", &[]interface{}{})
+	require.Nil(t, err)
+
 	defer func() {
-		result := []interface{}{}
-		err := edb.Query("DROP DATABASE "+dbName+";", &result)
-		assert.Nil(t, err)
-		assert.Equal(t, []interface{}{}, result)
+		conn0.Query("DROP DATABASE "+dbName+";", &types.Set{})
 	}()
-	assert.Equal(t, []interface{}{}, result)
 
-	options = ConnConfig{dbName, "edgedb"}
-	edb2, err := Connect(options)
-	assert.Nil(t, err)
-	defer edb2.Close()
+	opts = ConnConfig{dbName, "edgedb"}
+	conn, _ := Connect(opts)
+	defer conn.Close()
 
-	withDB := func(fun func(t *testing.T, edb *Conn)) func(t *testing.T) {
-		return func(t *testing.T) {
-			fun(t, edb2)
-		}
-	}
-
-	t.Run("migrate", withDB(testMigration))
-	t.Run("insert movie", withDB(testInsertMovie))
-}
-
-func testMigration(t *testing.T, edb *Conn) {
-	result := []interface{}{}
-	err := edb.Query(`
+	err = conn.Query(`
 		START MIGRATION TO {
 			module default {
 				type Movie {
@@ -62,30 +56,18 @@ func testMigration(t *testing.T, edb *Conn) {
 					required property last_name -> str;
 				}
 			}
-		};
-	`, &result)
-	assert.Nil(t, err)
-	assert.Equal(t, []interface{}{}, result)
+		};`,
+		&[]interface{}{},
+	)
+	require.Nil(t, err)
 
-	err = edb.Query(`POPULATE MIGRATION;`, &result)
-	assert.Nil(t, err)
-	assert.Equal(t, []interface{}{}, result)
+	err = conn.Query(`POPULATE MIGRATION;`, &[]interface{}{})
+	require.Nil(t, err)
 
-	err = edb.Query(`COMMIT MIGRATION;`, &result)
-	assert.Nil(t, err)
-	assert.Equal(t, []interface{}{}, result)
+	err = conn.Query(`COMMIT MIGRATION;`, &[]interface{}{})
+	require.Nil(t, err)
 
-	err = edb.Query(`
-		SELECT schema::ObjectType.name
-		FILTER schema::ObjectType.name LIKE 'default::%'
-	`, &result)
-	assert.Nil(t, err)
-	assert.Equal(t, []interface{}{"default::Movie", "default::Person"}, result)
-}
-
-func testInsertMovie(t *testing.T, edb *Conn) {
-	var result interface{} = 1
-	err := edb.Query(`
+	err = conn.Query(`
 		INSERT Movie {
 			title := 'Blade Runner 2049',
 			year := 2017,
@@ -109,16 +91,80 @@ func testInsertMovie(t *testing.T, edb *Conn) {
 					last_name := 'de Armas',
 				}),
 			}
-		};
-	`, &result)
-	assert.Nil(t, err)
+		};`,
+		&[]interface{}{},
+	)
+	require.Nil(t, err)
 
-	object := result.([]interface{})[0].(types.Object)
-	id := object["id"]
-	// ids are not deterministic so just check that there is one
-	assert.IsType(t, types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, id)
+	err = conn.Query(`
+		INSERT Movie {
+				title := 'Dune',
+				director := (
+						SELECT Person
+						FILTER
+								# the last name is sufficient
+								# to identify the right person
+								.last_name = 'Villeneuve'
+						# the LIMIT is needed to satisfy the single
+						# link requirement validation
+						LIMIT 1
+				)
+		};`,
+		&[]interface{}{},
+	)
+	require.Nil(t, err)
 
-	delete(object, "id")
-	expected := []interface{}{types.Object{}}
-	assert.Equal(t, expected, result)
+	var out []Movie
+
+	err = conn.Query(`
+		SELECT Movie {
+				title,
+				year,
+				director: {
+						first_name,
+						last_name
+				},
+				actors: {
+						first_name,
+						last_name
+				}
+		}`,
+		&out,
+	)
+	require.Nil(t, err)
+
+	expected := []Movie{
+		Movie{
+			Title: "Blade Runner 2049",
+			Year:  int64(2017),
+			Director: Person{
+				FirstName: "Denis",
+				LastName:  "Villeneuve",
+			},
+			Actors: []Person{
+				Person{
+					FirstName: "Harrison",
+					LastName:  "Ford",
+				},
+				Person{
+					FirstName: "Ryan",
+					LastName:  "Gosling",
+				},
+				Person{
+					FirstName: "Ana",
+					LastName:  "de Armas",
+				},
+			},
+		},
+		Movie{
+			Title: "Dune",
+			Director: Person{
+				FirstName: "Denis",
+				LastName:  "Villeneuve",
+			},
+			Actors: []Person{},
+		},
+	}
+
+	assert.Equal(t, expected, out)
 }

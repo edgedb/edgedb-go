@@ -40,6 +40,8 @@ func Pop(bts *[]byte) CodecLookup {
 		id := protocol.PopUUID(bts)
 
 		switch descriptorType {
+		case setType:
+			lookup[id] = popSetCodec(bts, id, codecs)
 		case objectType:
 			lookup[id] = popObjectCodec(bts, id, codecs)
 		case baseScalarType:
@@ -56,6 +58,48 @@ func Pop(bts *[]byte) CodecLookup {
 		codecs = append(codecs, lookup[id])
 	}
 	return lookup
+}
+
+func popSetCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
+	n := protocol.PopUint16(bts)
+	return &Set{codecs[n]}
+}
+
+type Set struct {
+	child DecodeEncoder
+}
+
+func (c *Set) Decode(bts *[]byte) interface{} {
+	buf := protocol.PopBytes(bts)
+
+	dimensions := []dimension{}
+	dimCount := int(int32(protocol.PopUint32(&buf))) // number of dimensions
+
+	// todo return empty set if dimCount is 0
+
+	protocol.PopUint32(&buf) // reserved
+	protocol.PopUint32(&buf) // reserved
+
+	for i := 0; i < dimCount; i++ {
+		upper := int32(protocol.PopUint32(&buf))
+		lower := int32(protocol.PopUint32(&buf))
+		dimensions = append(dimensions, dimension{upper, lower})
+	}
+
+	elmCount := 0
+	for _, dim := range dimensions {
+		elmCount += int(dim.upper - dim.lower + 1)
+	}
+
+	out := make(types.Set, elmCount)
+	for i := 0; i < elmCount; i++ {
+		out[i] = c.child.Decode(&buf)
+	}
+	return out
+}
+
+func (c *Set) Encode(bts *[]byte, val interface{}) {
+	panic("not implemented")
 }
 
 func popObjectCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
@@ -96,18 +140,25 @@ type objectField struct {
 
 // Decode an object
 func (c *Object) Decode(bts *[]byte) interface{} {
-	protocol.PopUint32(bts) // data length
-	elmCount := int(int32(protocol.PopUint32(bts)))
+	buf := protocol.PopBytes(bts)
+	elmCount := int(int32(protocol.PopUint32(&buf)))
 	out := make(types.Object)
+
 	for i := 0; i < elmCount; i++ {
-		protocol.PopUint32(bts) // reserved
+		protocol.PopUint32(&buf) // reserved
 		field := c.fields[i]
-		if field.name == "__tid__" {
-			field.codec.Decode(bts)
-		} else {
-			out[field.name] = field.codec.Decode(bts)
+
+		switch int32(protocol.PeekUint32(&buf)) {
+		case -1:
+			// element length -1 means missing field
+			// https://www.edgedb.com/docs/internals/protocol/dataformats#tuple-namedtuple-and-object
+			protocol.PopUint32(&buf)
+			out[field.name] = types.Set{}
+		default:
+			out[field.name] = field.codec.Decode(&buf)
 		}
 	}
+
 	return out
 }
 

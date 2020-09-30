@@ -1,20 +1,21 @@
 package marshal
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/fmoor/edgedb-golang/edgedb/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSetOfScalar(t *testing.T) {
+func TestMarshalSetOfScalar(t *testing.T) {
 	var result interface{} = &[]int64{}
 	input := types.Set{int64(3), int64(5), int64(8)}
 	Marshal(&result, input)
 	assert.Equal(t, []int64{3, 5, 8}, *(result.(*[]int64)))
 }
 
-func TestSetOfObject(t *testing.T) {
+func TestMarshalSetOfObject(t *testing.T) {
 
 	type Database struct {
 		Name string     `edgedb:"name"`
@@ -46,4 +47,23 @@ func TestSetOfObject(t *testing.T) {
 	var result interface{} = &[]Database{}
 	Marshal(&result, input)
 	assert.Equal(t, expected, *(result.(*[]Database)))
+}
+
+func TestSetNilScalar(t *testing.T) {
+	var out int64
+	in := types.Set{}
+
+	setScalar(reflect.ValueOf(out), reflect.ValueOf(in))
+
+	assert.Equal(t, int64(0), out)
+}
+
+func TestSetScalar(t *testing.T) {
+	out := int64(0)
+	in := int64(27)
+
+	ov := reflect.ValueOf(&out)
+	setScalar(ov.Elem(), reflect.ValueOf(in))
+
+	assert.Equal(t, int64(27), out)
 }

@@ -21,8 +21,18 @@ func setValue(out reflect.Value, in reflect.Value) {
 	case reflect.Slice:
 		setSlice(out, in)
 	default:
-		out.Set(in)
+		setScalar(out, in)
 	}
+}
+
+func setScalar(out reflect.Value, in reflect.Value) {
+	if in.Kind() == reflect.Slice {
+		// assume in's value is an empty slice
+		// which represents a null value
+		// https://www.edgedb.com/docs/internals/protocol/dataformats#tuple-namedtuple-and-object
+		return
+	}
+	out.Set(in)
 }
 
 func setSlice(out reflect.Value, in reflect.Value) {
