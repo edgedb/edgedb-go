@@ -2,7 +2,8 @@ package protocol
 
 import (
 	"encoding/binary"
-	"fmt"
+
+	"github.com/fmoor/edgedb-golang/edgedb/types"
 )
 
 func PopUint8(bts *[]byte) uint8 {
@@ -73,14 +74,11 @@ func PushString(bts *[]byte, val string) {
 	*bts = append(*bts, val...)
 }
 
-type UUID string
-
-func PopUUID(bts *[]byte) UUID {
-	b := *bts
-	val := fmt.Sprintf("%x-%x-%x-%x-%x-%x",
-		b[:4], b[4:6], b[6:8], b[8:10], b[10:12], b[12:16])
-	*bts = b[16:]
-	return UUID(val)
+func PopUUID(bts *[]byte) types.UUID {
+	var id types.UUID
+	copy(id[:], (*bts)[:16])
+	*bts = (*bts)[16:]
+	return id
 }
 
 func PopMessage(bts *[]byte) []byte {

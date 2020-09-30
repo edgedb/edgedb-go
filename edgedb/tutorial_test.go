@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fmoor/edgedb-golang/edgedb/protocol"
+	"github.com/fmoor/edgedb-golang/edgedb/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,10 +19,12 @@ func TestCreateDB(t *testing.T) {
 
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	result, err := edb.Query("CREATE DATABASE " + dbName + ";")
+	result := []interface{}{}
+	err = edb.Query("CREATE DATABASE "+dbName+";", &result)
 	assert.Nil(t, err)
 	defer func() {
-		result, err := edb.Query("DROP DATABASE " + dbName + ";")
+		result := []interface{}{}
+		err := edb.Query("DROP DATABASE "+dbName+";", &result)
 		assert.Nil(t, err)
 		assert.Equal(t, []interface{}{}, result)
 	}()
@@ -44,7 +46,8 @@ func TestCreateDB(t *testing.T) {
 }
 
 func testMigration(t *testing.T, edb *Conn) {
-	result, err := edb.Query(`
+	result := []interface{}{}
+	err := edb.Query(`
 		START MIGRATION TO {
 			module default {
 				type Movie {
@@ -60,28 +63,29 @@ func testMigration(t *testing.T, edb *Conn) {
 				}
 			}
 		};
-	`)
+	`, &result)
 	assert.Nil(t, err)
 	assert.Equal(t, []interface{}{}, result)
 
-	result, err = edb.Query(`POPULATE MIGRATION;`)
+	err = edb.Query(`POPULATE MIGRATION;`, &result)
 	assert.Nil(t, err)
 	assert.Equal(t, []interface{}{}, result)
 
-	result, err = edb.Query(`COMMIT MIGRATION;`)
+	err = edb.Query(`COMMIT MIGRATION;`, &result)
 	assert.Nil(t, err)
 	assert.Equal(t, []interface{}{}, result)
 
-	result, err = edb.Query(`
+	err = edb.Query(`
 		SELECT schema::ObjectType.name
 		FILTER schema::ObjectType.name LIKE 'default::%'
-	`)
+	`, &result)
 	assert.Nil(t, err)
 	assert.Equal(t, []interface{}{"default::Movie", "default::Person"}, result)
 }
 
 func testInsertMovie(t *testing.T, edb *Conn) {
-	result, err := edb.Query(`
+	var result interface{} = 1
+	err := edb.Query(`
 		INSERT Movie {
 			title := 'Blade Runner 2049',
 			year := 2017,
@@ -106,15 +110,15 @@ func testInsertMovie(t *testing.T, edb *Conn) {
 				}),
 			}
 		};
-	`)
+	`, &result)
 	assert.Nil(t, err)
 
-	object := result.([]interface{})[0].(map[string]interface{})
+	object := result.([]interface{})[0].(types.Object)
 	id := object["id"]
 	// ids are not deterministic so just check that there is one
-	assert.IsType(t, protocol.UUID(""), id)
+	assert.IsType(t, types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, id)
 
 	delete(object, "id")
-	expected := []interface{}{map[string]interface{}{}}
+	expected := []interface{}{types.Object{}}
 	assert.Equal(t, expected, result)
 }

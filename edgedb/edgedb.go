@@ -7,12 +7,14 @@ import (
 	"io"
 	"net"
 
+	"github.com/fmoor/edgedb-golang/edgedb/marshal"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/aspect"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/cardinality"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/codecs"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/format"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/message"
+	"github.com/fmoor/edgedb-golang/edgedb/types"
 )
 
 // Conn client
@@ -71,12 +73,25 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 	return rcv
 }
 
-func (edb *Conn) Query(query string) (interface{}, error) {
-	return edb.QueryWithArgs(query, map[string]interface{}{})
+func (edb *Conn) Query(query string, out interface{}) error {
+	return edb.QueryWithArgs(query, out, map[string]interface{}{})
 }
 
-// Query the database
-func (edb *Conn) QueryWithArgs(query string, args map[string]interface{}) (interface{}, error) {
+func (edb *Conn) QueryWithArgs(query string, out interface{}, args map[string]interface{}) error {
+	// todo assert that out is a pointer to a slice
+	result, err := edb.query(query, args)
+	if err != nil {
+		return err
+	} else if len(result) == 0 {
+		return nil
+	}
+
+	marshal.Marshal(&out, result)
+
+	return nil
+}
+
+func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, format.Binary)
@@ -87,8 +102,8 @@ func (edb *Conn) QueryWithArgs(query string, args map[string]interface{}) (inter
 
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
-	var argumentCodecID protocol.UUID
-	var resultCodecID protocol.UUID
+	var argumentCodecID types.UUID
+	var resultCodecID types.UUID
 
 	rcv := edb.writeAndRead(pyld)
 	for len(rcv) > 4 {
@@ -168,7 +183,7 @@ func (edb *Conn) QueryWithArgs(query string, args map[string]interface{}) (inter
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
 	rcv = edb.writeAndRead(pyld)
-	out := []interface{}{}
+	out := make(types.Set, 0)
 
 	for len(rcv) > 0 {
 		bts := protocol.PopMessage(&rcv)

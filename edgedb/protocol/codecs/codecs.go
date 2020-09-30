@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
+	"github.com/fmoor/edgedb-golang/edgedb/types"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 // CodecLookup ...
-type CodecLookup map[protocol.UUID]DecodeEncoder
+type CodecLookup map[types.UUID]DecodeEncoder
 
 // DecodeEncoder interface
 type DecodeEncoder interface {
@@ -57,7 +58,7 @@ func Pop(bts *[]byte) CodecLookup {
 	return lookup
 }
 
-func popObjectCodec(bts *[]byte, id protocol.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popObjectCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
 	fields := []objectField{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -97,7 +98,7 @@ type objectField struct {
 func (c *Object) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	elmCount := int(int32(protocol.PopUint32(bts)))
-	out := map[string]interface{}{}
+	out := make(types.Object)
 	for i := 0; i < elmCount; i++ {
 		protocol.PopUint32(bts) // reserved
 		field := c.fields[i]
@@ -115,44 +116,44 @@ func (c *Object) Encode(bts *[]byte, val interface{}) {
 	panic("objects can't be query parameters")
 }
 
-func getBaseScalarCodec(id protocol.UUID) DecodeEncoder {
+func getBaseScalarCodec(id types.UUID) DecodeEncoder {
 	switch id {
-	case "00000000-0000-0000-0000-0000-00000100":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}:
 		return &UUID{}
-	case "00000000-0000-0000-0000-0000-00000101":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}:
 		return &String{}
-	case "00000000-0000-0000-0000-0000-00000102":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}:
 		return &Bytes{}
-	case "00000000-0000-0000-0000-0000-00000103":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}:
 		return &Int16{}
-	case "00000000-0000-0000-0000-0000-00000104":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}:
 		return &Int32{}
-	case "00000000-0000-0000-0000-0000-00000105":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}:
 		return &Int64{}
-	case "00000000-0000-0000-0000-0000-00000106":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}:
 		return &Float32{}
-	case "00000000-0000-0000-0000-0000-00000107":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}:
 		return &Float64{}
-	case "00000000-0000-0000-0000-0000-00000108":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}:
 		panic("decimal type not implemented") // todo implement
-	case "00000000-0000-0000-0000-0000-00000109":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}:
 		return &Bool{}
-	case "00000000-0000-0000-0000-0000-0000010a":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xa}:
 		return &DateTime{}
-	case "00000000-0000-0000-0000-0000-0000010b":
-		return &LocalDateTime{}
-	case "00000000-0000-0000-0000-0000-0000010c":
-		return &LocalDate{}
-	case "00000000-0000-0000-0000-0000-0000010d":
-		return &LocalTime{}
-	case "00000000-0000-0000-0000-0000-0000010e":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xb}:
+		panic("cal::local_datetime type not implemented") // todo implement
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xc}:
+		panic("cal::local_date typep not implemented") // todo implement
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xd}:
+		panic("cal::local_time typep not implemented") // todo implement
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xe}:
 		return &Duration{}
-	case "00000000-0000-0000-0000-0000-0000010f":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}:
 		return &JSON{}
-	case "00000000-0000-0000-0000-0000-00000110":
+	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}:
 		panic("bigint type not implemented") // todo implement
 	default:
-		panic(fmt.Sprintf("unknown base scalar type descriptor id: %q", id))
+		panic(fmt.Sprintf("unknown base scalar type descriptor id: % x", id))
 	}
 }
 
@@ -167,7 +168,9 @@ func (c *UUID) Decode(bts *[]byte) interface{} {
 
 // Encode UUID
 func (c *UUID) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented, todo")
+	protocol.PushUint32(bts, uint32(16))
+	tmp := val.(types.UUID)
+	*bts = append(*bts, tmp[:]...)
 }
 
 // String codec
@@ -321,67 +324,6 @@ func (c *DateTime) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint64(bts, uint64(microseconds))
 }
 
-// LocalDateTime codec
-type LocalDateTime struct{}
-
-// Decode local datetime
-func (c *LocalDateTime) Decode(bts *[]byte) interface{} {
-	// todo this should return a date and time without a timezone
-	protocol.PopUint32(bts) // data length
-	val := int64(protocol.PopUint64(bts))
-	return time.Unix(0, 1_000*(val+946_684_800_000_000)).UTC()
-}
-
-// Encode local date time
-func (c *LocalDateTime) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented, todo")
-}
-
-// LocalDate codec
-type LocalDate struct{}
-
-// Decode local date
-func (c *LocalDate) Decode(bts *[]byte) interface{} {
-	// todo this should return a date without a time or timezone
-	protocol.PopUint32(bts) // data length
-	val := int32(protocol.PopUint32(bts))
-	delta, err := time.ParseDuration(fmt.Sprintf("%vh", 24*val))
-	if err != nil {
-		panic(err)
-	}
-	location, err := time.LoadLocation("UTC")
-	if err != nil {
-		panic(err)
-	}
-	return time.Date(2000, 1, 1, 0, 0, 0, 0, location).Add(delta)
-}
-
-// Encode local date
-func (c *LocalDate) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented, todo")
-}
-
-// LocalTime codec
-type LocalTime struct{}
-
-// Decode local time
-func (c *LocalTime) Decode(bts *[]byte) interface{} {
-	// todo this should probably return a different type
-	protocol.PopUint32(bts) // data length
-	val := int64(protocol.PopUint64(bts))
-	str := fmt.Sprintf("%vus", val)
-	duration, err := time.ParseDuration(str)
-	if err != nil {
-		panic(err)
-	}
-	return duration
-}
-
-// Encode local time
-func (c *LocalTime) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented, todo")
-}
-
 // Duration codec
 type Duration struct{}
 
@@ -421,10 +363,16 @@ func (c *JSON) Decode(bts *[]byte) interface{} {
 
 // Encode json
 func (c *JSON) Encode(bts *[]byte, val interface{}) {
-	panic("not implemented, todo")
+	buf, err := json.Marshal(val)
+	if err != nil {
+		panic(err)
+	}
+	protocol.PushUint32(bts, uint32(1+len(buf))) // data length
+	protocol.PushUint8(bts, 1)                   // json format, always 1
+	*bts = append(*bts, buf...)
 }
 
-func popTupleCodec(bts *[]byte, id protocol.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popTupleCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
 	fields := []DecodeEncoder{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -444,10 +392,10 @@ type Tuple struct {
 func (c *Tuple) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	elmCount := int(int32(protocol.PopUint32(bts)))
-	out := []interface{}{}
+	out := make(types.Tuple, elmCount)
 	for i := 0; i < elmCount; i++ {
 		protocol.PopUint32(bts) // reserved
-		out = append(out, c.fields[i].Decode(bts))
+		out[i] = c.fields[i].Decode(bts)
 	}
 	return out
 }
@@ -476,7 +424,7 @@ func (c *Tuple) Encode(bts *[]byte, val interface{}) {
 	*bts = append(*bts, tmp...)
 }
 
-func popNamedTupleCodec(bts *[]byte, id protocol.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popNamedTupleCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
 	fields := []namedTupleField{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -509,7 +457,7 @@ type NamedTuple struct {
 func (c *NamedTuple) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	elmCount := int(int32(protocol.PopUint32(bts)))
-	out := map[string]interface{}{}
+	out := make(types.NamedTuple)
 	for i := 0; i < elmCount; i++ {
 		protocol.PopUint32(bts) // reserved
 		field := c.fields[i]
@@ -537,7 +485,7 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 	*bts = append(*bts, tmp...)
 }
 
-func popArrayCodec(bts *[]byte, id protocol.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popArrayCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
 	index := protocol.PopUint16(bts)  // element type descriptor index
 	n := int(protocol.PopUint16(bts)) // number of array dimensions
 	for i := 0; i < n; i++ {
@@ -572,9 +520,9 @@ func (c *Array) Decode(bts *[]byte) interface{} {
 	for _, dim := range dimensions {
 		elmCount += int(dim.upper - dim.lower + 1)
 	}
-	out := []interface{}{}
+	out := make(types.Array, elmCount)
 	for i := 0; i < elmCount; i++ {
-		out = append(out, c.child.Decode(bts))
+		out[i] = c.child.Decode(bts)
 	}
 	return out
 }
