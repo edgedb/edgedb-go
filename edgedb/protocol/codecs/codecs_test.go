@@ -484,7 +484,7 @@ func TestEncodeNamedTuple(t *testing.T) {
 
 func TestDecodeArray(t *testing.T) {
 	bts := []byte{
-		0, 0, 0, 38, // data length
+		0, 0, 0, 56, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0x14, // reserved

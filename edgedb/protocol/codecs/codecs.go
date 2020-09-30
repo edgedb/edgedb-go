@@ -72,29 +72,23 @@ type Set struct {
 func (c *Set) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
 
-	dimensions := []dimension{}
-	dimCount := int(int32(protocol.PopUint32(&buf))) // number of dimensions
-
-	// todo return empty set if dimCount is 0
+	dimCount := protocol.PopUint32(&buf) // number of dimensions, either 0 or 1
+	if dimCount == 0 {
+		return types.Set{}
+	}
 
 	protocol.PopUint32(&buf) // reserved
 	protocol.PopUint32(&buf) // reserved
 
-	for i := 0; i < dimCount; i++ {
-		upper := int32(protocol.PopUint32(&buf))
-		lower := int32(protocol.PopUint32(&buf))
-		dimensions = append(dimensions, dimension{upper, lower})
-	}
-
-	elmCount := 0
-	for _, dim := range dimensions {
-		elmCount += int(dim.upper - dim.lower + 1)
-	}
+	upper := int32(protocol.PopUint32(&buf))
+	lower := int32(protocol.PopUint32(&buf))
+	elmCount := int(upper - lower + 1)
 
 	out := make(types.Set, elmCount)
 	for i := 0; i < elmCount; i++ {
 		out[i] = c.child.Decode(&buf)
 	}
+
 	return out
 }
 
@@ -141,6 +135,7 @@ type objectField struct {
 // Decode an object
 func (c *Object) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
+
 	elmCount := int(int32(protocol.PopUint32(&buf)))
 	out := make(types.Object)
 
@@ -345,7 +340,7 @@ func (c *Bool) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 1) // data length
 
 	// convert bool to uint8
-	var out uint8
+	var out uint8 = 0
 	if val.(bool) {
 		out = 1
 	}
@@ -403,11 +398,13 @@ type JSON struct{}
 func (c *JSON) Decode(bts *[]byte) interface{} {
 	n := protocol.PopUint32(bts) // data length
 	protocol.PopUint8(bts)       // json format, always 1
+
 	var val interface{}
 	err := json.Unmarshal((*bts)[:n-1], &val)
 	if err != nil {
 		panic(err)
 	}
+
 	*bts = (*bts)[n-1:]
 	return val
 }
@@ -431,6 +428,7 @@ func popTupleCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEnc
 		index := protocol.PopUint16(bts)
 		fields = append(fields, codecs[index])
 	}
+
 	return &Tuple{fields}
 }
 
@@ -441,13 +439,16 @@ type Tuple struct {
 
 // Decode a tuple
 func (c *Tuple) Decode(bts *[]byte) interface{} {
-	protocol.PopUint32(bts) // data length
-	elmCount := int(int32(protocol.PopUint32(bts)))
+	buf := protocol.PopBytes(bts)
+
+	elmCount := int(int32(protocol.PopUint32(&buf)))
 	out := make(types.Tuple, elmCount)
+
 	for i := 0; i < elmCount; i++ {
-		protocol.PopUint32(bts) // reserved
-		out[i] = c.fields[i].Decode(bts)
+		protocol.PopUint32(&buf) // reserved
+		out[i] = c.fields[i].Decode(&buf)
 	}
+
 	return out
 }
 
@@ -506,14 +507,17 @@ type NamedTuple struct {
 
 // Decode a named tuple
 func (c *NamedTuple) Decode(bts *[]byte) interface{} {
-	protocol.PopUint32(bts) // data length
-	elmCount := int(int32(protocol.PopUint32(bts)))
+	buf := protocol.PopBytes(bts)
+
+	elmCount := int(int32(protocol.PopUint32(&buf)))
 	out := make(types.NamedTuple)
+
 	for i := 0; i < elmCount; i++ {
-		protocol.PopUint32(bts) // reserved
+		protocol.PopUint32(&buf) // reserved
 		field := c.fields[i]
-		out[field.name] = field.codec.Decode(bts)
+		out[field.name] = field.codec.Decode(&buf)
 	}
+
 	return out
 }
 
@@ -526,6 +530,7 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 	elmCount := len(c.fields)
 	protocol.PushUint32(&tmp, uint32(elmCount))
 	in := val.(map[string]interface{})
+
 	for i := 0; i < elmCount; i++ {
 		protocol.PushUint32(&tmp, 0) // reserved
 		field := c.fields[i]
@@ -537,11 +542,13 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 }
 
 func popArrayCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
-	index := protocol.PopUint16(bts)  // element type descriptor index
+	index := protocol.PopUint16(bts) // element type descriptor index
+
 	n := int(protocol.PopUint16(bts)) // number of array dimensions
 	for i := 0; i < n; i++ {
 		protocol.PopUint32(bts) //array dimension
 	}
+
 	return &Array{codecs[index]}
 }
 
@@ -550,31 +557,27 @@ type Array struct {
 	child DecodeEncoder
 }
 
-type dimension struct {
-	upper int32
-	lower int32
-}
-
 // Decode an array
 func (c *Array) Decode(bts *[]byte) interface{} {
-	protocol.PopUint32(bts) // data length
-	dimensions := []dimension{}
-	dimCount := int(int32(protocol.PopUint32(bts))) // number of dimensions
-	protocol.PopUint32(bts)                         // reserved
-	protocol.PopUint32(bts)                         // reserved
-	for i := 0; i < dimCount; i++ {
-		upper := int32(protocol.PopUint32(bts))
-		lower := int32(protocol.PopUint32(bts))
-		dimensions = append(dimensions, dimension{upper, lower})
+	buf := protocol.PopBytes(bts)
+
+	dimCount := protocol.PopUint32(&buf) // number of dimensions is 1 or 0
+	if dimCount == 0 {
+		return types.Array{}
 	}
-	elmCount := 0
-	for _, dim := range dimensions {
-		elmCount += int(dim.upper - dim.lower + 1)
-	}
+
+	protocol.PopUint32(&buf) // reserved
+	protocol.PopUint32(&buf) // reserved
+
+	upper := int32(protocol.PopUint32(&buf))
+	lower := int32(protocol.PopUint32(&buf))
+	elmCount := int(upper - lower + 1)
+
 	out := make(types.Array, elmCount)
 	for i := 0; i < elmCount; i++ {
-		out[i] = c.child.Decode(bts)
+		out[i] = c.child.Decode(&buf)
 	}
+
 	return out
 }
 
@@ -587,6 +590,7 @@ func (c *Array) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(&tmp, 1) // number of dimensions
 	protocol.PushUint32(&tmp, 0) // reserved
 	protocol.PushUint32(&tmp, 0) // reserved
+	// todo test encoding array with len() != 3
 	protocol.PushUint32(&tmp, 3) // dimension.upper
 	protocol.PushUint32(&tmp, 1) // dimension.lower
 
