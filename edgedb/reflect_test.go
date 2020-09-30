@@ -1,7 +1,6 @@
 package edgedb
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/fmoor/edgedb-golang/edgedb/types"
@@ -36,7 +35,6 @@ func TestReflectStruct(t *testing.T) {
 
 	out := make([]Database, 0)
 	err := edb.Query("SELECT sys::Database{name, id}", &out)
-	fmt.Println(out)
 	assert.Nil(t, err)
 
 	expectedNames := []string{"edgedb", "edgedb0"}
