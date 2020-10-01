@@ -73,18 +73,21 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 	return rcv
 }
 
+// Transaction creates a new trasaction struct.
 func (edb *Conn) Transaction() error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.transaction
 	// todo implement Transaction()
 	panic("not implemented")
 }
 
+// Execute an EdgeQL command (or commands).
 func (edb *Conn) Execute(query string) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
 	// todo implement Execute()
 	panic("not implemented")
 }
 
+// QueryOne runs a singleton-returning query and return its element.
 func (edb *Conn) QueryOne(query string, out interface{}, args map[string]interface{}) error {
 	// todo rename (edb *Conn) to (conn *Conn) everywhere
 
@@ -93,6 +96,7 @@ func (edb *Conn) QueryOne(query string, out interface{}, args map[string]interfa
 	panic("not implemented")
 }
 
+// Query runs a query and returns the results.
 func (edb *Conn) Query(query string, out interface{}) error {
 	return edb.QueryWithArgs(query, out, map[string]interface{}{})
 }
@@ -110,12 +114,14 @@ func (edb *Conn) QueryWithArgs(query string, out interface{}, args map[string]in
 	return nil
 }
 
+// QueryJSON runs a query and return the results as JSON.
 func (edb *Conn) QueryJSON(query string, out *string, args map[string]interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_json
 	// todo implement QueryJSON()
 	panic("not implemented")
 }
 
+// QueryOneJSON runs a singleton-returning query and return its element in JSON
 func (edb *Conn) QueryOneJSON(query string, out *string, args map[string]interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one_json
 	// todo implement QueryOneJSON()
@@ -240,7 +246,7 @@ func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}
 	return out, nil
 }
 
-// Connect to a database
+// Connect establishes a connection to an EdgeDB server.
 func Connect(config ConnConfig) (edb *Conn, err error) {
 	conn, err := net.Dial("tcp", "127.0.0.1:5656")
 	if err != nil {
