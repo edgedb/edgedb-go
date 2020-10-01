@@ -87,7 +87,6 @@ func (edb *Conn) QueryWithArgs(query string, out interface{}, args map[string]in
 	}
 
 	marshal.Marshal(&out, result)
-
 	return nil
 }
 

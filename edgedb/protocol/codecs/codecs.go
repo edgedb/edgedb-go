@@ -11,14 +11,14 @@ import (
 )
 
 const (
-	setType = iota // todo implement
+	setType = iota
 	objectType
 	baseScalarType
-	scalarType // todo implement
+	scalarType
 	tupleType
-	namedTupleType // todo implement
+	namedTupleType
 	arrayType
-	enumType // todo implement
+	enumType
 )
 
 // CodecLookup ...
@@ -46,14 +46,18 @@ func Pop(bts *[]byte) CodecLookup {
 			lookup[id] = popObjectCodec(bts, id, codecs)
 		case baseScalarType:
 			lookup[id] = getBaseScalarCodec(id)
+		case scalarType:
+			panic("scalar type descriptor not implemented") // todo
 		case tupleType:
 			lookup[id] = popTupleCodec(bts, id, codecs)
 		case namedTupleType:
 			lookup[id] = popNamedTupleCodec(bts, id, codecs)
 		case arrayType:
 			lookup[id] = popArrayCodec(bts, id, codecs)
+		case enumType:
+			panic("enum type descriptor not implemented") // todo
 		default:
-			panic(fmt.Sprintf("unknown descriptor type %x:\n% x\n", descriptorType, bts))
+			panic(fmt.Sprintf("unknown descriptor type 0x%x:\n% x\n", descriptorType, bts))
 		}
 		codecs = append(codecs, lookup[id])
 	}
