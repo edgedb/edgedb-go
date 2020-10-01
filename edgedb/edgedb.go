@@ -73,6 +73,26 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 	return rcv
 }
 
+func (edb *Conn) Transaction() error {
+	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.transaction
+	// todo implement Transaction()
+	panic("not implemented")
+}
+
+func (edb *Conn) Execute(query string) error {
+	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
+	// todo implement Execute()
+	panic("not implemented")
+}
+
+func (edb *Conn) QueryOne(query string, out interface{}, args map[string]interface{}) error {
+	// todo rename (edb *Conn) to (conn *Conn) everywhere
+
+	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one
+	// todo implement QueryOne()
+	panic("not implemented")
+}
+
 func (edb *Conn) Query(query string, out interface{}) error {
 	return edb.QueryWithArgs(query, out, map[string]interface{}{})
 }
@@ -88,6 +108,18 @@ func (edb *Conn) QueryWithArgs(query string, out interface{}, args map[string]in
 
 	marshal.Marshal(&out, result)
 	return nil
+}
+
+func (edb *Conn) QueryJSON(query string, out *string, args map[string]interface{}) error {
+	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_json
+	// todo implement QueryJSON()
+	panic("not implemented")
+}
+
+func (edb *Conn) QueryOneJSON(query string, out *string, args map[string]interface{}) error {
+	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one_json
+	// todo implement QueryOneJSON()
+	panic("not implemented")
 }
 
 func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}, error) {
