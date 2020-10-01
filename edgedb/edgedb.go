@@ -234,8 +234,9 @@ func Connect(config ConnConfig) (edb *Conn, err error) {
 
 	for len(rcv) > 0 {
 		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
 
-		switch protocol.PopUint8(&bts) {
+		switch mType {
 		case message.ServerHandshake:
 			// todo close the connection if protocol version can't be supported
 			// https://edgedb.com/docs/internals/protocol/overview#connection-phase
