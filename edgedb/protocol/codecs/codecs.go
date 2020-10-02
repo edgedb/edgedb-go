@@ -193,9 +193,9 @@ func getBaseScalarCodec(id types.UUID) DecodeEncoder {
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xb}:
 		panic("cal::local_datetime type not implemented") // todo implement
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xc}:
-		panic("cal::local_date typep not implemented") // todo implement
+		panic("cal::local_date type not implemented") // todo implement
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xd}:
-		panic("cal::local_time typep not implemented") // todo implement
+		panic("cal::local_time type not implemented") // todo implement
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xe}:
 		return &Duration{}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}:
