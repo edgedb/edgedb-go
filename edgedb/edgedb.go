@@ -31,24 +31,24 @@ type ConnConfig struct {
 }
 
 // Close the db connection
-func (edb *Conn) Close() error {
-	// todo adjust return value if edb.conn.Close() close returns an error
-	defer edb.conn.Close()
+func (conn *Conn) Close() error {
+	// todo adjust return value if conn.conn.Close() close returns an error
+	defer conn.conn.Close()
 	msg := []byte{message.Terminate, 0, 0, 0, 4}
-	if _, err := edb.conn.Write(msg); err != nil {
+	if _, err := conn.conn.Write(msg); err != nil {
 		return fmt.Errorf("error while terminating: %v", err)
 	}
 	return nil
 }
 
-func (edb *Conn) writeAndRead(bts []byte) []byte {
+func (conn *Conn) writeAndRead(bts []byte) []byte {
 	// tmp := bts
 	// for len(tmp) > 0 {
 	// 	msg := protocol.PopMessage(&tmp)
 	// 	fmt.Printf("writing message %q:\n% x\n", msg[0], msg)
 	// }
 
-	if _, err := edb.conn.Write(bts); err != nil {
+	if _, err := conn.conn.Write(bts); err != nil {
 		panic(err)
 	}
 
@@ -57,7 +57,7 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 	var err error
 	for n == 1024 {
 		tmp := make([]byte, 1024)
-		n, err = edb.conn.Read(tmp)
+		n, err = conn.conn.Read(tmp)
 		if err != nil {
 			panic(err)
 		}
@@ -74,36 +74,34 @@ func (edb *Conn) writeAndRead(bts []byte) []byte {
 }
 
 // Transaction creates a new trasaction struct.
-func (edb *Conn) Transaction() error {
+func (conn *Conn) Transaction() error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.transaction
 	// todo implement Transaction()
 	panic("not implemented")
 }
 
 // Execute an EdgeQL command (or commands).
-func (edb *Conn) Execute(query string) error {
+func (conn *Conn) Execute(query string) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
 	// todo implement Execute()
 	panic("not implemented")
 }
 
 // QueryOne runs a singleton-returning query and return its element.
-func (edb *Conn) QueryOne(query string, out interface{}, args map[string]interface{}) error {
-	// todo rename (edb *Conn) to (conn *Conn) everywhere
-
+func (conn *Conn) QueryOne(query string, out interface{}, args map[string]interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one
 	// todo implement QueryOne()
 	panic("not implemented")
 }
 
 // Query runs a query and returns the results.
-func (edb *Conn) Query(query string, out interface{}) error {
-	return edb.QueryWithArgs(query, out, map[string]interface{}{})
+func (conn *Conn) Query(query string, out interface{}) error {
+	return conn.QueryWithArgs(query, out, map[string]interface{}{})
 }
 
-func (edb *Conn) QueryWithArgs(query string, out interface{}, args map[string]interface{}) error {
+func (conn *Conn) QueryWithArgs(query string, out interface{}, args map[string]interface{}) error {
 	// todo assert that out is a pointer to a slice
-	result, err := edb.query(query, args)
+	result, err := conn.query(query, args)
 	if err != nil {
 		return err
 	} else if len(result) == 0 {
@@ -115,20 +113,20 @@ func (edb *Conn) QueryWithArgs(query string, out interface{}, args map[string]in
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (edb *Conn) QueryJSON(query string, out *string, args map[string]interface{}) error {
+func (conn *Conn) QueryJSON(query string, out *string, args map[string]interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_json
 	// todo implement QueryJSON()
 	panic("not implemented")
 }
 
 // QueryOneJSON runs a singleton-returning query and return its element in JSON
-func (edb *Conn) QueryOneJSON(query string, out *string, args map[string]interface{}) error {
+func (conn *Conn) QueryOneJSON(query string, out *string, args map[string]interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one_json
 	// todo implement QueryOneJSON()
 	panic("not implemented")
 }
 
-func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}, error) {
+func (conn *Conn) query(query string, args map[string]interface{}) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, format.Binary)
@@ -142,7 +140,7 @@ func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}
 	var argumentCodecID types.UUID
 	var resultCodecID types.UUID
 
-	rcv := edb.writeAndRead(pyld)
+	rcv := conn.writeAndRead(pyld)
 	for len(rcv) > 4 {
 		bts := protocol.PopMessage(&rcv)
 		mType := protocol.PopUint8(&bts)
@@ -174,7 +172,7 @@ func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}
 	pyld = msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv = edb.writeAndRead(pyld)
+	rcv = conn.writeAndRead(pyld)
 
 	codecLookup := codecs.CodecLookup{}
 
@@ -219,7 +217,7 @@ func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}
 	pyld = msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv = edb.writeAndRead(pyld)
+	rcv = conn.writeAndRead(pyld)
 	out := make(types.Set, 0)
 
 	for len(rcv) > 0 {
@@ -247,12 +245,12 @@ func (edb *Conn) query(query string, args map[string]interface{}) ([]interface{}
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(config ConnConfig) (edb *Conn, err error) {
-	conn, err := net.Dial("tcp", "127.0.0.1:5656")
+func Connect(config ConnConfig) (conn *Conn, err error) {
+	tcpConn, err := net.Dial("tcp", "127.0.0.1:5656")
 	if err != nil {
-		return edb, fmt.Errorf("tcp connection error while connecting: %v", err)
+		return conn, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}
-	edb = &Conn{conn, nil}
+	conn = &Conn{tcpConn, nil}
 
 	msg := []byte{message.ClientHandshake, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // major version
@@ -265,7 +263,7 @@ func Connect(config ConnConfig) (edb *Conn, err error) {
 	protocol.PushUint16(&msg, 0) // no extensions
 	protocol.PutMsgLength(msg)
 
-	rcv := edb.writeAndRead(msg)
+	rcv := conn.writeAndRead(msg)
 
 	var secret []byte
 
@@ -280,7 +278,7 @@ func Connect(config ConnConfig) (edb *Conn, err error) {
 		case message.ServerKeyData:
 			secret = bts[5:]
 		case message.ReadyForCommand:
-			return &Conn{conn, secret}, nil
+			return &Conn{tcpConn, secret}, nil
 		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
@@ -289,5 +287,5 @@ func Connect(config ConnConfig) (edb *Conn, err error) {
 			panic(message)
 		}
 	}
-	return edb, nil
+	return conn, nil
 }
