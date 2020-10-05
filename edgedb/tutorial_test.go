@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fmoor/edgedb-golang/edgedb/options"
 	"github.com/fmoor/edgedb-golang/edgedb/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,7 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
-	opts := ConnConfig{"edgedb", "edgedb"}
+	opts := options.FromDSN("edgedb://edgedb@localhost:5656/edgedb")
 	conn0, _ := Connect(opts)
 	defer conn0.Close()
 
@@ -37,7 +38,7 @@ func TestTutorial(t *testing.T) {
 		conn0.Query("DROP DATABASE "+dbName+";", &types.Set{})
 	}()
 
-	opts = ConnConfig{dbName, "edgedb"}
+	opts = options.Options{Database: dbName, User: "edgedb"}
 	conn, _ := Connect(opts)
 	defer conn.Close()
 

@@ -8,6 +8,7 @@ import (
 	"net"
 
 	"github.com/fmoor/edgedb-golang/edgedb/marshal"
+	"github.com/fmoor/edgedb-golang/edgedb/options"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/aspect"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/cardinality"
@@ -21,13 +22,6 @@ import (
 type Conn struct {
 	conn   io.ReadWriteCloser
 	secret []byte
-}
-
-// ConnConfig options for configuring a connection
-type ConnConfig struct {
-	Database string
-	User     string
-	// todo support authentication etc.
 }
 
 // Close the db connection
@@ -245,7 +239,7 @@ func (conn *Conn) query(query string, args map[string]interface{}) ([]interface{
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(config ConnConfig) (conn *Conn, err error) {
+func Connect(opts options.Options) (conn *Conn, err error) {
 	tcpConn, err := net.Dial("tcp", "127.0.0.1:5656")
 	if err != nil {
 		return conn, fmt.Errorf("tcp connection error while connecting: %v", err)
@@ -257,9 +251,9 @@ func Connect(config ConnConfig) (conn *Conn, err error) {
 	protocol.PushUint16(&msg, 8) // minor version
 	protocol.PushUint16(&msg, 2) // number of parameters
 	protocol.PushString(&msg, "database")
-	protocol.PushString(&msg, config.Database)
+	protocol.PushString(&msg, opts.Database)
 	protocol.PushString(&msg, "user")
-	protocol.PushString(&msg, config.User)
+	protocol.PushString(&msg, opts.User)
 	protocol.PushUint16(&msg, 0) // no extensions
 	protocol.PutMsgLength(msg)
 
