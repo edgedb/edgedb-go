@@ -565,7 +565,8 @@ type Array struct {
 func (c *Array) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
 
-	dimCount := protocol.PopUint32(&buf) // number of dimensions is 1 or 0
+	// number of dimensions is 1 or 0
+	dimCount := protocol.PopUint32(&buf)
 	if dimCount == 0 {
 		return types.Array{}
 	}
@@ -590,16 +591,15 @@ func (c *Array) Encode(bts *[]byte, val interface{}) {
 	// the data length is not know until all values have been encoded
 	// put the data in temporary slice to get the length
 	tmp := []byte{}
-
-	protocol.PushUint32(&tmp, 1) // number of dimensions
-	protocol.PushUint32(&tmp, 0) // reserved
-	protocol.PushUint32(&tmp, 0) // reserved
-	// todo test encoding array with len() != 3
-	protocol.PushUint32(&tmp, 3) // dimension.upper
-	protocol.PushUint32(&tmp, 1) // dimension.lower
-
 	in := val.([]interface{})
 	elmCount := len(in)
+
+	protocol.PushUint32(&tmp, 1)                // number of dimensions
+	protocol.PushUint32(&tmp, 0)                // reserved
+	protocol.PushUint32(&tmp, 0)                // reserved
+	protocol.PushUint32(&tmp, uint32(elmCount)) // dimension.upper
+	protocol.PushUint32(&tmp, 1)                // dimension.lower
+
 	for i := 0; i < elmCount; i++ {
 		c.child.Encode(&tmp, in[i])
 	}
