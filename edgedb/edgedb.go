@@ -3,6 +3,7 @@ package edgedb
 // todo add context.Context
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -89,10 +90,9 @@ func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) e
 	result, err := conn.query(query, args...)
 	if err != nil {
 		return err
-	} else if len(result) == 1 {
-		marshal.Marshal(&out, result[0])
 	}
 
+	marshal.Marshal(&out, result[0])
 	return nil
 }
 
@@ -102,18 +102,20 @@ func (conn *Conn) Query(query string, out interface{}, args ...interface{}) erro
 	result, err := conn.query(query, args...)
 	if err != nil {
 		return err
-	} else if len(result) > 0 {
-		marshal.Marshal(&out, result)
 	}
 
+	marshal.Marshal(&out, result)
 	return nil
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (conn *Conn) QueryJSON(query string, out *string, args map[string]interface{}) error {
-	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_json
-	// todo implement QueryJSON()
-	panic("not implemented")
+func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
+	result, err := conn.query(query, args...)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return json.Marshal(result)
 }
 
 // QueryOneJSON runs a singleton-returning query and return its element in JSON
