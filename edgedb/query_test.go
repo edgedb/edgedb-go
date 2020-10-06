@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/fmoor/edgedb-golang/edgedb/options"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,7 +12,7 @@ import (
 var conn *Conn
 
 func TestMain(m *testing.M) {
-	opts := options.FromDSN("edgedb://edgedb@localhost:5656/edgedb")
+	opts := DSN("edgedb://edgedb@localhost:5656/edgedb")
 	var err error
 	conn, err = Connect(opts)
 	if err != nil {

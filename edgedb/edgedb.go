@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/fmoor/edgedb-golang/edgedb/marshal"
-	"github.com/fmoor/edgedb-golang/edgedb/options"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/aspect"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/cardinality"
@@ -27,6 +29,56 @@ var (
 	// todo use this in all the query methods
 	ErrorZeroResults = errors.New("zero results")
 )
+
+// Options for connecting to an EdgeDB server
+type Options struct {
+	Host     string
+	Port     int
+	User     string
+	Database string
+	Password string
+	// todo support authentication etc.
+}
+
+func (o Options) dialHost() string {
+	host := o.Host
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := o.Port
+	if port == 0 {
+		port = 5656
+	}
+
+	return fmt.Sprintf("%v:%v", host, port)
+}
+
+// DSN parses a URI string into an Options struct
+func DSN(dsn string) Options {
+	// todo assert scheme is edgedb
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	port, err := strconv.Atoi(parsed.Port())
+	if err != nil {
+		panic(err)
+	}
+
+	host := strings.Split(parsed.Host, ":")[0]
+	db := strings.TrimLeft(parsed.Path, "/")
+	password, _ := parsed.User.Password()
+
+	return Options{
+		Host:     host,
+		Port:     port,
+		User:     parsed.User.Username(),
+		Database: db,
+		Password: password,
+	}
+}
 
 // Conn client
 type Conn struct {
@@ -269,9 +321,8 @@ func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(opts options.Options) (conn *Conn, err error) {
-	// todo use host and port from `opts`
-	tcpConn, err := net.Dial("tcp", "127.0.0.1:5656")
+func Connect(opts Options) (conn *Conn, err error) {
+	tcpConn, err := net.Dial("tcp", opts.dialHost())
 	if err != nil {
 		return conn, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}

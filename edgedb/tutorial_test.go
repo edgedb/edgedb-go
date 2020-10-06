@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fmoor/edgedb-golang/edgedb/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +32,7 @@ func TestTutorial(t *testing.T) {
 		conn.Execute("DROP DATABASE " + dbName + ";")
 	}()
 
-	opts := options.Options{Database: dbName, User: "edgedb"}
+	opts := Options{Database: dbName, User: "edgedb", Host: "localhost"}
 	edb, _ := Connect(opts)
 	defer edb.Close()
 
