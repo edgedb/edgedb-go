@@ -85,9 +85,15 @@ func (conn *Conn) Execute(query string) error {
 // QueryOne runs a singleton-returning query and return its element.
 func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one
-	// todo implement QueryOne()
 	// todo assert cardinality
-	panic("not implemented")
+	result, err := conn.query(query, args...)
+	if err != nil {
+		return err
+	} else if len(result) == 1 {
+		marshal.Marshal(&out, result[0])
+	}
+
+	return nil
 }
 
 // Query runs a query and returns the results.
@@ -96,11 +102,10 @@ func (conn *Conn) Query(query string, out interface{}, args ...interface{}) erro
 	result, err := conn.query(query, args...)
 	if err != nil {
 		return err
-	} else if len(result) == 0 {
-		return nil
+	} else if len(result) > 0 {
+		marshal.Marshal(&out, result)
 	}
 
-	marshal.Marshal(&out, result)
 	return nil
 }
 
