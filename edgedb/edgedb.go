@@ -101,7 +101,9 @@ func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) e
 		return err
 	}
 
-	// todo test zero results
+	if len(result) == 0 {
+		return ErrorZeroResults
+	}
 	marshal.Marshal(&out, result[0])
 	return nil
 }

@@ -95,3 +95,11 @@ func TestQueryOne(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, int64(42), result)
 }
+
+func TestQueryOneZeroResults(t *testing.T) {
+	result := (*int64)(nil)
+	err := conn.QueryOne("SELECT <int64>{}", result)
+
+	assert.Equal(t, ErrorZeroResults, err)
+	assert.Nil(t, result)
+}
