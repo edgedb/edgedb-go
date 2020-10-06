@@ -20,6 +20,8 @@ import (
 	"github.com/fmoor/edgedb-golang/edgedb/types"
 )
 
+// todo add examples
+
 var (
 	// ErrorZeroResults is returned when a query has no results.
 	// todo use this in all the query methods

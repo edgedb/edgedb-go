@@ -24,25 +24,20 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
-	opts := options.FromDSN("edgedb://edgedb@localhost:5656/edgedb")
-	conn0, err := Connect(opts)
-	require.Nil(t, err)
-	defer conn0.Close()
-
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	err = conn0.Execute("CREATE DATABASE " + dbName)
+	err := conn.Execute("CREATE DATABASE " + dbName)
 	require.Nil(t, err)
 
 	defer func() {
-		conn0.Execute("DROP DATABASE " + dbName + ";")
+		conn.Execute("DROP DATABASE " + dbName + ";")
 	}()
 
-	opts = options.Options{Database: dbName, User: "edgedb"}
-	conn, _ := Connect(opts)
-	defer conn.Close()
+	opts := options.Options{Database: dbName, User: "edgedb"}
+	edb, _ := Connect(opts)
+	defer edb.Close()
 
-	err = conn.Execute(`
+	err = edb.Execute(`
 		START MIGRATION TO {
 			module default {
 				type Movie {
@@ -61,13 +56,13 @@ func TestTutorial(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	err = conn.Execute(`POPULATE MIGRATION`)
+	err = edb.Execute(`POPULATE MIGRATION`)
 	require.Nil(t, err)
 
-	err = conn.Execute(`COMMIT MIGRATION`)
+	err = edb.Execute(`COMMIT MIGRATION`)
 	require.Nil(t, err)
 
-	err = conn.Execute(`
+	err = edb.Execute(`
 		INSERT Movie {
 			title := 'Blade Runner 2049',
 			year := 2017,
@@ -95,7 +90,7 @@ func TestTutorial(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	err = conn.Execute(`
+	err = edb.Execute(`
 		INSERT Movie {
 				title := 'Dune',
 				director := (
@@ -114,7 +109,7 @@ func TestTutorial(t *testing.T) {
 
 	var out []Movie
 
-	err = conn.Query(`
+	err = edb.Query(`
 		SELECT Movie {
 				title,
 				year,
