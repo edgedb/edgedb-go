@@ -4,6 +4,7 @@ package edgedb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -17,6 +18,12 @@ import (
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/format"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/message"
 	"github.com/fmoor/edgedb-golang/edgedb/types"
+)
+
+var (
+	// ErrorZeroResults is returned when a query has no results.
+	// todo use this in all the query methods
+	ErrorZeroResults = errors.New("zero results")
 )
 
 // Conn client
@@ -92,6 +99,7 @@ func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) e
 		return err
 	}
 
+	// todo test zero results
 	marshal.Marshal(&out, result[0])
 	return nil
 }
@@ -119,10 +127,18 @@ func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
 }
 
 // QueryOneJSON runs a singleton-returning query and return its element in JSON
-func (conn *Conn) QueryOneJSON(query string, out *string, args map[string]interface{}) error {
-	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one_json
-	// todo implement QueryOneJSON()
-	panic("not implemented")
+func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error) {
+	// todo assert cardinally
+	result, err := conn.query(query, args...)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if len(result) == 0 {
+		return []byte{}, ErrorZeroResults
+	}
+
+	return json.Marshal(result[0])
 }
 
 func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error) {

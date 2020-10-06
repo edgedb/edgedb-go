@@ -27,3 +27,34 @@ func TestQueryJSON(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "[{\"a\":0,\"b\":1},{\"a\":42,\"b\":2}]", actual)
 }
+
+func TestQueryOneJSON(t *testing.T) {
+	opts := options.FromDSN("edgedb://edgedb@localhost:5656/edgedb")
+	conn, err := Connect(opts)
+	require.Nil(t, err)
+	defer conn.Close()
+
+	result, err := conn.QueryOneJSON(
+		"SELECT (a := 0, b := <int64>$0)",
+		int64(42),
+	)
+
+	// casting to string makes error messages more helpful
+	// when this test fails
+	actual := string(result)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "{\"a\":0,\"b\":42}", actual)
+}
+
+func TestQueryOneJSONZeroResults(t *testing.T) {
+	opts := options.FromDSN("edgedb://edgedb@localhost:5656/edgedb")
+	conn, err := Connect(opts)
+	require.Nil(t, err)
+	defer conn.Close()
+
+	result, err := conn.QueryOneJSON("SELECT <int64>{}")
+
+	assert.Equal(t, err, ErrorZeroResults)
+	assert.Equal(t, []byte{}, result)
+}
