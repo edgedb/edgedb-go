@@ -93,6 +93,8 @@ func (conn *Conn) Execute(query string) error {
 }
 
 // QueryOne runs a singleton-returning query and return its element.
+// If the query executes successfully but doesn't return a result
+// ErrorZeroResults is returned.
 func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one
 	// todo assert cardinality
@@ -130,7 +132,9 @@ func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
 	return json.Marshal(result)
 }
 
-// QueryOneJSON runs a singleton-returning query and return its element in JSON
+// QueryOneJSON runs a singleton-returning query and return its element in JSON.
+// If the query executes successfully but doesn't return a result
+// []byte{}, ErrorZeroResults is returned.
 func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error) {
 	// todo assert cardinally
 	result, err := conn.query(query, args...)
