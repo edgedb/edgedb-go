@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/fmoor/edgedb-golang/edgedb/options"
-	"github.com/fmoor/edgedb-golang/edgedb/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,18 +31,18 @@ func TestTutorial(t *testing.T) {
 
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	err = conn0.Query("CREATE DATABASE "+dbName+";", &[]interface{}{})
+	err = conn0.Execute("CREATE DATABASE " + dbName)
 	require.Nil(t, err)
 
 	defer func() {
-		conn0.Query("DROP DATABASE "+dbName+";", &types.Set{})
+		conn0.Execute("DROP DATABASE " + dbName + ";")
 	}()
 
 	opts = options.Options{Database: dbName, User: "edgedb"}
 	conn, _ := Connect(opts)
 	defer conn.Close()
 
-	err = conn.Query(`
+	err = conn.Execute(`
 		START MIGRATION TO {
 			module default {
 				type Movie {
@@ -58,18 +57,17 @@ func TestTutorial(t *testing.T) {
 					required property last_name -> str;
 				}
 			}
-		};`,
-		&[]interface{}{},
+		}`,
 	)
 	require.Nil(t, err)
 
-	err = conn.Query(`POPULATE MIGRATION;`, &[]interface{}{})
+	err = conn.Execute(`POPULATE MIGRATION`)
 	require.Nil(t, err)
 
-	err = conn.Query(`COMMIT MIGRATION;`, &[]interface{}{})
+	err = conn.Execute(`COMMIT MIGRATION`)
 	require.Nil(t, err)
 
-	err = conn.Query(`
+	err = conn.Execute(`
 		INSERT Movie {
 			title := 'Blade Runner 2049',
 			year := 2017,
@@ -93,12 +91,11 @@ func TestTutorial(t *testing.T) {
 					last_name := 'de Armas',
 				}),
 			}
-		};`,
-		&[]interface{}{},
+		}`,
 	)
 	require.Nil(t, err)
 
-	err = conn.Query(`
+	err = conn.Execute(`
 		INSERT Movie {
 				title := 'Dune',
 				director := (
@@ -112,7 +109,6 @@ func TestTutorial(t *testing.T) {
 						LIMIT 1
 				)
 		};`,
-		&[]interface{}{},
 	)
 	require.Nil(t, err)
 

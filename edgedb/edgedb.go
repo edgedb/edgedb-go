@@ -77,9 +77,9 @@ func (conn *Conn) Transaction() error {
 // Execute an EdgeQL command (or commands).
 func (conn *Conn) Execute(query string) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
-	// todo implement Execute()
 	// todo assert cardinality
-	panic("not implemented")
+	_, err := conn.query(query)
+	return err
 }
 
 // QueryOne runs a singleton-returning query and return its element.
