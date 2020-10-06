@@ -69,10 +69,12 @@ func popSetCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncod
 	return &Set{codecs[n]}
 }
 
+// Set is an EdgeDB set type codec.
 type Set struct {
 	child DecodeEncoder
 }
 
+// Decode a set
 func (c *Set) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
 
@@ -96,6 +98,7 @@ func (c *Set) Decode(bts *[]byte) interface{} {
 	return out
 }
 
+// Encode a set
 func (c *Set) Encode(bts *[]byte, val interface{}) {
 	panic("not implemented")
 }
@@ -123,7 +126,7 @@ func popObjectCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEn
 	return &Object{fields}
 }
 
-// Object codec
+// Object is an EdgeDB object type codec.
 type Object struct {
 	fields []objectField
 }
@@ -207,129 +210,129 @@ func getBaseScalarCodec(id types.UUID) DecodeEncoder {
 	}
 }
 
-// UUID codec
+// UUID is an EdgeDB UUID type codec.
 type UUID struct{}
 
-// Decode a UUID
+// Decode a UUID.
 func (c *UUID) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	return protocol.PopUUID(bts)
 }
 
-// Encode UUID
+// Encode a UUID.
 func (c *UUID) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, uint32(16))
 	tmp := val.(types.UUID)
 	*bts = append(*bts, tmp[:]...)
 }
 
-// String codec
+// String is an EdgeDB string type codec.
 type String struct{}
 
-// Decode string
+// Decode a string.
 func (c *String) Decode(bts *[]byte) interface{} {
 	return protocol.PopString(bts)
 }
 
-// Encode string
+// Encode a string.
 func (c *String) Encode(bts *[]byte, val interface{}) {
 	protocol.PushString(bts, val.(string))
 }
 
-// Bytes codec
+// Bytes is an EdgeDB bytes type codec.
 type Bytes struct{}
 
-// Decode []byte
+// Decode []byte.
 func (c *Bytes) Decode(bts *[]byte) interface{} {
 	return protocol.PopBytes(bts)
 }
 
-// Encode []byte
+// Encode []byte.
 func (c *Bytes) Encode(bts *[]byte, val interface{}) {
 	protocol.PushBytes(bts, val.([]byte))
 }
 
-// Int16 codec
+// Int16 is an EdgeDB int64 type codec.
 type Int16 struct{}
 
-// Decode int16
+// Decode an int16.
 func (c *Int16) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	return int16(protocol.PopUint16(bts))
 }
 
-// Encode int16
+// Encode an int16.
 func (c *Int16) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 2) // data length
 	protocol.PushUint16(bts, uint16(val.(int16)))
 }
 
-// Int32 codec
+// Int32 is an EdgeDB int32 type codec.
 type Int32 struct{}
 
-// Decode int32
+// Decode an int32.
 func (c *Int32) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	return int32(protocol.PopUint32(bts))
 }
 
-// Encode int32
+// Encode an int32.
 func (c *Int32) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 4) // data length
 	protocol.PushUint32(bts, uint32(val.(int32)))
 }
 
-// Int64 codec
+// Int64 is an EdgeDB int64 typep codec.
 type Int64 struct{}
 
-// Decode int64
+// Decode an int64.
 func (c *Int64) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	return int64(protocol.PopUint64(bts))
 }
 
-// Encode int64
+// Encode an int64.
 func (c *Int64) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 8) // data length
 	protocol.PushUint64(bts, uint64(val.(int64)))
 }
 
-// Float32 codec
+// Float32 is an EdgeDB float32 type codec.
 type Float32 struct{}
 
-// Decode float32
+// Decode a float32.
 func (c *Float32) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	bits := protocol.PopUint32(bts)
 	return math.Float32frombits(bits)
 }
 
-// Encode float32
+// Encode a float32.
 func (c *Float32) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 4)
 	protocol.PushUint32(bts, math.Float32bits(val.(float32)))
 }
 
-// Float64 codec
+// Float64 is an EdgeDB float64 type codec.
 type Float64 struct{}
 
-// Decode float64
+// Decode a float64.
 func (c *Float64) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	bits := protocol.PopUint64(bts)
 	return math.Float64frombits(bits)
 }
 
-// Encode float64
+// Encode a float64.
 func (c *Float64) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 8)
 	protocol.PushUint64(bts, math.Float64bits(val.(float64)))
 }
 
-// Bool codec
+// Bool is an EdgeDB bool type codec.
 type Bool struct{}
 
-// Decode bool
+// Decode a bool.
 func (c *Bool) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	val := protocol.PopUint8(bts)
@@ -339,7 +342,7 @@ func (c *Bool) Decode(bts *[]byte) interface{} {
 	return val != 0
 }
 
-// Encode bool
+// Encode a bool.
 func (c *Bool) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 1) // data length
 
@@ -352,10 +355,10 @@ func (c *Bool) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint8(bts, out)
 }
 
-// DateTime codec
+// DateTime is an EdgeDB datetime type codec.
 type DateTime struct{}
 
-// Decode datetime
+// Decode a datetime.
 func (c *DateTime) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	val := int64(protocol.PopUint64(bts))
@@ -364,7 +367,7 @@ func (c *DateTime) Decode(bts *[]byte) interface{} {
 	return time.Unix(946_684_800+seconds, 1_000*microseconds).UTC()
 }
 
-// Encode date time
+// Encode a datetime.
 func (c *DateTime) Encode(bts *[]byte, val interface{}) {
 	date := val.(time.Time)
 	seconds := date.Unix() - 946_684_800
@@ -374,10 +377,10 @@ func (c *DateTime) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint64(bts, uint64(microseconds))
 }
 
-// Duration codec
+// Duration is an EdgeDB duration codec.
 type Duration struct{}
 
-// Decode duration
+// Decode a duration.
 func (c *Duration) Decode(bts *[]byte) interface{} {
 	protocol.PopUint32(bts) // data length
 	microseconds := int64(protocol.PopUint64(bts))
@@ -386,7 +389,7 @@ func (c *Duration) Decode(bts *[]byte) interface{} {
 	return time.Duration(microseconds * 1_000)
 }
 
-// Encode a duration
+// Encode a duration.
 func (c *Duration) Encode(bts *[]byte, val interface{}) {
 	duration := val.(time.Duration)
 	protocol.PushUint32(bts, 16) // data length
@@ -395,10 +398,10 @@ func (c *Duration) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 0) // reserved
 }
 
-// JSON codec
+// JSON is an EdgeDB json type codec.
 type JSON struct{}
 
-// Decode json
+// Decode json.
 func (c *JSON) Decode(bts *[]byte) interface{} {
 	n := protocol.PopUint32(bts) // data length
 	protocol.PopUint8(bts)       // json format, always 1
@@ -413,7 +416,7 @@ func (c *JSON) Decode(bts *[]byte) interface{} {
 	return val
 }
 
-// Encode json
+// Encode json.
 func (c *JSON) Encode(bts *[]byte, val interface{}) {
 	buf, err := json.Marshal(val)
 	if err != nil {
@@ -436,12 +439,12 @@ func popTupleCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEnc
 	return &Tuple{fields}
 }
 
-// Tuple codec
+// Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
 	fields []DecodeEncoder
 }
 
-// Decode a tuple
+// Decode a tuple.
 func (c *Tuple) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
 
@@ -456,7 +459,7 @@ func (c *Tuple) Decode(bts *[]byte) interface{} {
 	return out
 }
 
-// Encode a tuple
+// Encode a tuple.
 func (c *Tuple) Encode(bts *[]byte, val interface{}) {
 	tmp := []byte{}
 	elmCount := len(c.fields)
@@ -504,12 +507,12 @@ type namedTupleField struct {
 	codec DecodeEncoder
 }
 
-// NamedTuple codec
+// NamedTuple is an EdgeDB namedtuple typep codec.
 type NamedTuple struct {
 	fields []namedTupleField
 }
 
-// Decode a named tuple
+// Decode a named tuple.
 func (c *NamedTuple) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
 
@@ -525,7 +528,7 @@ func (c *NamedTuple) Decode(bts *[]byte) interface{} {
 	return out
 }
 
-// Encode a named tuple
+// Encode a named tuple.
 func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 	// don't know the data length yet
 	// put everything in a new slice to get the length
@@ -533,7 +536,13 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 
 	elmCount := len(c.fields)
 	protocol.PushUint32(&tmp, uint32(elmCount))
-	in := val.(map[string]interface{})
+
+	args := val.([]interface{})
+	if len(args) != 1 {
+		panic(fmt.Sprintf("wrong number of arguments: %v", args))
+	}
+
+	in := args[0].(map[string]interface{})
 
 	for i := 0; i < elmCount; i++ {
 		protocol.PushUint32(&tmp, 0) // reserved
@@ -556,12 +565,12 @@ func popArrayCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEnc
 	return &Array{codecs[index]}
 }
 
-// Array codec
+// Array is an EdgeDB array type codec.
 type Array struct {
 	child DecodeEncoder
 }
 
-// Decode an array
+// Decode an array.
 func (c *Array) Decode(bts *[]byte) interface{} {
 	buf := protocol.PopBytes(bts)
 
@@ -586,11 +595,12 @@ func (c *Array) Decode(bts *[]byte) interface{} {
 	return out
 }
 
-// Encode an array
+// Encode an array.
 func (c *Array) Encode(bts *[]byte, val interface{}) {
 	// the data length is not know until all values have been encoded
 	// put the data in temporary slice to get the length
 	tmp := []byte{}
+
 	in := val.([]interface{})
 	elmCount := len(in)
 

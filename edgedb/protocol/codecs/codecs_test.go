@@ -461,10 +461,10 @@ func TestEncodeNamedTuple(t *testing.T) {
 	}}
 
 	bts := []byte{}
-	codec.Encode(&bts, map[string]interface{}{
+	codec.Encode(&bts, []interface{}{map[string]interface{}{
 		"a": int32(5),
 		"b": int32(6),
-	})
+	}})
 
 	expected := []byte{
 		0, 0, 0, 28, // data length

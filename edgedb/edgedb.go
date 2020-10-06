@@ -78,24 +78,22 @@ func (conn *Conn) Transaction() error {
 func (conn *Conn) Execute(query string) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
 	// todo implement Execute()
+	// todo assert cardinality
 	panic("not implemented")
 }
 
 // QueryOne runs a singleton-returning query and return its element.
-func (conn *Conn) QueryOne(query string, out interface{}, args map[string]interface{}) error {
+func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one
 	// todo implement QueryOne()
+	// todo assert cardinality
 	panic("not implemented")
 }
 
 // Query runs a query and returns the results.
-func (conn *Conn) Query(query string, out interface{}) error {
-	return conn.QueryWithArgs(query, out, map[string]interface{}{})
-}
-
-func (conn *Conn) QueryWithArgs(query string, out interface{}, args map[string]interface{}) error {
+func (conn *Conn) Query(query string, out interface{}, args ...interface{}) error {
 	// todo assert that out is a pointer to a slice
-	result, err := conn.query(query, args)
+	result, err := conn.query(query, args...)
 	if err != nil {
 		return err
 	} else if len(result) == 0 {
@@ -120,7 +118,7 @@ func (conn *Conn) QueryOneJSON(query string, out *string, args map[string]interf
 	panic("not implemented")
 }
 
-func (conn *Conn) query(query string, args map[string]interface{}) ([]interface{}, error) {
+func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, format.Binary)
@@ -235,11 +233,13 @@ func (conn *Conn) query(query string, args map[string]interface{}) ([]interface{
 			panic(message)
 		}
 	}
+
 	return out, nil
 }
 
 // Connect establishes a connection to an EdgeDB server.
 func Connect(opts options.Options) (conn *Conn, err error) {
+	// todo use host and port from `opts`
 	tcpConn, err := net.Dial("tcp", "127.0.0.1:5656")
 	if err != nil {
 		return conn, fmt.Errorf("tcp connection error while connecting: %v", err)

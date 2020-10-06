@@ -26,12 +26,13 @@ type Movie struct {
 
 func TestTutorial(t *testing.T) {
 	opts := options.FromDSN("edgedb://edgedb@localhost:5656/edgedb")
-	conn0, _ := Connect(opts)
+	conn0, err := Connect(opts)
+	require.Nil(t, err)
 	defer conn0.Close()
 
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	err := conn0.Query("CREATE DATABASE "+dbName+";", &[]interface{}{})
+	err = conn0.Query("CREATE DATABASE "+dbName+";", &[]interface{}{})
 	require.Nil(t, err)
 
 	defer func() {
