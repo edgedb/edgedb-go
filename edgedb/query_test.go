@@ -20,6 +20,18 @@ func TestMain(m *testing.M) {
 	}
 	defer conn.Close()
 
+	conn.Execute(`
+		START MIGRATION TO {
+			module default {
+				type User {
+					property name -> str;
+				}
+			}
+		};
+	`)
+	conn.Execute(`POPULATE MIGRATION;`)
+	conn.Execute(`COMMIT MIGRATION;`)
+
 	os.Exit(m.Run())
 }
 

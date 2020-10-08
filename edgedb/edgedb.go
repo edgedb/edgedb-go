@@ -130,10 +130,17 @@ func (conn *Conn) writeAndRead(bts []byte) []byte {
 }
 
 // Transaction creates a new trasaction struct.
-func (conn *Conn) Transaction() error {
-	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.transaction
-	// todo implement Transaction()
-	panic("not implemented")
+func (conn *Conn) Transaction() (Transaction, error) {
+	// todo support transaction options
+	return Transaction{conn}, nil
+}
+
+// RunInTransaction runs a function in a transaction.
+// If function returns an error transaction is rolled back,
+// otherwise transaction is committed.
+func (conn *Conn) RunInTransaction(fn func() error) error {
+	// see https://pkg.go.dev/github.com/go-pg/pg/v10#DB.RunInTransaction
+	panic("RunInTransaction() not implemented") // todo
 }
 
 // Execute an EdgeQL command (or commands).
@@ -364,4 +371,29 @@ func Connect(opts Options) (conn *Conn, err error) {
 		}
 	}
 	return conn, nil
+}
+
+// Transaction represents a transaction or save point block.
+// Transactions are created by calling the Conn.Transaction() method.
+// Most callers should use `Conn.RunInTransaction()` instead.
+type Transaction struct {
+	conn *Conn
+}
+
+// Start a transaction or save point.
+func (tx Transaction) Start() {
+	// todo handle nested blocks and other options.
+	tx.conn.Execute("START TRANSACTION;")
+}
+
+// Commit the transaction or save point preserving changes.
+func (tx Transaction) Commit() {
+	// todo handle nested blocks etc.
+	tx.conn.Execute("COMMIT;")
+}
+
+// RollBack the transaction or save point block discarding changes.
+func (tx Transaction) RollBack() {
+	// todo handle nested blocks etc.
+	tx.conn.Execute("ROLLBACK;")
 }
