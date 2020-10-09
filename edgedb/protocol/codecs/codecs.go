@@ -461,17 +461,16 @@ func (c *Tuple) Decode(bts *[]byte) interface{} {
 
 // Encode a tuple.
 func (c *Tuple) Encode(bts *[]byte, val interface{}) {
-	tmp := []byte{}
 	elmCount := len(c.fields)
 
 	// special case for null tuple
-	// todo this should not be needed
 	if elmCount == 0 {
 		protocol.PushUint32(bts, 4) // data length
 		protocol.PushUint32(bts, uint32(elmCount))
 		return
 	}
 
+	tmp := []byte{}
 	protocol.PushUint32(&tmp, uint32(elmCount))
 	in := val.([]interface{})
 	for i := 0; i < elmCount; i++ {
