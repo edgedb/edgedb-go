@@ -80,10 +80,17 @@ func DSN(dsn string) Options {
 	}
 }
 
+type queryCodecIDs struct {
+	inputID  types.UUID
+	outputID types.UUID
+}
+
 // Conn client
 type Conn struct {
-	conn   io.ReadWriteCloser
-	secret []byte
+	conn       io.ReadWriteCloser
+	secret     []byte
+	codecCache codecs.CodecLookup
+	queryCache map[string]queryCodecIDs
 }
 
 // Close the db connection
@@ -109,6 +116,7 @@ func (conn *Conn) writeAndRead(bts []byte) []byte {
 	}
 
 	rcv := []byte{}
+	// todo evaluate buffer size
 	n := 1024
 	var err error
 	for n == 1024 {
@@ -147,6 +155,8 @@ func (conn *Conn) RunInTransaction(fn func() error) error {
 func (conn *Conn) Execute(query string) error {
 	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
 	// todo assert cardinality
+	// todo should use script flow rather than granular flow
+	// https://www.edgedb.com/docs/internals/protocol/overview/#script-flow
 	_, err := conn.query(query)
 	return err
 }
@@ -188,6 +198,7 @@ func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	// todo set format instead of marshaling json
 	return json.Marshal(result)
 }
 
@@ -205,22 +216,81 @@ func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error
 		return []byte{}, ErrorZeroResults
 	}
 
+	// todo set format instead of marshaling json
 	return json.Marshal(result[0])
 }
 
 func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error) {
+	_, hasCodecs := conn.queryCache[query]
+	if !hasCodecs {
+		return conn.execute(query, args...)
+	}
+
+	return conn.optimisticExecute(query, args...)
+}
+
+func (conn *Conn) optimisticExecute(query string, args ...interface{}) ([]interface{}, error) {
+	codecIDs := conn.queryCache[query]
+	inputCodec := conn.codecCache[codecIDs.inputID]
+	outputCodec := conn.codecCache[codecIDs.outputID]
+
+	msg := []byte{message.OptimisticExecute, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0) // no headers
+	protocol.PushUint8(&msg, format.Binary)
+	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
+	protocol.PushString(&msg, query)
+	msg = append(msg, codecIDs.inputID[:]...)
+	msg = append(msg, codecIDs.outputID[:]...)
+	inputCodec.Encode(&msg, args)
+	protocol.PutMsgLength(msg)
+
+	pyld := msg
+	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+
+	out := make(types.Set, 0)
+
+	rcv := conn.writeAndRead(pyld)
+	for len(rcv) > 0 {
+		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
+
+		switch mType {
+		case message.Data:
+			protocol.PopUint32(&bts) // message length
+			protocol.PopUint16(&bts) // number of data elements (always 1)
+			out = append(out, outputCodec.Decode(&bts))
+		case message.CommandComplete:
+			continue
+		case message.ReadyForCommand:
+			continue
+		case message.ErrorResponse:
+			// todo factor out error message parsing and return custom error struct
+			protocol.PopUint32(&bts) // message length
+			protocol.PopUint8(&bts)  // severity
+			protocol.PopUint32(&bts) // code
+			message := protocol.PopString(&bts)
+			panic(message)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+		}
+	}
+
+	return out, nil
+}
+
+func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, format.Binary)
-	protocol.PushUint8(&msg, cardinality.Many)
-	protocol.PushBytes(&msg, []byte{}) // no statement name
+	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
+	protocol.PushBytes(&msg, []byte{})         // no statement name
 	protocol.PushString(&msg, query)
 	protocol.PutMsgLength(msg)
 
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
-	var argumentCodecID types.UUID
-	var resultCodecID types.UUID
+	var inputCodecID types.UUID
+	var outputCodecID types.UUID
 
 	rcv := conn.writeAndRead(pyld)
 	for len(rcv) > 4 {
@@ -229,11 +299,11 @@ func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error
 
 		switch mType {
 		case message.PrepareComplete:
-			protocol.PopUint32(&bts)                 // message length
-			protocol.PopUint16(&bts)                 // number of headers, assume 0
-			protocol.PopUint8(&bts)                  // cardianlity
-			argumentCodecID = protocol.PopUUID(&bts) // argument type id
-			resultCodecID = protocol.PopUUID(&bts)   // result type id
+			protocol.PopUint32(&bts)               // message length
+			protocol.PopUint16(&bts)               // number of headers, assume 0
+			protocol.PopUint8(&bts)                // cardianlity
+			inputCodecID = protocol.PopUUID(&bts)  // input type id
+			outputCodecID = protocol.PopUUID(&bts) // output type id
 		case message.ReadyForCommand:
 			break
 		case message.ErrorResponse:
@@ -242,58 +312,25 @@ func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error
 			protocol.PopUint32(&bts) // code
 			message := protocol.PopString(&bts)
 			panic(message)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
-	msg = []byte{message.DescribeStatement, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, aspect.DataDescription)
-	protocol.PushUint32(&msg, 0) // no statement name
-	protocol.PutMsgLength(msg)
+	inputCodec, haveArg := conn.codecCache[inputCodecID]
+	outputCodec, haveRes := conn.codecCache[outputCodecID]
 
-	pyld = msg
-	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
-
-	rcv = conn.writeAndRead(pyld)
-
-	codecLookup := codecs.CodecLookup{}
-
-	for len(rcv) > 4 {
-		bts := protocol.PopMessage(&rcv)
-		mType := protocol.PopUint8(&bts)
-
-		switch mType {
-		case message.CommandDataDescription:
-			protocol.PopUint32(&bts)              // message length
-			protocol.PopUint16(&bts)              // number of headers is always 0
-			protocol.PopUint8(&bts)               // cardianlity
-			protocol.PopUUID(&bts)                // argument descriptor ID
-			descriptor := protocol.PopBytes(&bts) // argument descriptor
-			for k, v := range codecs.Pop(&descriptor) {
-				codecLookup[k] = v
-			}
-			protocol.PopUUID(&bts)               // result descriptor ID
-			descriptor = protocol.PopBytes(&bts) // argument descriptor
-
-			for k, v := range codecs.Pop(&descriptor) {
-				codecLookup[k] = v
-			}
-		case message.ErrorResponse:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
-		}
+	if !haveArg || !haveRes {
+		conn.cacheMissingCodecs()
+		inputCodec = conn.codecCache[inputCodecID]
+		outputCodec = conn.codecCache[outputCodecID]
 	}
-
-	argumentCodec := codecLookup[argumentCodecID]
-	resultCodec := codecLookup[resultCodecID]
+	conn.queryCache[query] = queryCodecIDs{inputCodecID, outputCodecID}
 
 	msg = []byte{message.Execute, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0)       // no headers
 	protocol.PushBytes(&msg, []byte{}) // no statement name
-	argumentCodec.Encode(&msg, args)
+	inputCodec.Encode(&msg, args)
 	protocol.PutMsgLength(msg)
 
 	pyld = msg
@@ -310,7 +347,7 @@ func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error
 		case message.Data:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint16(&bts) // number of data elements (always 1)
-			out = append(out, resultCodec.Decode(&bts))
+			out = append(out, outputCodec.Decode(&bts))
 		case message.CommandComplete:
 			continue
 		case message.ReadyForCommand:
@@ -321,10 +358,58 @@ func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error
 			protocol.PopUint32(&bts) // code
 			message := protocol.PopString(&bts)
 			panic(message)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
 	return out, nil
+}
+
+func (conn *Conn) cacheMissingCodecs() {
+	msg := []byte{message.DescribeStatement, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0) // no headers
+	protocol.PushUint8(&msg, aspect.DataDescription)
+	protocol.PushUint32(&msg, 0) // no statement name
+	protocol.PutMsgLength(msg)
+
+	pyld := msg
+	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+
+	rcv := conn.writeAndRead(pyld)
+	for len(rcv) > 4 {
+		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
+
+		switch mType {
+		case message.CommandDataDescription:
+			protocol.PopUint32(&bts) // message length
+			protocol.PopUint16(&bts) // number of headers is always 0
+			protocol.PopUint8(&bts)  // cardianlity
+
+			protocol.PopUUID(&bts)                // input descriptor ID
+			descriptor := protocol.PopBytes(&bts) // input descriptor
+			for k, v := range codecs.Pop(&descriptor) {
+				conn.codecCache[k] = v
+			}
+
+			protocol.PopUUID(&bts)               // output descriptor ID
+			descriptor = protocol.PopBytes(&bts) // input descriptor
+			for k, v := range codecs.Pop(&descriptor) {
+				conn.codecCache[k] = v
+			}
+		case message.ReadyForCommand:
+			continue
+		case message.ErrorResponse:
+			protocol.PopUint32(&bts) // message length
+			protocol.PopUint8(&bts)  // severity
+			protocol.PopUint32(&bts) // code
+			message := protocol.PopString(&bts)
+			panic(message)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+		}
+	}
 }
 
 // Connect establishes a connection to an EdgeDB server.
@@ -333,7 +418,7 @@ func Connect(opts Options) (conn *Conn, err error) {
 	if err != nil {
 		return conn, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}
-	conn = &Conn{tcpConn, nil}
+	conn = &Conn{tcpConn, nil, codecs.CodecLookup{}, map[string]queryCodecIDs{}}
 
 	msg := []byte{message.ClientHandshake, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // major version
@@ -361,13 +446,17 @@ func Connect(opts Options) (conn *Conn, err error) {
 		case message.ServerKeyData:
 			secret = bts[5:]
 		case message.ReadyForCommand:
-			return &Conn{tcpConn, secret}, nil
+			return &Conn{tcpConn, secret, codecs.CodecLookup{}, map[string]queryCodecIDs{}}, nil
 		case message.ErrorResponse:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint8(&bts)  // severity
 			protocol.PopUint32(&bts) // code
 			message := protocol.PopString(&bts)
 			panic(message)
+		case message.AuthenticationOK:
+			continue
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 	return conn, nil
