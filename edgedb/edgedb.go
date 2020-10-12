@@ -260,26 +260,26 @@ func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error
 	return []byte(jsonStr[1 : len(jsonStr)-1]), nil
 }
 
-func (conn *Conn) query(query string, frmt int, args ...interface{}) ([]interface{}, error) {
-	key := queryCacheKey{query, frmt}
+func (conn *Conn) query(query string, ioFormat int, args ...interface{}) ([]interface{}, error) {
+	key := queryCacheKey{query, ioFormat}
 	_, hasCodecs := conn.queryCache[key]
 
 	if !hasCodecs {
-		return conn.execute(query, frmt, args...)
+		return conn.execute(query, ioFormat, args...)
 	}
 
-	return conn.optimisticExecute(query, frmt, args...)
+	return conn.optimisticExecute(query, ioFormat, args...)
 }
 
-func (conn *Conn) optimisticExecute(query string, frmt int, args ...interface{}) ([]interface{}, error) {
-	key := queryCacheKey{query, frmt}
+func (conn *Conn) optimisticExecute(query string, ioFormat int, args ...interface{}) ([]interface{}, error) {
+	key := queryCacheKey{query, ioFormat}
 	codecIDs := conn.queryCache[key]
 	inputCodec := conn.codecCache[codecIDs.inputID]
 	outputCodec := conn.codecCache[codecIDs.outputID]
 
 	msg := []byte{message.OptimisticExecute, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, uint8(frmt))
+	protocol.PushUint8(&msg, uint8(ioFormat))
 	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
 	protocol.PushString(&msg, query)
 	msg = append(msg, codecIDs.inputID[:]...)
@@ -316,10 +316,10 @@ func (conn *Conn) optimisticExecute(query string, frmt int, args ...interface{})
 	return out, nil
 }
 
-func (conn *Conn) execute(query string, frmt int, args ...interface{}) ([]interface{}, error) {
+func (conn *Conn) execute(query string, ioFormat int, args ...interface{}) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, uint8(frmt))
+	protocol.PushUint8(&msg, uint8(ioFormat))
 	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
 	protocol.PushBytes(&msg, []byte{})         // no statement name
 	protocol.PushString(&msg, query)
@@ -363,7 +363,7 @@ func (conn *Conn) execute(query string, frmt int, args ...interface{}) ([]interf
 		outputCodec = conn.codecCache[outputCodecID]
 	}
 
-	key := queryCacheKey{query, frmt}
+	key := queryCacheKey{query, ioFormat}
 	conn.queryCache[key] = queryCodecIDs{inputCodecID, outputCodecID}
 
 	msg = []byte{message.Execute, 0, 0, 0, 0}
