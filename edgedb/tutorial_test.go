@@ -51,14 +51,12 @@ func TestTutorial(t *testing.T) {
 					required property last_name -> str;
 				}
 			}
-		}`,
-	)
-	require.Nil(t, err)
+		};
 
-	err = edb.Execute(`POPULATE MIGRATION`)
-	require.Nil(t, err)
+		POPULATE MIGRATION;
 
-	err = edb.Execute(`COMMIT MIGRATION`)
+		COMMIT MIGRATION;
+	`)
 	require.Nil(t, err)
 
 	err = edb.Execute(`
@@ -107,7 +105,6 @@ func TestTutorial(t *testing.T) {
 	require.Nil(t, err)
 
 	var out []Movie
-
 	err = edb.Query(`
 		SELECT Movie {
 				title,

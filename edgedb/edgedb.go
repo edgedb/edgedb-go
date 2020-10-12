@@ -153,12 +153,34 @@ func (conn *Conn) RunInTransaction(fn func() error) error {
 
 // Execute an EdgeQL command (or commands).
 func (conn *Conn) Execute(query string) error {
-	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.execute
-	// todo assert cardinality
-	// todo should use script flow rather than granular flow
-	// https://www.edgedb.com/docs/internals/protocol/overview/#script-flow
-	_, err := conn.query(query)
-	return err
+	msg := []byte{message.ExecuteScript, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0) // no headers
+	protocol.PushString(&msg, query)
+	protocol.PutMsgLength(msg)
+
+	rcv := conn.writeAndRead(msg)
+	for len(rcv) > 0 {
+		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
+
+		switch mType {
+		case message.CommandComplete:
+			continue
+		case message.ReadyForCommand:
+			break
+		case message.ErrorResponse:
+			// todo factor out error message parsing and return custom error struct
+			protocol.PopUint32(&bts) // message length
+			protocol.PopUint8(&bts)  // severity
+			protocol.PopUint32(&bts) // code
+			message := protocol.PopString(&bts)
+			panic(message)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+		}
+	}
+
+	return nil
 }
 
 // QueryOne runs a singleton-returning query and return its element.
