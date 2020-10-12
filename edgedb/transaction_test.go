@@ -6,18 +6,23 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransactionSaves(t *testing.T) {
 	tx, err := conn.Transaction()
 	assert.Nil(t, err)
 
-	tx.Start()
+	err = tx.Start()
+	require.Nil(t, err)
+
 	name := "test" + strconv.Itoa(rand.Int())
 	// todo maybe clean up the random entry :thinking:
 	err = conn.Query("INSERT User{ name := <str>$0 }", (*interface{})(nil), name)
 	assert.Nil(t, err)
-	tx.Commit()
+
+	err = tx.Commit()
+	require.Nil(t, err)
 
 	var result string
 	err = conn.QueryOne(`
@@ -36,12 +41,16 @@ func TestTransactionRollsBack(t *testing.T) {
 	tx, err := conn.Transaction()
 	assert.Nil(t, err)
 
-	tx.Start()
+	err = tx.Start()
+	require.Nil(t, err)
+
 	name := "test" + strconv.Itoa(rand.Int())
 	// todo maybe clean up the random entry :thinking:
 	err = conn.Query("INSERT User{ name := <str>$0 }", (*interface{})(nil), name)
 	assert.Nil(t, err)
-	tx.RollBack()
+
+	err = tx.RollBack()
+	require.Nil(t, err)
 
 	var result string
 	err = conn.QueryOne(`

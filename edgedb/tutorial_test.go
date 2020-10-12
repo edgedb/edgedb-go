@@ -29,7 +29,10 @@ func TestTutorial(t *testing.T) {
 	require.Nil(t, err)
 
 	defer func() {
-		conn.Execute("DROP DATABASE " + dbName + ";")
+		err := conn.Execute("DROP DATABASE " + dbName + ";")
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	opts := Options{Database: dbName, User: "edgedb", Host: "localhost"}

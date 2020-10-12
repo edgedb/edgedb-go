@@ -80,6 +80,27 @@ func DSN(dsn string) Options {
 	}
 }
 
+// Error is returned when something bad happened.
+type Error struct {
+	Severity int
+	Code     int
+	Message  string
+}
+
+func (e *Error) Error() string {
+	return e.Message
+}
+
+func decodeError(bts *[]byte) error {
+	protocol.PopUint32(bts) // message length
+
+	return &Error{
+		Severity: int(protocol.PopUint8(bts)),
+		Code:     int(protocol.PopUint32(bts)),
+		Message:  protocol.PopString(bts),
+	}
+}
+
 type queryCodecIDs struct {
 	inputID  types.UUID
 	outputID types.UUID
@@ -169,12 +190,7 @@ func (conn *Conn) Execute(query string) error {
 		case message.ReadyForCommand:
 			break
 		case message.ErrorResponse:
-			// todo factor out error message parsing and return custom error struct
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
+			return decodeError(&bts)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -286,12 +302,7 @@ func (conn *Conn) optimisticExecute(query string, args ...interface{}) ([]interf
 		case message.ReadyForCommand:
 			continue
 		case message.ErrorResponse:
-			// todo factor out error message parsing and return custom error struct
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
+			return nil, decodeError(&bts)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -329,11 +340,7 @@ func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, err
 		case message.ReadyForCommand:
 			break
 		case message.ErrorResponse:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
+			return nil, decodeError(&bts)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -343,7 +350,10 @@ func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, err
 	outputCodec, haveRes := conn.codecCache[outputCodecID]
 
 	if !haveArg || !haveRes {
-		conn.cacheMissingCodecs()
+		err := conn.cacheMissingCodecs()
+		if err != nil {
+			return nil, err
+		}
 		inputCodec = conn.codecCache[inputCodecID]
 		outputCodec = conn.codecCache[outputCodecID]
 	}
@@ -375,11 +385,7 @@ func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, err
 		case message.ReadyForCommand:
 			continue
 		case message.ErrorResponse:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
+			return nil, decodeError(&bts)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -388,7 +394,7 @@ func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, err
 	return out, nil
 }
 
-func (conn *Conn) cacheMissingCodecs() {
+func (conn *Conn) cacheMissingCodecs() error {
 	msg := []byte{message.DescribeStatement, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, aspect.DataDescription)
@@ -423,22 +429,20 @@ func (conn *Conn) cacheMissingCodecs() {
 		case message.ReadyForCommand:
 			continue
 		case message.ErrorResponse:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
+			return decodeError(&bts)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
+
+	return nil
 }
 
 // Connect establishes a connection to an EdgeDB server.
 func Connect(opts Options) (conn *Conn, err error) {
 	tcpConn, err := net.Dial("tcp", opts.dialHost())
 	if err != nil {
-		return conn, fmt.Errorf("tcp connection error while connecting: %v", err)
+		return nil, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}
 	conn = &Conn{tcpConn, nil, codecs.CodecLookup{}, map[string]queryCodecIDs{}}
 
@@ -470,11 +474,7 @@ func Connect(opts Options) (conn *Conn, err error) {
 		case message.ReadyForCommand:
 			return &Conn{tcpConn, secret, codecs.CodecLookup{}, map[string]queryCodecIDs{}}, nil
 		case message.ErrorResponse:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint8(&bts)  // severity
-			protocol.PopUint32(&bts) // code
-			message := protocol.PopString(&bts)
-			panic(message)
+			return nil, decodeError(&bts)
 		case message.AuthenticationOK:
 			continue
 		default:
@@ -492,19 +492,19 @@ type Transaction struct {
 }
 
 // Start a transaction or save point.
-func (tx Transaction) Start() {
+func (tx Transaction) Start() error {
 	// todo handle nested blocks and other options.
-	tx.conn.Execute("START TRANSACTION;")
+	return tx.conn.Execute("START TRANSACTION;")
 }
 
 // Commit the transaction or save point preserving changes.
-func (tx Transaction) Commit() {
+func (tx Transaction) Commit() error {
 	// todo handle nested blocks etc.
-	tx.conn.Execute("COMMIT;")
+	return tx.conn.Execute("COMMIT;")
 }
 
 // RollBack the transaction or save point block discarding changes.
-func (tx Transaction) RollBack() {
+func (tx Transaction) RollBack() error {
 	// todo handle nested blocks etc.
-	tx.conn.Execute("ROLLBACK;")
+	return tx.conn.Execute("ROLLBACK;")
 }

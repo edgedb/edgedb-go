@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 	}
 	defer conn.Close()
 
-	conn.Execute(`
+	err = conn.Execute(`
 		START MIGRATION TO {
 			module default {
 				type User {
@@ -28,9 +28,12 @@ func TestMain(m *testing.M) {
 				}
 			}
 		};
+		POPULATE MIGRATION;
+		COMMIT MIGRATION;
 	`)
-	conn.Execute(`POPULATE MIGRATION;`)
-	conn.Execute(`COMMIT MIGRATION;`)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	os.Exit(m.Run())
 }
@@ -113,4 +116,10 @@ func TestQueryOneZeroResults(t *testing.T) {
 
 	assert.Equal(t, ErrorZeroResults, err)
 	assert.Nil(t, result)
+}
+
+func TestError(t *testing.T) {
+	err := conn.Execute("malformed query;")
+	expected := &Error{Severity: 120, Code: 67174656, Message: "Unexpected 'malformed'"}
+	assert.Equal(t, expected, err)
 }
