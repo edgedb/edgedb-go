@@ -3,7 +3,6 @@ package edgedb
 // todo add context.Context
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,7 +25,7 @@ import (
 
 var (
 	// ErrorZeroResults is returned when a query has no results.
-	// todo use this in all the query methods
+	// todo should this be returned from Query() and QueryJSON()? :thinking:
 	ErrorZeroResults = errors.New("zero results")
 )
 
@@ -106,12 +105,17 @@ type queryCodecIDs struct {
 	outputID types.UUID
 }
 
+type queryCacheKey struct {
+	query  string
+	format int
+}
+
 // Conn client
 type Conn struct {
 	conn       io.ReadWriteCloser
 	secret     []byte
 	codecCache codecs.CodecLookup
-	queryCache map[string]queryCodecIDs
+	queryCache map[queryCacheKey]queryCodecIDs
 }
 
 // Close the db connection
@@ -203,9 +207,8 @@ func (conn *Conn) Execute(query string) error {
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
 func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) error {
-	// https://www.edgedb.com/docs/clients/00_python/api/blocking_con#edgedb.BlockingIOConnection.query_one
 	// todo assert cardinality
-	result, err := conn.query(query, args...)
+	result, err := conn.query(query, format.Binary, args...)
 	if err != nil {
 		return err
 	}
@@ -220,7 +223,7 @@ func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) e
 // Query runs a query and returns the results.
 func (conn *Conn) Query(query string, out interface{}, args ...interface{}) error {
 	// todo assert that out is a pointer to a slice
-	result, err := conn.query(query, args...)
+	result, err := conn.query(query, format.Binary, args...)
 	if err != nil {
 		return err
 	}
@@ -231,13 +234,12 @@ func (conn *Conn) Query(query string, out interface{}, args ...interface{}) erro
 
 // QueryJSON runs a query and return the results as JSON.
 func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
-	result, err := conn.query(query, args...)
+	result, err := conn.query(query, format.JSON, args...)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
-	// todo set format instead of marshaling json
-	return json.Marshal(result)
+	return []byte(result[0].(string)), nil
 }
 
 // QueryOneJSON runs a singleton-returning query and return its element in JSON.
@@ -245,36 +247,39 @@ func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
 // []byte{}, ErrorZeroResults is returned.
 func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error) {
 	// todo assert cardinally
-	result, err := conn.query(query, args...)
+	result, err := conn.query(query, format.JSON, args...)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
-	if len(result) == 0 {
-		return []byte{}, ErrorZeroResults
+	jsonStr := result[0].(string)
+	if len(jsonStr) == 2 { // "[]"
+		return nil, ErrorZeroResults
 	}
 
-	// todo set format instead of marshaling json
-	return json.Marshal(result[0])
+	return []byte(jsonStr[1 : len(jsonStr)-1]), nil
 }
 
-func (conn *Conn) query(query string, args ...interface{}) ([]interface{}, error) {
-	_, hasCodecs := conn.queryCache[query]
+func (conn *Conn) query(query string, frmt int, args ...interface{}) ([]interface{}, error) {
+	key := queryCacheKey{query, frmt}
+	_, hasCodecs := conn.queryCache[key]
+
 	if !hasCodecs {
-		return conn.execute(query, args...)
+		return conn.execute(query, frmt, args...)
 	}
 
-	return conn.optimisticExecute(query, args...)
+	return conn.optimisticExecute(query, frmt, args...)
 }
 
-func (conn *Conn) optimisticExecute(query string, args ...interface{}) ([]interface{}, error) {
-	codecIDs := conn.queryCache[query]
+func (conn *Conn) optimisticExecute(query string, frmt int, args ...interface{}) ([]interface{}, error) {
+	key := queryCacheKey{query, frmt}
+	codecIDs := conn.queryCache[key]
 	inputCodec := conn.codecCache[codecIDs.inputID]
 	outputCodec := conn.codecCache[codecIDs.outputID]
 
 	msg := []byte{message.OptimisticExecute, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, format.Binary)
+	protocol.PushUint8(&msg, uint8(frmt))
 	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
 	protocol.PushString(&msg, query)
 	msg = append(msg, codecIDs.inputID[:]...)
@@ -311,10 +316,10 @@ func (conn *Conn) optimisticExecute(query string, args ...interface{}) ([]interf
 	return out, nil
 }
 
-func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, error) {
+func (conn *Conn) execute(query string, frmt int, args ...interface{}) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, format.Binary)
+	protocol.PushUint8(&msg, uint8(frmt))
 	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
 	protocol.PushBytes(&msg, []byte{})         // no statement name
 	protocol.PushString(&msg, query)
@@ -357,7 +362,9 @@ func (conn *Conn) execute(query string, args ...interface{}) ([]interface{}, err
 		inputCodec = conn.codecCache[inputCodecID]
 		outputCodec = conn.codecCache[outputCodecID]
 	}
-	conn.queryCache[query] = queryCodecIDs{inputCodecID, outputCodecID}
+
+	key := queryCacheKey{query, frmt}
+	conn.queryCache[key] = queryCodecIDs{inputCodecID, outputCodecID}
 
 	msg = []byte{message.Execute, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0)       // no headers
@@ -444,7 +451,7 @@ func Connect(opts Options) (conn *Conn, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("tcp connection error while connecting: %v", err)
 	}
-	conn = &Conn{tcpConn, nil, codecs.CodecLookup{}, map[string]queryCodecIDs{}}
+	conn = &Conn{tcpConn, nil, codecs.CodecLookup{}, map[queryCacheKey]queryCodecIDs{}}
 
 	msg := []byte{message.ClientHandshake, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // major version
@@ -472,7 +479,7 @@ func Connect(opts Options) (conn *Conn, err error) {
 		case message.ServerKeyData:
 			secret = bts[5:]
 		case message.ReadyForCommand:
-			return &Conn{tcpConn, secret, codecs.CodecLookup{}, map[string]queryCodecIDs{}}, nil
+			return &Conn{tcpConn, secret, codecs.CodecLookup{}, map[queryCacheKey]queryCodecIDs{}}, nil
 		case message.ErrorResponse:
 			return nil, decodeError(&bts)
 		case message.AuthenticationOK:

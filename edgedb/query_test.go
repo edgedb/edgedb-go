@@ -78,7 +78,7 @@ func TestQueryJSON(t *testing.T) {
 	actual := string(result)
 
 	assert.Nil(t, err)
-	assert.Equal(t, "[{\"a\":0,\"b\":1},{\"a\":42,\"b\":2}]", actual)
+	assert.Equal(t, "[{\"a\" : 0, \"b\" : 1}, {\"a\" : 42, \"b\" : 2}]", actual)
 }
 
 func TestQueryOneJSON(t *testing.T) {
@@ -92,14 +92,14 @@ func TestQueryOneJSON(t *testing.T) {
 	actual := string(result)
 
 	assert.Nil(t, err)
-	assert.Equal(t, "{\"a\":0,\"b\":42}", actual)
+	assert.Equal(t, "{\"a\" : 0, \"b\" : 42}", actual)
 }
 
 func TestQueryOneJSONZeroResults(t *testing.T) {
 	result, err := conn.QueryOneJSON("SELECT <int64>{}")
 
 	assert.Equal(t, err, ErrorZeroResults)
-	assert.Equal(t, []byte{}, result)
+	assert.Equal(t, []byte(nil), result)
 }
 
 func TestQueryOne(t *testing.T) {
