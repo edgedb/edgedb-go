@@ -31,6 +31,11 @@ func TestParsePassword(t *testing.T) {
 	assert.Equal(t, "secret", opts.Password)
 }
 
+func TestMissingPort(t *testing.T) {
+	opts := DSN("edgedb://me@localhost/somedb")
+	assert.Equal(t, 5656, opts.Port)
+}
+
 func TestDialHost(t *testing.T) {
 	opts := Options{Host: "some.com", Port: 1234}
 	assert.Equal(t, "some.com:1234", opts.dialHost())

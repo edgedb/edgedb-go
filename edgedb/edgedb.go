@@ -61,9 +61,14 @@ func DSN(dsn string) Options {
 		panic(err)
 	}
 
-	port, err := strconv.Atoi(parsed.Port())
-	if err != nil {
-		panic(err)
+	var port int
+	if parsed.Port() == "" {
+		port = 5656
+	} else {
+		port, err = strconv.Atoi(parsed.Port())
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	host := strings.Split(parsed.Host, ":")[0]
