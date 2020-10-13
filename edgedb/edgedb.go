@@ -479,8 +479,16 @@ func Connect(opts Options) (conn *Conn, err error) {
 
 		switch mType {
 		case message.ServerHandshake:
-			// todo close the connection if protocol version can't be supported
+			// The client _MUST_ close the connection if the protocol version can't be supported.
 			// https://edgedb.com/docs/internals/protocol/overview#connection-phase
+			protocol.PopUint32(&bts) // message length
+			major := protocol.PopUint16(&bts)
+			minor := protocol.PopUint16(&bts)
+
+			if major != 0 || minor != 8 {
+				conn.conn.Close()
+				panic(fmt.Sprintf("unsupported protocol version: %v.%v", major, minor))
+			}
 		case message.ServerKeyData:
 			secret = bts[5:]
 		case message.ReadyForCommand:
