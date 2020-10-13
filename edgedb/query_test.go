@@ -11,6 +11,13 @@ import (
 // conn is initialized by TestMain
 var conn *Conn
 
+func executeOrFatal(command string) {
+	err := conn.Execute(command)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func TestMain(m *testing.M) {
 	opts := DSN("edgedb://edgedb@localhost:5656/edgedb")
 	var err error
@@ -20,7 +27,7 @@ func TestMain(m *testing.M) {
 	}
 	defer conn.Close()
 
-	err = conn.Execute(`
+	executeOrFatal(`
 		START MIGRATION TO {
 			module default {
 				type User {
@@ -31,9 +38,28 @@ func TestMain(m *testing.M) {
 		POPULATE MIGRATION;
 		COMMIT MIGRATION;
 	`)
-	if err != nil {
-		log.Fatal(err)
-	}
+	conn.Execute(`
+		CREATE SUPERUSER ROLE user_with_password {
+			SET password := 'secret';
+		};
+	`)
+	executeOrFatal("CONFIGURE SYSTEM RESET Auth;")
+	executeOrFatal(`
+		CONFIGURE SYSTEM INSERT Auth {
+			comment := "no password",
+			priority := 1,
+			method := (INSERT Trust),
+			user := {'*'},
+		};
+	`)
+	executeOrFatal(`
+		CONFIGURE SYSTEM INSERT Auth {
+			comment := "password required",
+			priority := 0,
+			method := (INSERT SCRAM),
+			user := {'user_with_password'}
+		}
+	`)
 
 	os.Exit(m.Run())
 }

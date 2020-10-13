@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/xdg/scram"
+
 	"github.com/fmoor/edgedb-golang/edgedb/marshal"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol"
 	"github.com/fmoor/edgedb-golang/edgedb/protocol/aspect"
@@ -450,6 +452,85 @@ func (conn *Conn) cacheMissingCodecs() error {
 	return nil
 }
 
+func (conn *Conn) authenticate(username string, password string) error {
+	client, err := scram.SHA256.NewClient(username, password, "")
+	if err != nil {
+		panic(err)
+	}
+
+	conv := client.NewConversation()
+	scramMsg, err := conv.Step("")
+	if err != nil {
+		panic(err)
+	}
+
+	msg := []byte{message.AuthenticationSASLInitialResponse, 0, 0, 0, 0}
+	protocol.PushString(&msg, "SCRAM-SHA-256")
+	protocol.PushString(&msg, scramMsg)
+	protocol.PutMsgLength(msg)
+
+	rcv := conn.writeAndRead(msg)
+	mType := protocol.PopUint8(&rcv)
+
+	switch mType {
+	case message.Authentication:
+		protocol.PopUint32(&rcv) // message length
+		authStatus := protocol.PopUint32(&rcv)
+		if authStatus != 0xb {
+			panic(fmt.Sprintf("unexpected authentication status: 0x%x", authStatus))
+		}
+
+		scramRcv := protocol.PopString(&rcv)
+		scramMsg, err = conv.Step(scramRcv)
+		if err != nil {
+			panic(err)
+		}
+	case message.ErrorResponse:
+		return decodeError(&rcv)
+	default:
+		panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+	}
+
+	msg = []byte{message.AuthenticationSASLResponse, 0, 0, 0, 0}
+	protocol.PushString(&msg, scramMsg)
+	protocol.PutMsgLength(msg)
+
+	rcv = conn.writeAndRead(msg)
+	for len(rcv) > 0 {
+		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
+
+		switch mType {
+		case message.Authentication:
+			protocol.PopUint32(&bts) // message length
+			authStatus := protocol.PopUint32(&bts)
+
+			switch authStatus {
+			case 0:
+				continue
+			case 0xc:
+				scramRcv := protocol.PopString(&bts)
+				_, err = conv.Step(scramRcv)
+				if err != nil {
+					panic(err)
+				}
+			default:
+				panic(fmt.Sprintf("unexpected authentication status: 0x%x", authStatus))
+			}
+		case message.ServerKeyData:
+			conn.secret = bts[5:]
+		case message.ReadyForCommand:
+			break
+		case message.ErrorResponse:
+			return decodeError(&bts)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+		}
+	}
+
+	return nil
+}
+
 // Connect establishes a connection to an EdgeDB server.
 func Connect(opts Options) (conn *Conn, err error) {
 	tcpConn, err := net.Dial("tcp", opts.dialHost())
@@ -470,9 +551,6 @@ func Connect(opts Options) (conn *Conn, err error) {
 	protocol.PutMsgLength(msg)
 
 	rcv := conn.writeAndRead(msg)
-
-	var secret []byte
-
 	for len(rcv) > 0 {
 		bts := protocol.PopMessage(&rcv)
 		mType := protocol.PopUint8(&bts)
@@ -487,16 +565,26 @@ func Connect(opts Options) (conn *Conn, err error) {
 
 			if major != 0 || minor != 8 {
 				conn.conn.Close()
-				panic(fmt.Sprintf("unsupported protocol version: %v.%v", major, minor))
+				return nil, fmt.Errorf("unsupported protocol version: %v.%v", major, minor)
 			}
 		case message.ServerKeyData:
-			secret = bts[5:]
+			conn.secret = bts[5:]
 		case message.ReadyForCommand:
-			return &Conn{tcpConn, secret, codecs.CodecLookup{}, map[queryCacheKey]queryCodecIDs{}}, nil
+			break
 		case message.ErrorResponse:
 			return nil, decodeError(&bts)
-		case message.AuthenticationOK:
-			continue
+		case message.Authentication:
+			protocol.PopUint32(&bts) // message length
+			authStatus := protocol.PopUint32(&bts)
+
+			if authStatus != 0 {
+				err := conn.authenticate(opts.User, opts.Password)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			break
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}

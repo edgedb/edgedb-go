@@ -11,6 +11,8 @@ require (
 	github.com/gin-gonic/gin v1.6.3 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect
 	github.com/stretchr/testify v1.6.1
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
+	github.com/xdg/stringprep v1.0.0 // indirect
 	go.opencensus.io v0.22.4 // indirect
 	google.golang.org/api v0.32.0 // indirect
 	google.golang.org/grpc v1.32.0 // indirect
