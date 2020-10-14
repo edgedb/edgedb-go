@@ -13,14 +13,14 @@ import (
 
 	"github.com/xdg/scram"
 
-	"github.com/fmoor/edgedb-golang/edgedb/marshal"
-	"github.com/fmoor/edgedb-golang/edgedb/protocol"
-	"github.com/fmoor/edgedb-golang/edgedb/protocol/aspect"
-	"github.com/fmoor/edgedb-golang/edgedb/protocol/cardinality"
-	"github.com/fmoor/edgedb-golang/edgedb/protocol/codecs"
-	"github.com/fmoor/edgedb-golang/edgedb/protocol/format"
-	"github.com/fmoor/edgedb-golang/edgedb/protocol/message"
-	"github.com/fmoor/edgedb-golang/edgedb/types"
+	"github.com/edgedb/edgedb-go/edgedb/marshal"
+	"github.com/edgedb/edgedb-go/edgedb/protocol"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/aspect"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
+	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
 // todo add examples

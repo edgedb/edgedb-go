@@ -3,7 +3,7 @@ package protocol
 import (
 	"encoding/binary"
 
-	"github.com/fmoor/edgedb-golang/edgedb/types"
+	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
 func PopUint8(bts *[]byte) uint8 {

@@ -1,4 +1,4 @@
-module github.com/fmoor/edgedb-golang/edgedb
+module github.com/edgedb/edgedb-go/edgedb
 
 go 1.15
 

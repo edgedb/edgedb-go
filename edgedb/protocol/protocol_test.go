@@ -3,7 +3,7 @@ package protocol
 import (
 	"testing"
 
-	"github.com/fmoor/edgedb-golang/edgedb/types"
+	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
 )
 

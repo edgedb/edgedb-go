@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/fmoor/edgedb-golang/edgedb/protocol"
-	"github.com/fmoor/edgedb-golang/edgedb/types"
+	"github.com/edgedb/edgedb-go/edgedb/protocol"
+	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
 const (
