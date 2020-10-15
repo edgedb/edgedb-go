@@ -23,8 +23,14 @@ import (
 )
 
 func TestAuth(t *testing.T) {
-	opts := DSN("edgedb://user_with_password:secret@localhost/edgedb")
-	conn, err := Connect(opts)
+	conn, err := Connect(Options{
+		Host:     server.Host,
+		Port:     server.Port,
+		User:     "user_with_password",
+		Password: "secret",
+		Database: "edgedb",
+		admin:    true,
+	})
 	assert.Nil(t, err)
 
 	result, err := conn.QueryOneJSON("SELECT 'It worked!';")

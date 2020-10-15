@@ -44,20 +44,19 @@ func TestTutorial(t *testing.T) {
 	err := conn.Execute("CREATE DATABASE " + dbName)
 	require.Nil(t, err)
 
-	defer func() {
-		err = conn.Execute("DROP DATABASE " + dbName + ";")
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	opts := Options{Database: dbName, User: "edgedb", Host: "localhost"}
-	edb, _ := Connect(opts)
+	edb, err := Connect(Options{
+		Host:     server.Host,
+		Port:     server.Port,
+		Database: dbName,
+		User:     "edgedb",
+		admin:    true,
+	})
+	if err != nil {
+		panic(err)
+	}
 	defer func() {
 		err = edb.Close()
-		if err != nil {
-			panic(err)
-		}
+		require.Nil(t, err)
 	}()
 
 	err = edb.Execute(`

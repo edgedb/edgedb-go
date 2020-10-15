@@ -17,8 +17,13 @@
 package edgedb
 
 import (
+	"bufio"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,33 +32,96 @@ import (
 // conn is initialized by TestMain
 var conn *Conn
 
-func executeOrFatal(command string) {
+type serverData struct {
+	Port int    `json:"port"`
+	Host string `json:"runstate_dir"`
+}
+
+var server serverData
+
+func executeOrPanic(command string) {
 	err := conn.Execute(command)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
-func TestMain(m *testing.M) {
-	opts := DSN("edgedb://edgedb@localhost:5656/edgedb")
-	var err error
-	conn, err = Connect(opts)
-	if err != nil {
-		log.Fatal(err)
+func startServer() (err error) {
+	cmdName := "edgedb-server"
+	if slot, ok := os.LookupEnv("EDGEDB_SLOT"); ok {
+		cmdName = fmt.Sprintf("%v-%v", cmdName, slot)
 	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
+	cmd := exec.Command(
+		cmdName,
+		"--temp-dir",
+		"--testmode",
+		"--echo-runtime-info",
+		"--port=auto",
+		"--auto-shutdown",
+	)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	var text string
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		text = scanner.Text()
+		log.Println(text)
+		if strings.HasPrefix(text, "EDGEDB_SERVER_DATA:") {
+			break
+		}
+	}
+
+	encoded := strings.TrimPrefix(text, "EDGEDB_SERVER_DATA:")
+	err = json.Unmarshal([]byte(encoded), &server)
+	if err != nil {
+		if e := cmd.Process.Kill(); e != nil {
+			return fmt.Errorf("%v AND %v", err, e)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		os.Exit(code)
 	}()
 
-	executeOrFatal(`
+	err := startServer()
+	if err != nil {
+		panic(err)
+	}
+
+	conn, err = Connect(Options{
+		Host:     server.Host,
+		Port:     server.Port,
+		User:     "edgedb",
+		Database: "edgedb",
+		admin:    true,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	executeOrPanic(`
 		START MIGRATION TO {
 			module default {
 				type User {
@@ -69,8 +137,8 @@ func TestMain(m *testing.M) {
 			SET password := 'secret';
 		};
 	`)
-	executeOrFatal("CONFIGURE SYSTEM RESET Auth;")
-	executeOrFatal(`
+	executeOrPanic("CONFIGURE SYSTEM RESET Auth;")
+	executeOrPanic(`
 		CONFIGURE SYSTEM INSERT Auth {
 			comment := "no password",
 			priority := 1,
@@ -78,7 +146,7 @@ func TestMain(m *testing.M) {
 			user := {'*'},
 		};
 	`)
-	executeOrFatal(`
+	executeOrPanic(`
 		CONFIGURE SYSTEM INSERT Auth {
 			comment := "password required",
 			priority := 0,

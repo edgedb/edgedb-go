@@ -54,7 +54,7 @@ type Options struct {
 	User     string
 	Database string
 	Password string
-	// todo support authentication etc.
+	admin    bool
 }
 
 func (o Options) dialHost() string {
@@ -589,7 +589,18 @@ func (conn *Conn) authenticate(username string, password string) error {
 
 // Connect establishes a connection to an EdgeDB server.
 func Connect(opts Options) (conn *Conn, err error) {
-	tcpConn, err := net.Dial("tcp", opts.dialHost())
+	// todo add connection timeout
+	var tcpConn net.Conn
+	if opts.admin {
+		tcpConn, err = net.Dial("unix", fmt.Sprintf(
+			"%v/.s.EDGEDB.admin.%v",
+			opts.Host,
+			opts.Port,
+		))
+	} else {
+		tcpConn, err = net.Dial("tcp", opts.dialHost())
+	}
+
 	if err != nil {
 		err = fmt.Errorf("tcp connection error while connecting: %v", err)
 		return nil, err
