@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - ci
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 4
+      matrix:
+        go-version: ["1.11", "1.12", "1.13", "1.14", "1.15"]
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up go ${{ matrix.go-version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.29
+          working-directory: ./edgedb
+
+      - name: Build
+        working-directory: ./edgedb
+        run: |
+          go build .
+
+      - name: Install EdgeDB
+        env:
+          OS_NAME: ${{ matrix.os  }}
+          SLOT: 1-alpha4
+        run: |
+          .github/workflows/install-edgedb.sh
+
+      - name: Test
+        working-directory: ./edgedb
+        run: |
+          go test ./...
