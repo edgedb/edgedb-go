@@ -73,14 +73,22 @@ func Pop(bts *[]byte) CodecLookup {
 		case enumType:
 			panic("enum type descriptor not implemented") // todo
 		default:
-			panic(fmt.Sprintf("unknown descriptor type 0x%x:\n% x\n", descriptorType, bts))
+			panic(fmt.Sprintf(
+				"unknown descriptor type 0x%x:\n% x\n",
+				descriptorType,
+				bts,
+			))
 		}
 		codecs = append(codecs, lookup[id])
 	}
 	return lookup
 }
 
-func popSetCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popSetCodec(
+	bts *[]byte,
+	id types.UUID,
+	codecs []DecodeEncoder,
+) DecodeEncoder {
 	n := protocol.PopUint16(bts)
 	return &Set{codecs[n]}
 }
@@ -119,7 +127,11 @@ func (c *Set) Encode(bts *[]byte, val interface{}) {
 	panic("not implemented")
 }
 
-func popObjectCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popObjectCodec(
+	bts *[]byte,
+	id types.UUID,
+	codecs []DecodeEncoder,
+) DecodeEncoder {
 	fields := []objectField{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -169,7 +181,7 @@ func (c *Object) Decode(bts *[]byte) interface{} {
 		switch int32(protocol.PeekUint32(&buf)) {
 		case -1:
 			// element length -1 means missing field
-			// https://www.edgedb.com/docs/internals/protocol/dataformats#tuple-namedtuple-and-object
+			// https://www.edgedb.com/docs/internals/protocol/dataformats
 			protocol.PopUint32(&buf)
 			out[field.name] = types.Set{}
 		default:
@@ -443,7 +455,11 @@ func (c *JSON) Encode(bts *[]byte, val interface{}) {
 	*bts = append(*bts, buf...)
 }
 
-func popTupleCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popTupleCodec(
+	bts *[]byte,
+	id types.UUID,
+	codecs []DecodeEncoder,
+) DecodeEncoder {
 	fields := []DecodeEncoder{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -498,7 +514,11 @@ func (c *Tuple) Encode(bts *[]byte, val interface{}) {
 	*bts = append(*bts, tmp...)
 }
 
-func popNamedTupleCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popNamedTupleCodec(
+	bts *[]byte,
+	id types.UUID,
+	codecs []DecodeEncoder,
+) DecodeEncoder {
 	fields := []namedTupleField{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -569,12 +589,16 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 	*bts = append(*bts, tmp...)
 }
 
-func popArrayCodec(bts *[]byte, id types.UUID, codecs []DecodeEncoder) DecodeEncoder {
+func popArrayCodec(
+	bts *[]byte,
+	id types.UUID,
+	codecs []DecodeEncoder,
+) DecodeEncoder {
 	index := protocol.PopUint16(bts) // element type descriptor index
 
 	n := int(protocol.PopUint16(bts)) // number of array dimensions
 	for i := 0; i < n; i++ {
-		protocol.PopUint32(bts) //array dimension
+		protocol.PopUint32(bts) // array dimension
 	}
 
 	return &Array{codecs[index]}

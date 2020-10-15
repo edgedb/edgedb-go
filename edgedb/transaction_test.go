@@ -34,7 +34,11 @@ func TestTransactionSaves(t *testing.T) {
 
 	name := "test" + strconv.Itoa(rand.Int())
 	// todo maybe clean up the random entry :thinking:
-	err = conn.Query("INSERT User{ name := <str>$0 }", (*interface{})(nil), name)
+	err = conn.Query(
+		"INSERT User{ name := <str>$0 }",
+		(*interface{})(nil),
+		name,
+	)
 	assert.Nil(t, err)
 
 	err = tx.Commit()
@@ -62,7 +66,11 @@ func TestTransactionRollsBack(t *testing.T) {
 
 	name := "test" + strconv.Itoa(rand.Int())
 	// todo maybe clean up the random entry :thinking:
-	err = conn.Query("INSERT User{ name := <str>$0 }", (*interface{})(nil), name)
+	err = conn.Query(
+		"INSERT User{ name := <str>$0 }",
+		(*interface{})(nil),
+		name,
+	)
 	assert.Nil(t, err)
 
 	err = tx.RollBack()
@@ -78,5 +86,4 @@ func TestTransactionRollsBack(t *testing.T) {
 	)
 
 	assert.Equal(t, ErrorZeroResults, err)
-
 }

@@ -23,7 +23,14 @@ import "fmt"
 type UUID [16]byte
 
 func (id UUID) String() string {
-	return fmt.Sprintf("%x-%x-%x-%x-%x", id[0:4], id[4:6], id[6:8], id[8:10], id[10:16])
+	return fmt.Sprintf(
+		"%x-%x-%x-%x-%x",
+		id[0:4],
+		id[4:6],
+		id[6:8],
+		id[8:10],
+		id[10:16],
+	)
 }
 
 // Set https://www.edgedb.com/docs/edgeql/overview#everything-is-a-set

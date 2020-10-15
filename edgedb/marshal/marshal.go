@@ -20,6 +20,7 @@ import (
 	"reflect"
 )
 
+// Marshal populates out with values from in
 func Marshal(out *interface{}, in interface{}) {
 	ov := reflect.ValueOf(out).Elem().Elem().Elem()
 	iv := reflect.ValueOf(in)
@@ -45,7 +46,7 @@ func setScalar(out reflect.Value, in reflect.Value) {
 	if in.Kind() == reflect.Slice {
 		// assume in's value is an empty slice
 		// which represents a null value
-		// https://www.edgedb.com/docs/internals/protocol/dataformats#tuple-namedtuple-and-object
+		// https://www.edgedb.com/docs/internals/protocol/dataformats
 		return
 	}
 	out.Set(in)

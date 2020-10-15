@@ -32,7 +32,6 @@ func TestMarshalSetOfScalar(t *testing.T) {
 }
 
 func TestMarshalSetOfObject(t *testing.T) {
-
 	type Database struct {
 		Name string     `edgedb:"name"`
 		ID   types.UUID `edgedb:"id"`
@@ -45,7 +44,10 @@ func TestMarshalSetOfObject(t *testing.T) {
 		},
 		types.Object{
 			"name": "tutorial",
-			"id":   types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			"id": types.UUID{
+				1, 2, 3, 4, 5, 6, 7, 8,
+				9, 10, 11, 12, 13, 14, 15, 16,
+			},
 		},
 	}
 
@@ -56,7 +58,10 @@ func TestMarshalSetOfObject(t *testing.T) {
 		},
 		Database{
 			Name: "tutorial",
-			ID:   types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			ID: types.UUID{
+				1, 2, 3, 4, 5, 6, 7, 8,
+				9, 10, 11, 12, 13, 14, 15, 16,
+			},
 		},
 	}
 

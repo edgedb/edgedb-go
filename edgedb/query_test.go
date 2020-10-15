@@ -41,7 +41,17 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	code := 1
+	defer func() {
+		os.Exit(code)
+	}()
 
 	executeOrFatal(`
 		START MIGRATION TO {
@@ -54,7 +64,7 @@ func TestMain(m *testing.M) {
 		POPULATE MIGRATION;
 		COMMIT MIGRATION;
 	`)
-	conn.Execute(`
+	_ = conn.Execute(`
 		CREATE SUPERUSER ROLE user_with_password {
 			SET password := 'secret';
 		};
@@ -77,7 +87,7 @@ func TestMain(m *testing.M) {
 		}
 	`)
 
-	os.Exit(m.Run())
+	code = m.Run()
 }
 
 func TestNamedQueryArguments(t *testing.T) {
@@ -120,7 +130,11 @@ func TestQueryJSON(t *testing.T) {
 	actual := string(result)
 
 	assert.Nil(t, err)
-	assert.Equal(t, "[{\"a\" : 0, \"b\" : 1}, {\"a\" : 42, \"b\" : 2}]", actual)
+	assert.Equal(
+		t,
+		"[{\"a\" : 0, \"b\" : 1}, {\"a\" : 42, \"b\" : 2}]",
+		actual,
+	)
 }
 
 func TestQueryOneJSON(t *testing.T) {
@@ -162,6 +176,10 @@ func TestQueryOneZeroResults(t *testing.T) {
 
 func TestError(t *testing.T) {
 	err := conn.Execute("malformed query;")
-	expected := &Error{Severity: 120, Code: 67174656, Message: "Unexpected 'malformed'"}
+	expected := &Error{
+		Severity: 120,
+		Code:     67174656,
+		Message:  "Unexpected 'malformed'",
+	}
 	assert.Equal(t, expected, err)
 }

@@ -270,7 +270,7 @@ linters-settings:
     # max line length, lines longer will be reported. Default is 120.
     # '\t' is counted as 1 character by default,
     # and can be changed with the tab-width option
-    line-length: 80
+    line-length: 79
     # tab width in spaces. Default to 1.
     tab-width: 4
   maligned:
@@ -390,7 +390,6 @@ linters:
   enable:
     - deadcode
     - errcheck
-    - gocognit
     - gocritic
     - goheader
     - goimports

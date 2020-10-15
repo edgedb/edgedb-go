@@ -142,9 +142,10 @@ type Conn struct {
 }
 
 // Close the db connection
-func (conn *Conn) Close() error {
-	// todo adjust return value if conn.conn.Close() close returns an error
-	defer conn.conn.Close()
+func (conn *Conn) Close() (err error) {
+	defer func() {
+		err = conn.conn.Close()
+	}()
 	msg := []byte{message.Terminate, 0, 0, 0, 4}
 	if _, err := conn.conn.Write(msg); err != nil {
 		return fmt.Errorf("error while terminating: %v", err)
@@ -215,7 +216,6 @@ func (conn *Conn) Execute(query string) error {
 		case message.CommandComplete:
 			continue
 		case message.ReadyForCommand:
-			break
 		case message.ErrorResponse:
 			return decodeError(&bts)
 		default:
@@ -229,7 +229,11 @@ func (conn *Conn) Execute(query string) error {
 // QueryOne runs a singleton-returning query and return its element.
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
-func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) error {
+func (conn *Conn) QueryOne(
+	query string,
+	out interface{},
+	args ...interface{},
+) error {
 	// todo assert cardinality
 	result, err := conn.query(query, format.Binary, args...)
 	if err != nil {
@@ -244,7 +248,11 @@ func (conn *Conn) QueryOne(query string, out interface{}, args ...interface{}) e
 }
 
 // Query runs a query and returns the results.
-func (conn *Conn) Query(query string, out interface{}, args ...interface{}) error {
+func (conn *Conn) Query(
+	query string,
+	out interface{},
+	args ...interface{},
+) error {
 	// todo assert that out is a pointer to a slice
 	result, err := conn.query(query, format.Binary, args...)
 	if err != nil {
@@ -256,7 +264,10 @@ func (conn *Conn) Query(query string, out interface{}, args ...interface{}) erro
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
+func (conn *Conn) QueryJSON(
+	query string,
+	args ...interface{},
+) ([]byte, error) {
 	result, err := conn.query(query, format.JSON, args...)
 	if err != nil {
 		return nil, err
@@ -265,10 +276,14 @@ func (conn *Conn) QueryJSON(query string, args ...interface{}) ([]byte, error) {
 	return []byte(result[0].(string)), nil
 }
 
-// QueryOneJSON runs a singleton-returning query and return its element in JSON.
+// QueryOneJSON runs a singleton-returning query
+// and return its element in JSON.
 // If the query executes successfully but doesn't return a result
 // []byte{}, ErrorZeroResults is returned.
-func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error) {
+func (conn *Conn) QueryOneJSON(
+	query string,
+	args ...interface{},
+) ([]byte, error) {
 	// todo assert cardinally
 	result, err := conn.query(query, format.JSON, args...)
 	if err != nil {
@@ -283,7 +298,11 @@ func (conn *Conn) QueryOneJSON(query string, args ...interface{}) ([]byte, error
 	return []byte(jsonStr[1 : len(jsonStr)-1]), nil
 }
 
-func (conn *Conn) query(query string, ioFormat int, args ...interface{}) ([]interface{}, error) {
+func (conn *Conn) query(
+	query string,
+	ioFormat int,
+	args ...interface{},
+) ([]interface{}, error) {
 	key := queryCacheKey{query, ioFormat}
 	_, hasCodecs := conn.queryCache[key]
 
@@ -294,7 +313,11 @@ func (conn *Conn) query(query string, ioFormat int, args ...interface{}) ([]inte
 	return conn.optimisticExecute(query, ioFormat, args...)
 }
 
-func (conn *Conn) optimisticExecute(query string, ioFormat int, args ...interface{}) ([]interface{}, error) {
+func (conn *Conn) optimisticExecute(
+	query string,
+	ioFormat int,
+	args ...interface{},
+) ([]interface{}, error) {
 	key := queryCacheKey{query, ioFormat}
 	codecIDs := conn.queryCache[key]
 	inputCodec := conn.codecCache[codecIDs.inputID]
@@ -303,7 +326,10 @@ func (conn *Conn) optimisticExecute(query string, ioFormat int, args ...interfac
 	msg := []byte{message.OptimisticExecute, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, uint8(ioFormat))
-	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
+
+	// todo should this be more intelligent?
+	protocol.PushUint8(&msg, cardinality.Many)
+
 	protocol.PushString(&msg, query)
 	msg = append(msg, codecIDs.inputID[:]...)
 	msg = append(msg, codecIDs.outputID[:]...)
@@ -339,12 +365,19 @@ func (conn *Conn) optimisticExecute(query string, ioFormat int, args ...interfac
 	return out, nil
 }
 
-func (conn *Conn) execute(query string, ioFormat int, args ...interface{}) ([]interface{}, error) {
+func (conn *Conn) execute(
+	query string,
+	ioFormat int,
+	args ...interface{},
+) ([]interface{}, error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, uint8(ioFormat))
-	protocol.PushUint8(&msg, cardinality.Many) // todo should this be more intelligent?
-	protocol.PushBytes(&msg, []byte{})         // no statement name
+
+	// todo should this be more intelligent?
+	protocol.PushUint8(&msg, cardinality.Many)
+
+	protocol.PushBytes(&msg, []byte{}) // no statement name
 	protocol.PushString(&msg, query)
 	protocol.PutMsgLength(msg)
 
@@ -360,13 +393,15 @@ func (conn *Conn) execute(query string, ioFormat int, args ...interface{}) ([]in
 
 		switch mType {
 		case message.PrepareComplete:
-			protocol.PopUint32(&bts)               // message length
-			protocol.PopUint16(&bts)               // number of headers, assume 0
+			protocol.PopUint32(&bts) // message length
+
+			// number of headers, assume 0
+			protocol.PopUint16(&bts)
+
 			protocol.PopUint8(&bts)                // cardianlity
 			inputCodecID = protocol.PopUUID(&bts)  // input type id
 			outputCodecID = protocol.PopUUID(&bts) // output type id
 		case message.ReadyForCommand:
-			break
 		case message.ErrorResponse:
 			return nil, decodeError(&bts)
 		default:
@@ -493,7 +528,10 @@ func (conn *Conn) authenticate(username string, password string) error {
 		protocol.PopUint32(&rcv) // message length
 		authStatus := protocol.PopUint32(&rcv)
 		if authStatus != 0xb {
-			panic(fmt.Sprintf("unexpected authentication status: 0x%x", authStatus))
+			panic(fmt.Sprintf(
+				"unexpected authentication status: 0x%x",
+				authStatus,
+			))
 		}
 
 		scramRcv := protocol.PopString(&rcv)
@@ -531,12 +569,14 @@ func (conn *Conn) authenticate(username string, password string) error {
 					panic(err)
 				}
 			default:
-				panic(fmt.Sprintf("unexpected authentication status: 0x%x", authStatus))
+				panic(fmt.Sprintf(
+					"unexpected authentication status: 0x%x",
+					authStatus,
+				))
 			}
 		case message.ServerKeyData:
 			conn.secret = bts[5:]
 		case message.ReadyForCommand:
-			break
 		case message.ErrorResponse:
 			return decodeError(&bts)
 		default:
@@ -551,9 +591,15 @@ func (conn *Conn) authenticate(username string, password string) error {
 func Connect(opts Options) (conn *Conn, err error) {
 	tcpConn, err := net.Dial("tcp", opts.dialHost())
 	if err != nil {
-		return nil, fmt.Errorf("tcp connection error while connecting: %v", err)
+		err = fmt.Errorf("tcp connection error while connecting: %v", err)
+		return nil, err
 	}
-	conn = &Conn{tcpConn, nil, codecs.CodecLookup{}, map[queryCacheKey]queryCodecIDs{}}
+	conn = &Conn{
+		tcpConn,
+		nil,
+		codecs.CodecLookup{},
+		map[queryCacheKey]queryCodecIDs{},
+	}
 
 	msg := []byte{message.ClientHandshake, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // major version
@@ -573,20 +619,28 @@ func Connect(opts Options) (conn *Conn, err error) {
 
 		switch mType {
 		case message.ServerHandshake:
-			// The client _MUST_ close the connection if the protocol version can't be supported.
-			// https://edgedb.com/docs/internals/protocol/overview#connection-phase
+			// The client _MUST_ close the connection
+			// if the protocol version can't be supported.
+			// https://edgedb.com/docs/internals/protocol/overview
 			protocol.PopUint32(&bts) // message length
 			major := protocol.PopUint16(&bts)
 			minor := protocol.PopUint16(&bts)
 
 			if major != 0 || minor != 8 {
-				conn.conn.Close()
-				return nil, fmt.Errorf("unsupported protocol version: %v.%v", major, minor)
+				err := conn.conn.Close()
+				if err != nil {
+					return nil, err
+				}
+				err = fmt.Errorf(
+					"unsupported protocol version: %v.%v",
+					major,
+					minor,
+				)
+				return nil, err
 			}
 		case message.ServerKeyData:
 			conn.secret = bts[5:]
 		case message.ReadyForCommand:
-			break
 		case message.ErrorResponse:
 			return nil, decodeError(&bts)
 		case message.Authentication:
@@ -599,8 +653,6 @@ func Connect(opts Options) (conn *Conn, err error) {
 					return nil, err
 				}
 			}
-
-			break
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}

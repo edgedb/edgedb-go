@@ -30,5 +30,4 @@ func TestAuth(t *testing.T) {
 	result, err := conn.QueryOneJSON("SELECT 'It worked!';")
 	assert.Nil(t, err)
 	assert.Equal(t, `"It worked!"`, string(result))
-
 }

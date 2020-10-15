@@ -45,7 +45,7 @@ func TestTutorial(t *testing.T) {
 	require.Nil(t, err)
 
 	defer func() {
-		err := conn.Execute("DROP DATABASE " + dbName + ";")
+		err = conn.Execute("DROP DATABASE " + dbName + ";")
 		if err != nil {
 			panic(err)
 		}
@@ -53,7 +53,12 @@ func TestTutorial(t *testing.T) {
 
 	opts := Options{Database: dbName, User: "edgedb", Host: "localhost"}
 	edb, _ := Connect(opts)
-	defer edb.Close()
+	defer func() {
+		err = edb.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	err = edb.Execute(`
 		START MIGRATION TO {
