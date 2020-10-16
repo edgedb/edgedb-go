@@ -17,38 +17,46 @@
 package edgedb
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseHost(t *testing.T) {
-	opts := DSN("edgedb://me@localhost:5656/somedb")
+	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	require.Nil(t, err)
 	assert.Equal(t, "localhost", opts.Host)
 }
 
 func TestParsePort(t *testing.T) {
-	opts := DSN("edgedb://me@localhost:5656/somedb")
+	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	require.Nil(t, err)
 	assert.Equal(t, 5656, opts.Port)
 }
 
 func TestParseUser(t *testing.T) {
-	opts := DSN("edgedb://me@localhost:5656/somedb")
+	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	require.Nil(t, err)
 	assert.Equal(t, "me", opts.User)
 }
 
 func TestParseDatabase(t *testing.T) {
-	opts := DSN("edgedb://me@localhost:5656/somedb")
+	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	require.Nil(t, err)
 	assert.Equal(t, "somedb", opts.Database)
 }
 
 func TestParsePassword(t *testing.T) {
-	opts := DSN("edgedb://me:secret@localhost:5656/somedb")
+	opts, err := DSN("edgedb://me:secret@localhost:5656/somedb")
+	require.Nil(t, err)
 	assert.Equal(t, "secret", opts.Password)
 }
 
 func TestMissingPort(t *testing.T) {
-	opts := DSN("edgedb://me@localhost/somedb")
+	opts, err := DSN("edgedb://me@localhost/somedb")
+	require.Nil(t, err)
 	assert.Equal(t, 5656, opts.Port)
 }
 
@@ -64,4 +72,13 @@ func TestDialHost(t *testing.T) {
 
 	opts = Options{}
 	assert.Equal(t, "localhost:5656", opts.dialHost())
+}
+
+func TestWrongScheme(t *testing.T) {
+	_, err := DSN("http://localhost")
+	assert.Equal(
+		t,
+		errors.New(`dsn "http://localhost" is not an edgedb:// URI`),
+		err,
+	)
 }

@@ -74,7 +74,6 @@ func startServer() (err error) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		text = scanner.Text()
-		log.Println(text)
 		if strings.HasPrefix(text, "EDGEDB_SERVER_DATA:") {
 			break
 		}

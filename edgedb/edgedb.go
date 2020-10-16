@@ -72,11 +72,14 @@ func (o Options) dialHost() string {
 }
 
 // DSN parses a URI string into an Options struct
-func DSN(dsn string) Options {
-	// todo assert scheme is edgedb
+func DSN(dsn string) (opts Options, err error) {
 	parsed, err := url.Parse(dsn)
 	if err != nil {
-		panic(err)
+		return opts, err
+	}
+
+	if parsed.Scheme != "edgedb" {
+		return opts, fmt.Errorf("dsn %q is not an edgedb:// URI", dsn)
 	}
 
 	var port int
@@ -85,7 +88,7 @@ func DSN(dsn string) Options {
 	} else {
 		port, err = strconv.Atoi(parsed.Port())
 		if err != nil {
-			panic(err)
+			return opts, err
 		}
 	}
 
@@ -99,7 +102,7 @@ func DSN(dsn string) Options {
 		User:     parsed.User.Username(),
 		Database: db,
 		Password: password,
-	}
+	}, nil
 }
 
 // Error is returned when something bad happened.
