@@ -62,12 +62,12 @@ func startServer() (err error) {
 	)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	var text string
@@ -84,9 +84,9 @@ func startServer() (err error) {
 	err = json.Unmarshal([]byte(encoded), &server)
 	if err != nil {
 		if e := cmd.Process.Kill(); e != nil {
-			return fmt.Errorf("%v AND %v", err, e)
+			err = fmt.Errorf("%v AND %v", err, e)
 		}
-		return err
+		log.Fatal(err)
 	}
 
 	return nil
