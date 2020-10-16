@@ -52,8 +52,8 @@ func TestDecodeSet(t *testing.T) {
 
 func TestDecodeObject(t *testing.T) {
 	codec := &Object{[]objectField{
-		objectField{false, false, false, "a", &String{}},
-		objectField{false, false, false, "b", &Int32{}},
+		{false, false, false, "a", &String{}},
+		{false, false, false, "b", &Int32{}},
 	}}
 
 	bts := []byte{
@@ -459,8 +459,8 @@ func TestDecodeNamedTuple(t *testing.T) {
 	}
 
 	codec := &NamedTuple{[]namedTupleField{
-		namedTupleField{"a", &Int32{}},
-		namedTupleField{"b", &Int32{}},
+		{"a", &Int32{}},
+		{"b", &Int32{}},
 	}}
 
 	result := codec.Decode(&bts)
@@ -475,8 +475,8 @@ func TestDecodeNamedTuple(t *testing.T) {
 
 func TestEncodeNamedTuple(t *testing.T) {
 	codec := &NamedTuple{[]namedTupleField{
-		namedTupleField{"a", &Int32{}},
-		namedTupleField{"b", &Int32{}},
+		{"a", &Int32{}},
+		{"b", &Int32{}},
 	}}
 
 	bts := []byte{}

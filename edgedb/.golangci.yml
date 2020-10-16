@@ -391,6 +391,7 @@ linters:
     - deadcode
     - errcheck
     - gocritic
+    - gofmt
     - goheader
     - goimports
     - golint

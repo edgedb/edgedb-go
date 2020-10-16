@@ -52,11 +52,11 @@ func TestMarshalSetOfObject(t *testing.T) {
 	}
 
 	expected := []Database{
-		Database{
+		{
 			Name: "edgedb",
 			ID:   types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		},
-		Database{
+		{
 			Name: "tutorial",
 			ID: types.UUID{
 				1, 2, 3, 4, 5, 6, 7, 8,

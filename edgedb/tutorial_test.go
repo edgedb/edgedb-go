@@ -146,7 +146,7 @@ func TestTutorial(t *testing.T) {
 	require.Nil(t, err)
 
 	expected := []Movie{
-		Movie{
+		{
 			Title: "Blade Runner 2049",
 			Year:  int64(2017),
 			Director: Person{
@@ -154,21 +154,21 @@ func TestTutorial(t *testing.T) {
 				LastName:  "Villeneuve",
 			},
 			Actors: []Person{
-				Person{
+				{
 					FirstName: "Harrison",
 					LastName:  "Ford",
 				},
-				Person{
+				{
 					FirstName: "Ryan",
 					LastName:  "Gosling",
 				},
-				Person{
+				{
 					FirstName: "Ana",
 					LastName:  "de Armas",
 				},
 			},
 		},
-		Movie{
+		{
 			Title: "Dune",
 			Director: Person{
 				FirstName: "Denis",

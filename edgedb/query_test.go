@@ -170,7 +170,7 @@ func TestNamedQueryArguments(t *testing.T) {
 	)
 
 	assert.Nil(t, err)
-	assert.Equal(t, [][]int64{[]int64{5, 8}}, result)
+	assert.Equal(t, [][]int64{{5, 8}}, result)
 }
 
 func TestNumberedQueryArguments(t *testing.T) {
@@ -183,7 +183,7 @@ func TestNumberedQueryArguments(t *testing.T) {
 	)
 
 	assert.Nil(t, err)
-	assert.Equal(t, [][]int64{[]int64{5, 8}}, result)
+	assert.Equal(t, [][]int64{{5, 8}}, result)
 }
 
 func TestQueryJSON(t *testing.T) {
