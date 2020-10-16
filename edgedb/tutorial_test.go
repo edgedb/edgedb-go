@@ -47,9 +47,10 @@ func TestTutorial(t *testing.T) {
 	edb, err := Connect(Options{
 		Host:     server.Host,
 		Port:     server.Port,
+		User:     server.User,
+		Password: server.Password,
 		Database: dbName,
-		User:     "edgedb",
-		admin:    true,
+		admin:    server.admin,
 	})
 	if err != nil {
 		panic(err)

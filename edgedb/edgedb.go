@@ -49,15 +49,26 @@ var (
 
 // Options for connecting to an EdgeDB server
 type Options struct {
-	Host     string
-	Port     int
-	User     string
-	Database string
-	Password string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Database string `json:"database"`
+	Password string `json:"password"`
 	admin    bool
 }
 
+func (o Options) socType() string {
+	if o.admin {
+		return "unix"
+	}
+	return "tcp"
+}
+
 func (o Options) dialHost() string {
+	if o.admin {
+		return fmt.Sprintf("%v/.s.EDGEDB.admin.%v", o.Host, o.Port)
+	}
+
 	host := o.Host
 	if host == "" {
 		host = "localhost"
@@ -593,16 +604,7 @@ func (conn *Conn) authenticate(username string, password string) error {
 // Connect establishes a connection to an EdgeDB server.
 func Connect(opts Options) (conn *Conn, err error) {
 	// todo add connection timeout
-	var tcpConn net.Conn
-	if opts.admin {
-		tcpConn, err = net.Dial("unix", fmt.Sprintf(
-			"%v/.s.EDGEDB.admin.%v",
-			opts.Host,
-			opts.Port,
-		))
-	} else {
-		tcpConn, err = net.Dial("tcp", opts.dialHost())
-	}
+	tcpConn, err := net.Dial(opts.socType(), opts.dialHost())
 
 	if err != nil {
 		err = fmt.Errorf("tcp connection error while connecting: %v", err)

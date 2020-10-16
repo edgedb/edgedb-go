@@ -23,13 +23,19 @@ import (
 )
 
 func TestAuth(t *testing.T) {
+	var host string
+	if server.admin {
+		host = "localhost"
+	} else {
+		host = server.Host
+	}
+
 	conn, err := Connect(Options{
-		Host:     server.Host,
+		Host:     host,
 		Port:     server.Port,
 		User:     "user_with_password",
 		Password: "secret",
-		Database: "edgedb",
-		admin:    true,
+		Database: server.Database,
 	})
 	assert.Nil(t, err)
 
