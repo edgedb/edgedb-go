@@ -1,13 +1,17 @@
-# A Golang driver for EdgeDB
-This is an unofficial EdgeDB driver for Golang. It is also the only one I know of at the moment.
+# The Go driver for EdgeDB
+
+Requires go 1.11 or higher.
 
 # ⚠️ WIP ⚠️
 This project is far from production ready. Contributions welcome! 😊
 
 ## Installation
-$ go get https://github.com/fmoor/edgedb-golang/edgedb
+$ go get https://github.com/edgedb/edgedb-go/edgedb
 
 ## Basic Usage
+Follow the [EdgeDB tutorial](https://edgedb.com/docs/tutorial/index)
+to get EdgeDB installed and minimally configured.
+
 ```go
 package main
 
@@ -36,5 +40,15 @@ func main() {
 }
 ```
 
+## Development
+
+A local installation of EdgeDB is required to run tests.
+Download EdgeDB from [here](https://edgedb.com/download)
+or [build it manually](https://edgedb.com/docs/internals/dev/).
+
+To run the test suite run `make test` from the `edgedb/` directory.
+To run lints `make lint`.
+To format the code `make format`.
+
 ## License
-edgedb-golang is developed and distributed under the Apache 2.0 license.
+edgedb-go is developed and distributed under the Apache 2.0 license.
