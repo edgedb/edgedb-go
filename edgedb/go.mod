@@ -10,6 +10,7 @@ require (
 	github.com/gin-gonic/contrib v0.0.0-20200913005814-1c32036e7ea4 // indirect
 	github.com/gin-gonic/gin v1.6.3 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect
+	github.com/golangci/golangci-lint v1.31.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xdg/stringprep v1.0.0 // indirect
