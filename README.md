@@ -1,4 +1,6 @@
 # The Go driver for EdgeDB
+[![Build Status](https://github.com/edgedb/edgedb-go/workflows/Tests/badge.svg?event=push&branch=master)](https://github.com/edgedb/edgedb-go/actions)
+[![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
 Requires go 1.11 or higher.
 
