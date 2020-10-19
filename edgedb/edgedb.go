@@ -495,7 +495,7 @@ func (conn *Conn) authenticate(username string, password string) error {
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(opts Options) (conn *Conn, err error) {
+func Connect(opts *Options) (conn *Conn, err error) {
 	// todo add connection timeout
 	tcpConn, err := net.Dial(opts.socType(), opts.dialHost())
 

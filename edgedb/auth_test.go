@@ -30,7 +30,7 @@ func TestAuth(t *testing.T) {
 		host = server.Host
 	}
 
-	conn, err := Connect(Options{
+	conn, err := Connect(&Options{
 		Host:     host,
 		Port:     server.Port,
 		User:     "user_with_password",

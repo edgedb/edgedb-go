@@ -142,7 +142,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	conn, err = Connect(server)
+	conn, err = Connect(&server)
 	if err != nil {
 		panic(err)
 	}

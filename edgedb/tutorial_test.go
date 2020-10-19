@@ -44,7 +44,7 @@ func TestTutorial(t *testing.T) {
 	err := conn.Execute("CREATE DATABASE " + dbName)
 	require.Nil(t, err)
 
-	edb, err := Connect(Options{
+	edb, err := Connect(&Options{
 		Host:     server.Host,
 		Port:     server.Port,
 		User:     server.User,
