@@ -23,9 +23,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/url"
-	"strconv"
-	"strings"
 
 	"github.com/xdg/scram"
 
@@ -46,96 +43,6 @@ var (
 	// todo should this be returned from Query() and QueryJSON()? :thinking:
 	ErrorZeroResults = errors.New("zero results")
 )
-
-// Options for connecting to an EdgeDB server
-type Options struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Database string `json:"database"`
-	Password string `json:"password"`
-	admin    bool
-}
-
-func (o Options) socType() string {
-	if o.admin {
-		return "unix"
-	}
-	return "tcp"
-}
-
-func (o Options) dialHost() string {
-	if o.admin {
-		return fmt.Sprintf("%v/.s.EDGEDB.admin.%v", o.Host, o.Port)
-	}
-
-	host := o.Host
-	if host == "" {
-		host = "localhost"
-	}
-
-	port := o.Port
-	if port == 0 {
-		port = 5656
-	}
-
-	return fmt.Sprintf("%v:%v", host, port)
-}
-
-// DSN parses a URI string into an Options struct
-func DSN(dsn string) (opts Options, err error) {
-	parsed, err := url.Parse(dsn)
-	if err != nil {
-		return opts, err
-	}
-
-	if parsed.Scheme != "edgedb" {
-		return opts, fmt.Errorf("dsn %q is not an edgedb:// URI", dsn)
-	}
-
-	var port int
-	if parsed.Port() == "" {
-		port = 5656
-	} else {
-		port, err = strconv.Atoi(parsed.Port())
-		if err != nil {
-			return opts, err
-		}
-	}
-
-	host := strings.Split(parsed.Host, ":")[0]
-	db := strings.TrimLeft(parsed.Path, "/")
-	password, _ := parsed.User.Password()
-
-	return Options{
-		Host:     host,
-		Port:     port,
-		User:     parsed.User.Username(),
-		Database: db,
-		Password: password,
-	}, nil
-}
-
-// Error is returned when something bad happened.
-type Error struct {
-	Severity int
-	Code     int
-	Message  string
-}
-
-func (e *Error) Error() string {
-	return e.Message
-}
-
-func decodeError(bts *[]byte) error {
-	protocol.PopUint32(bts) // message length
-
-	return &Error{
-		Severity: int(protocol.PopUint8(bts)),
-		Code:     int(protocol.PopUint32(bts)),
-		Message:  protocol.PopString(bts),
-	}
-}
 
 type queryCodecIDs struct {
 	inputID  types.UUID
@@ -198,20 +105,6 @@ func (conn *Conn) writeAndRead(bts []byte) []byte {
 	// }
 
 	return rcv
-}
-
-// Transaction creates a new trasaction struct.
-func (conn *Conn) Transaction() (Transaction, error) {
-	// todo support transaction options
-	return Transaction{conn}, nil
-}
-
-// RunInTransaction runs a function in a transaction.
-// If function returns an error transaction is rolled back,
-// otherwise transaction is committed.
-func (conn *Conn) RunInTransaction(fn func() error) error {
-	// see https://pkg.go.dev/github.com/go-pg/pg/v10#DB.RunInTransaction
-	panic("RunInTransaction() not implemented") // todo
 }
 
 // Execute an EdgeQL command (or commands).
@@ -674,29 +567,4 @@ func Connect(opts Options) (conn *Conn, err error) {
 		}
 	}
 	return conn, nil
-}
-
-// Transaction represents a transaction or save point block.
-// Transactions are created by calling the Conn.Transaction() method.
-// Most callers should use `Conn.RunInTransaction()` instead.
-type Transaction struct {
-	conn *Conn
-}
-
-// Start a transaction or save point.
-func (tx Transaction) Start() error {
-	// todo handle nested blocks and other options.
-	return tx.conn.Execute("START TRANSACTION;")
-}
-
-// Commit the transaction or save point preserving changes.
-func (tx Transaction) Commit() error {
-	// todo handle nested blocks etc.
-	return tx.conn.Execute("COMMIT;")
-}
-
-// RollBack the transaction or save point block discarding changes.
-func (tx Transaction) RollBack() error {
-	// todo handle nested blocks etc.
-	return tx.conn.Execute("ROLLBACK;")
 }
