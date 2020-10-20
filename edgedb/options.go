@@ -59,7 +59,7 @@ func (o *Options) dialHost() string {
 }
 
 // DSN parses a URI string into an Options struct
-func DSN(dsn string) (opts *Options, err error) {
+func DSN(dsn string) (opts Options, err error) {
 	parsed, err := url.Parse(dsn)
 	if err != nil {
 		return opts, err
@@ -83,7 +83,7 @@ func DSN(dsn string) (opts *Options, err error) {
 	db := strings.TrimLeft(parsed.Path, "/")
 	password, _ := parsed.User.Password()
 
-	return &Options{
+	return Options{
 		Host:     host,
 		Port:     port,
 		User:     parsed.User.Username(),
