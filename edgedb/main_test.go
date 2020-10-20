@@ -132,12 +132,16 @@ func startServer() (err error) {
 }
 
 func TestMain(m *testing.M) {
+	var err error = nil
 	code := 1
 	defer func() {
+		if err != nil {
+			log.Println(err)
+		}
 		os.Exit(code)
 	}()
 
-	err := getLocalServer()
+	err = getLocalServer()
 	if err != nil {
 		err = startServer()
 		if err != nil {
@@ -154,7 +158,7 @@ func TestMain(m *testing.M) {
 	defer func() {
 		err := client.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 	}()
 
