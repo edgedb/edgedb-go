@@ -28,7 +28,7 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
-func (c *Conn) granularFlow(
+func (c *Client) granularFlow(
 	conn net.Conn,
 	query string,
 	ioFmt int,

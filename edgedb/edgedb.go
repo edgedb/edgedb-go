@@ -50,8 +50,8 @@ type queryCacheKey struct {
 
 // todo rename Conn to Client
 
-// Conn client
-type Conn struct {
+// Client client
+type Client struct {
 	pool   pool.Pool
 	secret []byte
 
@@ -61,13 +61,13 @@ type Conn struct {
 }
 
 // Close the db connection
-func (c *Conn) Close() (err error) {
+func (c *Client) Close() (err error) {
 	defer c.pool.Close()
 	return nil
 }
 
 // Execute an EdgeQL command (or commands).
-func (c *Conn) Execute(query string) (err error) {
+func (c *Client) Execute(query string) (err error) {
 	conn, err := c.pool.Get()
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (c *Conn) Execute(query string) (err error) {
 // QueryOne runs a singleton-returning query and return its element.
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
-func (c *Conn) QueryOne(
+func (c *Client) QueryOne(
 	query string,
 	out interface{},
 	args ...interface{},
@@ -118,7 +118,7 @@ func (c *Conn) QueryOne(
 }
 
 // Query runs a query and returns the results.
-func (c *Conn) Query(
+func (c *Client) Query(
 	query string,
 	out interface{},
 	args ...interface{},
@@ -146,7 +146,7 @@ func (c *Conn) Query(
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (c *Conn) QueryJSON(
+func (c *Client) QueryJSON(
 	query string,
 	args ...interface{},
 ) ([]byte, error) {
@@ -174,7 +174,7 @@ func (c *Conn) QueryJSON(
 // and return its element in JSON.
 // If the query executes successfully but doesn't return a result
 // []byte{}, ErrorZeroResults is returned.
-func (c *Conn) QueryOneJSON(
+func (c *Client) QueryOneJSON(
 	query string,
 	args ...interface{},
 ) ([]byte, error) {
@@ -205,7 +205,7 @@ func (c *Conn) QueryOneJSON(
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(opts Options) (client *Conn, err error) {
+func Connect(opts Options) (client *Client, err error) {
 	// todo making the pool bigger slows down the tests,
 	// and uses way more memory :thinking:
 	p, err := pool.NewChannelPool(1, 1, func() (conn net.Conn, e error) {
@@ -223,7 +223,7 @@ func Connect(opts Options) (client *Conn, err error) {
 		return nil, err
 	}
 
-	client = &Conn{
+	client = &Client{
 		p,
 		nil,
 		codecs.CodecLookup{},

@@ -27,7 +27,7 @@ import (
 // Transactions are created by calling the Conn.Transaction() method.
 // Most callers should use `Conn.RunInTransaction()` instead.
 type Transaction struct {
-	client *Conn
+	client *Client
 	conn   net.Conn
 }
 
@@ -86,7 +86,7 @@ func (tx *Transaction) Query(
 }
 
 // Transaction creates a new trasaction struct.
-func (c *Conn) Transaction() (*Transaction, error) {
+func (c *Client) Transaction() (*Transaction, error) {
 	// todo support transaction options
 	conn, err := c.pool.Get()
 	if err != nil {
@@ -99,7 +99,7 @@ func (c *Conn) Transaction() (*Transaction, error) {
 // RunInTransaction runs a function in a transaction.
 // If function returns an error transaction is rolled back,
 // otherwise transaction is committed.
-func (c *Conn) RunInTransaction(fn func() error) error {
+func (c *Client) RunInTransaction(fn func() error) error {
 	// see https://pkg.go.dev/github.com/go-pg/pg/v10#DB.RunInTransaction
 	panic("RunInTransaction() not implemented") // todo
 }
