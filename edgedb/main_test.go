@@ -23,20 +23,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 // initialized by TestMain
 var (
 	server Options
-	conn   *Conn
+	client *Conn
 )
 
 func executeOrPanic(command string) {
-	err := conn.Execute(command)
+	err := client.Execute(command)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +62,6 @@ func getLocalServer() error {
 		log.Printf("failed to parse credentials file: %q", credFileName)
 		return errors.New("credentials not found")
 	}
-	fmt.Println(server)
 
 	log.Print("using existing server")
 	return nil
@@ -142,13 +143,13 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	conn, err = Connect(&server)
+	client, err = Connect(server)
 	if err != nil {
 		panic(err)
 	}
 
 	defer func() {
-		err := conn.Close()
+		err := client.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -165,7 +166,7 @@ func TestMain(m *testing.M) {
 		POPULATE MIGRATION;
 		COMMIT MIGRATION;
 	`)
-	_ = conn.Execute(`
+	_ = client.Execute(`
 		CREATE SUPERUSER ROLE user_with_password {
 			SET password := 'secret';
 		};
@@ -188,5 +189,6 @@ func TestMain(m *testing.M) {
 		}
 	`)
 
+	rand.Seed(time.Now().Unix())
 	code = m.Run()
 }

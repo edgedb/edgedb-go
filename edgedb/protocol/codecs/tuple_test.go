@@ -37,7 +37,7 @@ func TestDecodeTuple(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 3,
 	}
 
-	codec := &Tuple{[]DecodeEncoder{&Int64{}, &Int64{}}}
+	codec := &Tuple{idField{}, []DecodeEncoder{&Int64{}, &Int64{}}}
 	result := codec.Decode(&bts)
 	expected := types.Tuple{int64(2), int64(3)}
 
@@ -60,7 +60,7 @@ func TestEncodeNullTuple(t *testing.T) {
 func TestEncodeTuple(t *testing.T) {
 	bts := []byte{}
 
-	codec := &Tuple{[]DecodeEncoder{&Int64{}, &Int64{}}}
+	codec := &Tuple{idField{}, []DecodeEncoder{&Int64{}, &Int64{}}}
 	codec.Encode(&bts, []interface{}{int64(2), int64(3)})
 
 	expected := []byte{

@@ -34,11 +34,12 @@ func popTupleCodec(
 		fields = append(fields, codecs[index])
 	}
 
-	return &Tuple{fields}
+	return &Tuple{idField{id}, fields}
 }
 
 // Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
+	idField
 	fields []DecodeEncoder
 }
 

@@ -17,29 +17,37 @@
 package edgedb
 
 import (
-	"testing"
+	"fmt"
+	"net"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/edgedb/edgedb-go/edgedb/protocol"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 )
 
-func TestAuth(t *testing.T) {
-	var host string
-	if server.admin {
-		host = "localhost"
-	} else {
-		host = server.Host
+func scriptFlow(conn net.Conn, query string) (err error) {
+	msg := []byte{message.ExecuteScript, 0, 0, 0, 0}
+	protocol.PushUint16(&msg, 0) // no headers
+	protocol.PushString(&msg, query)
+	protocol.PutMsgLength(msg)
+
+	rcv, err := writeAndRead(conn, msg)
+	if err != nil {
+		return err
 	}
 
-	conn, err := Connect(Options{
-		Host:     host,
-		Port:     server.Port,
-		User:     "user_with_password",
-		Password: "secret",
-		Database: server.Database,
-	})
-	assert.Nil(t, err)
+	for len(rcv) > 0 {
+		bts := protocol.PopMessage(&rcv)
+		mType := protocol.PopUint8(&bts)
 
-	result, err := conn.QueryOneJSON("SELECT 'It worked!';")
-	assert.Nil(t, err)
-	assert.Equal(t, `"It worked!"`, string(result))
+		switch mType {
+		case message.CommandComplete:
+		case message.ReadyForCommand:
+		case message.ErrorResponse:
+			return decodeError(&bts)
+		default:
+			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+		}
+	}
+
+	return nil
 }

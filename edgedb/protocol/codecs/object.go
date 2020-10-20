@@ -45,11 +45,12 @@ func popObjectCodec(
 		fields = append(fields, field)
 	}
 
-	return &Object{fields}
+	return &Object{idField{id}, fields}
 }
 
 // Object is an EdgeDB object type codec.
 type Object struct {
+	idField
 	fields []objectField
 }
 

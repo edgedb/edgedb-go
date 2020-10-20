@@ -43,7 +43,7 @@ func popNamedTupleCodec(
 		fields = append(fields, field)
 	}
 
-	return &NamedTuple{fields}
+	return &NamedTuple{idField{id}, fields}
 }
 
 type namedTupleField struct {
@@ -53,6 +53,7 @@ type namedTupleField struct {
 
 // NamedTuple is an EdgeDB namedtuple typep codec.
 type NamedTuple struct {
+	idField
 	fields []namedTupleField
 }
 

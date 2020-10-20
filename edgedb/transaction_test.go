@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -26,15 +27,15 @@ import (
 )
 
 func TestTransactionSaves(t *testing.T) {
-	tx, err := conn.Transaction()
-	assert.Nil(t, err)
+	tx, err := client.Transaction()
+	require.Nil(t, err)
 
 	err = tx.Start()
 	require.Nil(t, err)
 
 	name := "test" + strconv.Itoa(rand.Int())
 	// todo maybe clean up the random entry :thinking:
-	err = conn.Query(
+	err = tx.Query(
 		"INSERT User{ name := <str>$0 }",
 		(*interface{})(nil),
 		name,
@@ -45,7 +46,7 @@ func TestTransactionSaves(t *testing.T) {
 	require.Nil(t, err)
 
 	var result string
-	err = conn.QueryOne(`
+	err = client.QueryOne(`
 			SELECT User.name
 			FILTER User.name = <str>$0;
 		`,
@@ -58,7 +59,7 @@ func TestTransactionSaves(t *testing.T) {
 }
 
 func TestTransactionRollsBack(t *testing.T) {
-	tx, err := conn.Transaction()
+	tx, err := client.Transaction()
 	assert.Nil(t, err)
 
 	err = tx.Start()
@@ -66,7 +67,7 @@ func TestTransactionRollsBack(t *testing.T) {
 
 	name := "test" + strconv.Itoa(rand.Int())
 	// todo maybe clean up the random entry :thinking:
-	err = conn.Query(
+	err = tx.Query(
 		"INSERT User{ name := <str>$0 }",
 		(*interface{})(nil),
 		name,
@@ -77,13 +78,14 @@ func TestTransactionRollsBack(t *testing.T) {
 	require.Nil(t, err)
 
 	var result string
-	err = conn.QueryOne(`
+	err = client.QueryOne(`
 			SELECT User.name
 			FILTER User.name = <str>$0;
 		`,
 		&result,
 		name,
 	)
+	fmt.Println(result)
 
 	assert.Equal(t, ErrorZeroResults, err)
 }

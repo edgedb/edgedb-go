@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/bigtable v1.6.0 // indirect
 	cloud.google.com/go/firestore v1.3.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/fatih/pool v3.0.0+incompatible
 	github.com/gin-gonic/contrib v0.0.0-20200913005814-1c32036e7ea4 // indirect
 	github.com/gin-gonic/gin v1.6.3 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect

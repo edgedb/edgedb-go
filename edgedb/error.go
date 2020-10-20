@@ -16,7 +16,9 @@
 
 package edgedb
 
-import "github.com/edgedb/edgedb-go/edgedb/protocol"
+import (
+	"github.com/edgedb/edgedb-go/edgedb/protocol"
+)
 
 // Error is returned when the server responded with an error message.
 type Error struct {

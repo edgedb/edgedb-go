@@ -34,6 +34,14 @@ const (
 	enumType
 )
 
+type idField struct {
+	id types.UUID
+}
+
+func (i *idField) ID() types.UUID {
+	return i.id
+}
+
 // CodecLookup ...
 type CodecLookup map[types.UUID]DecodeEncoder
 
@@ -41,6 +49,7 @@ type CodecLookup map[types.UUID]DecodeEncoder
 type DecodeEncoder interface {
 	Decode(*[]byte) interface{}
 	Encode(*[]byte, interface{})
+	ID() types.UUID
 }
 
 // Pop a decoder

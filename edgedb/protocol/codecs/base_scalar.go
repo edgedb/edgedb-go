@@ -29,27 +29,27 @@ import (
 func getBaseScalarCodec(id types.UUID) DecodeEncoder {
 	switch id {
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}:
-		return &UUID{}
+		return &UUID{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}:
-		return &String{}
+		return &String{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}:
-		return &Bytes{}
+		return &Bytes{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}:
-		return &Int16{}
+		return &Int16{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}:
-		return &Int32{}
+		return &Int32{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}:
-		return &Int64{}
+		return &Int64{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}:
-		return &Float32{}
+		return &Float32{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}:
-		return &Float64{}
+		return &Float64{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}:
 		panic("decimal type not implemented") // todo implement
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}:
-		return &Bool{}
+		return &Bool{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xa}:
-		return &DateTime{}
+		return &DateTime{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xb}:
 		panic("cal::local_datetime type not implemented") // todo implement
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xc}:
@@ -57,9 +57,9 @@ func getBaseScalarCodec(id types.UUID) DecodeEncoder {
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xd}:
 		panic("cal::local_time type not implemented") // todo implement
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xe}:
-		return &Duration{}
+		return &Duration{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}:
-		return &JSON{}
+		return &JSON{idField{id}}
 	case types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}:
 		panic("bigint type not implemented") // todo implement
 	default:
@@ -68,7 +68,9 @@ func getBaseScalarCodec(id types.UUID) DecodeEncoder {
 }
 
 // UUID is an EdgeDB UUID type codec.
-type UUID struct{}
+type UUID struct {
+	idField
+}
 
 // Decode a UUID.
 func (c *UUID) Decode(bts *[]byte) interface{} {
@@ -84,7 +86,9 @@ func (c *UUID) Encode(bts *[]byte, val interface{}) {
 }
 
 // String is an EdgeDB string type codec.
-type String struct{}
+type String struct {
+	idField
+}
 
 // Decode a string.
 func (c *String) Decode(bts *[]byte) interface{} {
@@ -97,7 +101,9 @@ func (c *String) Encode(bts *[]byte, val interface{}) {
 }
 
 // Bytes is an EdgeDB bytes type codec.
-type Bytes struct{}
+type Bytes struct {
+	idField
+}
 
 // Decode []byte.
 func (c *Bytes) Decode(bts *[]byte) interface{} {
@@ -110,7 +116,9 @@ func (c *Bytes) Encode(bts *[]byte, val interface{}) {
 }
 
 // Int16 is an EdgeDB int64 type codec.
-type Int16 struct{}
+type Int16 struct {
+	idField
+}
 
 // Decode an int16.
 func (c *Int16) Decode(bts *[]byte) interface{} {
@@ -125,7 +133,9 @@ func (c *Int16) Encode(bts *[]byte, val interface{}) {
 }
 
 // Int32 is an EdgeDB int32 type codec.
-type Int32 struct{}
+type Int32 struct {
+	idField
+}
 
 // Decode an int32.
 func (c *Int32) Decode(bts *[]byte) interface{} {
@@ -140,7 +150,9 @@ func (c *Int32) Encode(bts *[]byte, val interface{}) {
 }
 
 // Int64 is an EdgeDB int64 typep codec.
-type Int64 struct{}
+type Int64 struct {
+	idField
+}
 
 // Decode an int64.
 func (c *Int64) Decode(bts *[]byte) interface{} {
@@ -155,7 +167,9 @@ func (c *Int64) Encode(bts *[]byte, val interface{}) {
 }
 
 // Float32 is an EdgeDB float32 type codec.
-type Float32 struct{}
+type Float32 struct {
+	idField
+}
 
 // Decode a float32.
 func (c *Float32) Decode(bts *[]byte) interface{} {
@@ -171,7 +185,9 @@ func (c *Float32) Encode(bts *[]byte, val interface{}) {
 }
 
 // Float64 is an EdgeDB float64 type codec.
-type Float64 struct{}
+type Float64 struct {
+	idField
+}
 
 // Decode a float64.
 func (c *Float64) Decode(bts *[]byte) interface{} {
@@ -187,7 +203,9 @@ func (c *Float64) Encode(bts *[]byte, val interface{}) {
 }
 
 // Bool is an EdgeDB bool type codec.
-type Bool struct{}
+type Bool struct {
+	idField
+}
 
 // Decode a bool.
 func (c *Bool) Decode(bts *[]byte) interface{} {
@@ -213,7 +231,9 @@ func (c *Bool) Encode(bts *[]byte, val interface{}) {
 }
 
 // DateTime is an EdgeDB datetime type codec.
-type DateTime struct{}
+type DateTime struct {
+	idField
+}
 
 // Decode a datetime.
 func (c *DateTime) Decode(bts *[]byte) interface{} {
@@ -235,7 +255,9 @@ func (c *DateTime) Encode(bts *[]byte, val interface{}) {
 }
 
 // Duration is an EdgeDB duration codec.
-type Duration struct{}
+type Duration struct {
+	idField
+}
 
 // Decode a duration.
 func (c *Duration) Decode(bts *[]byte) interface{} {
@@ -256,7 +278,9 @@ func (c *Duration) Encode(bts *[]byte, val interface{}) {
 }
 
 // JSON is an EdgeDB json type codec.
-type JSON struct{}
+type JSON struct {
+	idField
+}
 
 // Decode json.
 func (c *JSON) Decode(bts *[]byte) interface{} {

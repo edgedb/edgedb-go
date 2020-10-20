@@ -24,10 +24,13 @@ import (
 )
 
 func TestDecodeObject(t *testing.T) {
-	codec := &Object{[]objectField{
-		{false, false, false, "a", &String{}},
-		{false, false, false, "b", &Int32{}},
-	}}
+	codec := &Object{
+		idField{},
+		[]objectField{
+			{false, false, false, "a", &String{}},
+			{false, false, false, "b", &Int32{}},
+		},
+	}
 
 	bts := []byte{
 		0, 0, 0, 28, // data length

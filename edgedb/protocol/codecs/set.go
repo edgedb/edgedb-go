@@ -27,11 +27,12 @@ func popSetCodec(
 	codecs []DecodeEncoder,
 ) DecodeEncoder {
 	n := protocol.PopUint16(bts)
-	return &Set{codecs[n]}
+	return &Set{idField{id}, codecs[n]}
 }
 
 // Set is an EdgeDB set type codec.
 type Set struct {
+	idField
 	child DecodeEncoder
 }
 

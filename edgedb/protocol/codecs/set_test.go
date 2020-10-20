@@ -42,7 +42,7 @@ func TestDecodeSet(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	}
 
-	result := (&Set{&Int64{}}).Decode(&bts)
+	result := (&Set{idField{}, &Int64{}}).Decode(&bts)
 	expected := types.Set{int64(3), int64(5), int64(8)}
 
 	assert.Equal(t, expected, result)

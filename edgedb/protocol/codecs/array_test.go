@@ -42,7 +42,7 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	}
 
-	result := (&Array{&Int64{}}).Decode(&bts)
+	result := (&Array{idField{}, &Int64{}}).Decode(&bts)
 	expected := types.Array{int64(3), int64(5), int64(8)}
 
 	assert.Equal(t, expected, result)
@@ -51,7 +51,7 @@ func TestDecodeArray(t *testing.T) {
 
 func TestEncodeArray(t *testing.T) {
 	bts := []byte{}
-	codec := &Array{&Int64{}}
+	codec := &Array{idField{}, &Int64{}}
 	codec.Encode(&bts, []interface{}{int64(3), int64(5), int64(8)})
 
 	expected := []byte{

@@ -37,10 +37,13 @@ func TestDecodeNamedTuple(t *testing.T) {
 		0, 0, 0, 6,
 	}
 
-	codec := &NamedTuple{[]namedTupleField{
-		{"a", &Int32{}},
-		{"b", &Int32{}},
-	}}
+	codec := &NamedTuple{
+		idField{},
+		[]namedTupleField{
+			{"a", &Int32{}},
+			{"b", &Int32{}},
+		},
+	}
 
 	result := codec.Decode(&bts)
 	expected := types.NamedTuple{
@@ -53,10 +56,13 @@ func TestDecodeNamedTuple(t *testing.T) {
 }
 
 func TestEncodeNamedTuple(t *testing.T) {
-	codec := &NamedTuple{[]namedTupleField{
-		{"a", &Int32{}},
-		{"b", &Int32{}},
-	}}
+	codec := &NamedTuple{
+		idField{},
+		[]namedTupleField{
+			{"a", &Int32{}},
+			{"b", &Int32{}},
+		},
+	}
 
 	bts := []byte{}
 	codec.Encode(&bts, []interface{}{map[string]interface{}{

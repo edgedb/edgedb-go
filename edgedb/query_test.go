@@ -20,11 +20,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNamedQueryArguments(t *testing.T) {
 	result := [][]int64{}
-	err := conn.Query(
+	err := client.Query(
 		"SELECT [<int64>$first, <int64>$second]",
 		&result,
 		map[string]interface{}{
@@ -39,7 +40,7 @@ func TestNamedQueryArguments(t *testing.T) {
 
 func TestNumberedQueryArguments(t *testing.T) {
 	result := [][]int64{}
-	err := conn.Query(
+	err := client.Query(
 		"SELECT [<int64>$0, <int64>$1]",
 		&result,
 		int64(5),
@@ -51,7 +52,7 @@ func TestNumberedQueryArguments(t *testing.T) {
 }
 
 func TestQueryJSON(t *testing.T) {
-	result, err := conn.QueryJSON(
+	result, err := client.QueryJSON(
 		"SELECT {(a := 0, b := <int64>$0), (a := 42, b := <int64>$1)}",
 		int64(1),
 		int64(2),
@@ -70,7 +71,7 @@ func TestQueryJSON(t *testing.T) {
 }
 
 func TestQueryOneJSON(t *testing.T) {
-	result, err := conn.QueryOneJSON(
+	result, err := client.QueryOneJSON(
 		"SELECT (a := 0, b := <int64>$0)",
 		int64(42),
 	)
@@ -84,7 +85,7 @@ func TestQueryOneJSON(t *testing.T) {
 }
 
 func TestQueryOneJSONZeroResults(t *testing.T) {
-	result, err := conn.QueryOneJSON("SELECT <int64>{}")
+	result, err := client.QueryOneJSON("SELECT <int64>{}")
 
 	assert.Equal(t, err, ErrorZeroResults)
 	assert.Equal(t, []byte(nil), result)
@@ -92,7 +93,7 @@ func TestQueryOneJSONZeroResults(t *testing.T) {
 
 func TestQueryOne(t *testing.T) {
 	var result int64
-	err := conn.QueryOne("SELECT 42", &result)
+	err := client.QueryOne("SELECT 42", &result)
 
 	assert.Nil(t, err)
 	assert.Equal(t, int64(42), result)
@@ -100,18 +101,43 @@ func TestQueryOne(t *testing.T) {
 
 func TestQueryOneZeroResults(t *testing.T) {
 	result := (*int64)(nil)
-	err := conn.QueryOne("SELECT <int64>{}", result)
+	err := client.QueryOne("SELECT <int64>{}", result)
 
 	assert.Equal(t, ErrorZeroResults, err)
 	assert.Nil(t, result)
 }
 
 func TestError(t *testing.T) {
-	err := conn.Execute("malformed query;")
+	err := client.Execute("malformed query;")
 	expected := &Error{
 		Severity: 120,
 		Code:     67174656,
 		Message:  "Unexpected 'malformed'",
 	}
 	assert.Equal(t, expected, err)
+}
+
+func TestConcurrentQueries(t *testing.T) {
+	eChan := make(chan error, 10)
+	rChan := make(chan []byte, 10)
+
+	for i := 0; i < 10; i++ {
+		go func() {
+			result, err := client.QueryOneJSON("SELECT 1;")
+			eChan <- err
+			rChan <- result
+		}()
+	}
+
+	for i := 0; i < 20; i++ {
+		select {
+		case e := <-eChan:
+			require.Nil(t, e)
+		case r := <-rChan:
+			assert.Equal(t, "1", string(r))
+		}
+	}
+
+	close(eChan)
+	close(rChan)
 }

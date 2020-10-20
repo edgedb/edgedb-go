@@ -41,10 +41,10 @@ type Movie struct {
 func TestTutorial(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	err := conn.Execute("CREATE DATABASE " + dbName)
+	err := client.Execute("CREATE DATABASE " + dbName)
 	require.Nil(t, err)
 
-	edb, err := Connect(&Options{
+	edb, err := Connect(Options{
 		Host:     server.Host,
 		Port:     server.Port,
 		User:     server.User,

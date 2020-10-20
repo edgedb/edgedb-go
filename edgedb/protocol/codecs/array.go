@@ -33,11 +33,12 @@ func popArrayCodec(
 		protocol.PopUint32(bts) // array dimension
 	}
 
-	return &Array{codecs[index]}
+	return &Array{idField{id}, codecs[index]}
 }
 
 // Array is an EdgeDB array type codec.
 type Array struct {
+	idField
 	child DecodeEncoder
 }
 
