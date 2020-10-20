@@ -17,15 +17,21 @@
 package edgedb
 
 import (
+	"context"
+	"errors"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNamedQueryArguments(t *testing.T) {
+	ctx := context.Background()
 	result := [][]int64{}
 	err := client.Query(
+		ctx,
 		"SELECT [<int64>$first, <int64>$second]",
 		&result,
 		map[string]interface{}{
@@ -39,8 +45,10 @@ func TestNamedQueryArguments(t *testing.T) {
 }
 
 func TestNumberedQueryArguments(t *testing.T) {
+	ctx := context.Background()
 	result := [][]int64{}
 	err := client.Query(
+		ctx,
 		"SELECT [<int64>$0, <int64>$1]",
 		&result,
 		int64(5),
@@ -52,7 +60,9 @@ func TestNumberedQueryArguments(t *testing.T) {
 }
 
 func TestQueryJSON(t *testing.T) {
+	ctx := context.Background()
 	result, err := client.QueryJSON(
+		ctx,
 		"SELECT {(a := 0, b := <int64>$0), (a := 42, b := <int64>$1)}",
 		int64(1),
 		int64(2),
@@ -71,7 +81,9 @@ func TestQueryJSON(t *testing.T) {
 }
 
 func TestQueryOneJSON(t *testing.T) {
+	ctx := context.Background()
 	result, err := client.QueryOneJSON(
+		ctx,
 		"SELECT (a := 0, b := <int64>$0)",
 		int64(42),
 	)
@@ -85,30 +97,34 @@ func TestQueryOneJSON(t *testing.T) {
 }
 
 func TestQueryOneJSONZeroResults(t *testing.T) {
-	result, err := client.QueryOneJSON("SELECT <int64>{}")
+	ctx := context.Background()
+	result, err := client.QueryOneJSON(ctx, "SELECT <int64>{}")
 
 	assert.Equal(t, err, ErrorZeroResults)
 	assert.Equal(t, []byte(nil), result)
 }
 
 func TestQueryOne(t *testing.T) {
+	ctx := context.Background()
 	var result int64
-	err := client.QueryOne("SELECT 42", &result)
+	err := client.QueryOne(ctx, "SELECT 42", &result)
 
 	assert.Nil(t, err)
 	assert.Equal(t, int64(42), result)
 }
 
 func TestQueryOneZeroResults(t *testing.T) {
+	ctx := context.Background()
 	result := (*int64)(nil)
-	err := client.QueryOne("SELECT <int64>{}", result)
+	err := client.QueryOne(ctx, "SELECT <int64>{}", result)
 
 	assert.Equal(t, ErrorZeroResults, err)
 	assert.Nil(t, result)
 }
 
 func TestError(t *testing.T) {
-	err := client.Execute("malformed query;")
+	ctx := context.Background()
+	err := client.Execute(ctx, "malformed query;")
 	expected := &Error{
 		Severity: 120,
 		Code:     67174656,
@@ -118,12 +134,13 @@ func TestError(t *testing.T) {
 }
 
 func TestConcurrentQueries(t *testing.T) {
+	ctx := context.Background()
 	eChan := make(chan error, 10)
 	rChan := make(chan []byte, 10)
 
 	for i := 0; i < 10; i++ {
 		go func() {
-			result, err := client.QueryOneJSON("SELECT 1;")
+			result, err := client.QueryOneJSON(ctx, "SELECT 1;")
 			eChan <- err
 			rChan <- result
 		}()
@@ -140,4 +157,12 @@ func TestConcurrentQueries(t *testing.T) {
 
 	close(eChan)
 	close(rChan)
+}
+
+func TestQueryTimesOut(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
+	err := client.Execute(ctx, "SELECT 1;")
+
+	assert.True(t, errors.Is(err, os.ErrDeadlineExceeded))
+	cancel()
 }

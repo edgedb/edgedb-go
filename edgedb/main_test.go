@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,7 +39,8 @@ var (
 )
 
 func executeOrPanic(command string) {
-	err := client.Execute(command)
+	ctx := context.Background()
+	err := client.Execute(ctx, command)
 	if err != nil {
 		panic(err)
 	}
@@ -143,7 +145,8 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	client, err = Connect(server)
+	ctx := context.Background()
+	client, err = Connect(ctx, server)
 	if err != nil {
 		panic(err)
 	}
@@ -166,7 +169,7 @@ func TestMain(m *testing.M) {
 		POPULATE MIGRATION;
 		COMMIT MIGRATION;
 	`)
-	_ = client.Execute(`
+	_ = client.Execute(ctx, `
 		CREATE SUPERUSER ROLE user_with_password {
 			SET password := 'secret';
 		};

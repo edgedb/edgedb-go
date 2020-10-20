@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"context"
 	"net"
 
 	"github.com/edgedb/edgedb-go/edgedb/marshal"
@@ -32,13 +33,13 @@ type Transaction struct {
 }
 
 // Start a transaction or save point.
-func (tx *Transaction) Start() error {
+func (tx *Transaction) Start(ctx context.Context) error {
 	// todo handle nested blocks and other options.
-	return tx.Execute("START TRANSACTION;")
+	return tx.Execute(ctx, "START TRANSACTION;")
 }
 
 // Commit the transaction or save point preserving changes.
-func (tx *Transaction) Commit() (err error) {
+func (tx *Transaction) Commit(ctx context.Context) (err error) {
 	defer func() {
 		e := tx.conn.Close()
 		if e != nil && err == nil {
@@ -47,11 +48,11 @@ func (tx *Transaction) Commit() (err error) {
 	}()
 
 	// todo handle nested blocks etc.
-	return tx.Execute("COMMIT;")
+	return tx.Execute(ctx, "COMMIT;")
 }
 
 // RollBack the transaction or save point block discarding changes.
-func (tx *Transaction) RollBack() (err error) {
+func (tx *Transaction) RollBack(ctx context.Context) (err error) {
 	defer func() {
 		e := tx.conn.Close()
 		if e != nil && err == nil {
@@ -60,23 +61,31 @@ func (tx *Transaction) RollBack() (err error) {
 	}()
 
 	// todo handle nested blocks etc.
-	return tx.Execute("ROLLBACK;")
+	return tx.Execute(ctx, "ROLLBACK;")
 }
 
 // Execute an EdgeQL command (or commands).
 // Only valid if transaction has been started.
-func (tx *Transaction) Execute(query string) error {
-	return scriptFlow(tx.conn, query)
+func (tx *Transaction) Execute(ctx context.Context, query string) error {
+	return scriptFlow(ctx, tx.conn, query)
 }
 
 // Query runs a query and returns the results.
 // Only valid if transaction has been started.
 func (tx *Transaction) Query(
+	ctx context.Context,
 	query string,
 	out interface{},
 	args ...interface{},
 ) error {
-	result, err := tx.client.granularFlow(tx.conn, query, format.Binary, args)
+	result, err := tx.client.granularFlow(
+		ctx,
+		tx.conn,
+		query,
+		format.Binary,
+		args,
+	)
+
 	if err != nil {
 		return err
 	}
@@ -86,8 +95,11 @@ func (tx *Transaction) Query(
 }
 
 // Transaction creates a new trasaction struct.
-func (c *Client) Transaction() (*Transaction, error) {
+func (c *Client) Transaction(ctx context.Context) (*Transaction, error) {
 	// todo support transaction options
+	// todo pass transaction when getting a connection
+	// for the case that a new connection is dialed
+	// and needs a timeout.
 	conn, err := c.pool.Get()
 	if err != nil {
 		return nil, err

@@ -19,6 +19,7 @@ package edgedb
 // todo add context.Context
 
 import (
+	"context"
 	"errors"
 	"net"
 
@@ -62,12 +63,13 @@ type Client struct {
 
 // Close the db connection
 func (c *Client) Close() (err error) {
+	// todo send Terminate on each connection that needs to be closed.
 	defer c.pool.Close()
 	return nil
 }
 
 // Execute an EdgeQL command (or commands).
-func (c *Client) Execute(query string) (err error) {
+func (c *Client) Execute(ctx context.Context, query string) (err error) {
 	conn, err := c.pool.Get()
 	if err != nil {
 		return err
@@ -80,13 +82,14 @@ func (c *Client) Execute(query string) (err error) {
 		}
 	}()
 
-	return scriptFlow(conn, query)
+	return scriptFlow(ctx, conn, query)
 }
 
 // QueryOne runs a singleton-returning query and return its element.
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
 func (c *Client) QueryOne(
+	ctx context.Context,
 	query string,
 	out interface{},
 	args ...interface{},
@@ -104,7 +107,7 @@ func (c *Client) QueryOne(
 	}()
 
 	// todo assert cardinality
-	result, err := c.granularFlow(conn, query, format.Binary, args)
+	result, err := c.granularFlow(ctx, conn, query, format.Binary, args)
 	if err != nil {
 		return err
 	}
@@ -119,6 +122,7 @@ func (c *Client) QueryOne(
 
 // Query runs a query and returns the results.
 func (c *Client) Query(
+	ctx context.Context,
 	query string,
 	out interface{},
 	args ...interface{},
@@ -136,7 +140,7 @@ func (c *Client) Query(
 	}()
 
 	// todo assert that out is a pointer to a slice
-	result, err := c.granularFlow(conn, query, format.Binary, args)
+	result, err := c.granularFlow(ctx, conn, query, format.Binary, args)
 	if err != nil {
 		return err
 	}
@@ -147,6 +151,7 @@ func (c *Client) Query(
 
 // QueryJSON runs a query and return the results as JSON.
 func (c *Client) QueryJSON(
+	ctx context.Context,
 	query string,
 	args ...interface{},
 ) ([]byte, error) {
@@ -162,7 +167,7 @@ func (c *Client) QueryJSON(
 		}
 	}()
 
-	result, err := c.granularFlow(conn, query, format.JSON, args)
+	result, err := c.granularFlow(ctx, conn, query, format.JSON, args)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +180,7 @@ func (c *Client) QueryJSON(
 // If the query executes successfully but doesn't return a result
 // []byte{}, ErrorZeroResults is returned.
 func (c *Client) QueryOneJSON(
+	ctx context.Context,
 	query string,
 	args ...interface{},
 ) ([]byte, error) {
@@ -191,7 +197,7 @@ func (c *Client) QueryOneJSON(
 	}()
 
 	// todo assert cardinally
-	result, err := c.granularFlow(conn, query, format.JSON, args)
+	result, err := c.granularFlow(ctx, conn, query, format.JSON, args)
 	if err != nil {
 		return nil, err
 	}
@@ -205,17 +211,18 @@ func (c *Client) QueryOneJSON(
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(opts Options) (client *Client, err error) {
+func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	// todo making the pool bigger slows down the tests,
 	// and uses way more memory :thinking:
 	p, err := pool.NewChannelPool(1, 1, func() (conn net.Conn, e error) {
-		// todo add connection timeout
-		conn, e = net.Dial(opts.socType(), opts.dialHost())
+		var d net.Dialer
+		// todo closing over the context is the wrong thing to do.
+		conn, e = d.DialContext(ctx, opts.socType(), opts.dialHost())
 		if e != nil {
 			return nil, e
 		}
 
-		e = connect(conn, &opts)
+		e = connect(ctx, conn, &opts)
 		return conn, e
 	})
 
@@ -233,12 +240,23 @@ func Connect(opts Options) (client *Client, err error) {
 	return client, nil
 }
 
-func writeAndRead(conn net.Conn, bts []byte) (rcv []byte, err error) {
+func writeAndRead(
+	ctx context.Context,
+	conn net.Conn,
+	bts []byte,
+) (rcv []byte, err error) {
 	defer func() {
+		// todo don't mark unusable on timeout
 		if err != nil {
 			conn.(*pool.PoolConn).MarkUnusable()
 		}
 	}()
+
+	deadline, _ := ctx.Deadline()
+	err = conn.SetDeadline(deadline)
+	if err != nil {
+		return nil, err
+	}
 
 	_, err = conn.Write(bts)
 	if err != nil {

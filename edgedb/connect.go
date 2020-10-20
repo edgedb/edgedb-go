@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/xdg/scram"
 )
 
-func connect(conn net.Conn, opts *Options) (err error) {
+func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 	msg := []byte{message.ClientHandshake, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // major version
 	protocol.PushUint16(&msg, 8) // minor version
@@ -37,7 +38,7 @@ func connect(conn net.Conn, opts *Options) (err error) {
 	protocol.PushUint16(&msg, 0) // no extensions
 	protocol.PutMsgLength(msg)
 
-	rcv, err := writeAndRead(conn, msg)
+	rcv, err := writeAndRead(ctx, conn, msg)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func connect(conn net.Conn, opts *Options) (err error) {
 				continue
 			}
 
-			err := authenticate(conn, opts)
+			err := authenticate(ctx, conn, opts)
 			if err != nil {
 				return err
 			}
@@ -92,7 +93,11 @@ func connect(conn net.Conn, opts *Options) (err error) {
 	return nil
 }
 
-func authenticate(conn net.Conn, opts *Options) (err error) {
+func authenticate(
+	ctx context.Context,
+	conn net.Conn,
+	opts *Options,
+) (err error) {
 	client, err := scram.SHA256.NewClient(opts.User, opts.Password, "")
 	if err != nil {
 		panic(err)
@@ -109,7 +114,7 @@ func authenticate(conn net.Conn, opts *Options) (err error) {
 	protocol.PushString(&msg, scramMsg)
 	protocol.PutMsgLength(msg)
 
-	rcv, err := writeAndRead(conn, msg)
+	rcv, err := writeAndRead(ctx, conn, msg)
 	if err != nil {
 		return err
 	}
@@ -142,7 +147,7 @@ func authenticate(conn net.Conn, opts *Options) (err error) {
 	protocol.PushString(&msg, scramMsg)
 	protocol.PutMsgLength(msg)
 
-	rcv, err = writeAndRead(conn, msg)
+	rcv, err = writeAndRead(ctx, conn, msg)
 	if err != nil {
 		return err
 	}

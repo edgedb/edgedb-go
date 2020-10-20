@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -39,19 +40,23 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
+	ctx := context.Background()
 	rand.Seed(time.Now().UnixNano())
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	err := client.Execute("CREATE DATABASE " + dbName)
+	err := client.Execute(ctx, "CREATE DATABASE "+dbName)
 	require.Nil(t, err)
 
-	edb, err := Connect(Options{
-		Host:     server.Host,
-		Port:     server.Port,
-		User:     server.User,
-		Password: server.Password,
-		Database: dbName,
-		admin:    server.admin,
-	})
+	edb, err := Connect(
+		ctx,
+		Options{
+			Host:     server.Host,
+			Port:     server.Port,
+			User:     server.User,
+			Password: server.Password,
+			Database: dbName,
+			admin:    server.admin,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +65,7 @@ func TestTutorial(t *testing.T) {
 		require.Nil(t, err)
 	}()
 
-	err = edb.Execute(`
+	err = edb.Execute(ctx, `
 		START MIGRATION TO {
 			module default {
 				type Movie {
@@ -83,7 +88,7 @@ func TestTutorial(t *testing.T) {
 	`)
 	require.Nil(t, err)
 
-	err = edb.Execute(`
+	err = edb.Execute(ctx, `
 		INSERT Movie {
 			title := 'Blade Runner 2049',
 			year := 2017,
@@ -111,7 +116,7 @@ func TestTutorial(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	err = edb.Execute(`
+	err = edb.Execute(ctx, `
 		INSERT Movie {
 				title := 'Dune',
 				director := (
@@ -129,7 +134,7 @@ func TestTutorial(t *testing.T) {
 	require.Nil(t, err)
 
 	var out []Movie
-	err = edb.Query(`
+	err = edb.Query(ctx, `
 		SELECT Movie {
 				title,
 				year,

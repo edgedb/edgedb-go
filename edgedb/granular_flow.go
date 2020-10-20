@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -29,6 +30,7 @@ import (
 )
 
 func (c *Client) granularFlow(
+	ctx context.Context,
 	conn net.Conn,
 	query string,
 	ioFmt int,
@@ -39,20 +41,21 @@ func (c *Client) granularFlow(
 	codecs, ok := c.queryCache[key]
 
 	if ok {
-		return optimistic(conn, codecs.in, codecs.out, query, ioFmt, args)
+		return optimistic(ctx, conn, codecs.in, codecs.out, query, ioFmt, args)
 	}
 
-	return pesimistic(conn, c.codecCache, query, ioFmt, args)
+	return pesimistic(ctx, conn, c.codecCache, query, ioFmt, args)
 }
 
 func pesimistic(
+	ctx context.Context,
 	conn net.Conn,
 	cache codecs.CodecLookup,
 	query string,
 	ioFmt int,
 	args []interface{},
 ) ([]interface{}, error) {
-	inID, outID, err := prepare(conn, query, ioFmt)
+	inID, outID, err := prepare(ctx, conn, query, ioFmt)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +63,7 @@ func pesimistic(
 	in, inOK := cache[inID]
 	out, outOK := cache[outID]
 	if !inOK || !outOK {
-		lookup, err := describe(conn)
+		lookup, err := describe(ctx, conn)
 		if err != nil {
 			return nil, err
 		}
@@ -73,10 +76,11 @@ func pesimistic(
 		out = cache[outID]
 	}
 
-	return execute(conn, in, out, args)
+	return execute(ctx, conn, in, out, args)
 }
 
 func prepare(
+	ctx context.Context,
 	conn net.Conn,
 	query string,
 	ioFmt int,
@@ -92,7 +96,7 @@ func prepare(
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(conn, pyld)
+	rcv, err := writeAndRead(ctx, conn, pyld)
 	if err != nil {
 		return in, out, err
 	}
@@ -119,7 +123,7 @@ func prepare(
 	return in, out, nil
 }
 
-func describe(conn net.Conn) (codecs.CodecLookup, error) {
+func describe(ctx context.Context, conn net.Conn) (codecs.CodecLookup, error) {
 	msg := []byte{message.DescribeStatement, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, aspect.DataDescription)
@@ -129,7 +133,7 @@ func describe(conn net.Conn) (codecs.CodecLookup, error) {
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(conn, pyld)
+	rcv, err := writeAndRead(ctx, conn, pyld)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +168,7 @@ func describe(conn net.Conn) (codecs.CodecLookup, error) {
 }
 
 func execute(
+	ctx context.Context,
 	conn net.Conn,
 	in codecs.DecodeEncoder,
 	out codecs.DecodeEncoder,
@@ -178,7 +183,7 @@ func execute(
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(conn, pyld)
+	rcv, err := writeAndRead(ctx, conn, pyld)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +212,7 @@ func execute(
 }
 
 func optimistic(
+	ctx context.Context,
 	conn net.Conn,
 	in codecs.DecodeEncoder,
 	out codecs.DecodeEncoder,
@@ -230,7 +236,7 @@ func optimistic(
 	pyld := msg
 	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(conn, pyld)
+	rcv, err := writeAndRead(ctx, conn, pyld)
 	if err != nil {
 		return nil, err
 	}

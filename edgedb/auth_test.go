@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,7 +31,8 @@ func TestAuth(t *testing.T) {
 		host = server.Host
 	}
 
-	conn, err := Connect(Options{
+	ctx := context.Background()
+	conn, err := Connect(ctx, Options{
 		Host:     host,
 		Port:     server.Port,
 		User:     "user_with_password",
@@ -39,7 +41,7 @@ func TestAuth(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	result, err := conn.QueryOneJSON("SELECT 'It worked!';")
+	result, err := conn.QueryOneJSON(ctx, "SELECT 'It worked!';")
 	assert.Nil(t, err)
 	assert.Equal(t, `"It worked!"`, string(result))
 }
