@@ -156,6 +156,7 @@ func TestMain(m *testing.M) {
 	}
 
 	defer func() {
+		log.Println(recover())
 		err := client.Close()
 		if err != nil {
 			log.Println(err)
