@@ -243,8 +243,8 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 func writeAndRead(
 	ctx context.Context,
 	conn net.Conn,
-	bts []byte,
-) (rcv []byte, err error) {
+	buf *[]byte,
+) (err error) {
 	defer func() {
 		// todo don't mark unusable on timeout
 		if err != nil {
@@ -255,21 +255,30 @@ func writeAndRead(
 	deadline, _ := ctx.Deadline()
 	err = conn.SetDeadline(deadline)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	_, err = conn.Write(bts)
+	_, err = conn.Write(*buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	rcv = []byte{}
-	n := 1024 // todo evaluate buffer size
+	// expand slice length to full capacity
+	*buf = (*buf)[:cap(*buf)]
+
+	n, err := conn.Read(*buf)
+	*buf = (*buf)[:n]
+
+	if n < cap(*buf) {
+		return err
+	}
+
+	n = 1024 // todo evaluate temporary buffer size
+	tmp := make([]byte, n)
 	for n == 1024 {
-		tmp := make([]byte, 1024)
 		n, err = conn.Read(tmp)
-		rcv = append(rcv, tmp[:n]...)
+		*buf = append(*buf, tmp[:n]...)
 	}
 
-	return rcv, err
+	return err
 }

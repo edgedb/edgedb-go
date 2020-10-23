@@ -25,28 +25,28 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 )
 
-func scriptFlow(ctx context.Context, conn net.Conn, query string) (err error) {
-	msg := []byte{message.ExecuteScript, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushString(&msg, query)
-	protocol.PutMsgLength(msg)
+func scriptFlow(ctx context.Context, conn net.Conn, query string) error {
+	buf := []byte{message.ExecuteScript, 0, 0, 0, 0}
+	protocol.PushUint16(&buf, 0) // no headers
+	protocol.PushString(&buf, query)
+	protocol.PutMsgLength(buf)
 
-	rcv, err := writeAndRead(ctx, conn, msg)
+	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
 		return err
 	}
 
-	for len(rcv) > 0 {
-		bts := protocol.PopMessage(&rcv)
-		mType := protocol.PopUint8(&bts)
+	for len(buf) > 0 {
+		msg := protocol.PopMessage(&buf)
+		mType := protocol.PopUint8(&msg)
 
 		switch mType {
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return decodeError(&bts)
+			return decodeError(&msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			return fmt.Errorf("unexpected message type: 0x%x", mType)
 		}
 	}
 

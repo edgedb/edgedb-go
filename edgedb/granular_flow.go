@@ -96,36 +96,35 @@ func prepare(
 	query string,
 	ioFmt uint8,
 ) (in types.UUID, out types.UUID, err error) {
-	msg := []byte{message.Prepare, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, ioFmt)
-	protocol.PushUint8(&msg, cardinality.Many) // todo is this correct?
-	protocol.PushBytes(&msg, []byte{})         // no statement name
-	protocol.PushString(&msg, query)
-	protocol.PutMsgLength(msg)
+	buf := []byte{message.Prepare, 0, 0, 0, 0}
+	protocol.PushUint16(&buf, 0) // no headers
+	protocol.PushUint8(&buf, ioFmt)
+	protocol.PushUint8(&buf, cardinality.Many) // todo is this correct?
+	protocol.PushBytes(&buf, []byte{})         // no statement name
+	protocol.PushString(&buf, query)
+	protocol.PutMsgLength(buf)
 
-	pyld := msg
-	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(ctx, conn, pyld)
+	err = writeAndRead(ctx, conn, &buf)
 	if err != nil {
 		return in, out, err
 	}
 
-	for len(rcv) > 4 {
-		bts := protocol.PopMessage(&rcv)
-		mType := protocol.PopUint8(&bts)
+	for len(buf) > 4 {
+		msg := protocol.PopMessage(&buf)
+		mType := protocol.PopUint8(&msg)
 
 		switch mType {
 		case message.PrepareComplete:
-			protocol.PopUint32(&bts)     // message length
-			protocol.PopUint16(&bts)     // number of headers, assume 0
-			protocol.PopUint8(&bts)      // cardianlity
-			in = protocol.PopUUID(&bts)  // input type id
-			out = protocol.PopUUID(&bts) // output type id
+			protocol.PopUint32(&msg)     // message length
+			protocol.PopUint16(&msg)     // number of headers, assume 0
+			protocol.PopUint8(&msg)      // cardianlity
+			in = protocol.PopUUID(&msg)  // input type id
+			out = protocol.PopUUID(&msg) // output type id
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return in, out, decodeError(&bts)
+			return in, out, decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -135,43 +134,42 @@ func prepare(
 }
 
 func (c *Client) describe(ctx context.Context, conn net.Conn) error {
-	msg := []byte{message.DescribeStatement, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, aspect.DataDescription)
-	protocol.PushUint32(&msg, 0) // no statement name
-	protocol.PutMsgLength(msg)
+	buf := []byte{message.DescribeStatement, 0, 0, 0, 0}
+	protocol.PushUint16(&buf, 0) // no headers
+	protocol.PushUint8(&buf, aspect.DataDescription)
+	protocol.PushUint32(&buf, 0) // no statement name
+	protocol.PutMsgLength(buf)
 
-	pyld := msg
-	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(ctx, conn, pyld)
+	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
 		return err
 	}
 
-	for len(rcv) > 4 {
-		bts := protocol.PopMessage(&rcv)
-		mType := protocol.PopUint8(&bts)
+	for len(buf) > 4 {
+		msg := protocol.PopMessage(&buf)
+		mType := protocol.PopUint8(&msg)
 
 		switch mType {
 		case message.CommandDataDescription:
-			protocol.PopUint32(&bts)              // message length
-			protocol.PopUint16(&bts)              // num headers is always 0
-			protocol.PopUint8(&bts)               // cardianlity
-			protocol.PopUUID(&bts)                // input descriptor ID
-			descriptor := protocol.PopBytes(&bts) // input descriptor
+			protocol.PopUint32(&msg)              // message length
+			protocol.PopUint16(&msg)              // num headers is always 0
+			protocol.PopUint8(&msg)               // cardianlity
+			protocol.PopUUID(&msg)                // input descriptor ID
+			descriptor := protocol.PopBytes(&msg) // input descriptor
 			for k, v := range codecs.Pop(&descriptor) {
 				c.codecCache[k] = v
 			}
 
-			protocol.PopUUID(&bts)               // output descriptor ID
-			descriptor = protocol.PopBytes(&bts) // input descriptor
+			protocol.PopUUID(&msg)               // output descriptor ID
+			descriptor = protocol.PopBytes(&msg) // input descriptor
 			for k, v := range codecs.Pop(&descriptor) {
 				c.codecCache[k] = v
 			}
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return decodeError(&bts)
+			return decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -187,35 +185,33 @@ func execute(
 	out codecs.DecodeEncoder,
 	args []interface{},
 ) ([]interface{}, error) {
-	msg := []byte{message.Execute, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0)       // no headers
-	protocol.PushBytes(&msg, []byte{}) // no statement name
-	in.Encode(&msg, args)
-	protocol.PutMsgLength(msg)
+	buf := []byte{message.Execute, 0, 0, 0, 0}
+	protocol.PushUint16(&buf, 0)       // no headers
+	protocol.PushBytes(&buf, []byte{}) // no statement name
+	in.Encode(&buf, args)
+	protocol.PutMsgLength(buf)
 
-	pyld := msg
-	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(ctx, conn, pyld)
+	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make(types.Set, 0)
-
-	for len(rcv) > 0 {
-		bts := protocol.PopMessage(&rcv)
-		mType := protocol.PopUint8(&bts)
+	for len(buf) > 0 {
+		msg := protocol.PopMessage(&buf)
+		mType := protocol.PopUint8(&msg)
 
 		switch mType {
 		case message.Data:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint16(&bts) // number of data elements (always 1)
-			result = append(result, out.Decode(&bts))
+			protocol.PopUint32(&msg) // message length
+			protocol.PopUint16(&msg) // number of data elements (always 1)
+			result = append(result, out.Decode(&msg))
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return nil, decodeError(&bts)
+			return nil, decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
@@ -251,7 +247,7 @@ func (c *Client) optimistic(
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	buf, err := writeAndRead(ctx, conn, buf)
+	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
 		return nil, err
 	}
