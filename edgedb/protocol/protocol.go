@@ -43,9 +43,10 @@ func PopUint16(bts *[]byte) uint16 {
 
 // PushUint16 adds a uint16 to the buffer
 func PushUint16(bts *[]byte, val uint16) {
-	segment := make([]byte, 2)
-	binary.BigEndian.PutUint16(segment, val)
-	*bts = append(*bts, segment...)
+	n := len(*bts)
+	*bts = append(*bts, 0, 0)
+	slot := (*bts)[n:]
+	binary.BigEndian.PutUint16(slot, val)
 }
 
 // PopUint32 removes a uint32 from the buffer.
@@ -62,9 +63,10 @@ func PeekUint32(bts *[]byte) uint32 {
 
 // PushUint32 adds a uint32 to the buffer.
 func PushUint32(bts *[]byte, val uint32) {
-	tmp := make([]byte, 4)
-	binary.BigEndian.PutUint32(tmp, val)
-	*bts = append(*bts, tmp...)
+	n := len(*bts)
+	*bts = append(*bts, 0, 0, 0, 0)
+	slot := (*bts)[n:]
+	binary.BigEndian.PutUint32(slot, val)
 }
 
 // PopUint64 removes a uint64 from the buffer.
@@ -84,8 +86,7 @@ func PushUint64(bts *[]byte, val uint64) {
 // PopBytes removes a bytes string from the buffer.
 func PopBytes(bts *[]byte) []byte {
 	n := PopUint32(bts)
-	out := make([]byte, n)
-	copy(out, (*bts)[:n])
+	out := (*bts)[:n]
 	*bts = (*bts)[n:]
 	return out
 }
@@ -118,8 +119,7 @@ func PopUUID(bts *[]byte) types.UUID {
 // PopMessage removes a message from the buffer.
 func PopMessage(bts *[]byte) []byte {
 	n := 1 + binary.BigEndian.Uint32((*bts)[1:5])
-	msg := make([]byte, n)
-	copy(msg, *bts)
+	msg := (*bts)[:n]
 	*bts = (*bts)[n:]
 	return msg
 }
