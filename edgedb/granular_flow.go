@@ -29,6 +29,24 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
+func (c *Client) queryCodecs(query string, ioFmt int) (queryCodecs, bool) {
+	// todo this isn't thread safe
+	key := queryCacheKey{query, ioFmt}
+	codecs, ok := c.queryCache[key]
+	return codecs, ok
+}
+
+func (c *Client) cacheQuery(
+	query string,
+	ioFmt int,
+	in,
+	out codecs.DecodeEncoder,
+) {
+	// todo this isn't thread safe
+	key := queryCacheKey{query: query, format: ioFmt}
+	c.queryCache[key] = queryCodecs{in: in, out: out}
+}
+
 func (c *Client) granularFlow(
 	ctx context.Context,
 	conn net.Conn,
@@ -36,21 +54,17 @@ func (c *Client) granularFlow(
 	ioFmt int,
 	args []interface{},
 ) ([]interface{}, error) {
-	// todo this isn't thread safe
-	key := queryCacheKey{query, ioFmt}
-	codecs, ok := c.queryCache[key]
-
+	codecs, ok := c.queryCodecs(query, ioFmt)
 	if ok {
-		return optimistic(ctx, conn, codecs.in, codecs.out, query, ioFmt, args)
+		return c.optimistic(ctx, conn, codecs, query, ioFmt, args)
 	}
 
-	return pesimistic(ctx, conn, c.codecCache, query, ioFmt, args)
+	return c.pesimistic(ctx, conn, query, ioFmt, args)
 }
 
-func pesimistic(
+func (c *Client) pesimistic(
 	ctx context.Context,
 	conn net.Conn,
-	cache codecs.CodecLookup,
 	query string,
 	ioFmt int,
 	args []interface{},
@@ -60,20 +74,17 @@ func pesimistic(
 		return nil, err
 	}
 
-	in, inOK := cache[inID]
-	out, outOK := cache[outID]
+	in, inOK := c.codecCache[inID]
+	out, outOK := c.codecCache[outID]
 	if !inOK || !outOK {
-		lookup, err := describe(ctx, conn)
+		err := c.describe(ctx, conn)
 		if err != nil {
 			return nil, err
 		}
 
-		for k, v := range lookup {
-			cache[k] = v
-		}
-
-		in = cache[inID]
-		out = cache[outID]
+		in = c.codecCache[inID]
+		out = c.codecCache[outID]
+		c.cacheQuery(query, ioFmt, in, out)
 	}
 
 	return execute(ctx, conn, in, out, args)
@@ -123,7 +134,7 @@ func prepare(
 	return in, out, nil
 }
 
-func describe(ctx context.Context, conn net.Conn) (codecs.CodecLookup, error) {
+func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 	msg := []byte{message.DescribeStatement, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
 	protocol.PushUint8(&msg, aspect.DataDescription)
@@ -135,10 +146,9 @@ func describe(ctx context.Context, conn net.Conn) (codecs.CodecLookup, error) {
 
 	rcv, err := writeAndRead(ctx, conn, pyld)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var lookup codecs.CodecLookup
 	for len(rcv) > 4 {
 		bts := protocol.PopMessage(&rcv)
 		mType := protocol.PopUint8(&bts)
@@ -150,21 +160,24 @@ func describe(ctx context.Context, conn net.Conn) (codecs.CodecLookup, error) {
 			protocol.PopUint8(&bts)               // cardianlity
 			protocol.PopUUID(&bts)                // input descriptor ID
 			descriptor := protocol.PopBytes(&bts) // input descriptor
-			lookup = codecs.Pop(&descriptor)
+			for k, v := range codecs.Pop(&descriptor) {
+				c.codecCache[k] = v
+			}
+
 			protocol.PopUUID(&bts)               // output descriptor ID
 			descriptor = protocol.PopBytes(&bts) // input descriptor
 			for k, v := range codecs.Pop(&descriptor) {
-				lookup[k] = v
+				c.codecCache[k] = v
 			}
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return nil, decodeError(&bts)
+			return decodeError(&bts)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
-	return lookup, nil
+	return nil
 }
 
 func execute(
@@ -211,17 +224,16 @@ func execute(
 	return result, nil
 }
 
-func optimistic(
+func (c *Client) optimistic(
 	ctx context.Context,
 	conn net.Conn,
-	in codecs.DecodeEncoder,
-	out codecs.DecodeEncoder,
+	codecs queryCodecs,
 	query string,
 	ioFmt int,
 	args []interface{},
 ) ([]interface{}, error) {
-	inID := in.ID()
-	outID := in.ID()
+	inID := codecs.in.ID()
+	outID := codecs.out.ID()
 
 	msg := []byte{message.OptimisticExecute, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
@@ -230,13 +242,12 @@ func optimistic(
 	protocol.PushString(&msg, query)
 	msg = append(msg, inID[:]...)
 	msg = append(msg, outID[:]...)
-	in.Encode(&msg, args)
+	codecs.in.Encode(&msg, args)
 	protocol.PutMsgLength(msg)
 
-	pyld := msg
-	pyld = append(pyld, message.Sync, 0, 0, 0, 4)
+	msg = append(msg, message.Sync, 0, 0, 0, 4)
 
-	rcv, err := writeAndRead(ctx, conn, pyld)
+	rcv, err := writeAndRead(ctx, conn, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +261,7 @@ func optimistic(
 		case message.Data:
 			protocol.PopUint32(&bts) // message length
 			protocol.PopUint16(&bts) // number of data elements (always 1)
-			result = append(result, out.Decode(&bts))
+			result = append(result, codecs.out.Decode(&bts))
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
