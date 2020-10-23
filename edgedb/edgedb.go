@@ -46,7 +46,7 @@ type queryCodecs struct {
 
 type queryCacheKey struct {
 	query  string
-	format int
+	format uint8
 }
 
 // todo rename Conn to Client

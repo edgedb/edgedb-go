@@ -29,7 +29,7 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
-func (c *Client) queryCodecs(query string, ioFmt int) (queryCodecs, bool) {
+func (c *Client) queryCodecs(query string, ioFmt uint8) (queryCodecs, bool) {
 	// todo this isn't thread safe
 	key := queryCacheKey{query, ioFmt}
 	codecs, ok := c.queryCache[key]
@@ -38,7 +38,7 @@ func (c *Client) queryCodecs(query string, ioFmt int) (queryCodecs, bool) {
 
 func (c *Client) cacheQuery(
 	query string,
-	ioFmt int,
+	ioFmt uint8,
 	in,
 	out codecs.DecodeEncoder,
 ) {
@@ -51,7 +51,7 @@ func (c *Client) granularFlow(
 	ctx context.Context,
 	conn net.Conn,
 	query string,
-	ioFmt int,
+	ioFmt uint8,
 	args []interface{},
 ) ([]interface{}, error) {
 	codecs, ok := c.queryCodecs(query, ioFmt)
@@ -66,7 +66,7 @@ func (c *Client) pesimistic(
 	ctx context.Context,
 	conn net.Conn,
 	query string,
-	ioFmt int,
+	ioFmt uint8,
 	args []interface{},
 ) ([]interface{}, error) {
 	inID, outID, err := prepare(ctx, conn, query, ioFmt)
@@ -94,11 +94,11 @@ func prepare(
 	ctx context.Context,
 	conn net.Conn,
 	query string,
-	ioFmt int,
+	ioFmt uint8,
 ) (in types.UUID, out types.UUID, err error) {
 	msg := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, uint8(ioFmt))
+	protocol.PushUint8(&msg, ioFmt)
 	protocol.PushUint8(&msg, cardinality.Many) // todo is this correct?
 	protocol.PushBytes(&msg, []byte{})         // no statement name
 	protocol.PushString(&msg, query)
@@ -229,43 +229,49 @@ func (c *Client) optimistic(
 	conn net.Conn,
 	codecs queryCodecs,
 	query string,
-	ioFmt int,
+	ioFmt uint8,
 	args []interface{},
 ) ([]interface{}, error) {
 	inID := codecs.in.ID()
 	outID := codecs.out.ID()
 
-	msg := []byte{message.OptimisticExecute, 0, 0, 0, 0}
-	protocol.PushUint16(&msg, 0) // no headers
-	protocol.PushUint8(&msg, uint8(ioFmt))
-	protocol.PushUint8(&msg, cardinality.Many) // todo is this correct?
-	protocol.PushString(&msg, query)
-	msg = append(msg, inID[:]...)
-	msg = append(msg, outID[:]...)
-	codecs.in.Encode(&msg, args)
-	protocol.PutMsgLength(msg)
+	buf := []byte{
+		message.OptimisticExecute,
+		0, 0, 0, 0, // message length slot, to be filled in later
+		0, 0, // no headers
+		ioFmt,
+		cardinality.Many, // todo is this correct?
+	}
 
-	msg = append(msg, message.Sync, 0, 0, 0, 4)
+	protocol.PushString(&buf, query)
+	buf = append(buf, inID[:]...)
+	buf = append(buf, outID[:]...)
+	codecs.in.Encode(&buf, args)
+	protocol.PutMsgLength(buf)
 
-	rcv, err := writeAndRead(ctx, conn, msg)
+	buf = append(buf, message.Sync, 0, 0, 0, 4)
+
+	buf, err := writeAndRead(ctx, conn, buf)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make(types.Set, 0)
-	for len(rcv) > 0 {
-		bts := protocol.PopMessage(&rcv)
-		mType := protocol.PopUint8(&bts)
+	for len(buf) > 0 {
+		msg := protocol.PopMessage(&buf)
+		mType := protocol.PopUint8(&msg)
 
 		switch mType {
 		case message.Data:
-			protocol.PopUint32(&bts) // message length
-			protocol.PopUint16(&bts) // number of data elements (always 1)
-			result = append(result, codecs.out.Decode(&bts))
+			// skip the following fields
+			// message length
+			// number of data elements (always 1)
+			msg = msg[6:]
+			result = append(result, codecs.out.Decode(&msg))
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return nil, decodeError(&bts)
+			return nil, decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
