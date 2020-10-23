@@ -42,19 +42,43 @@ func (i *idField) ID() types.UUID {
 	return i.id
 }
 
-// CodecLookup ...
-type CodecLookup map[types.UUID]DecodeEncoder
+// Cache ...
+type Cache map[types.UUID]DecodeEncoder
+
+// NewCache returns a cache with common types preallocated.
+func NewCache() Cache {
+	// todo add null tuple?
+	return Cache{
+		uuidID:      &UUID{idField{uuidID}},
+		stringID:    &String{idField{stringID}},
+		bytesID:     &Bytes{idField{bytesID}},
+		int16ID:     &Int16{idField{int16ID}},
+		int32ID:     &Int32{idField{int32ID}},
+		int64ID:     &Int64{idField{int64ID}},
+		float32ID:   &Float32{idField{float32ID}},
+		float64ID:   &Float64{idField{float64ID}},
+		decimalID:   nil, // not implemented
+		boolID:      &Bool{idField{boolID}},
+		dateTimeID:  &DateTime{idField{dateTimeID}},
+		localDTID:   nil, // not implemented
+		localDateID: nil, // not implemented
+		localTimeID: nil, // not implemented
+		durationID:  &Duration{idField{durationID}},
+		jsonID:      &JSON{idField{jsonID}},
+		bigIntID:    nil, // not implemented
+	}
+}
 
 // DecodeEncoder interface
 type DecodeEncoder interface {
+	// todo update name
 	Decode(*[]byte) interface{}
 	Encode(*[]byte, interface{})
 	ID() types.UUID
 }
 
-// Pop a decoder
-func Pop(bts *[]byte) CodecLookup {
-	lookup := CodecLookup{}
+// UpdateCache a decoder
+func UpdateCache(lookup Cache, bts *[]byte) {
 	codecs := []DecodeEncoder{}
 
 	for len(*bts) > 0 {
@@ -67,7 +91,7 @@ func Pop(bts *[]byte) CodecLookup {
 		case objectType:
 			lookup[id] = popObjectCodec(bts, id, codecs)
 		case baseScalarType:
-			lookup[id] = getBaseScalarCodec(id)
+			// base scalar types are preallocated
 		case scalarType:
 			panic("scalar type descriptor not implemented") // todo
 		case tupleType:
@@ -87,5 +111,4 @@ func Pop(bts *[]byte) CodecLookup {
 		}
 		codecs = append(codecs, lookup[id])
 	}
-	return lookup
 }

@@ -53,11 +53,10 @@ type queryCacheKey struct {
 
 // Client client
 type Client struct {
-	pool   pool.Pool
-	secret []byte
+	pool pool.Pool
 
 	// todo caches are not thread safe
-	codecCache codecs.CodecLookup
+	codecCache codecs.Cache
 	queryCache map[queryCacheKey]queryCodecs
 }
 
@@ -172,7 +171,7 @@ func (c *Client) QueryJSON(
 		return nil, err
 	}
 
-	return []byte(result[0].(string)), nil
+	return result[0].([]byte), nil
 }
 
 // QueryOneJSON runs a singleton-returning query
@@ -202,12 +201,12 @@ func (c *Client) QueryOneJSON(
 		return nil, err
 	}
 
-	jsonStr := result[0].(string)
-	if jsonStr == "[]" {
+	jsonStr := result[0].([]byte)
+	if len(jsonStr) == 2 {
 		return nil, ErrorZeroResults
 	}
 
-	return []byte(jsonStr[1 : len(jsonStr)-1]), nil
+	return jsonStr[1 : len(jsonStr)-1], nil
 }
 
 // Connect establishes a connection to an EdgeDB server.
@@ -231,10 +230,9 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	}
 
 	client = &Client{
-		p,
-		nil,
-		codecs.CodecLookup{},
-		map[queryCacheKey]queryCodecs{},
+		pool:       p,
+		codecCache: codecs.NewCache(),
+		queryCache: make(map[queryCacheKey]queryCodecs),
 	}
 
 	return client, nil

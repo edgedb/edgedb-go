@@ -25,6 +25,7 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/protocol/aspect"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -85,6 +86,13 @@ func (c *Client) pesimistic(
 		in = c.codecCache[inID]
 		out = c.codecCache[outID]
 		c.cacheQuery(query, ioFmt, in, out)
+	}
+
+	if ioFmt == format.JSON {
+		// treat json format as bytes instead of string
+		out = c.codecCache[types.UUID{
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
+		}]
 	}
 
 	return execute(ctx, conn, in, out, args)
@@ -158,15 +166,11 @@ func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 			protocol.PopUint8(&msg)               // cardianlity
 			protocol.PopUUID(&msg)                // input descriptor ID
 			descriptor := protocol.PopBytes(&msg) // input descriptor
-			for k, v := range codecs.Pop(&descriptor) {
-				c.codecCache[k] = v
-			}
+			codecs.UpdateCache(c.codecCache, &descriptor)
 
 			protocol.PopUUID(&msg)               // output descriptor ID
 			descriptor = protocol.PopBytes(&msg) // input descriptor
-			for k, v := range codecs.Pop(&descriptor) {
-				c.codecCache[k] = v
-			}
+			codecs.UpdateCache(c.codecCache, &descriptor)
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
 			return decodeError(&msg)
@@ -233,6 +237,14 @@ func (c *Client) optimistic(
 	inID := codecs.in.ID()
 	outID := codecs.out.ID()
 
+	out := codecs.out
+	if ioFmt == format.JSON {
+		// treat json format as bytes instead of string
+		out = c.codecCache[types.UUID{
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
+		}]
+	}
+
 	buf := buffer[:0]
 	buf = append(buf,
 		message.OptimisticExecute,
@@ -266,7 +278,7 @@ func (c *Client) optimistic(
 			// message length
 			// number of data elements (always 1)
 			msg = msg[6:]
-			result = append(result, codecs.out.Decode(&msg))
+			result = append(result, out.Decode(&msg))
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
