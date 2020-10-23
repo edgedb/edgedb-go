@@ -220,6 +220,8 @@ func execute(
 	return result, nil
 }
 
+var buffer [8192]byte
+
 func (c *Client) optimistic(
 	ctx context.Context,
 	conn net.Conn,
@@ -231,13 +233,14 @@ func (c *Client) optimistic(
 	inID := codecs.in.ID()
 	outID := codecs.out.ID()
 
-	buf := []byte{
+	buf := buffer[:0]
+	buf = append(buf,
 		message.OptimisticExecute,
 		0, 0, 0, 0, // message length slot, to be filled in later
 		0, 0, // no headers
 		ioFmt,
 		cardinality.Many, // todo is this correct?
-	}
+	)
 
 	protocol.PushString(&buf, query)
 	buf = append(buf, inID[:]...)
