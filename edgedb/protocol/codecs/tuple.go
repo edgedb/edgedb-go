@@ -17,6 +17,8 @@
 package codecs
 
 import (
+	"encoding/binary"
+
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -60,23 +62,20 @@ func (c *Tuple) Decode(bts *[]byte) interface{} {
 
 // Encode a tuple.
 func (c *Tuple) Encode(bts *[]byte, val interface{}) {
+	p := len(*bts)
+
+	// data length slot to be filled in at end
+	*bts = append(*bts, 0, 0, 0, 0)
+
 	elmCount := len(c.fields)
+	protocol.PushUint32(bts, uint32(elmCount))
 
-	// special case for null tuple
-	if elmCount == 0 {
-		protocol.PushUint32(bts, 4) // data length
-		protocol.PushUint32(bts, uint32(elmCount))
-		return
-	}
-
-	tmp := []byte{}
-	protocol.PushUint32(&tmp, uint32(elmCount))
 	in := val.([]interface{})
 	for i := 0; i < elmCount; i++ {
-		protocol.PushUint32(&tmp, 0) // reserved
-		c.fields[i].Encode(&tmp, in[i])
+		*bts = append(*bts, 0, 0, 0, 0) // reserved
+		c.fields[i].Encode(bts, in[i])
 	}
 
-	protocol.PushUint32(bts, uint32(len(tmp)))
-	*bts = append(*bts, tmp...)
+	n := len(*bts)
+	binary.BigEndian.PutUint32((*bts)[p:], uint32(n-p-4))
 }

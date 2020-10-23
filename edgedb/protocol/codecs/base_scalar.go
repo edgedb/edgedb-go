@@ -80,8 +80,8 @@ func (c *UUID) Decode(bts *[]byte) interface{} {
 
 // Encode a UUID.
 func (c *UUID) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, uint32(16))
 	tmp := val.(types.UUID)
+	*bts = append(*bts, 0, 0, 0, 16)
 	*bts = append(*bts, tmp[:]...)
 }
 
