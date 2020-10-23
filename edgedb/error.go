@@ -17,23 +17,16 @@
 package edgedb
 
 import (
+	"errors"
+
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 )
 
-// Error is returned when the server responded with an error message.
-type Error struct {
-	error
-	Severity int
-	Code     int
-	Message  string
-}
-
-func decodeError(bts *[]byte) *Error {
-	protocol.PopUint32(bts) // message length
-
-	return &Error{
-		Severity: int(protocol.PopUint8(bts)),
-		Code:     int(protocol.PopUint32(bts)),
-		Message:  protocol.PopString(bts),
-	}
+func decodeError(bts *[]byte) error {
+	// skip the following fields
+	// message length
+	// severity
+	// code
+	*bts = (*bts)[9:]
+	return errors.New(protocol.PopString(bts))
 }

@@ -125,11 +125,7 @@ func TestQueryOneZeroResults(t *testing.T) {
 func TestError(t *testing.T) {
 	ctx := context.Background()
 	err := client.Execute(ctx, "malformed query;")
-	expected := &Error{
-		Severity: 120,
-		Code:     67174656,
-		Message:  "Unexpected 'malformed'",
-	}
+	expected := errors.New("Unexpected 'malformed'")
 	assert.Equal(t, expected, err)
 }
 
