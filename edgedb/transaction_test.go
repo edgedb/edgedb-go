@@ -18,7 +18,6 @@ package edgedb
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -94,7 +93,6 @@ func TestTransactionRollsBack(t *testing.T) {
 		&result,
 		name,
 	)
-	fmt.Println(result)
 
 	assert.Equal(t, ErrorZeroResults, err)
 }
