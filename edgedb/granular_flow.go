@@ -224,8 +224,6 @@ func execute(
 	return result, nil
 }
 
-var buffer [8192]byte
-
 func (c *Client) optimistic(
 	ctx context.Context,
 	conn net.Conn,
@@ -245,7 +243,7 @@ func (c *Client) optimistic(
 		}]
 	}
 
-	buf := buffer[:0]
+	buf := c.buffer[:0]
 	buf = append(buf,
 		message.OptimisticExecute,
 		0, 0, 0, 0, // message length slot, to be filled in later

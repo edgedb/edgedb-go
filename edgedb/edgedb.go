@@ -53,7 +53,8 @@ type queryCacheKey struct {
 
 // Client client
 type Client struct {
-	pool pool.Pool
+	pool   pool.Pool
+	buffer [8192]byte
 
 	// todo caches are not thread safe
 	codecCache codecs.Cache
