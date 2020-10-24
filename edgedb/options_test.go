@@ -62,16 +62,16 @@ func TestMissingPort(t *testing.T) {
 
 func TestDialHost(t *testing.T) {
 	opts := Options{Host: "some.com", Port: 1234}
-	assert.Equal(t, "some.com:1234", opts.dialHost())
+	assert.Equal(t, "some.com:1234", opts.address())
 
 	opts = Options{Port: 1234}
-	assert.Equal(t, "localhost:1234", opts.dialHost())
+	assert.Equal(t, "localhost:1234", opts.address())
 
 	opts = Options{Host: "some.com"}
-	assert.Equal(t, "some.com:5656", opts.dialHost())
+	assert.Equal(t, "some.com:5656", opts.address())
 
 	opts = Options{}
-	assert.Equal(t, "localhost:5656", opts.dialHost())
+	assert.Equal(t, "localhost:5656", opts.address())
 }
 
 func TestWrongScheme(t *testing.T) {

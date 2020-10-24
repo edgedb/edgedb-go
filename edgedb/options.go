@@ -33,14 +33,14 @@ type Options struct {
 	admin    bool
 }
 
-func (o *Options) socType() string {
+func (o *Options) network() string {
 	if o.admin {
 		return "unix"
 	}
 	return "tcp"
 }
 
-func (o *Options) dialHost() string {
+func (o *Options) address() string {
 	if o.admin {
 		return fmt.Sprintf("%v/.s.EDGEDB.admin.%v", o.Host, o.Port)
 	}

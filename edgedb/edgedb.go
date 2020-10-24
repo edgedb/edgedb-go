@@ -216,7 +216,7 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	p, err := pool.NewChannelPool(1, 1, func() (conn net.Conn, e error) {
 		var d net.Dialer
 		// todo closing over the context is the wrong thing to do.
-		conn, e = d.DialContext(ctx, opts.socType(), opts.dialHost())
+		conn, e = d.DialContext(ctx, opts.network(), opts.address())
 		if e != nil {
 			return nil, e
 		}
