@@ -16,7 +16,11 @@
 
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // UUID a universally unique identifier
 // https://www.edgedb.com/docs/datamodel/scalars/uuid#type::std::uuid
@@ -31,6 +35,24 @@ func (id UUID) String() string {
 		id[8:10],
 		id[10:16],
 	)
+}
+
+// UUIDFromString converts a string to a UUID.
+func UUIDFromString(s string) (UUID, error) {
+	s = strings.Replace(s, "-", "", 4)
+
+	var id UUID
+	for i := 0; i < 16; i++ {
+		val, err := strconv.ParseUint(s[:2], 16, 8)
+		if err != nil {
+			return UUID{}, err
+		}
+
+		id[i] = uint8(val)
+		s = s[2:]
+	}
+
+	return id, nil
 }
 
 // Set https://www.edgedb.com/docs/edgeql/overview#everything-is-a-set
