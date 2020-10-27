@@ -32,6 +32,109 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
+const (
+	getUserQuery = `
+        SELECT User {
+            id,
+            name,
+            image,
+            latest_reviews := (
+                WITH UserReviews := User.<author[IS Review]
+                SELECT UserReviews {
+                    id,
+                    body,
+                    rating,
+                    movie: {
+                        id,
+                        image,
+                        title,
+                        avg_rating
+                    }
+                }
+                ORDER BY .creation_time DESC
+                LIMIT 10
+            )
+        }
+        FILTER .id = <uuid>$id
+	`
+
+	getMovieQuery = `
+        SELECT Movie {
+            id,
+            image,
+            title,
+            year,
+            description,
+            avg_rating,
+
+            directors: {
+                id,
+                full_name,
+                image,
+            }
+            ORDER BY Movie.directors@list_order EMPTY LAST
+                THEN Movie.directors.last_name,
+
+            cast: {
+                id,
+                full_name,
+                image,
+            }
+            ORDER BY Movie.cast@list_order EMPTY LAST
+                THEN Movie.cast.last_name,
+
+            reviews := (
+                SELECT Movie.<movie[IS Review] {
+                    id,
+                    body,
+                    rating,
+                    author: {
+                        id,
+                        name,
+                        image,
+                    }
+                }
+                ORDER BY .creation_time DESC
+            ),
+        }
+        FILTER .id = <uuid>$id
+	`
+
+	getPersonQuery = `
+        SELECT Person {
+            id,
+            full_name,
+            image,
+            bio,
+
+            acted_in := (
+                WITH M := Person.<cast[IS Movie]
+                SELECT M {
+                    id,
+                    image,
+                    title,
+                    year,
+                    avg_rating
+                }
+                ORDER BY .year ASC THEN .title ASC
+            ),
+
+            directed := (
+                WITH M := Person.<directors[IS Movie]
+                SELECT M {
+                    id,
+                    image,
+                    title,
+                    year,
+                    avg_rating
+                }
+                ORDER BY .year ASC THEN .title ASC
+            ),
+        }
+        FILTER .id = <uuid>$id
+	`
+)
+
 var (
 	client *edgedb.Client
 	ids    randIDs
@@ -132,39 +235,10 @@ done:
 	return
 }
 
-func getUser(id types.UUID) ([]byte, error) {
-	return client.QueryOneJSON(
-		ctx,
-		`
-		SELECT User {
-			id,
-			name,
-			image,
-			latest_reviews := (
-				WITH UserReviews := User.<author[IS Review]
-				SELECT UserReviews {
-					id,
-					body,
-					rating,
-					movie: {
-						id,
-						image,
-						title,
-						avg_rating
-					}
-				}
-				ORDER BY .creation_time DESC
-				LIMIT 10
-			)
-		}
-		FILTER .id = <uuid>$0
-		`,
-		id,
-	)
-}
-
-func userID() types.UUID {
-	return ids.Users[rand.Intn(len(ids.Users))]
+func userID() map[string]interface{} {
+	return map[string]interface{}{
+		"id": ids.Users[rand.Intn(len(ids.Users))],
+	}
 }
 
 func BenchmarkRandIDFunc(b *testing.B) {
@@ -176,7 +250,7 @@ func BenchmarkRandIDFunc(b *testing.B) {
 func BenchmarkUsers(b *testing.B) {
 	// warmup
 	runFor(5*time.Second, func() {
-		_, err := getUser(userID())
+		_, err := client.QueryOneJSON(ctx, getUserQuery, userID())
 		if err != nil {
 			log.Println(err)
 			b.FailNow()
@@ -185,60 +259,21 @@ func BenchmarkUsers(b *testing.B) {
 
 	b.Run("run", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			id := userID()
-			getUser(id) // nolint errcheck
+			client.QueryOneJSON(ctx, getUserQuery, userID()) // nolint
 		}
 	})
 }
 
-func personID() types.UUID {
-	return ids.People[rand.Intn(len(ids.People))]
-}
-
-func getPerson(id types.UUID) ([]byte, error) {
-	return client.QueryOneJSON(
-		ctx,
-		`
-        SELECT Person {
-            id,
-            full_name,
-            image,
-            bio,
-
-            acted_in := (
-                WITH M := Person.<cast[IS Movie]
-                SELECT M {
-                    id,
-                    image,
-                    title,
-                    year,
-                    avg_rating
-                }
-                ORDER BY .year ASC THEN .title ASC
-            ),
-
-            directed := (
-                WITH M := Person.<directors[IS Movie]
-                SELECT M {
-                    id,
-                    image,
-                    title,
-                    year,
-                    avg_rating
-                }
-                ORDER BY .year ASC THEN .title ASC
-            ),
-        }
-        FILTER .id = <uuid>$0
-		`,
-		id,
-	)
+func personID() map[string]interface{} {
+	return map[string]interface{}{
+		"id": ids.People[rand.Intn(len(ids.People))],
+	}
 }
 
 func BenchmarkPerson(b *testing.B) {
 	// warmup
 	runFor(5*time.Second, func() {
-		_, err := getPerson(personID())
+		_, err := client.QueryOneJSON(ctx, getPersonQuery, personID())
 		if err != nil {
 			log.Println(err)
 			b.FailNow()
@@ -247,67 +282,21 @@ func BenchmarkPerson(b *testing.B) {
 
 	b.Run("run", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			getPerson(personID()) // nolint errcheck
+			client.QueryOneJSON(ctx, getPersonQuery, personID()) // nolint
 		}
 	})
 }
 
-func movieID() types.UUID {
-	return ids.Movies[rand.Intn(len(ids.Movies))]
-}
-
-func getMovie(id types.UUID) ([]byte, error) {
-	return client.QueryOneJSON(
-		ctx,
-		`
-        SELECT Movie {
-            id,
-            image,
-            title,
-            year,
-            description,
-            avg_rating,
-
-            directors: {
-                id,
-                full_name,
-                image,
-            }
-            ORDER BY Movie.directors@list_order EMPTY LAST
-                THEN Movie.directors.last_name,
-
-            cast: {
-                id,
-                full_name,
-                image,
-            }
-            ORDER BY Movie.cast@list_order EMPTY LAST
-                THEN Movie.cast.last_name,
-
-            reviews := (
-                SELECT Movie.<movie[IS Review] {
-                    id,
-                    body,
-                    rating,
-                    author: {
-                        id,
-                        name,
-                        image,
-                    }
-                }
-                ORDER BY .creation_time DESC
-            ),
-        }
-        FILTER .id = <uuid>$0
-		`,
-		id,
-	)
+func movieID() map[string]interface{} {
+	return map[string]interface{}{
+		"id": ids.Movies[rand.Intn(len(ids.Movies))],
+	}
 }
 
 func BenchmarkMovie(b *testing.B) {
 	// warmup
 	runFor(5*time.Second, func() {
-		_, err := getMovie(movieID())
+		_, err := client.QueryOneJSON(ctx, getMovieQuery, movieID())
 		if err != nil {
 			log.Println(err)
 			b.FailNow()
@@ -316,7 +305,8 @@ func BenchmarkMovie(b *testing.B) {
 
 	b.Run("run", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			getMovie(movieID()) // nolint errcheck
+			fmt.Println(i, b.N)
+			client.QueryOneJSON(ctx, getMovieQuery, movieID()) // nolint
 		}
 	})
 }
