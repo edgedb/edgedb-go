@@ -39,7 +39,6 @@ func (id UUID) String() string {
 
 // MarshalText returns the id as a byte string.
 func (id UUID) MarshalText() ([]byte, error) {
-	fmt.Println("in marshal:", id.String())
 	return []byte(id.String()), nil
 }
 
