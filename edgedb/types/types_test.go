@@ -17,6 +17,7 @@
 package types
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,6 +31,25 @@ func TestUUIDString(t *testing.T) {
 
 func TestUUIDFromString(t *testing.T) {
 	uuid, err := UUIDFromString("00010203-0405-0607-0809-0a0b0c0d0e0f")
+	require.Nil(t, err)
+
+	expected := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+	assert.Equal(t, expected, uuid)
+}
+
+func TestUUIDMarshalJSON(t *testing.T) {
+	uuid := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+	bts, err := json.Marshal(uuid)
+	require.Nil(t, err)
+
+	expected := `"00010203-0405-0607-0809-0a0b0c0d0e0f"`
+	assert.Equal(t, expected, string(bts))
+}
+
+func TestUUIDUnmarshalJSON(t *testing.T) {
+	str := `"00010203-0405-0607-0809-0a0b0c0d0e0f"`
+	var uuid UUID
+	err := json.Unmarshal([]byte(str), &uuid)
 	require.Nil(t, err)
 
 	expected := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}

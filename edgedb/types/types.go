@@ -37,6 +37,18 @@ func (id UUID) String() string {
 	)
 }
 
+// MarshalText returns the id as a byte string.
+func (id UUID) MarshalText() ([]byte, error) {
+	fmt.Println("in marshal:", id.String())
+	return []byte(id.String()), nil
+}
+
+// UnmarshalText unmarshals the id from a string.
+func (id *UUID) UnmarshalText(b []byte) (err error) {
+	*id, err = UUIDFromString(string(b))
+	return err
+}
+
 // UUIDFromString converts a string to a UUID.
 func UUIDFromString(s string) (UUID, error) {
 	s = strings.Replace(s, "-", "", 4)
