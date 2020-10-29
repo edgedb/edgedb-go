@@ -26,9 +26,9 @@ import (
 func popTupleCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
-	fields := []DecodeEncoder{}
+	codecs []Codec,
+) Codec {
+	fields := []Codec{}
 
 	elmCount := int(protocol.PopUint16(bts))
 	for i := 0; i < elmCount; i++ {
@@ -42,7 +42,7 @@ func popTupleCodec(
 // Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
 	idField
-	fields []DecodeEncoder
+	fields []Codec
 }
 
 // Decode a tuple.

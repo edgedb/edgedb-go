@@ -40,8 +40,8 @@ var (
 )
 
 type queryCodecs struct {
-	in  codecs.DecodeEncoder
-	out codecs.DecodeEncoder
+	in  codecs.Codec
+	out codecs.Codec
 }
 
 type queryCacheKey struct {

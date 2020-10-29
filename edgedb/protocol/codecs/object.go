@@ -24,8 +24,8 @@ import (
 func popObjectCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
+	codecs []Codec,
+) Codec {
 	fields := []objectField{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -59,7 +59,7 @@ type objectField struct {
 	isLinkProperty bool
 	isLink         bool
 	name           string
-	codec          DecodeEncoder
+	codec          Codec
 }
 
 // Decode an object

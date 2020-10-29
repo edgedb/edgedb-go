@@ -24,8 +24,8 @@ import (
 func popArrayCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
+	codecs []Codec,
+) Codec {
 	index := protocol.PopUint16(bts) // element type descriptor index
 
 	n := int(protocol.PopUint16(bts)) // number of array dimensions
@@ -39,7 +39,7 @@ func popArrayCodec(
 // Array is an EdgeDB array type codec.
 type Array struct {
 	idField
-	child DecodeEncoder
+	child Codec
 }
 
 // Decode an array.

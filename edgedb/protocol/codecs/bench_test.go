@@ -35,7 +35,7 @@ func BenchmarkEncodeUUID(b *testing.B) {
 }
 
 func BenchmarkEncodeTuple(b *testing.B) {
-	codec := Tuple{fields: []DecodeEncoder{&UUID{}}}
+	codec := Tuple{fields: []Codec{&UUID{}}}
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
 	ids := []interface{}{id}
 	data := [2000]byte{}

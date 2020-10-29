@@ -26,8 +26,8 @@ import (
 func popNamedTupleCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
+	codecs []Codec,
+) Codec {
 	fields := []namedTupleField{}
 
 	elmCount := int(protocol.PopUint16(bts))
@@ -48,7 +48,7 @@ func popNamedTupleCodec(
 
 type namedTupleField struct {
 	name  string
-	codec DecodeEncoder
+	codec Codec
 }
 
 // NamedTuple is an EdgeDB namedtuple typep codec.

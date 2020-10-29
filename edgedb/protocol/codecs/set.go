@@ -24,8 +24,8 @@ import (
 func popSetCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
+	codecs []Codec,
+) Codec {
 	n := protocol.PopUint16(bts)
 	return &Set{idField{id}, codecs[n]}
 }
@@ -33,7 +33,7 @@ func popSetCodec(
 // Set is an EdgeDB set type codec.
 type Set struct {
 	idField
-	child DecodeEncoder
+	child Codec
 }
 
 // Decode a set

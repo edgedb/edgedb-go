@@ -41,7 +41,7 @@ func (c *Client) cacheQuery(
 	query string,
 	ioFmt uint8,
 	in,
-	out codecs.DecodeEncoder,
+	out codecs.Codec,
 ) {
 	// todo this isn't thread safe
 	key := queryCacheKey{query: query, format: ioFmt}
@@ -185,8 +185,8 @@ func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 func execute(
 	ctx context.Context,
 	conn net.Conn,
-	in codecs.DecodeEncoder,
-	out codecs.DecodeEncoder,
+	in codecs.Codec,
+	out codecs.Codec,
 	args []interface{},
 ) ([]interface{}, error) {
 	buf := []byte{message.Execute, 0, 0, 0, 0}

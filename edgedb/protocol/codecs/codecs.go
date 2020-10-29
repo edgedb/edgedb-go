@@ -34,6 +34,14 @@ const (
 	enumType
 )
 
+// Codec interface
+type Codec interface {
+	// todo update name
+	Decode(*[]byte) interface{}
+	Encode(*[]byte, interface{})
+	ID() types.UUID
+}
+
 type idField struct {
 	id types.UUID
 }
@@ -43,7 +51,7 @@ func (i *idField) ID() types.UUID {
 }
 
 // Cache ...
-type Cache map[types.UUID]DecodeEncoder
+type Cache map[types.UUID]Codec
 
 // NewCache returns a cache with common types preallocated.
 func NewCache() Cache {
@@ -69,17 +77,9 @@ func NewCache() Cache {
 	}
 }
 
-// DecodeEncoder interface
-type DecodeEncoder interface {
-	// todo update name
-	Decode(*[]byte) interface{}
-	Encode(*[]byte, interface{})
-	ID() types.UUID
-}
-
 // UpdateCache a decoder
 func UpdateCache(lookup Cache, bts *[]byte) {
-	codecs := []DecodeEncoder{}
+	codecs := []Codec{}
 
 	for len(*bts) > 0 {
 		descriptorType := protocol.PopUint8(bts)
