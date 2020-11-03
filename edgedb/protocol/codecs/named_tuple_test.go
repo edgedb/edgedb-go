@@ -17,11 +17,35 @@
 package codecs
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestSetNamedTupleType(t *testing.T) {
+	codec := &NamedTuple{fields: []*objectField{
+		{name: "id", codec: &UUID{t: uuidType}},
+		{name: "name", codec: &Str{t: strType}},
+		{name: "count", codec: &Int64{t: int64Type}},
+	}}
+
+	type Thing struct {
+		ID    types.UUID `edgedb:"id"`
+		Name  string     `edgedb:"name"`
+		Count int64      `edgedb:"count"`
+	}
+
+	err := codec.setType(reflect.TypeOf(Thing{}))
+	require.Nil(t, err)
+
+	assert.Equal(t, []int{0}, codec.fields[0].index)
+	assert.Equal(t, []int{1}, codec.fields[1].index)
+	assert.Equal(t, []int{2}, codec.fields[2].index)
+
+}
 
 func TestDecodeNamedTuple(t *testing.T) {
 	bts := []byte{
@@ -37,32 +61,65 @@ func TestDecodeNamedTuple(t *testing.T) {
 		0, 0, 0, 6,
 	}
 
-	codec := &NamedTuple{
-		idField{},
-		[]namedTupleField{
-			{"a", &Int32{}},
-			{"b", &Int32{}},
-		},
+	codec := &NamedTuple{fields: []*objectField{
+		{index: []int{0}, codec: &Int32{}},
+		{index: []int{1}, codec: &Int32{}},
+	}}
+
+	type SomeThing struct {
+		A int32
+		B int32
 	}
 
-	result := codec.Decode(&bts)
-	expected := types.NamedTuple{
-		"a": int32(5),
-		"b": int32(6),
-	}
+	var result SomeThing
+	val := reflect.ValueOf(&result).Elem()
+	err := codec.Decode(&bts, val)
+	require.Nil(t, err)
+
+	expected := SomeThing{A: 5, B: 6}
 
 	assert.Equal(t, expected, result)
 	assert.Equal(t, []byte{}, bts)
 }
 
-func TestEncodeNamedTuple(t *testing.T) {
-	codec := &NamedTuple{
-		idField{},
-		[]namedTupleField{
-			{"a", &Int32{}},
-			{"b", &Int32{}},
-		},
+func BenchmarkDecodeNamedTuple(b *testing.B) {
+	data := []byte{
+		0, 0, 0, 28, // data length
+		0, 0, 0, 2, // number of elements
+		// element 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4,
+		0, 0, 0, 5,
+		// element 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4,
+		0, 0, 0, 6,
 	}
+
+	type SomeThing struct {
+		A int32
+		B int32
+	}
+
+	var result SomeThing
+	val := reflect.ValueOf(&result).Elem()
+	codec := &NamedTuple{fields: []*objectField{
+		{index: []int{0}, codec: &Int32{}},
+		{index: []int{1}, codec: &Int32{}},
+	}}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buf := data[:]
+		codec.Decode(&buf, val)
+	}
+}
+
+func TestEncodeNamedTuple(t *testing.T) {
+	codec := &NamedTuple{fields: []*objectField{
+		{name: "a", codec: &Int32{}},
+		{name: "b", codec: &Int32{}},
+	}}
 
 	bts := []byte{}
 	codec.Encode(&bts, []interface{}{map[string]interface{}{

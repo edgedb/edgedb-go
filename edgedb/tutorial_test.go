@@ -23,20 +23,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type Person struct {
-	FirstName string `edgedb:"first_name"`
-	LastName  string `edgedb:"last_name"`
+	ID        types.UUID `edgedb:"id"`
+	FirstName string     `edgedb:"first_name"`
+	LastName  string     `edgedb:"last_name"`
 }
 
 type Movie struct {
-	Title    string   `edgedb:"title"`
-	Year     int64    `edgedb:"year"`
-	Director Person   `edgedb:"director"`
-	Actors   []Person `edgedb:"actors"`
+	ID       types.UUID `edgedb:"id"`
+	Title    string     `edgedb:"title"`
+	Year     int64      `edgedb:"year"`
+	Director Person     `edgedb:"director"`
+	Actors   []Person   `edgedb:"actors"`
 }
 
 func TestTutorial(t *testing.T) {
@@ -151,6 +154,16 @@ func TestTutorial(t *testing.T) {
 	)
 	require.Nil(t, err)
 
+	// clobber IDs with zero value since they are not deterministic
+	zeroID := make([]byte, 16)
+	for i := 0; i < len(out); i++ {
+		copy(out[i].ID[:], zeroID)
+		copy(out[i].Director.ID[:], zeroID)
+		for j := 0; j < len(out[i].Actors); j++ {
+			copy(out[i].Actors[j].ID[:], zeroID)
+		}
+	}
+
 	expected := []Movie{
 		{
 			Title: "Blade Runner 2049",
@@ -180,7 +193,7 @@ func TestTutorial(t *testing.T) {
 				FirstName: "Denis",
 				LastName:  "Villeneuve",
 			},
-			Actors: []Person{},
+			Actors: []Person(nil),
 		},
 	}
 

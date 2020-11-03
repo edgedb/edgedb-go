@@ -17,6 +17,9 @@
 package codecs
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -26,30 +29,52 @@ func popArrayCodec(
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	index := protocol.PopUint16(bts) // element type descriptor index
+	i := protocol.PopUint16(bts) // element type descriptor index
 
 	n := int(protocol.PopUint16(bts)) // number of array dimensions
 	for i := 0; i < n; i++ {
 		protocol.PopUint32(bts) // array dimension
 	}
 
-	return &Array{idField{id}, codecs[index]}
+	return &Array{id: id, child: codecs[i]}
 }
 
 // Array is an EdgeDB array type codec.
 type Array struct {
-	idField
+	id    types.UUID
 	child Codec
+	t     reflect.Type
+}
+
+func (c *Array) setType(t reflect.Type) error {
+	if t.Kind() != reflect.Slice {
+		return fmt.Errorf(
+			"out value does not match query schema: "+
+				"expected Slice got %v",
+			t.Kind(),
+		)
+	}
+
+	c.t = t
+	return c.child.setType(t.Elem())
+}
+
+func (c *Array) ID() types.UUID {
+	return c.id
+}
+
+func (c *Array) Type() reflect.Type {
+	return c.child.Type()
 }
 
 // Decode an array.
-func (c *Array) Decode(bts *[]byte) interface{} {
+func (c *Array) Decode(bts *[]byte, out reflect.Value) error {
 	buf := protocol.PopBytes(bts)
 
 	// number of dimensions is 1 or 0
 	dimCount := protocol.PopUint32(&buf)
 	if dimCount == 0 {
-		return types.Array{}
+		return nil
 	}
 
 	protocol.PopUint32(&buf) // reserved
@@ -57,18 +82,22 @@ func (c *Array) Decode(bts *[]byte) interface{} {
 
 	upper := int32(protocol.PopUint32(&buf))
 	lower := int32(protocol.PopUint32(&buf))
-	elmCount := int(upper - lower + 1)
+	n := int(upper - lower + 1)
 
-	out := make(types.Array, elmCount)
-	for i := 0; i < elmCount; i++ {
-		out[i] = c.child.Decode(&buf)
+	tmp := reflect.MakeSlice(c.t, n, n)
+	for i := 0; i < n; i++ {
+		err := c.child.Decode(&buf, tmp.Index(i))
+		if err != nil {
+			return err
+		}
 	}
 
-	return out
+	out.Set(tmp)
+	return nil
 }
 
 // Encode an array.
-func (c *Array) Encode(bts *[]byte, val interface{}) {
+func (c *Array) Encode(bts *[]byte, val interface{}) error {
 	// the data length is not know until all values have been encoded
 	// put the data in temporary slice to get the length
 	tmp := []byte{}
@@ -83,9 +112,13 @@ func (c *Array) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(&tmp, 1)                // dimension.lower
 
 	for i := 0; i < elmCount; i++ {
-		c.child.Encode(&tmp, in[i])
+		err := c.child.Encode(&tmp, in[i])
+		if err != nil {
+			return err
+		}
 	}
 
 	protocol.PushUint32(bts, uint32(len(tmp)))
 	*bts = append(*bts, tmp...)
+	return nil
 }

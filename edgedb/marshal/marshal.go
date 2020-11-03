@@ -17,74 +17,65 @@
 package marshal
 
 import (
+	"fmt"
 	"reflect"
 )
 
-// Marshal populates out with values from in
-func Marshal(out *interface{}, in interface{}) {
-	ov := reflect.ValueOf(out).Elem().Elem().Elem()
-	iv := reflect.ValueOf(in)
-	setValue(ov, iv)
-}
-
-func setValue(out reflect.Value, in reflect.Value) {
-	if in.Kind() == reflect.Interface {
-		in = in.Elem()
-	}
-
-	switch out.Kind() {
-	case reflect.Struct:
-		setStruct(out, in)
-	case reflect.Slice:
-		setSlice(out, in)
-	default:
-		setScalar(out, in)
-	}
-}
-
-func setScalar(out reflect.Value, in reflect.Value) {
-	if in.Kind() == reflect.Slice {
-		// assume in's value is an empty slice
-		// which represents a null value
-		// https://www.edgedb.com/docs/internals/protocol/dataformats
-		return
-	}
-	out.Set(in)
-}
-
-func setSlice(out reflect.Value, in reflect.Value) {
-	tmp := reflect.MakeSlice(out.Type(), in.Len(), in.Len())
-
-	for i := 0; i < in.Len(); i++ {
-		setValue(tmp.Index(i), in.Index(i))
-	}
-
-	out.Set(tmp)
-}
-
-func setStruct(out reflect.Value, in reflect.Value) {
-	iter := in.MapRange()
-	for iter.Next() {
-		setField(out, in, iter.Key())
-	}
-}
-
-func setField(out reflect.Value, in reflect.Value, name reflect.Value) {
-	fieldName := name.Interface().(string)
-	outField := fieldByTag(out, fieldName)
-	inField := in.MapIndex(name)
-	if outField.IsValid() {
-		setValue(outField, inField)
-	}
-}
-
-func fieldByTag(out reflect.Value, name string) reflect.Value {
-	sType := out.Type()
-	for i := 0; i < sType.NumField(); i++ {
-		field := sType.Field(i)
+func fieldByTag(t reflect.Type, name string) (reflect.StructField, bool) {
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
 		if field.Tag.Get("edgedb") == name {
-			return out.FieldByName(field.Name)
+			return field, true
 		}
 	}
-	return reflect.Value{}
+
+	return reflect.StructField{}, false
+}
+
+func StructField(t reflect.Type, name string) (reflect.StructField, bool) {
+	if f, ok := fieldByTag(t, name); ok {
+		return f, true
+	}
+
+	if f, ok := t.FieldByName(name); ok {
+		return f, true
+	}
+
+	return reflect.StructField{}, false
+}
+
+func ValueOf(i interface{}) (reflect.Value, error) {
+	v := reflect.ValueOf(i)
+	if v.Kind() != reflect.Ptr {
+		return reflect.Value{}, fmt.Errorf(
+			"out must be a pointer, got %v",
+			v.Type(),
+		)
+	}
+
+	e := v.Elem()
+	if !e.IsValid() {
+		return reflect.Value{}, fmt.Errorf(
+			"out must point to a valid value, got %v",
+			i,
+		)
+	}
+
+	return e, nil
+}
+
+func ValueOfSlice(i interface{}) (reflect.Value, error) {
+	v, err := ValueOf(i)
+	if err != nil {
+		return v, err
+	}
+
+	if v.Kind() != reflect.Slice {
+		return reflect.Value{}, fmt.Errorf(
+			"out must be a pointer to a slice, got %v",
+			reflect.ValueOf(i).Type(),
+		)
+	}
+
+	return v, nil
 }

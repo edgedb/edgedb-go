@@ -17,10 +17,11 @@
 package codecs
 
 import (
+	"reflect"
 	"testing"
 
-	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecodeArray(t *testing.T) {
@@ -42,8 +43,17 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	}
 
-	result := (&Array{idField{}, &Int64{}}).Decode(&bts)
-	expected := types.Array{int64(3), int64(5), int64(8)}
+	codec := &Array{
+		child: &Int64{},
+		t:     reflect.TypeOf([]int64{}),
+	}
+
+	var result []int64
+	val := reflect.ValueOf(&result).Elem()
+	err := codec.Decode(&bts, val)
+	require.Nil(t, err)
+
+	expected := []int64{3, 5, 8}
 
 	assert.Equal(t, expected, result)
 	assert.Equal(t, []byte{}, bts)
@@ -51,7 +61,10 @@ func TestDecodeArray(t *testing.T) {
 
 func TestEncodeArray(t *testing.T) {
 	bts := []byte{}
-	codec := &Array{idField{}, &Int64{}}
+	codec := &Array{
+		child: &Int64{},
+		t:     nil,
+	}
 	codec.Encode(&bts, []interface{}{int64(3), int64(5), int64(8)})
 
 	expected := []byte{

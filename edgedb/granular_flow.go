@@ -20,96 +20,114 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"reflect"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/aspect"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
-func (c *Client) queryCodecs(query string, ioFmt uint8) (queryCodecs, bool) {
+func (c *Client) queryCodecs(q query, t reflect.Type) (queryCodecs, bool) {
 	// todo this isn't thread safe
-	key := queryCacheKey{query, ioFmt}
-	codecs, ok := c.queryCache[key]
+	key := queryCacheKey{q.cmd, q.fmt, q.card, t}
+	codecs, ok := c.codecs[key]
 	return codecs, ok
 }
 
-func (c *Client) cacheQuery(
-	query string,
-	ioFmt uint8,
+func (c *Client) cacheQueryCodecs(
+	q query,
+	t reflect.Type,
 	in,
 	out codecs.Codec,
 ) {
+
+	if in == nil {
+		panic("in codec is nil")
+	}
+
+	if out == nil {
+		panic("out codec is nil")
+	}
+
 	// todo this isn't thread safe
-	key := queryCacheKey{query: query, format: ioFmt}
-	c.queryCache[key] = queryCodecs{in: in, out: out}
+	key := queryCacheKey{q.cmd, q.fmt, q.card, t}
+	c.codecs[key] = queryCodecs{in: in, out: out}
 }
 
 func (c *Client) granularFlow(
 	ctx context.Context,
 	conn net.Conn,
-	query string,
-	ioFmt uint8,
-	args []interface{},
-) ([]interface{}, error) {
-	codecs, ok := c.queryCodecs(query, ioFmt)
-	if ok {
-		return c.optimistic(ctx, conn, codecs, query, ioFmt, args)
+	out reflect.Value,
+	q query,
+) error {
+	if _, ok := c.queryCodecs(q, out.Type()); ok {
+		return c.optimistic(ctx, conn, out, q)
 	}
 
-	return c.pesimistic(ctx, conn, query, ioFmt, args)
+	return c.pesimistic(ctx, conn, out, q)
 }
 
 func (c *Client) pesimistic(
 	ctx context.Context,
 	conn net.Conn,
-	query string,
-	ioFmt uint8,
-	args []interface{},
-) ([]interface{}, error) {
-	inID, outID, err := prepare(ctx, conn, query, ioFmt)
-	if err != nil {
-		return nil, err
+	out reflect.Value,
+	q query,
+) error {
+	outType := out.Type()
+	if !q.flat() {
+		outType = outType.Elem()
 	}
 
-	in, inOK := c.codecCache[inID]
-	out, outOK := c.codecCache[outID]
+	inID, outID, err := prepare(ctx, conn, q)
+	if err != nil {
+		return err
+	}
+
+	dIn, inOK := c.descriptors[inID]
+	dOut, outOK := c.descriptors[outID]
 	if !inOK || !outOK {
 		err := c.describe(ctx, conn)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		in = c.codecCache[inID]
-		out = c.codecCache[outID]
-		c.cacheQuery(query, ioFmt, in, out)
+		dIn = c.descriptors[inID][:]
+		dOut = c.descriptors[outID][:]
 	}
 
-	if ioFmt == format.JSON {
-		// treat json format as bytes instead of string
-		out = c.codecCache[types.UUID{
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
-		}]
+	cIn, err := codecs.BuildCodec(&dIn)
+	if err != nil {
+		return err
 	}
 
-	return execute(ctx, conn, in, out, args)
+	var cOut codecs.Codec
+	if q.fmt == format.JSON {
+		cOut = codecs.JSONBytes
+	} else {
+		cOut, err = codecs.BuildTypedCodec(&dOut, outType)
+		if err != nil {
+			return err
+		}
+	}
+
+	c.cacheQueryCodecs(q, outType, cIn, cOut)
+	return c.execute(ctx, conn, out, q)
 }
 
 func prepare(
 	ctx context.Context,
 	conn net.Conn,
-	query string,
-	ioFmt uint8,
+	q query,
 ) (in types.UUID, out types.UUID, err error) {
 	buf := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
-	protocol.PushUint8(&buf, ioFmt)
-	protocol.PushUint8(&buf, cardinality.Many) // todo is this correct?
-	protocol.PushBytes(&buf, []byte{})         // no statement name
-	protocol.PushString(&buf, query)
+	protocol.PushUint8(&buf, q.fmt)
+	protocol.PushUint8(&buf, q.card)
+	protocol.PushBytes(&buf, []byte{}) // no statement name
+	protocol.PushString(&buf, q.cmd)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
@@ -125,9 +143,12 @@ func prepare(
 
 		switch mType {
 		case message.PrepareComplete:
-			protocol.PopUint32(&msg)     // message length
-			protocol.PopUint16(&msg)     // number of headers, assume 0
-			protocol.PopUint8(&msg)      // cardianlity
+			protocol.PopUint32(&msg) // message length
+			protocol.PopUint16(&msg) // number of headers, assume 0
+
+			// todo assert cardinality matches query
+			protocol.PopUint8(&msg) // cardianlity
+
 			in = protocol.PopUUID(&msg)  // input type id
 			out = protocol.PopUUID(&msg) // output type id
 		case message.ReadyForCommand:
@@ -161,16 +182,23 @@ func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 
 		switch mType {
 		case message.CommandDataDescription:
-			protocol.PopUint32(&msg)              // message length
-			protocol.PopUint16(&msg)              // num headers is always 0
-			protocol.PopUint8(&msg)               // cardianlity
-			protocol.PopUUID(&msg)                // input descriptor ID
-			descriptor := protocol.PopBytes(&msg) // input descriptor
-			codecs.UpdateCache(c.codecCache, &descriptor)
+			protocol.PopUint32(&msg) // message length
+			protocol.PopUint16(&msg) // num headers is always 0
+			protocol.PopUint8(&msg)  // cardianlity
 
-			protocol.PopUUID(&msg)               // output descriptor ID
-			descriptor = protocol.PopBytes(&msg) // input descriptor
-			codecs.UpdateCache(c.codecCache, &descriptor)
+			// input descriptor
+			id := protocol.PopUUID(&msg)
+			d := protocol.PopBytes(&msg)
+			o := make([]byte, len(d))
+			copy(o, d)
+			c.descriptors[id] = o
+
+			// output descriptor
+			id = protocol.PopUUID(&msg)
+			d = protocol.PopBytes(&msg)
+			o = make([]byte, len(d))
+			copy(o, d)
+			c.descriptors[id] = o
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
 			return decodeError(&msg)
@@ -182,27 +210,37 @@ func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 	return nil
 }
 
-func execute(
+func (c *Client) execute(
 	ctx context.Context,
 	conn net.Conn,
-	in codecs.Codec,
-	out codecs.Codec,
-	args []interface{},
-) ([]interface{}, error) {
+	out reflect.Value,
+	q query,
+) error {
+	outType := out.Type()
+	if !q.flat() {
+		outType = outType.Elem()
+	}
+
+	cdcs, _ := c.queryCodecs(q, outType)
 	buf := []byte{message.Execute, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0)       // no headers
 	protocol.PushBytes(&buf, []byte{}) // no statement name
-	in.Encode(&buf, args)
+	cdcs.in.Encode(&buf, q.args)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
 	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	result := make(types.Set, 0)
+	o := out
+	if !q.flat() {
+		out.SetLen(0)
+	}
+
+	err = ErrorZeroResults
 	for len(buf) > 0 {
 		msg := protocol.PopMessage(&buf)
 		mType := protocol.PopUint8(&msg)
@@ -211,61 +249,75 @@ func execute(
 		case message.Data:
 			protocol.PopUint32(&msg) // message length
 			protocol.PopUint16(&msg) // number of data elements (always 1)
-			result = append(result, out.Decode(&msg))
+
+			if !q.flat() {
+				val := reflect.New(outType).Elem()
+				cdcs.out.Decode(&msg, val)
+				o = reflect.Append(o, val)
+			} else {
+				cdcs.out.Decode(&msg, out)
+			}
+
+			err = nil
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return nil, decodeError(&msg)
+			return decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
-	return result, nil
+	if !q.flat() {
+		out.Set(o)
+	}
+
+	return err
 }
 
 func (c *Client) optimistic(
 	ctx context.Context,
 	conn net.Conn,
-	codecs queryCodecs,
-	query string,
-	ioFmt uint8,
-	args []interface{},
-) ([]interface{}, error) {
-	inID := codecs.in.ID()
-	outID := codecs.out.ID()
-
-	out := codecs.out
-	if ioFmt == format.JSON {
-		// treat json format as bytes instead of string
-		out = c.codecCache[types.UUID{
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
-		}]
+	out reflect.Value,
+	q query,
+) error {
+	outType := out.Type()
+	if !q.flat() {
+		outType = outType.Elem()
 	}
+
+	cdcs, _ := c.queryCodecs(q, out.Type())
+	inID := cdcs.in.ID()
+	outID := cdcs.out.ID()
 
 	buf := c.buffer[:0]
 	buf = append(buf,
 		message.OptimisticExecute,
 		0, 0, 0, 0, // message length slot, to be filled in later
 		0, 0, // no headers
-		ioFmt,
-		cardinality.Many, // todo is this correct?
+		q.fmt,
+		q.card,
 	)
 
-	protocol.PushString(&buf, query)
+	protocol.PushString(&buf, q.cmd)
 	buf = append(buf, inID[:]...)
 	buf = append(buf, outID[:]...)
-	codecs.in.Encode(&buf, args)
+	cdcs.in.Encode(&buf, q.args)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
 	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	result := make(types.Set, 0)
+	o := out
+	if !q.flat() {
+		out.SetLen(0)
+	}
+
+	err = ErrorZeroResults
 	for len(buf) > 0 {
 		msg := protocol.PopMessage(&buf)
 		mType := protocol.PopUint8(&msg)
@@ -276,15 +328,27 @@ func (c *Client) optimistic(
 			// message length
 			// number of data elements (always 1)
 			msg = msg[6:]
-			result = append(result, out.Decode(&msg))
+
+			if !q.flat() {
+				val := reflect.New(outType).Elem()
+				cdcs.out.Decode(&msg, val)
+				o = reflect.Append(o, val)
+			} else {
+				cdcs.out.Decode(&msg, out)
+			}
+			err = nil
 		case message.CommandComplete:
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return nil, decodeError(&msg)
+			return decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
-	return result, nil
+	if !q.flat() {
+		out.Set(o)
+	}
+
+	return err
 }

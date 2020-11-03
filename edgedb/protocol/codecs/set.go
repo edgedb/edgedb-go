@@ -17,6 +17,9 @@
 package codecs
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -27,22 +30,45 @@ func popSetCodec(
 	codecs []Codec,
 ) Codec {
 	n := protocol.PopUint16(bts)
-	return &Set{idField{id}, codecs[n]}
+	// todo type value
+	return &Set{id: id, child: codecs[n]}
 }
 
 // Set is an EdgeDB set type codec.
 type Set struct {
-	idField
+	id    types.UUID
 	child Codec
+	t     reflect.Type
+}
+
+func (c *Set) ID() types.UUID {
+	return c.id
+}
+
+func (c *Set) setType(t reflect.Type) error {
+	if t.Kind() != reflect.Slice {
+		return fmt.Errorf(
+			"out value does not match query schema: "+
+				"expected Slice got %v",
+			t.Kind(),
+		)
+	}
+
+	c.t = t
+	return c.child.setType(t.Elem())
+}
+
+func (c *Set) Type() reflect.Type {
+	return c.t
 }
 
 // Decode a set
-func (c *Set) Decode(bts *[]byte) interface{} {
+func (c *Set) Decode(bts *[]byte, out reflect.Value) error {
 	buf := protocol.PopBytes(bts)
 
 	dimCount := protocol.PopUint32(&buf) // number of dimensions, either 0 or 1
 	if dimCount == 0 {
-		return types.Set{}
+		return nil
 	}
 
 	protocol.PopUint32(&buf) // reserved
@@ -50,17 +76,18 @@ func (c *Set) Decode(bts *[]byte) interface{} {
 
 	upper := int32(protocol.PopUint32(&buf))
 	lower := int32(protocol.PopUint32(&buf))
-	elmCount := int(upper - lower + 1)
+	n := int(upper - lower + 1)
+	tmp := reflect.MakeSlice(c.t, n, n)
 
-	out := make(types.Set, elmCount)
-	for i := 0; i < elmCount; i++ {
-		out[i] = c.child.Decode(&buf)
+	for i := 0; i < n; i++ {
+		c.child.Decode(&buf, tmp.Index(i))
 	}
 
-	return out
+	out.Set(tmp)
+	return nil
 }
 
 // Encode a set
-func (c *Set) Encode(bts *[]byte, val interface{}) {
+func (c *Set) Encode(bts *[]byte, val interface{}) error {
 	panic("not implemented")
 }

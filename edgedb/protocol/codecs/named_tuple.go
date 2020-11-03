@@ -18,7 +18,9 @@ package codecs
 
 import (
 	"fmt"
+	"reflect"
 
+	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -28,14 +30,18 @@ func popNamedTupleCodec(
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	fields := []namedTupleField{}
+	fields := []*objectField{}
 
 	elmCount := int(protocol.PopUint16(bts))
 	for i := 0; i < elmCount; i++ {
 		name := protocol.PopString(bts)
 		index := protocol.PopUint16(bts)
 
-		field := namedTupleField{
+		if name == "__tid__" {
+			continue
+		}
+
+		field := &objectField{
 			name:  name,
 			codec: codecs[index],
 		}
@@ -43,38 +49,74 @@ func popNamedTupleCodec(
 		fields = append(fields, field)
 	}
 
-	return &NamedTuple{idField{id}, fields}
+	// todo missing type
+	return &NamedTuple{id: id, fields: fields}
 }
 
-type namedTupleField struct {
-	name  string
-	codec Codec
-}
-
-// NamedTuple is an EdgeDB namedtuple typep codec.
+// NamedTuple is an EdgeDB namedtuple type codec.
 type NamedTuple struct {
-	idField
-	fields []namedTupleField
+	id     types.UUID
+	fields []*objectField
+	t      reflect.Type
+}
+
+func (c *NamedTuple) ID() types.UUID {
+	return c.id
+}
+
+func (c *NamedTuple) setType(t reflect.Type) error {
+	if t.Kind() != reflect.Struct {
+		return fmt.Errorf(
+			"out value does not match query schema: "+
+				"expected Struct got %v",
+			t.Kind(),
+		)
+	}
+
+	for i := 0; i < len(c.fields); i++ {
+		field := c.fields[i]
+
+		if f, ok := marshal.StructField(t, field.name); ok {
+			field.index = f.Index
+			if err := field.codec.setType(f.Type); err != nil {
+				return err
+			}
+			continue
+		}
+
+		return fmt.Errorf(
+			"out value does not match query schema: "+
+				"%v struct is missing field %q",
+			t,
+			field.name,
+		)
+	}
+
+	c.t = t
+	return nil
+}
+
+func (c *NamedTuple) Type() reflect.Type {
+	return c.t
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(bts *[]byte) interface{} {
+func (c *NamedTuple) Decode(bts *[]byte, out reflect.Value) error {
 	buf := protocol.PopBytes(bts)
-
 	elmCount := int(int32(protocol.PopUint32(&buf)))
-	out := make(types.NamedTuple)
 
 	for i := 0; i < elmCount; i++ {
 		protocol.PopUint32(&buf) // reserved
 		field := c.fields[i]
-		out[field.name] = field.codec.Decode(&buf)
+		val := out.FieldByIndex(field.index)
+		field.codec.Decode(&buf, val)
 	}
 
-	return out
+	return nil
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
+func (c *NamedTuple) Encode(bts *[]byte, val interface{}) error {
 	// don't know the data length yet
 	// put everything in a new slice to get the length
 	tmp := []byte{}
@@ -97,4 +139,5 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 
 	protocol.PushUint32(bts, uint32(len(tmp)))
 	*bts = append(*bts, tmp...)
+	return nil
 }

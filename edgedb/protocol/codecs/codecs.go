@@ -16,8 +16,12 @@
 
 package codecs
 
+// todo better error messages for nested data structures
+
 import (
+	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
@@ -37,78 +41,69 @@ const (
 // Codec interface
 type Codec interface {
 	// todo update name
-	Decode(*[]byte) interface{}
-	Encode(*[]byte, interface{})
+	Decode(*[]byte, reflect.Value) error
+	Encode(*[]byte, interface{}) error
 	ID() types.UUID
+	Type() reflect.Type
+	setType(reflect.Type) error
 }
 
-type idField struct {
-	id types.UUID
-}
-
-func (i *idField) ID() types.UUID {
-	return i.id
-}
-
-// Cache ...
-type Cache map[types.UUID]Codec
-
-// NewCache returns a cache with common types preallocated.
-func NewCache() Cache {
-	// todo add null tuple?
-	return Cache{
-		uuidID:      &UUID{idField{uuidID}},
-		stringID:    &String{idField{stringID}},
-		bytesID:     &Bytes{idField{bytesID}},
-		int16ID:     &Int16{idField{int16ID}},
-		int32ID:     &Int32{idField{int32ID}},
-		int64ID:     &Int64{idField{int64ID}},
-		float32ID:   &Float32{idField{float32ID}},
-		float64ID:   &Float64{idField{float64ID}},
-		decimalID:   nil, // not implemented
-		boolID:      &Bool{idField{boolID}},
-		dateTimeID:  &DateTime{idField{dateTimeID}},
-		localDTID:   nil, // not implemented
-		localDateID: nil, // not implemented
-		localTimeID: nil, // not implemented
-		durationID:  &Duration{idField{durationID}},
-		jsonID:      &JSON{idField{jsonID}},
-		bigIntID:    nil, // not implemented
-	}
-}
-
-// UpdateCache a decoder
-func UpdateCache(lookup Cache, bts *[]byte) {
+// BuildCodec a decoder
+func BuildCodec(bts *[]byte) (Codec, error) {
 	codecs := []Codec{}
 
 	for len(*bts) > 0 {
 		descriptorType := protocol.PopUint8(bts)
 		id := protocol.PopUUID(bts)
+		var codec Codec
 
 		switch descriptorType {
 		case setType:
-			lookup[id] = popSetCodec(bts, id, codecs)
+			codec = popSetCodec(bts, id, codecs)
 		case objectType:
-			lookup[id] = popObjectCodec(bts, id, codecs)
+			codec = popObjectCodec(bts, id, codecs)
 		case baseScalarType:
-			// base scalar types are preallocated
+			var err error
+			codec, err = baseScalarCodec(id)
+			if err != nil {
+				return nil, err
+			}
 		case scalarType:
-			panic("scalar type descriptor not implemented") // todo
+			// todo implement scalar type descriptor
+			return nil, errors.New("scalar type descriptor not implemented")
 		case tupleType:
-			lookup[id] = popTupleCodec(bts, id, codecs)
+			codec = popTupleCodec(bts, id, codecs)
 		case namedTupleType:
-			lookup[id] = popNamedTupleCodec(bts, id, codecs)
+			codec = popNamedTupleCodec(bts, id, codecs)
 		case arrayType:
-			lookup[id] = popArrayCodec(bts, id, codecs)
+			codec = popArrayCodec(bts, id, codecs)
 		case enumType:
-			panic("enum type descriptor not implemented") // todo
+			// todo implement enum type descriptor
+			return nil, errors.New("enum type descriptor not implemented")
 		default:
-			panic(fmt.Sprintf(
+			return nil, fmt.Errorf(
 				"unknown descriptor type 0x%x:\n% x\n",
 				descriptorType,
 				bts,
-			))
+			)
 		}
-		codecs = append(codecs, lookup[id])
+
+		codecs = append(codecs, codec)
 	}
+
+	root := codecs[len(codecs)-1]
+	return root, nil
+}
+
+func BuildTypedCodec(bts *[]byte, t reflect.Type) (Codec, error) {
+	codec, err := BuildCodec(bts)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := codec.setType(t); err != nil {
+		return nil, err
+	}
+
+	return codec, nil
 }

@@ -22,12 +22,15 @@ import (
 	"context"
 	"errors"
 	"net"
+	"reflect"
 
 	"github.com/fatih/pool"
 
 	"github.com/edgedb/edgedb-go/edgedb/marshal"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
+	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
 // todo add examples
@@ -45,8 +48,11 @@ type queryCodecs struct {
 }
 
 type queryCacheKey struct {
-	query  string
-	format uint8
+	// todo what are all the values that should be in the cache key?
+	cmd  string
+	fmt  uint8
+	card uint8
+	t    reflect.Type
 }
 
 // todo rename Conn to Client
@@ -57,8 +63,8 @@ type Client struct {
 	buffer [8192]byte
 
 	// todo caches are not thread safe
-	codecCache codecs.Cache
-	queryCache map[queryCacheKey]queryCodecs
+	descriptors map[types.UUID][]byte
+	codecs      map[queryCacheKey]queryCodecs
 }
 
 // Close the db connection
@@ -85,15 +91,20 @@ func (c *Client) Execute(ctx context.Context, query string) (err error) {
 	return scriptFlow(ctx, conn, query)
 }
 
-// QueryOne runs a singleton-returning query and return its element.
+// QueryOne runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
 func (c *Client) QueryOne(
 	ctx context.Context,
-	query string,
+	cmd string,
 	out interface{},
 	args ...interface{},
 ) (err error) {
+	val, err := marshal.ValueOf(out)
+	if err != nil {
+		return err
+	}
+
 	conn, err := c.pool.Get()
 	if err != nil {
 		return err
@@ -106,27 +117,34 @@ func (c *Client) QueryOne(
 		}
 	}()
 
-	// todo assert cardinality
-	result, err := c.granularFlow(ctx, conn, query, format.Binary, args)
+	q := query{
+		cmd:  cmd,
+		fmt:  format.Binary,
+		card: cardinality.One,
+		args: args,
+	}
+
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return err
 	}
 
-	if len(result) == 0 {
-		return ErrorZeroResults
-	}
-
-	marshal.Marshal(&out, result[0])
+	// todo return ErrorZeroResults?
 	return nil
 }
 
 // Query runs a query and returns the results.
 func (c *Client) Query(
 	ctx context.Context,
-	query string,
+	cmd string,
 	out interface{},
 	args ...interface{},
 ) error {
+	val, err := marshal.ValueOfSlice(out)
+	if err != nil {
+		return err
+	}
+
 	conn, err := c.pool.Get()
 	if err != nil {
 		return err
@@ -139,20 +157,25 @@ func (c *Client) Query(
 		}
 	}()
 
-	// todo assert that out is a pointer to a slice
-	result, err := c.granularFlow(ctx, conn, query, format.Binary, args)
+	q := query{
+		cmd:  cmd,
+		fmt:  format.Binary,
+		card: cardinality.Many,
+		args: args,
+	}
+
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return err
 	}
 
-	marshal.Marshal(&out, result)
 	return nil
 }
 
 // QueryJSON runs a query and return the results as JSON.
 func (c *Client) QueryJSON(
 	ctx context.Context,
-	query string,
+	cmd string,
 	args ...interface{},
 ) ([]byte, error) {
 	conn, err := c.pool.Get()
@@ -167,12 +190,21 @@ func (c *Client) QueryJSON(
 		}
 	}()
 
-	result, err := c.granularFlow(ctx, conn, query, format.JSON, args)
+	q := query{
+		cmd:  cmd,
+		fmt:  format.JSON,
+		card: cardinality.Many,
+		args: args,
+	}
+
+	var result []byte
+	val := reflect.ValueOf(&result).Elem()
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return nil, err
 	}
 
-	return result[0].([]byte), nil
+	return result, nil
 }
 
 // QueryOneJSON runs a singleton-returning query
@@ -181,7 +213,7 @@ func (c *Client) QueryJSON(
 // []byte{}, ErrorZeroResults is returned.
 func (c *Client) QueryOneJSON(
 	ctx context.Context,
-	query string,
+	cmd string,
 	args ...interface{},
 ) ([]byte, error) {
 	conn, err := c.pool.Get()
@@ -196,18 +228,25 @@ func (c *Client) QueryOneJSON(
 		}
 	}()
 
-	// todo assert cardinally
-	result, err := c.granularFlow(ctx, conn, query, format.JSON, args)
+	q := query{
+		cmd:  cmd,
+		fmt:  format.JSON,
+		card: cardinality.One,
+		args: args,
+	}
+
+	var result []byte
+	val := reflect.ValueOf(&result).Elem()
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return nil, err
 	}
 
-	jsonStr := result[0].([]byte)
-	if len(jsonStr) == 2 {
+	if len(result) == 0 {
 		return nil, ErrorZeroResults
 	}
 
-	return jsonStr[1 : len(jsonStr)-1], nil
+	return result, nil
 }
 
 // Connect establishes a connection to an EdgeDB server.
@@ -231,9 +270,9 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	}
 
 	client = &Client{
-		pool:       p,
-		codecCache: codecs.NewCache(),
-		queryCache: make(map[queryCacheKey]queryCodecs),
+		pool:        p,
+		descriptors: make(map[types.UUID][]byte),
+		codecs:      make(map[queryCacheKey]queryCodecs),
 	}
 
 	return client, nil

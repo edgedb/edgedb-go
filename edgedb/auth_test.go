@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAuth(t *testing.T) {
@@ -41,7 +42,8 @@ func TestAuth(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	result, err := conn.QueryOneJSON(ctx, "SELECT 'It worked!';")
-	assert.Nil(t, err)
-	assert.Equal(t, `"It worked!"`, string(result))
+	var result string
+	err = conn.QueryOne(ctx, "SELECT 'It worked!';", &result)
+	require.Nil(t, err)
+	assert.Equal(t, "It worked!", result)
 }

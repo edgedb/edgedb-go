@@ -17,23 +17,45 @@
 package codecs
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestDecodeObject(t *testing.T) {
-	codec := &Object{
-		idField{},
-		[]objectField{
-			{false, false, false, "a", &String{}},
-			{false, false, false, "b", &Int32{}},
-		},
+func TestSetObjectType(t *testing.T) {
+	codec := &Object{fields: []*objectField{
+		{name: "id", codec: &UUID{t: uuidType}},
+		{name: "name", codec: &Str{t: strType}},
+		{name: "count", codec: &Int64{t: int64Type}},
+	}}
+
+	type Thing struct {
+		ID    types.UUID `edgedb:"id"`
+		Name  string     `edgedb:"name"`
+		Count int64      `edgedb:"count"`
 	}
 
+	err := codec.setType(reflect.TypeOf(Thing{}))
+	require.Nil(t, err)
+
+	assert.Equal(t, []int{0}, codec.fields[0].index)
+	assert.Equal(t, []int{1}, codec.fields[1].index)
+	assert.Equal(t, []int{2}, codec.fields[2].index)
+
+}
+
+func TestDecodeObject(t *testing.T) {
+	codec := &Object{fields: []*objectField{
+		{index: []int{0}, codec: &Str{}},
+		{index: []int{1}, codec: &Int32{}},
+		{index: []int{2}, codec: &Int64{}},
+	}}
+
 	bts := []byte{
-		0, 0, 0, 28, // data length
+		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
 		0, 0, 0, 0, // reserved
@@ -43,14 +65,61 @@ func TestDecodeObject(t *testing.T) {
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 4, // data length
 		0, 0, 0, 4, // int32
+		// field 2
+		0, 0, 0, 0, // reserved
+		0xff, 0xff, 0xff, 0xff, // data length (-1)
 	}
 
-	result := codec.Decode(&bts)
-	expected := types.Object{
-		"a": "four",
-		"b": int32(4),
+	type SomeThing struct {
+		A string
+		B int32
+		C int64
 	}
 
+	var result SomeThing
+	val := reflect.ValueOf(&result).Elem()
+	err := codec.Decode(&bts, val)
+	require.Nil(t, err)
+
+	expected := SomeThing{A: "four", B: 4, C: 0}
 	assert.Equal(t, expected, result)
 	assert.Equal(t, []byte{}, bts)
+}
+
+func BenchmarkDecodeObject(b *testing.B) {
+	data := []byte{
+		0, 0, 0, 36, // data length
+		0, 0, 0, 2, // element count
+		// field 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		102, 111, 117, 114, // utf-8 data
+		// field 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		0, 0, 0, 4, // int32
+		// field 2
+		0, 0, 0, 0, // reserved
+		0xff, 0xff, 0xff, 0xff, // data length (-1)
+	}
+
+	type SomeThing struct {
+		A string
+		B int32
+		C int64
+	}
+
+	var result SomeThing
+	val := reflect.ValueOf(&result).Elem()
+	codec := &Object{fields: []*objectField{
+		{index: []int{0}, codec: &Str{}},
+		{index: []int{1}, codec: &Int32{}},
+		{index: []int{2}, codec: &Int64{}},
+	}}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buf := data[:]
+		codec.Decode(&buf, val)
+	}
 }
