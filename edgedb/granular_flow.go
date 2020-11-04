@@ -32,7 +32,7 @@ import (
 
 func (c *Client) queryCodecs(q query, t reflect.Type) (queryCodecs, bool) {
 	// todo this isn't thread safe
-	key := queryCacheKey{q.cmd, q.fmt, q.card, t}
+	key := queryCacheKey{q.cmd, q.fmt, q.expCard, t}
 	codecs, ok := c.codecs[key]
 	return codecs, ok
 }
@@ -52,7 +52,7 @@ func (c *Client) cacheQueryCodecs(
 	}
 
 	// todo this isn't thread safe
-	key := queryCacheKey{q.cmd, q.fmt, q.card, t}
+	key := queryCacheKey{q.cmd, q.fmt, q.expCard, t}
 	c.codecs[key] = queryCodecs{in: in, out: out}
 }
 
@@ -124,7 +124,7 @@ func prepare(
 	buf := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
 	protocol.PushUint8(&buf, q.fmt)
-	protocol.PushUint8(&buf, q.card)
+	protocol.PushUint8(&buf, q.expCard)
 	protocol.PushBytes(&buf, []byte{}) // no statement name
 	protocol.PushString(&buf, q.cmd)
 	protocol.PutMsgLength(buf)
@@ -294,7 +294,7 @@ func (c *Client) optimistic(
 		0, 0, 0, 0, // message length slot, to be filled in later
 		0, 0, // no headers
 		q.fmt,
-		q.card,
+		q.expCard,
 	)
 
 	protocol.PushString(&buf, q.cmd)

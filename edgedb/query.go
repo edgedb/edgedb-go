@@ -22,14 +22,14 @@ import (
 )
 
 type query struct {
-	cmd  string
-	fmt  uint8
-	card uint8
-	args []interface{}
+	cmd     string
+	fmt     uint8
+	expCard uint8
+	args    []interface{}
 }
 
 func (q *query) flat() bool {
-	if q.card != cardinality.Many {
+	if q.expCard != cardinality.Many {
 		return true
 	}
 

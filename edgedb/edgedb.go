@@ -48,11 +48,10 @@ type queryCodecs struct {
 }
 
 type queryCacheKey struct {
-	// todo what are all the values that should be in the cache key?
-	cmd  string
-	fmt  uint8
-	card uint8
-	t    reflect.Type
+	cmd     string
+	fmt     uint8
+	expCard uint8
+	t       reflect.Type
 }
 
 // todo rename Conn to Client
@@ -118,10 +117,10 @@ func (c *Client) QueryOne(
 	}()
 
 	q := query{
-		cmd:  cmd,
-		fmt:  format.Binary,
-		card: cardinality.One,
-		args: args,
+		cmd:     cmd,
+		fmt:     format.Binary,
+		expCard: cardinality.One,
+		args:    args,
 	}
 
 	err = c.granularFlow(ctx, conn, val, q)
@@ -158,10 +157,10 @@ func (c *Client) Query(
 	}()
 
 	q := query{
-		cmd:  cmd,
-		fmt:  format.Binary,
-		card: cardinality.Many,
-		args: args,
+		cmd:     cmd,
+		fmt:     format.Binary,
+		expCard: cardinality.Many,
+		args:    args,
 	}
 
 	err = c.granularFlow(ctx, conn, val, q)
@@ -191,10 +190,10 @@ func (c *Client) QueryJSON(
 	}()
 
 	q := query{
-		cmd:  cmd,
-		fmt:  format.JSON,
-		card: cardinality.Many,
-		args: args,
+		cmd:     cmd,
+		fmt:     format.JSON,
+		expCard: cardinality.Many,
+		args:    args,
 	}
 
 	var result []byte
@@ -229,10 +228,10 @@ func (c *Client) QueryOneJSON(
 	}()
 
 	q := query{
-		cmd:  cmd,
-		fmt:  format.JSON,
-		card: cardinality.One,
-		args: args,
+		cmd:     cmd,
+		fmt:     format.JSON,
+		expCard: cardinality.One,
+		args:    args,
 	}
 
 	var result []byte
