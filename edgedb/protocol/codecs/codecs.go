@@ -81,6 +81,7 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 			// todo implement enum type descriptor
 			return nil, errors.New("enum type descriptor not implemented")
 		default:
+			// todo ignore special types
 			return nil, fmt.Errorf(
 				"unknown descriptor type 0x%x",
 				descriptorType,
@@ -102,7 +103,10 @@ func BuildTypedCodec(bts *[]byte, t reflect.Type) (Codec, error) {
 	}
 
 	if err := codec.setType(t); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"the \"out\" argument does not match query schema: %w",
+			err,
+		)
 	}
 
 	return codec, nil

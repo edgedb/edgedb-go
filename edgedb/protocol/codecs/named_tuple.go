@@ -67,11 +67,7 @@ func (c *NamedTuple) ID() types.UUID {
 
 func (c *NamedTuple) setType(t reflect.Type) error {
 	if t.Kind() != reflect.Struct {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected Struct got %v",
-			t.Kind(),
-		)
+		return fmt.Errorf("expected Struct got %v", t.Kind())
 	}
 
 	for i := 0; i < len(c.fields); i++ {
@@ -85,12 +81,7 @@ func (c *NamedTuple) setType(t reflect.Type) error {
 			continue
 		}
 
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"%v struct is missing field %q",
-			t,
-			field.name,
-		)
+		return fmt.Errorf("%v struct is missing field %q", t, field.name)
 	}
 
 	c.t = t

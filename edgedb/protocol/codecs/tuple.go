@@ -61,27 +61,16 @@ func (c *Tuple) ID() types.UUID {
 
 func (c *Tuple) setType(t reflect.Type) error {
 	if t.Kind() != reflect.Slice {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected Slice got %v",
-			t.Kind(),
-		)
+		return fmt.Errorf("expected Slice got %v", t.Kind())
 	}
 
 	if t.Elem().Kind() != reflect.Interface {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected Interface got %v",
-			t.Elem().Kind(),
-		)
+		return fmt.Errorf("expected Interface got %v", t.Elem().Kind())
 	}
 
 	for _, field := range c.fields {
 		if field.Type() == nil {
-			return errors.New(
-				"unsupported schema type: " +
-					"tuples may only contain base scalar types",
-			)
+			return errors.New("tuples may only contain base scalar types")
 		}
 	}
 

@@ -48,11 +48,7 @@ type Array struct {
 
 func (c *Array) setType(t reflect.Type) error {
 	if t.Kind() != reflect.Slice {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected Slice got %v",
-			t.Kind(),
-		)
+		return fmt.Errorf("expected Slice got %v", t.Kind())
 	}
 
 	c.t = t

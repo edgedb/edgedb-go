@@ -76,11 +76,7 @@ func (c *Object) ID() types.UUID {
 
 func (c *Object) setType(t reflect.Type) error {
 	if t.Kind() != reflect.Struct {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected Struct got %v",
-			t.Kind(),
-		)
+		return fmt.Errorf("expected Struct got %v", t.Kind())
 	}
 
 	for _, field := range c.fields {
@@ -94,12 +90,7 @@ func (c *Object) setType(t reflect.Type) error {
 				return err
 			}
 		} else {
-			return fmt.Errorf(
-				"out value does not match query schema: "+
-					"%v struct is missing field %q",
-				t,
-				field.name,
-			)
+			return fmt.Errorf("%v struct is missing field %q", t, field.name)
 		}
 	}
 

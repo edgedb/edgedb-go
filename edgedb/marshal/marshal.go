@@ -51,7 +51,7 @@ func ValueOf(i interface{}) (reflect.Value, error) {
 	v := reflect.ValueOf(i)
 	if v.Kind() != reflect.Ptr {
 		return reflect.Value{}, fmt.Errorf(
-			"out must be a pointer, got %v",
+			"the \"out\" argument must be a pointer, got %v",
 			v.Type(),
 		)
 	}
@@ -59,7 +59,7 @@ func ValueOf(i interface{}) (reflect.Value, error) {
 	e := v.Elem()
 	if !e.IsValid() {
 		return reflect.Value{}, fmt.Errorf(
-			"out must point to a valid value, got %v",
+			"the \"out\" argument must point to a valid value, got %v",
 			i,
 		)
 	}
@@ -77,7 +77,7 @@ func ValueOfSlice(i interface{}) (reflect.Value, error) {
 
 	if v.Kind() != reflect.Slice {
 		return reflect.Value{}, fmt.Errorf(
-			"out must be a pointer to a slice, got %v",
+			"the \"out\" argument must be a pointer to a slice, got %v",
 			reflect.ValueOf(i).Type(),
 		)
 	}

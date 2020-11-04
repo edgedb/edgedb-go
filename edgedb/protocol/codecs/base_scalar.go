@@ -125,12 +125,7 @@ func (c *UUID) ID() types.UUID {
 
 func (c *UUID) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -169,12 +164,7 @@ func (c *Str) ID() types.UUID {
 
 func (c *Str) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -208,12 +198,7 @@ func (c *Bytes) ID() types.UUID {
 
 func (c *Bytes) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -250,12 +235,7 @@ func (c *Int16) ID() types.UUID {
 
 func (c *Int16) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -291,12 +271,7 @@ func (c *Int32) ID() types.UUID {
 
 func (c *Int32) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -332,12 +307,7 @@ func (c *Int64) ID() types.UUID {
 
 func (c *Int64) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -373,12 +343,7 @@ func (c *Float32) ID() types.UUID {
 
 func (c *Float32) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -414,12 +379,7 @@ func (c *Float64) ID() types.UUID {
 
 func (c *Float64) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -455,12 +415,7 @@ func (c *Bool) ID() types.UUID {
 
 func (c *Bool) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -503,12 +458,7 @@ func (c *DateTime) ID() types.UUID {
 
 func (c *DateTime) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -552,12 +502,7 @@ func (c *Duration) ID() types.UUID {
 
 func (c *Duration) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
@@ -600,12 +545,7 @@ func (c *JSON) ID() types.UUID {
 
 func (c *JSON) setType(t reflect.Type) error {
 	if t != c.t {
-		return fmt.Errorf(
-			"out value does not match query schema: "+
-				"expected %v got %v",
-			c.t,
-			t,
-		)
+		return fmt.Errorf("expected %v got %v", c.t, t)
 	}
 
 	return nil
