@@ -22,7 +22,6 @@ import (
 
 	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDecodeTuple(t *testing.T) {
@@ -46,8 +45,7 @@ func TestDecodeTuple(t *testing.T) {
 
 	var result []interface{}
 	val := reflect.ValueOf(&result).Elem()
-	err := codec.Decode(&bts, val)
-	require.Nil(t, err)
+	codec.Decode(&bts, val)
 
 	expected := []interface{}{int64(2), int32(3)}
 	assert.Equal(t, expected, result)
@@ -94,9 +92,10 @@ func BenchmarkEncodeTuple(b *testing.B) {
 	ids := []interface{}{id}
 	data := [2000]byte{}
 
+	var buf []byte
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf := data[:0]
-		codec.Encode(&buf, ids)
+		buf = data[:0]
+		codec.Encode(&buf, ids) // nolint
 	}
 }

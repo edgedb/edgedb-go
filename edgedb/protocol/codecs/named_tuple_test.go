@@ -44,7 +44,6 @@ func TestSetNamedTupleType(t *testing.T) {
 	assert.Equal(t, []int{0}, codec.fields[0].index)
 	assert.Equal(t, []int{1}, codec.fields[1].index)
 	assert.Equal(t, []int{2}, codec.fields[2].index)
-
 }
 
 func TestDecodeNamedTuple(t *testing.T) {
@@ -73,8 +72,7 @@ func TestDecodeNamedTuple(t *testing.T) {
 
 	var result SomeThing
 	val := reflect.ValueOf(&result).Elem()
-	err := codec.Decode(&bts, val)
-	require.Nil(t, err)
+	codec.Decode(&bts, val)
 
 	expected := SomeThing{A: 5, B: 6}
 
@@ -108,9 +106,10 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 		{index: []int{1}, codec: &Int32{}},
 	}}
 
+	var buf []byte
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf := data[:]
+		buf = data
 		codec.Decode(&buf, val)
 	}
 }

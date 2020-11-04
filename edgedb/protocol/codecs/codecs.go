@@ -41,8 +41,8 @@ const (
 // Codec interface
 type Codec interface {
 	// todo update name
-	Decode(*[]byte, reflect.Value) error
-	Encode(*[]byte, interface{}) error
+	Decode(*[]byte, reflect.Value)
+	Encode(*[]byte, interface{})
 	ID() types.UUID
 	Type() reflect.Type
 	setType(reflect.Type) error
@@ -82,9 +82,8 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 			return nil, errors.New("enum type descriptor not implemented")
 		default:
 			return nil, fmt.Errorf(
-				"unknown descriptor type 0x%x:\n% x\n",
+				"unknown descriptor type 0x%x",
 				descriptorType,
-				bts,
 			)
 		}
 
@@ -95,6 +94,7 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 	return root, nil
 }
 
+// BuildTypedCodec builds a codec for decoding into a specific type.
 func BuildTypedCodec(bts *[]byte, t reflect.Type) (Codec, error) {
 	codec, err := BuildCodec(bts)
 	if err != nil {

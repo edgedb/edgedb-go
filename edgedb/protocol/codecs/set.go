@@ -41,6 +41,7 @@ type Set struct {
 	t     reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Set) ID() types.UUID {
 	return c.id
 }
@@ -58,17 +59,18 @@ func (c *Set) setType(t reflect.Type) error {
 	return c.child.setType(t.Elem())
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Set) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a set
-func (c *Set) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Set) Decode(bts *[]byte, out reflect.Value) {
 	buf := protocol.PopBytes(bts)
 
 	dimCount := protocol.PopUint32(&buf) // number of dimensions, either 0 or 1
 	if dimCount == 0 {
-		return nil
+		return
 	}
 
 	protocol.PopUint32(&buf) // reserved
@@ -84,10 +86,9 @@ func (c *Set) Decode(bts *[]byte, out reflect.Value) error {
 	}
 
 	out.Set(tmp)
-	return nil
 }
 
 // Encode a set
-func (c *Set) Encode(bts *[]byte, val interface{}) error {
+func (c *Set) Encode(bts *[]byte, val interface{}) {
 	panic("not implemented")
 }

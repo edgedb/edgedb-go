@@ -32,6 +32,7 @@ func fieldByTag(t reflect.Type, name string) (reflect.StructField, bool) {
 	return reflect.StructField{}, false
 }
 
+// StructField finds a field where name matches either the tag or name.
 func StructField(t reflect.Type, name string) (reflect.StructField, bool) {
 	if f, ok := fieldByTag(t, name); ok {
 		return f, true
@@ -44,6 +45,8 @@ func StructField(t reflect.Type, name string) (reflect.StructField, bool) {
 	return reflect.StructField{}, false
 }
 
+// ValueOf returns the reflect.Value of an out parameter or an error
+// if the out parameter is not valid.
 func ValueOf(i interface{}) (reflect.Value, error) {
 	v := reflect.ValueOf(i)
 	if v.Kind() != reflect.Ptr {
@@ -64,6 +67,8 @@ func ValueOf(i interface{}) (reflect.Value, error) {
 	return e, nil
 }
 
+// ValueOfSlice returns the reflect.Value of an out parameter slice or an error
+// if the out parameter is not valid.
 func ValueOfSlice(i interface{}) (reflect.Value, error) {
 	v, err := ValueOf(i)
 	if err != nil {

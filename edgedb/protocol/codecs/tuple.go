@@ -54,6 +54,7 @@ type Tuple struct {
 	t      reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Tuple) ID() types.UUID {
 	return c.id
 }
@@ -88,12 +89,13 @@ func (c *Tuple) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Tuple) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a tuple.
-func (c *Tuple) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Tuple) Decode(bts *[]byte, out reflect.Value) {
 	buf := protocol.PopBytes(bts)
 	n := int(int32(protocol.PopUint32(&buf)))
 	tmp := reflect.MakeSlice(interfaceSliceType, 0, n)
@@ -107,11 +109,10 @@ func (c *Tuple) Decode(bts *[]byte, out reflect.Value) error {
 	}
 
 	out.Set(tmp)
-	return nil
 }
 
 // Encode a tuple.
-func (c *Tuple) Encode(bts *[]byte, val interface{}) error {
+func (c *Tuple) Encode(bts *[]byte, val interface{}) {
 	p := len(*bts)
 
 	// data length slot to be filled in at end
@@ -128,5 +129,4 @@ func (c *Tuple) Encode(bts *[]byte, val interface{}) error {
 
 	n := len(*bts)
 	binary.BigEndian.PutUint32((*bts)[p:], uint32(n-p-4))
-	return nil
 }

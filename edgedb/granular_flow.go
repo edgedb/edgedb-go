@@ -43,7 +43,6 @@ func (c *Client) cacheQueryCodecs(
 	in,
 	out codecs.Codec,
 ) {
-
 	if in == nil {
 		panic("in codec is nil")
 	}
@@ -89,13 +88,13 @@ func (c *Client) pesimistic(
 	dIn, inOK := c.descriptors[inID]
 	dOut, outOK := c.descriptors[outID]
 	if !inOK || !outOK {
-		err := c.describe(ctx, conn)
+		err = c.describe(ctx, conn)
 		if err != nil {
 			return err
 		}
 
-		dIn = c.descriptors[inID][:]
-		dOut = c.descriptors[outID][:]
+		dIn = c.descriptors[inID]
+		dOut = c.descriptors[outID]
 	}
 
 	cIn, err := codecs.BuildCodec(&dIn)
@@ -257,7 +256,6 @@ func (c *Client) execute(
 			} else {
 				cdcs.out.Decode(&msg, out)
 			}
-
 			err = nil
 		case message.CommandComplete:
 		case message.ReadyForCommand:

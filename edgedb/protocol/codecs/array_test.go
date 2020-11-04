@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDecodeArray(t *testing.T) {
@@ -50,8 +49,7 @@ func TestDecodeArray(t *testing.T) {
 
 	var result []int64
 	val := reflect.ValueOf(&result).Elem()
-	err := codec.Decode(&bts, val)
-	require.Nil(t, err)
+	codec.Decode(&bts, val)
 
 	expected := []int64{3, 5, 8}
 

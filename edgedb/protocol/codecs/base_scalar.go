@@ -118,6 +118,7 @@ type UUID struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *UUID) ID() types.UUID {
 	return c.id
 }
@@ -135,26 +136,24 @@ func (c *UUID) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *UUID) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a UUID.
-func (c *UUID) Decode(bts *[]byte, out reflect.Value) error {
+func (c *UUID) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	p := (*types.UUID)(unsafe.Pointer(out.UnsafeAddr()))
 	copy((*p)[:], (*bts)[:16])
 	*bts = (*bts)[16:]
-
-	return nil
 }
 
 // Encode a UUID.
-func (c *UUID) Encode(bts *[]byte, val interface{}) error {
+func (c *UUID) Encode(bts *[]byte, val interface{}) {
 	tmp := val.(types.UUID)
 	*bts = append(*bts, 0, 0, 0, 16)
 	*bts = append(*bts, tmp[:]...)
-	return nil
 }
 
 // Str is an EdgeDB string type codec.
@@ -163,6 +162,7 @@ type Str struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Str) ID() types.UUID {
 	return c.id
 }
@@ -180,20 +180,19 @@ func (c *Str) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Str) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a string.
-func (c *Str) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Str) Decode(bts *[]byte, out reflect.Value) {
 	out.SetString(protocol.PopString(bts))
-	return nil
 }
 
 // Encode a string.
-func (c *Str) Encode(bts *[]byte, val interface{}) error {
+func (c *Str) Encode(bts *[]byte, val interface{}) {
 	protocol.PushString(bts, val.(string))
-	return nil
 }
 
 // Bytes is an EdgeDB bytes type codec.
@@ -202,6 +201,7 @@ type Bytes struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Bytes) ID() types.UUID {
 	return c.id
 }
@@ -219,23 +219,22 @@ func (c *Bytes) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Bytes) Type() reflect.Type {
 	return c.t
 }
 
 // Decode []byte.
-func (c *Bytes) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Bytes) Decode(bts *[]byte, out reflect.Value) {
 	b := protocol.PopBytes(bts)
 	o := make([]byte, len(b))
 	copy(o, b)
 	out.SetBytes(o)
-	return nil
 }
 
 // Encode []byte.
-func (c *Bytes) Encode(bts *[]byte, val interface{}) error {
+func (c *Bytes) Encode(bts *[]byte, val interface{}) {
 	protocol.PushBytes(bts, val.([]byte))
-	return nil
 }
 
 // Int16 is an EdgeDB int64 type codec.
@@ -244,6 +243,7 @@ type Int16 struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Int16) ID() types.UUID {
 	return c.id
 }
@@ -261,22 +261,21 @@ func (c *Int16) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Int16) Type() reflect.Type {
 	return c.t
 }
 
 // Decode an int16.
-func (c *Int16) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Int16) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	*(*uint16)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint16(bts)
-	return nil
 }
 
 // Encode an int16.
-func (c *Int16) Encode(bts *[]byte, val interface{}) error {
+func (c *Int16) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 2) // data length
 	protocol.PushUint16(bts, uint16(val.(int16)))
-	return nil
 }
 
 // Int32 is an EdgeDB int32 type codec.
@@ -285,6 +284,7 @@ type Int32 struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Int32) ID() types.UUID {
 	return c.id
 }
@@ -302,22 +302,21 @@ func (c *Int32) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Int32) Type() reflect.Type {
 	return c.t
 }
 
 // Decode an int32.
-func (c *Int32) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Int32) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	*(*uint32)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint32(bts)
-	return nil
 }
 
 // Encode an int32.
-func (c *Int32) Encode(bts *[]byte, val interface{}) error {
+func (c *Int32) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 4) // data length
 	protocol.PushUint32(bts, uint32(val.(int32)))
-	return nil
 }
 
 // Int64 is an EdgeDB int64 typep codec.
@@ -326,6 +325,7 @@ type Int64 struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Int64) ID() types.UUID {
 	return c.id
 }
@@ -343,22 +343,21 @@ func (c *Int64) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Int64) Type() reflect.Type {
 	return c.t
 }
 
 // Decode an int64.
-func (c *Int64) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Int64) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	*(*uint64)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint64(bts)
-	return nil
 }
 
 // Encode an int64.
-func (c *Int64) Encode(bts *[]byte, val interface{}) error {
+func (c *Int64) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 8) // data length
 	protocol.PushUint64(bts, uint64(val.(int64)))
-	return nil
 }
 
 // Float32 is an EdgeDB float32 type codec.
@@ -367,6 +366,7 @@ type Float32 struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Float32) ID() types.UUID {
 	return c.id
 }
@@ -384,22 +384,21 @@ func (c *Float32) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Float32) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a float32.
-func (c *Float32) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Float32) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	*(*uint32)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint32(bts)
-	return nil
 }
 
 // Encode a float32.
-func (c *Float32) Encode(bts *[]byte, val interface{}) error {
+func (c *Float32) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 4)
 	protocol.PushUint32(bts, math.Float32bits(val.(float32)))
-	return nil
 }
 
 // Float64 is an EdgeDB float64 type codec.
@@ -408,6 +407,7 @@ type Float64 struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Float64) ID() types.UUID {
 	return c.id
 }
@@ -425,22 +425,21 @@ func (c *Float64) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Float64) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a float64.
-func (c *Float64) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Float64) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	*(*uint64)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint64(bts)
-	return nil
 }
 
 // Encode a float64.
-func (c *Float64) Encode(bts *[]byte, val interface{}) error {
+func (c *Float64) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 8)
 	protocol.PushUint64(bts, math.Float64bits(val.(float64)))
-	return nil
 }
 
 // Bool is an EdgeDB bool type codec.
@@ -449,6 +448,7 @@ type Bool struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Bool) ID() types.UUID {
 	return c.id
 }
@@ -466,19 +466,19 @@ func (c *Bool) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Bool) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a bool.
-func (c *Bool) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Bool) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	*(*uint8)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint8(bts)
-	return nil
 }
 
 // Encode a bool.
-func (c *Bool) Encode(bts *[]byte, val interface{}) error {
+func (c *Bool) Encode(bts *[]byte, val interface{}) {
 	protocol.PushUint32(bts, 1) // data length
 
 	// convert bool to uint8
@@ -488,7 +488,6 @@ func (c *Bool) Encode(bts *[]byte, val interface{}) error {
 	}
 
 	protocol.PushUint8(bts, out)
-	return nil
 }
 
 // DateTime is an EdgeDB datetime type codec.
@@ -497,6 +496,7 @@ type DateTime struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *DateTime) ID() types.UUID {
 	return c.id
 }
@@ -514,30 +514,29 @@ func (c *DateTime) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *DateTime) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a datetime.
-func (c *DateTime) Decode(bts *[]byte, out reflect.Value) error {
+func (c *DateTime) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	val := int64(protocol.PopUint64(bts))
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
 	t := time.Unix(946_684_800+seconds, 1_000*microseconds).UTC()
 	out.Set(reflect.ValueOf(t))
-	return nil
 }
 
 // Encode a datetime.
-func (c *DateTime) Encode(bts *[]byte, val interface{}) error {
+func (c *DateTime) Encode(bts *[]byte, val interface{}) {
 	date := val.(time.Time)
 	seconds := date.Unix() - 946_684_800
 	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
 	microseconds := seconds*1_000_000 + nanoseconds/1_000
 	protocol.PushUint32(bts, 8) // data length
 	protocol.PushUint64(bts, uint64(microseconds))
-	return nil
 }
 
 // Duration is an EdgeDB duration codec.
@@ -546,6 +545,7 @@ type Duration struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Duration) ID() types.UUID {
 	return c.id
 }
@@ -563,29 +563,28 @@ func (c *Duration) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Duration) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a duration.
-func (c *Duration) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Duration) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	microseconds := int64(protocol.PopUint64(bts))
 	protocol.PopUint32(bts) // reserved
 	protocol.PopUint32(bts) // reserved
 	d := time.Duration(microseconds * 1_000)
 	out.Set(reflect.ValueOf(d))
-	return nil
 }
 
 // Encode a duration.
-func (c *Duration) Encode(bts *[]byte, val interface{}) error {
+func (c *Duration) Encode(bts *[]byte, val interface{}) {
 	duration := val.(time.Duration)
 	protocol.PushUint32(bts, 16) // data length
 	protocol.PushUint64(bts, uint64(duration/1_000))
 	protocol.PushUint32(bts, 0) // reserved
 	protocol.PushUint32(bts, 0) // reserved
-	return nil
 }
 
 // JSON is an EdgeDB json type codec.
@@ -594,6 +593,7 @@ type JSON struct {
 	t  reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *JSON) ID() types.UUID {
 	return c.id
 }
@@ -611,12 +611,13 @@ func (c *JSON) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *JSON) Type() reflect.Type {
 	return c.t
 }
 
 // Decode json.
-func (c *JSON) Decode(bts *[]byte, out reflect.Value) error {
+func (c *JSON) Decode(bts *[]byte, out reflect.Value) {
 	n := protocol.PopUint32(bts) // data length
 	protocol.PopUint8(bts)       // json format, always 1
 
@@ -628,11 +629,10 @@ func (c *JSON) Decode(bts *[]byte, out reflect.Value) error {
 
 	*bts = (*bts)[n-1:]
 	out.Set(reflect.ValueOf(val))
-	return nil
 }
 
 // Encode json.
-func (c *JSON) Encode(bts *[]byte, val interface{}) error {
+func (c *JSON) Encode(bts *[]byte, val interface{}) {
 	buf, err := json.Marshal(val)
 	if err != nil {
 		panic(err)
@@ -640,5 +640,4 @@ func (c *JSON) Encode(bts *[]byte, val interface{}) error {
 	protocol.PushUint32(bts, uint32(1+len(buf))) // data length
 	protocol.PushUint8(bts, 1)                   // json format, always 1
 	*bts = append(*bts, buf...)
-	return nil
 }

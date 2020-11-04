@@ -59,22 +59,24 @@ func (c *Array) setType(t reflect.Type) error {
 	return c.child.setType(t.Elem())
 }
 
+// ID returns the descriptor id.
 func (c *Array) ID() types.UUID {
 	return c.id
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Array) Type() reflect.Type {
 	return c.child.Type()
 }
 
 // Decode an array.
-func (c *Array) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Array) Decode(bts *[]byte, out reflect.Value) {
 	buf := protocol.PopBytes(bts)
 
 	// number of dimensions is 1 or 0
 	dimCount := protocol.PopUint32(&buf)
 	if dimCount == 0 {
-		return nil
+		return
 	}
 
 	protocol.PopUint32(&buf) // reserved
@@ -86,18 +88,14 @@ func (c *Array) Decode(bts *[]byte, out reflect.Value) error {
 
 	tmp := reflect.MakeSlice(c.t, n, n)
 	for i := 0; i < n; i++ {
-		err := c.child.Decode(&buf, tmp.Index(i))
-		if err != nil {
-			return err
-		}
+		c.child.Decode(&buf, tmp.Index(i))
 	}
 
 	out.Set(tmp)
-	return nil
 }
 
 // Encode an array.
-func (c *Array) Encode(bts *[]byte, val interface{}) error {
+func (c *Array) Encode(bts *[]byte, val interface{}) {
 	// the data length is not know until all values have been encoded
 	// put the data in temporary slice to get the length
 	tmp := []byte{}
@@ -112,13 +110,9 @@ func (c *Array) Encode(bts *[]byte, val interface{}) error {
 	protocol.PushUint32(&tmp, 1)                // dimension.lower
 
 	for i := 0; i < elmCount; i++ {
-		err := c.child.Encode(&tmp, in[i])
-		if err != nil {
-			return err
-		}
+		c.child.Encode(&tmp, in[i])
 	}
 
 	protocol.PushUint32(bts, uint32(len(tmp)))
 	*bts = append(*bts, tmp...)
-	return nil
 }

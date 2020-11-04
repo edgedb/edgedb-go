@@ -69,6 +69,7 @@ type Object struct {
 	t      reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *Object) ID() types.UUID {
 	return c.id
 }
@@ -106,12 +107,13 @@ func (c *Object) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *Object) Type() reflect.Type {
 	return c.t
 }
 
 // Decode an object
-func (c *Object) Decode(bts *[]byte, out reflect.Value) error {
+func (c *Object) Decode(bts *[]byte, out reflect.Value) {
 	protocol.PopUint32(bts) // data length
 	protocol.PopUint32(bts) // element count
 
@@ -131,11 +133,9 @@ func (c *Object) Decode(bts *[]byte, out reflect.Value) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 // Encode an object
-func (c *Object) Encode(bts *[]byte, val interface{}) error {
+func (c *Object) Encode(bts *[]byte, val interface{}) {
 	panic("objects can't be query parameters")
 }

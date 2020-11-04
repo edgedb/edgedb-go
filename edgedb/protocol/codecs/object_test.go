@@ -44,7 +44,6 @@ func TestSetObjectType(t *testing.T) {
 	assert.Equal(t, []int{0}, codec.fields[0].index)
 	assert.Equal(t, []int{1}, codec.fields[1].index)
 	assert.Equal(t, []int{2}, codec.fields[2].index)
-
 }
 
 func TestDecodeObject(t *testing.T) {
@@ -78,8 +77,7 @@ func TestDecodeObject(t *testing.T) {
 
 	var result SomeThing
 	val := reflect.ValueOf(&result).Elem()
-	err := codec.Decode(&bts, val)
-	require.Nil(t, err)
+	codec.Decode(&bts, val)
 
 	expected := SomeThing{A: "four", B: 4, C: 0}
 	assert.Equal(t, expected, result)
@@ -117,9 +115,10 @@ func BenchmarkDecodeObject(b *testing.B) {
 		{index: []int{2}, codec: &Int64{}},
 	}}
 
+	var buf []byte
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf := data[:]
-		codec.Decode(&buf, val)
+		buf = data
+		codec.Decode(&buf, val) // nolint
 	}
 }

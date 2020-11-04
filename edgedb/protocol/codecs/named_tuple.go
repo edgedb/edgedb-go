@@ -60,6 +60,7 @@ type NamedTuple struct {
 	t      reflect.Type
 }
 
+// ID returns the descriptor id.
 func (c *NamedTuple) ID() types.UUID {
 	return c.id
 }
@@ -96,12 +97,13 @@ func (c *NamedTuple) setType(t reflect.Type) error {
 	return nil
 }
 
+// Type returns the reflect.Type that this codec decodes to.
 func (c *NamedTuple) Type() reflect.Type {
 	return c.t
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(bts *[]byte, out reflect.Value) error {
+func (c *NamedTuple) Decode(bts *[]byte, out reflect.Value) {
 	buf := protocol.PopBytes(bts)
 	elmCount := int(int32(protocol.PopUint32(&buf)))
 
@@ -111,12 +113,10 @@ func (c *NamedTuple) Decode(bts *[]byte, out reflect.Value) error {
 		val := out.FieldByIndex(field.index)
 		field.codec.Decode(&buf, val)
 	}
-
-	return nil
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(bts *[]byte, val interface{}) error {
+func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
 	// don't know the data length yet
 	// put everything in a new slice to get the length
 	tmp := []byte{}
@@ -139,5 +139,4 @@ func (c *NamedTuple) Encode(bts *[]byte, val interface{}) error {
 
 	protocol.PushUint32(bts, uint32(len(tmp)))
 	*bts = append(*bts, tmp...)
-	return nil
 }
