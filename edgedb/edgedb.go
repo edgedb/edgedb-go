@@ -128,7 +128,6 @@ func (c *Client) QueryOne(
 		return err
 	}
 
-	// todo return ErrorZeroResults?
 	return nil
 }
 
