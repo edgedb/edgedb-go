@@ -17,74 +17,80 @@
 package marshal
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
-	"github.com/edgedb/edgedb-go/edgedb/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMarshalSetOfScalar(t *testing.T) {
-	var result interface{} = &[]int64{}
-	input := types.Set{int64(3), int64(5), int64(8)}
-	Marshal(&result, input)
-	assert.Equal(t, []int64{3, 5, 8}, *(result.(*[]int64)))
+type SomeStruct struct {
+	First  string
+	Second int
+	Third  []byte `edgedb:"First"`
 }
 
-func TestMarshalSetOfObject(t *testing.T) {
-	type Database struct {
-		Name string     `edgedb:"name"`
-		ID   types.UUID `edgedb:"id"`
-	}
-
-	input := types.Set{
-		types.Object{
-			"name": "edgedb",
-			"id":   types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		types.Object{
-			"name": "tutorial",
-			"id": types.UUID{
-				1, 2, 3, 4, 5, 6, 7, 8,
-				9, 10, 11, 12, 13, 14, 15, 16,
-			},
-		},
-	}
-
-	expected := []Database{
-		{
-			Name: "edgedb",
-			ID:   types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
-			Name: "tutorial",
-			ID: types.UUID{
-				1, 2, 3, 4, 5, 6, 7, 8,
-				9, 10, 11, 12, 13, 14, 15, 16,
-			},
-		},
-	}
-
-	var result interface{} = &[]Database{}
-	Marshal(&result, input)
-	assert.Equal(t, expected, *(result.(*[]Database)))
+func TestStructFieldTagPrefered(t *testing.T) {
+	tp := reflect.TypeOf(SomeStruct{})
+	field, ok := StructField(tp, "First")
+	require.True(t, ok)
+	assert.Equal(t, "Third", field.Name)
 }
 
-func TestSetNilScalar(t *testing.T) {
-	var out int64
-	in := types.Set{}
-
-	setScalar(reflect.ValueOf(out), reflect.ValueOf(in))
-
-	assert.Equal(t, int64(0), out)
+func TestStructFieldByName(t *testing.T) {
+	tp := reflect.TypeOf(SomeStruct{})
+	field, ok := StructField(tp, "Second")
+	require.True(t, ok)
+	assert.Equal(t, "Second", field.Name)
 }
 
-func TestSetScalar(t *testing.T) {
-	out := int64(0)
-	in := int64(27)
+func TestStructFieldMissingField(t *testing.T) {
+	tp := reflect.TypeOf(SomeStruct{})
+	_, ok := StructField(tp, "Fourth")
+	require.False(t, ok)
+}
 
-	ov := reflect.ValueOf(&out)
-	setScalar(ov.Elem(), reflect.ValueOf(in))
+func TestValueOfNonPointer(t *testing.T) {
+	var thing string
+	_, err := ValueOf(thing)
+	expected := errors.New("out must be a pointer, got string")
+	assert.Equal(t, expected, err)
+}
 
-	assert.Equal(t, int64(27), out)
+func TestValueOfPointerToNil(t *testing.T) {
+	thing := (*int64)(nil)
+	_, err := ValueOf(thing)
+	expected := errors.New("out must point to a valid value, got <nil>")
+	assert.Equal(t, expected, err)
+}
+
+func TestValueOfPointer(t *testing.T) {
+	var thing string
+	val, err := ValueOf(&thing)
+	require.Nil(t, err)
+	val.SetString("hello")
+	assert.Equal(t, "hello", thing)
+}
+
+func TestValueOfSliceNonPointer(t *testing.T) {
+	var thing []int
+	_, err := ValueOfSlice(thing)
+	expected := errors.New("out must be a pointer, got []int")
+	assert.Equal(t, expected, err)
+}
+
+func TestValueOfSliceNonSlice(t *testing.T) {
+	var thing int
+	_, err := ValueOfSlice(&thing)
+	expected := errors.New("out must be a pointer to a slice, got *int")
+	assert.Equal(t, expected, err)
+}
+
+func TestValueOfSlice(t *testing.T) {
+	var thing []byte
+	val, err := ValueOfSlice(&thing)
+	require.Nil(t, err)
+	val.SetBytes([]byte{1, 2, 3})
+	assert.Equal(t, []byte{1, 2, 3}, thing)
 }

@@ -16,8 +16,13 @@
 
 package codecs
 
+// todo improve tuple support  :thinking:
+
 import (
 	"encoding/binary"
+	"errors"
+	"fmt"
+	"reflect"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
@@ -26,9 +31,9 @@ import (
 func popTupleCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
-	fields := []DecodeEncoder{}
+	codecs []Codec,
+) Codec {
+	fields := []Codec{}
 
 	elmCount := int(protocol.PopUint16(bts))
 	for i := 0; i < elmCount; i++ {
@@ -36,28 +41,63 @@ func popTupleCodec(
 		fields = append(fields, codecs[index])
 	}
 
-	return &Tuple{idField{id}, fields}
+	// todo needs type
+	return &Tuple{id: id, fields: fields}
 }
+
+var interfaceSliceType reflect.Type = reflect.TypeOf([]interface{}{})
 
 // Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
-	idField
-	fields []DecodeEncoder
+	id     types.UUID
+	fields []Codec
+	t      reflect.Type
+}
+
+// ID returns the descriptor id.
+func (c *Tuple) ID() types.UUID {
+	return c.id
+}
+
+func (c *Tuple) setType(t reflect.Type) error {
+	if t.Kind() != reflect.Slice {
+		return fmt.Errorf("expected Slice got %v", t.Kind())
+	}
+
+	if t.Elem().Kind() != reflect.Interface {
+		return fmt.Errorf("expected Interface got %v", t.Elem().Kind())
+	}
+
+	for _, field := range c.fields {
+		if field.Type() == nil {
+			return errors.New("tuples may only contain base scalar types")
+		}
+	}
+
+	c.t = t
+	return nil
+}
+
+// Type returns the reflect.Type that this codec decodes to.
+func (c *Tuple) Type() reflect.Type {
+	return c.t
 }
 
 // Decode a tuple.
-func (c *Tuple) Decode(bts *[]byte) interface{} {
+func (c *Tuple) Decode(bts *[]byte, out reflect.Value) {
 	buf := protocol.PopBytes(bts)
+	n := int(int32(protocol.PopUint32(&buf)))
+	tmp := reflect.MakeSlice(interfaceSliceType, 0, n)
 
-	elmCount := int(int32(protocol.PopUint32(&buf)))
-	out := make(types.Tuple, elmCount)
-
-	for i := 0; i < elmCount; i++ {
+	for i := 0; i < n; i++ {
 		protocol.PopUint32(&buf) // reserved
-		out[i] = c.fields[i].Decode(&buf)
+		field := c.fields[i]
+		val := reflect.New(field.Type()).Elem()
+		field.Decode(&buf, val)
+		tmp = reflect.Append(tmp, val)
 	}
 
-	return out
+	out.Set(tmp)
 }
 
 // Encode a tuple.

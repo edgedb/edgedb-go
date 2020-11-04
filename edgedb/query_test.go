@@ -29,7 +29,7 @@ import (
 
 func TestNamedQueryArguments(t *testing.T) {
 	ctx := context.Background()
-	result := [][]int64{}
+	var result [][]int64
 	err := client.Query(
 		ctx,
 		"SELECT [<int64>$first, <int64>$second]",
@@ -40,7 +40,7 @@ func TestNamedQueryArguments(t *testing.T) {
 		},
 	)
 
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	assert.Equal(t, [][]int64{{5, 8}}, result)
 }
 
@@ -72,7 +72,7 @@ func TestQueryJSON(t *testing.T) {
 	// when this test fails
 	actual := string(result)
 
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	assert.Equal(
 		t,
 		"[{\"a\" : 0, \"b\" : 1}, {\"a\" : 42, \"b\" : 2}]",
@@ -100,7 +100,7 @@ func TestQueryOneJSONZeroResults(t *testing.T) {
 	ctx := context.Background()
 	result, err := client.QueryOneJSON(ctx, "SELECT <int64>{}")
 
-	assert.Equal(t, err, ErrorZeroResults)
+	require.Equal(t, err, ErrorZeroResults)
 	assert.Equal(t, []byte(nil), result)
 }
 
@@ -115,11 +115,10 @@ func TestQueryOne(t *testing.T) {
 
 func TestQueryOneZeroResults(t *testing.T) {
 	ctx := context.Background()
-	result := (*int64)(nil)
-	err := client.QueryOne(ctx, "SELECT <int64>{}", result)
+	var result int64
+	err := client.QueryOne(ctx, "SELECT <int64>{}", &result)
 
 	assert.Equal(t, ErrorZeroResults, err)
-	assert.Nil(t, result)
 }
 
 func TestError(t *testing.T) {

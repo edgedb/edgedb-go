@@ -17,6 +17,10 @@
 package codecs
 
 import (
+	"fmt"
+	"reflect"
+
+	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -24,9 +28,9 @@ import (
 func popObjectCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
-	fields := []objectField{}
+	codecs []Codec,
+) Codec {
+	fields := []*objectField{}
 
 	elmCount := int(protocol.PopUint16(bts))
 	for i := 0; i < elmCount; i++ {
@@ -34,7 +38,7 @@ func popObjectCodec(
 		name := protocol.PopString(bts)
 		index := protocol.PopUint16(bts)
 
-		field := objectField{
+		field := &objectField{
 			isImplicit:     flags&0b1 != 0,
 			isLinkProperty: flags&0b10 != 0,
 			isLink:         flags&0b100 != 0,
@@ -45,46 +49,81 @@ func popObjectCodec(
 		fields = append(fields, field)
 	}
 
-	return &Object{idField{id}, fields}
+	// todo needs type
+	return &Object{id: id, fields: fields}
+}
+
+type objectField struct {
+	name           string
+	index          []int
+	codec          Codec
+	isImplicit     bool
+	isLinkProperty bool
+	isLink         bool
 }
 
 // Object is an EdgeDB object type codec.
 type Object struct {
-	idField
-	fields []objectField
+	id     types.UUID
+	fields []*objectField
+	t      reflect.Type
 }
 
-type objectField struct {
-	isImplicit     bool
-	isLinkProperty bool
-	isLink         bool
-	name           string
-	codec          DecodeEncoder
+// ID returns the descriptor id.
+func (c *Object) ID() types.UUID {
+	return c.id
 }
 
-// Decode an object
-func (c *Object) Decode(bts *[]byte) interface{} {
-	buf := protocol.PopBytes(bts)
+func (c *Object) setType(t reflect.Type) error {
+	if t.Kind() != reflect.Struct {
+		return fmt.Errorf("expected Struct got %v", t.Kind())
+	}
 
-	elmCount := int(int32(protocol.PopUint32(&buf)))
-	out := make(types.Object)
+	for _, field := range c.fields {
+		if field.name == "__tid__" {
+			continue
+		}
 
-	for i := 0; i < elmCount; i++ {
-		protocol.PopUint32(&buf) // reserved
-		field := c.fields[i]
-
-		switch int32(protocol.PeekUint32(&buf)) {
-		case -1:
-			// element length -1 means missing field
-			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			protocol.PopUint32(&buf)
-			out[field.name] = types.Set{}
-		default:
-			out[field.name] = field.codec.Decode(&buf)
+		if f, ok := marshal.StructField(t, field.name); ok {
+			field.index = f.Index
+			if err := field.codec.setType(f.Type); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("%v struct is missing field %q", t, field.name)
 		}
 	}
 
-	return out
+	c.t = t
+	return nil
+}
+
+// Type returns the reflect.Type that this codec decodes to.
+func (c *Object) Type() reflect.Type {
+	return c.t
+}
+
+// Decode an object
+func (c *Object) Decode(bts *[]byte, out reflect.Value) {
+	protocol.PopUint32(bts) // data length
+	protocol.PopUint32(bts) // element count
+
+	for _, field := range c.fields {
+		protocol.PopUint32(bts) // reserved
+
+		switch int32(protocol.PeekUint32(bts)) {
+		case -1:
+			// element length -1 means missing field
+			// https://www.edgedb.com/docs/internals/protocol/dataformats
+			protocol.PopUint32(bts)
+		default:
+			if field.name == "__tid__" {
+				*bts = (*bts)[20:]
+			} else {
+				field.codec.Decode(bts, out.FieldByIndex(field.index))
+			}
+		}
+	}
 }
 
 // Encode an object

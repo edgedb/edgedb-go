@@ -14,35 +14,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package codecs
+package edgedb
 
 import (
-	"testing"
-
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
 )
 
-func BenchmarkEncodeUUID(b *testing.B) {
-	codec := &UUID{}
-	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
-	data := [2000]byte{}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		buf := data[:0]
-		codec.Encode(&buf, id)
-	}
+type query struct {
+	cmd     string
+	fmt     uint8
+	expCard uint8
+	args    []interface{}
 }
 
-func BenchmarkEncodeTuple(b *testing.B) {
-	codec := Tuple{fields: []DecodeEncoder{&UUID{}}}
-	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
-	ids := []interface{}{id}
-	data := [2000]byte{}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		buf := data[:0]
-		codec.Encode(&buf, ids)
+func (q *query) flat() bool {
+	if q.expCard != cardinality.Many {
+		return true
 	}
+
+	if q.fmt == format.JSON {
+		return true
+	}
+
+	return false
 }

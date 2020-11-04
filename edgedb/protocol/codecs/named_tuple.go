@@ -18,7 +18,9 @@ package codecs
 
 import (
 	"fmt"
+	"reflect"
 
+	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
@@ -26,16 +28,20 @@ import (
 func popNamedTupleCodec(
 	bts *[]byte,
 	id types.UUID,
-	codecs []DecodeEncoder,
-) DecodeEncoder {
-	fields := []namedTupleField{}
+	codecs []Codec,
+) Codec {
+	fields := []*objectField{}
 
 	elmCount := int(protocol.PopUint16(bts))
 	for i := 0; i < elmCount; i++ {
 		name := protocol.PopString(bts)
 		index := protocol.PopUint16(bts)
 
-		field := namedTupleField{
+		if name == "__tid__" {
+			continue
+		}
+
+		field := &objectField{
 			name:  name,
 			codec: codecs[index],
 		}
@@ -43,34 +49,61 @@ func popNamedTupleCodec(
 		fields = append(fields, field)
 	}
 
-	return &NamedTuple{idField{id}, fields}
+	// todo missing type
+	return &NamedTuple{id: id, fields: fields}
 }
 
-type namedTupleField struct {
-	name  string
-	codec DecodeEncoder
-}
-
-// NamedTuple is an EdgeDB namedtuple typep codec.
+// NamedTuple is an EdgeDB namedtuple type codec.
 type NamedTuple struct {
-	idField
-	fields []namedTupleField
+	id     types.UUID
+	fields []*objectField
+	t      reflect.Type
+}
+
+// ID returns the descriptor id.
+func (c *NamedTuple) ID() types.UUID {
+	return c.id
+}
+
+func (c *NamedTuple) setType(t reflect.Type) error {
+	if t.Kind() != reflect.Struct {
+		return fmt.Errorf("expected Struct got %v", t.Kind())
+	}
+
+	for i := 0; i < len(c.fields); i++ {
+		field := c.fields[i]
+
+		if f, ok := marshal.StructField(t, field.name); ok {
+			field.index = f.Index
+			if err := field.codec.setType(f.Type); err != nil {
+				return err
+			}
+			continue
+		}
+
+		return fmt.Errorf("%v struct is missing field %q", t, field.name)
+	}
+
+	c.t = t
+	return nil
+}
+
+// Type returns the reflect.Type that this codec decodes to.
+func (c *NamedTuple) Type() reflect.Type {
+	return c.t
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(bts *[]byte) interface{} {
+func (c *NamedTuple) Decode(bts *[]byte, out reflect.Value) {
 	buf := protocol.PopBytes(bts)
-
 	elmCount := int(int32(protocol.PopUint32(&buf)))
-	out := make(types.NamedTuple)
 
 	for i := 0; i < elmCount; i++ {
 		protocol.PopUint32(&buf) // reserved
 		field := c.fields[i]
-		out[field.name] = field.codec.Decode(&buf)
+		val := out.FieldByIndex(field.index)
+		field.codec.Decode(&buf, val)
 	}
-
-	return out
 }
 
 // Encode a named tuple.
