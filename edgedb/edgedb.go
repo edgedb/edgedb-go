@@ -16,8 +16,6 @@
 
 package edgedb
 
-// todo add context.Context
-
 import (
 	"context"
 	"errors"
@@ -28,9 +26,7 @@ import (
 
 	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
-	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
 // todo add examples
@@ -40,18 +36,12 @@ var (
 
 	// ErrorZeroResults is returned when a query has no results.
 	ErrorZeroResults = errors.New("zero results")
-
-	// todo what should codec cache capacity be?
-	codecCache = codecs.MakeCache(100)
 )
 
 // Client client
 type Client struct {
 	pool   pool.Pool
 	buffer [8192]byte
-
-	// todo caches are not thread safe
-	descriptors map[types.UUID][]byte
 }
 
 // Close the db connection
@@ -255,11 +245,7 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 		return nil, err
 	}
 
-	client = &Client{
-		pool:        p,
-		descriptors: make(map[types.UUID][]byte),
-	}
-
+	client = &Client{pool: p}
 	return client, nil
 }
 

@@ -128,32 +128,6 @@ func TestError(t *testing.T) {
 	assert.Equal(t, expected, err)
 }
 
-func TestConcurrentQueries(t *testing.T) {
-	ctx := context.Background()
-	eChan := make(chan error, 10)
-	rChan := make(chan []byte, 10)
-
-	for i := 0; i < 10; i++ {
-		go func() {
-			result, err := client.QueryOneJSON(ctx, "SELECT 1;")
-			eChan <- err
-			rChan <- result
-		}()
-	}
-
-	for i := 0; i < 20; i++ {
-		select {
-		case e := <-eChan:
-			require.Nil(t, e)
-		case r := <-rChan:
-			assert.Equal(t, "1", string(r))
-		}
-	}
-
-	close(eChan)
-	close(rChan)
-}
-
 func TestQueryTimesOut(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
 	err := client.Execute(ctx, "SELECT 1;")

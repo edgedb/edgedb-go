@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package codecs
+package cache
 
 import (
 	"testing"
@@ -24,32 +24,55 @@ import (
 )
 
 func TestCacheGetMissingKey(t *testing.T) {
-	cache := MakeCache(1)
-	result := cache.Get(CacheKey{})
-	assert.Nil(t, result)
+	cache := New(1)
+	val, ok := cache.Get("key")
+	assert.False(t, ok)
+	assert.Nil(t, val)
 }
 
 func TestCachePutNewKey(t *testing.T) {
-	cache := MakeCache(1)
-	key := CacheKey{}
-	require.Nil(t, cache.Get(key))
+	cache := New(1)
 
-	pair := &CodecPair{JSONBytes, JSONBytes}
-	cache.Put(key, pair)
-	result := cache.Get(key)
+	cache.Put("key", "val")
+	val, ok := cache.Get("key")
 
-	require.Equal(t, pair, result)
+	require.True(t, ok)
+	assert.Equal(t, "val", val)
 }
 
 func TestCachePutMoreThanCapacity(t *testing.T) {
-	cache := MakeCache(1)
-	k0 := CacheKey{Format: 0}
-	k1 := CacheKey{Format: 1}
-	pair := &CodecPair{JSONBytes, JSONBytes}
+	cache := New(1)
 
-	cache.Put(k0, pair)
-	cache.Put(k1, pair)
+	cache.Put(1, "one")
+	cache.Put(2, "two")
 
-	require.Nil(t, cache.Get(k0))
-	assert.Equal(t, cache.Get(k1), pair)
+	val, ok := cache.Get(1)
+	require.False(t, ok)
+	require.Nil(t, val)
+
+	val, ok = cache.Get(2)
+	require.True(t, ok)
+	assert.Equal(t, "two", val)
+}
+
+func TestCachePutConcurencySafe(t *testing.T) {
+	// running this test with the race detector enabled
+	// is likely to expose race conditions.
+	// https://golang.org/doc/articles/race_detector.html
+
+	done := make(chan struct{}, 20)
+	cache := New(10)
+
+	for i := 0; i < 20; i++ {
+		go func() {
+			for i := 0; i < 1000; i++ {
+				cache.Put("key", "val")
+			}
+			done <- struct{}{}
+		}()
+	}
+
+	for i := 0; i < 20; i++ {
+		<-done
+	}
 }
