@@ -54,14 +54,18 @@ func TestStructFieldMissingField(t *testing.T) {
 func TestValueOfNonPointer(t *testing.T) {
 	var thing string
 	_, err := ValueOf(thing)
-	expected := errors.New("out must be a pointer, got string")
+	expected := errors.New(
+		"the \"out\" argument must be a pointer, got string",
+	)
 	assert.Equal(t, expected, err)
 }
 
 func TestValueOfPointerToNil(t *testing.T) {
 	thing := (*int64)(nil)
 	_, err := ValueOf(thing)
-	expected := errors.New("out must point to a valid value, got <nil>")
+	expected := errors.New(
+		"the \"out\" argument must point to a valid value, got <nil>",
+	)
 	assert.Equal(t, expected, err)
 }
 
@@ -76,14 +80,18 @@ func TestValueOfPointer(t *testing.T) {
 func TestValueOfSliceNonPointer(t *testing.T) {
 	var thing []int
 	_, err := ValueOfSlice(thing)
-	expected := errors.New("out must be a pointer, got []int")
+	expected := errors.New(
+		"the \"out\" argument must be a pointer, got []int",
+	)
 	assert.Equal(t, expected, err)
 }
 
 func TestValueOfSliceNonSlice(t *testing.T) {
 	var thing int
 	_, err := ValueOfSlice(&thing)
-	expected := errors.New("out must be a pointer to a slice, got *int")
+	expected := errors.New(
+		"the \"out\" argument must be a pointer to a slice, got *int",
+	)
 	assert.Equal(t, expected, err)
 }
 
