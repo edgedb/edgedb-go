@@ -40,21 +40,10 @@ var (
 
 	// ErrorZeroResults is returned when a query has no results.
 	ErrorZeroResults = errors.New("zero results")
+
+	// todo what should codec cache capacity be?
+	codecCache = codecs.MakeCache(100)
 )
-
-type queryCodecs struct {
-	in  codecs.Codec
-	out codecs.Codec
-}
-
-type queryCacheKey struct {
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	t       reflect.Type
-}
-
-// todo rename Conn to Client
 
 // Client client
 type Client struct {
@@ -63,7 +52,6 @@ type Client struct {
 
 	// todo caches are not thread safe
 	descriptors map[types.UUID][]byte
-	codecs      map[queryCacheKey]queryCodecs
 }
 
 // Close the db connection
@@ -270,7 +258,6 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	client = &Client{
 		pool:        p,
 		descriptors: make(map[types.UUID][]byte),
-		codecs:      make(map[queryCacheKey]queryCodecs),
 	}
 
 	return client, nil

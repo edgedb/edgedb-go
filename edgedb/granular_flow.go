@@ -30,11 +30,16 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
-func (c *Client) queryCodecs(q query, t reflect.Type) (queryCodecs, bool) {
+func (c *Client) queryCodecs(q query, t reflect.Type) *codecs.CodecPair {
 	// todo this isn't thread safe
-	key := queryCacheKey{q.cmd, q.fmt, q.expCard, t}
-	codecs, ok := c.codecs[key]
-	return codecs, ok
+	key := codecs.CacheKey{
+		Command:      q.cmd,
+		Format:       q.fmt,
+		ExpectedCard: q.expCard,
+		Type:         t,
+	}
+	codecs := codecCache.Get(key)
+	return codecs
 }
 
 func (c *Client) cacheQueryCodecs(
@@ -51,9 +56,14 @@ func (c *Client) cacheQueryCodecs(
 		panic("out codec is nil")
 	}
 
-	// todo this isn't thread safe
-	key := queryCacheKey{q.cmd, q.fmt, q.expCard, t}
-	c.codecs[key] = queryCodecs{in: in, out: out}
+	key := codecs.CacheKey{
+		Command:      q.cmd,
+		Format:       q.fmt,
+		ExpectedCard: q.expCard,
+		Type:         t,
+	}
+	pair := &codecs.CodecPair{In: in, Out: out}
+	codecCache.Put(key, pair)
 }
 
 func (c *Client) granularFlow(
@@ -62,7 +72,7 @@ func (c *Client) granularFlow(
 	out reflect.Value,
 	q query,
 ) error {
-	if _, ok := c.queryCodecs(q, out.Type()); ok {
+	if codecs := c.queryCodecs(q, out.Type()); codecs != nil {
 		return c.optimistic(ctx, conn, out, q)
 	}
 
@@ -220,11 +230,11 @@ func (c *Client) execute(
 		outType = outType.Elem()
 	}
 
-	cdcs, _ := c.queryCodecs(q, outType)
+	cdcs := c.queryCodecs(q, outType)
 	buf := []byte{message.Execute, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0)       // no headers
 	protocol.PushBytes(&buf, []byte{}) // no statement name
-	cdcs.in.Encode(&buf, q.args)
+	cdcs.In.Encode(&buf, q.args)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
@@ -251,10 +261,10 @@ func (c *Client) execute(
 
 			if !q.flat() {
 				val := reflect.New(outType).Elem()
-				cdcs.out.Decode(&msg, val)
+				cdcs.Out.Decode(&msg, val)
 				o = reflect.Append(o, val)
 			} else {
-				cdcs.out.Decode(&msg, out)
+				cdcs.Out.Decode(&msg, out)
 			}
 			err = nil
 		case message.CommandComplete:
@@ -284,9 +294,9 @@ func (c *Client) optimistic(
 		outType = outType.Elem()
 	}
 
-	cdcs, _ := c.queryCodecs(q, out.Type())
-	inID := cdcs.in.ID()
-	outID := cdcs.out.ID()
+	cdcs := c.queryCodecs(q, out.Type())
+	inID := cdcs.In.ID()
+	outID := cdcs.Out.ID()
 
 	buf := c.buffer[:0]
 	buf = append(buf,
@@ -300,7 +310,7 @@ func (c *Client) optimistic(
 	protocol.PushString(&buf, q.cmd)
 	buf = append(buf, inID[:]...)
 	buf = append(buf, outID[:]...)
-	cdcs.in.Encode(&buf, q.args)
+	cdcs.In.Encode(&buf, q.args)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
@@ -329,10 +339,10 @@ func (c *Client) optimistic(
 
 			if !q.flat() {
 				val := reflect.New(outType).Elem()
-				cdcs.out.Decode(&msg, val)
+				cdcs.Out.Decode(&msg, val)
 				o = reflect.Append(o, val)
 			} else {
-				cdcs.out.Decode(&msg, out)
+				cdcs.Out.Decode(&msg, out)
 			}
 			err = nil
 		case message.CommandComplete:
