@@ -17,10 +17,7 @@
 package edgedb
 
 import (
-	"reflect"
-
 	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
 )
 
@@ -41,26 +38,4 @@ func (q *query) flat() bool {
 	}
 
 	return false
-}
-
-func buildCodecs(
-	q query,
-	tp reflect.Type,
-	descs descPair,
-) (cdcs codecPair, err error) {
-	in, err := codecs.BuildCodec(&descs.in)
-	if err != nil {
-		return cdcs, err
-	}
-
-	if q.fmt == format.JSON {
-		return codecPair{in: in, out: codecs.JSONBytes}, nil
-	}
-
-	out, err := codecs.BuildTypedCodec(&descs.out, tp)
-	if err != nil {
-		return cdcs, err
-	}
-
-	return codecPair{in: in, out: out}, nil
 }

@@ -24,6 +24,8 @@ import (
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/aspect"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
+	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 )
 
@@ -32,7 +34,7 @@ func (c *Client) granularFlow(
 	conn net.Conn,
 	out reflect.Value,
 	q query,
-) error {
+) (err error) {
 	tp := out.Type()
 	if !q.flat() {
 		tp = tp.Elem()
@@ -43,23 +45,34 @@ func (c *Client) granularFlow(
 		return c.pesimistic(ctx, conn, out, q, tp)
 	}
 
-	cdcs, ok := c.getCodecs(ids, tp)
-	if ok {
-		return c.optimistic(ctx, conn, out, q, tp, cdcs)
-	}
-
-	descs, ok := getDescriptors(ids)
+	in, ok := c.getCodec(ids.in, nil)
 	if !ok {
-		return c.pesimistic(ctx, conn, out, q, tp)
+		if desc, OK := descCache.Get(ids.in); OK {
+			d := desc.([]byte)
+			in, err = codecs.BuildCodec(&d)
+			if err != nil {
+				return err
+			}
+		} else {
+			return c.pesimistic(ctx, conn, out, q, tp)
+		}
 	}
 
-	cdcs, err := buildCodecs(q, tp, descs)
-	if err != nil {
-		return err
+	cOut, ok := c.getCodec(ids.out, tp)
+	if !ok {
+		if desc, ok := descCache.Get(ids.out); ok {
+			d := desc.([]byte)
+			cOut, err = codecs.BuildTypedCodec(&d, tp)
+			if err != nil {
+				return err
+			}
+		} else {
+			return c.pesimistic(ctx, conn, out, q, tp)
+		}
 	}
 
-	c.putCodecs(ids, tp, cdcs)
-	return c.optimistic(ctx, conn, out, q, tp, cdcs)
+	cdsc := codecPair{in: in, out: cOut}
+	return c.optimistic(ctx, conn, out, q, tp, cdsc)
 }
 
 func (c *Client) pesimistic(
@@ -75,18 +88,26 @@ func (c *Client) pesimistic(
 	}
 	c.putTypeIDs(q, ids)
 
-	descs, ok := getDescriptors(ids)
-	if !ok {
-		descs, err = c.describe(ctx, conn)
+	descs, err := c.describe(ctx, conn)
+	if err != nil {
+		return err
+	}
+	descCache.Put(ids.in, descs.in)
+	descCache.Put(ids.out, descs.out)
+
+	var cdcs codecPair
+	cdcs.in, err = codecs.BuildCodec(&descs.in)
+	if err != nil {
+		return err
+	}
+
+	if q.fmt == format.JSON {
+		cdcs.out = codecs.JSONBytes
+	} else {
+		cdcs.out, err = codecs.BuildTypedCodec(&descs.out, tp)
 		if err != nil {
 			return err
 		}
-		putDescriptors(ids, descs)
-	}
-
-	cdcs, err := buildCodecs(q, tp, descs)
-	if err != nil {
-		return err
 	}
 
 	c.putCodecs(ids, tp, cdcs)

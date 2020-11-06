@@ -16,6 +16,29 @@
 
 package edgedb
 
+/*
+All caches should be LRU with max items set to 1000 or so.
+
+descriptor cache (shared globally) mapping:
+Type ID -> Type Descriptor
+
+codec cache (conn/pool specific) mapping:
+(Type ID, Go Type Ref) -> Codec
+
+type id cache (conn/pool) mapping:
+(Query, Expected Cardinality, IO Format) -> (In Type ID, Out Type ID)
+
+Optimistic execute flow:
+1. check type id cache for (eql, expCard, format).
+	- if cache miss then do prepare/execute flow instead of optimistic
+
+2. check codec cache for (out Type ID, out.Type()).
+	- if cache miss then check descriptor cache for out Type ID
+		- if cache miss then do prepare/execute flow instead of optimistic
+		- else build typed codec for out.Type()
+
+3. use codecs in optimistic execute
+*/
 import (
 	"reflect"
 
@@ -25,6 +48,11 @@ import (
 )
 
 var descCache = cache.New(1_000)
+
+type codecKey struct {
+	ID   types.UUID
+	Type reflect.Type
+}
 
 type codecPair struct {
 	in  codecs.Codec
@@ -70,58 +98,19 @@ func (c *Client) putTypeIDs(q query, ids idPair) {
 	c.typeIDCache.Put(key, ids)
 }
 
-type codecKey struct {
-	inID    types.UUID
-	outID   types.UUID
-	outType reflect.Type
-}
-
-func (c *Client) getCodecs(
-	ids idPair,
+func (c *Client) getCodec(
+	id types.UUID,
 	tp reflect.Type,
-) (cdcs codecPair, ok bool) {
-	key := codecKey{inID: ids.in, outID: ids.out, outType: tp}
-	out, ok := c.codecCache.Get(key)
-	if !ok {
-		return cdcs, false
-	}
-
-	key = codecKey{inID: ids.in, outID: ids.out}
-	in, ok := c.codecCache.Get(key)
-	if !ok {
-		return cdcs, false
-	}
-
-	cdcs.out = out.(codecs.Codec)
-	cdcs.in = in.(codecs.Codec)
-	return cdcs, false
+) (codecs.Codec, bool) {
+	key := codecKey{ID: id, Type: tp}
+	codec, ok := c.codecCache.Get(key)
+	return codec.(codecs.Codec), ok
 }
 
 func (c *Client) putCodecs(ids idPair, tp reflect.Type, cdcs codecPair) {
-	key := codecKey{inID: ids.in, outID: ids.out, outType: tp}
+	key := codecKey{ID: ids.out, Type: tp}
 	c.codecCache.Put(key, cdcs.out)
 
-	key = codecKey{inID: ids.in, outID: ids.out}
+	key = codecKey{ID: ids.in}
 	c.codecCache.Put(key, cdcs.in)
-}
-
-func getDescriptors(ids idPair) (descs descPair, ok bool) {
-	val, ok := descCache.Get(ids.in)
-	if !ok {
-		return descs, ok
-	}
-	descs.in = val.([]byte)
-
-	val, ok = descCache.Get(ids.out)
-	if !ok {
-		return descs, ok
-	}
-
-	descs.out = val.([]byte)
-	return descs, ok
-}
-
-func putDescriptors(ids idPair, descs descPair) {
-	descCache.Put(ids.in, descs.in)
-	descCache.Put(ids.out, descs.out)
 }
