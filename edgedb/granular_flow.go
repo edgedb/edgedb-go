@@ -38,21 +38,28 @@ func (c *Client) granularFlow(
 		tp = tp.Elem()
 	}
 
-	if cdcs, ok := getCodecs(q, tp); ok {
+	ids, ok := c.getTypeIDs(q)
+	if !ok {
+		return c.pesimistic(ctx, conn, out, q, tp)
+	}
+
+	cdcs, ok := c.getCodecs(ids, tp)
+	if ok {
 		return c.optimistic(ctx, conn, out, q, tp, cdcs)
 	}
 
-	if descs, ok := getDescriptors(q); ok {
-		cdcs, err := buildCodecs(q, tp, descs)
-		if err != nil {
-			return err
-		}
-
-		putCodecs(q, tp, cdcs)
-		return c.optimistic(ctx, conn, out, q, tp, cdcs)
+	descs, ok := getDescriptors(ids)
+	if !ok {
+		return c.pesimistic(ctx, conn, out, q, tp)
 	}
 
-	return c.pesimistic(ctx, conn, out, q, tp)
+	cdcs, err := buildCodecs(q, tp, descs)
+	if err != nil {
+		return err
+	}
+
+	c.putCodecs(ids, tp, cdcs)
+	return c.optimistic(ctx, conn, out, q, tp, cdcs)
 }
 
 func (c *Client) pesimistic(
@@ -66,23 +73,23 @@ func (c *Client) pesimistic(
 	if err != nil {
 		return err
 	}
+	c.putTypeIDs(q, ids)
 
-	descs, ok := getDescriptorsByID(ids)
+	descs, ok := getDescriptors(ids)
 	if !ok {
 		descs, err = c.describe(ctx, conn)
 		if err != nil {
 			return err
 		}
-		putDescriptorsByID(ids, descs)
+		putDescriptors(ids, descs)
 	}
-	putDescriptors(q, descs)
 
 	cdcs, err := buildCodecs(q, tp, descs)
 	if err != nil {
 		return err
 	}
 
-	putCodecs(q, tp, cdcs)
+	c.putCodecs(ids, tp, cdcs)
 	return c.execute(ctx, conn, out, q, tp, cdcs)
 }
 
@@ -189,7 +196,7 @@ func (c *Client) execute(
 	buf := []byte{message.Execute, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0)       // no headers
 	protocol.PushBytes(&buf, []byte{}) // no statement name
-	cdcs.In.Encode(&buf, q.args)
+	cdcs.in.Encode(&buf, q.args)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
@@ -216,10 +223,10 @@ func (c *Client) execute(
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.Out.Decode(&msg, val)
+				cdcs.out.Decode(&msg, val)
 				o = reflect.Append(o, val)
 			} else {
-				cdcs.Out.Decode(&msg, out)
+				cdcs.out.Decode(&msg, out)
 			}
 			err = nil
 		case message.CommandComplete:
@@ -246,8 +253,8 @@ func (c *Client) optimistic(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	inID := cdcs.In.ID()
-	outID := cdcs.Out.ID()
+	inID := cdcs.in.ID()
+	outID := cdcs.out.ID()
 
 	buf := c.buffer[:0]
 	buf = append(buf,
@@ -261,7 +268,7 @@ func (c *Client) optimistic(
 	protocol.PushString(&buf, q.cmd)
 	buf = append(buf, inID[:]...)
 	buf = append(buf, outID[:]...)
-	cdcs.In.Encode(&buf, q.args)
+	cdcs.in.Encode(&buf, q.args)
 	protocol.PutMsgLength(buf)
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
@@ -290,10 +297,10 @@ func (c *Client) optimistic(
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.Out.Decode(&msg, val)
+				cdcs.out.Decode(&msg, val)
 				o = reflect.Append(o, val)
 			} else {
-				cdcs.Out.Decode(&msg, out)
+				cdcs.out.Decode(&msg, out)
 			}
 			err = nil
 		case message.CommandComplete:

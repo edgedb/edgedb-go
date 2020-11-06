@@ -24,6 +24,7 @@ import (
 
 	"github.com/fatih/pool"
 
+	"github.com/edgedb/edgedb-go/edgedb/cache"
 	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
@@ -40,8 +41,10 @@ var (
 
 // Client client
 type Client struct {
-	pool   pool.Pool
-	buffer [8192]byte
+	pool        pool.Pool
+	buffer      [8192]byte
+	typeIDCache *cache.Cache
+	codecCache  *cache.Cache
 }
 
 // Close the db connection
@@ -245,7 +248,11 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 		return nil, err
 	}
 
-	client = &Client{pool: p}
+	client = &Client{
+		pool:        p,
+		typeIDCache: cache.New(1_000),
+		codecCache:  cache.New(1_000),
+	}
 	return client, nil
 }
 

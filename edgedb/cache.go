@@ -17,7 +17,6 @@
 package edgedb
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/edgedb/cache"
@@ -25,19 +24,11 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
-var (
-	// don't use these caches directly.
-	// instead use the utility functions below.
-
-	// todo what should codec cache capacity be?
-	codecCache     = cache.New(100)
-	descQueryCache = cache.New(100)
-	descCache      = cache.New(200)
-)
+var descCache = cache.New(1_000)
 
 type codecPair struct {
-	In  codecs.Codec
-	Out codecs.Codec
+	in  codecs.Codec
+	out codecs.Codec
 }
 
 type descPair struct {
@@ -54,68 +45,83 @@ type queryKey struct {
 	cmd     string
 	fmt     uint8
 	expCard uint8
-	tp      reflect.Type
 }
 
-func newQueryKey(q query, tp reflect.Type) queryKey {
-	return queryKey{
+func (c *Client) getTypeIDs(q query) (idPair, bool) {
+	key := queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
 		expCard: q.expCard,
-		tp:      tp,
 	}
+
+	if val, ok := c.typeIDCache.Get(key); ok {
+		return val.(idPair), true
+	}
+
+	return idPair{}, false
 }
 
-func getCodecs(q query, tp reflect.Type) (cdcs codecPair, ok bool) {
-	key := newQueryKey(q, tp)
-	val, ok := codecCache.Get(key)
+func (c *Client) putTypeIDs(q query, ids idPair) {
+	key := queryKey{
+		cmd:     q.cmd,
+		fmt:     q.fmt,
+		expCard: q.expCard,
+	}
+	c.typeIDCache.Put(key, ids)
+}
 
+type codecKey struct {
+	inID    types.UUID
+	outID   types.UUID
+	outType reflect.Type
+}
+
+func (c *Client) getCodecs(
+	ids idPair,
+	tp reflect.Type,
+) (cdcs codecPair, ok bool) {
+	key := codecKey{inID: ids.in, outID: ids.out, outType: tp}
+	out, ok := c.codecCache.Get(key)
 	if !ok {
-		return cdcs, ok
+		return cdcs, false
 	}
 
-	return val.(codecPair), ok
+	key = codecKey{inID: ids.in, outID: ids.out}
+	in, ok := c.codecCache.Get(key)
+	if !ok {
+		return cdcs, false
+	}
+
+	cdcs.out = out.(codecs.Codec)
+	cdcs.in = in.(codecs.Codec)
+	return cdcs, false
 }
 
-func putCodecs(q query, tp reflect.Type, cdcs codecPair) {
-	key := newQueryKey(q, tp)
-	fmt.Println(key)
-	codecCache.Put(key, cdcs)
+func (c *Client) putCodecs(ids idPair, tp reflect.Type, cdcs codecPair) {
+	key := codecKey{inID: ids.in, outID: ids.out, outType: tp}
+	c.codecCache.Put(key, cdcs.out)
+
+	key = codecKey{inID: ids.in, outID: ids.out}
+	c.codecCache.Put(key, cdcs.in)
 }
 
-func getDescriptors(q query) (descs descPair, ok bool) {
-	key := newQueryKey(q, nil)
-	val, ok := descQueryCache.Get(key)
+func getDescriptors(ids idPair) (descs descPair, ok bool) {
+	val, ok := descCache.Get(ids.in)
+	if !ok {
+		return descs, ok
+	}
+	descs.in = val.([]byte)
 
+	val, ok = descCache.Get(ids.out)
 	if !ok {
 		return descs, ok
 	}
 
-	return val.(descPair), ok
-}
-
-func putDescriptors(q query, descs descPair) {
-	key := newQueryKey(q, nil)
-	descQueryCache.Put(key, descs)
-}
-
-func getDescriptorsByID(ids idPair) (descs descPair, ok bool) {
-	inVal, ok := descCache.Get(ids.in)
-	if !ok {
-		return descs, ok
-	}
-
-	outVal, ok := descCache.Get(ids.out)
-	if !ok {
-		return descs, ok
-	}
-
-	descs.in = inVal.([]byte)
-	descs.out = outVal.([]byte)
+	descs.out = val.([]byte)
 	return descs, ok
 }
 
-func putDescriptorsByID(ids idPair, pair descPair) {
-	descCache.Put(ids.in, pair.in)
-	descCache.Put(ids.out, pair.out)
+func putDescriptors(ids idPair, descs descPair) {
+	descCache.Put(ids.in, descs.in)
+	descCache.Put(ids.out, descs.out)
 }

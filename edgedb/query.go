@@ -54,7 +54,7 @@ func buildCodecs(
 	}
 
 	if q.fmt == format.JSON {
-		return codecPair{In: in, Out: codecs.JSONBytes}, nil
+		return codecPair{in: in, out: codecs.JSONBytes}, nil
 	}
 
 	out, err := codecs.BuildTypedCodec(&descs.out, tp)
@@ -62,5 +62,5 @@ func buildCodecs(
 		return cdcs, err
 	}
 
-	return codecPair{In: in, Out: out}, nil
+	return codecPair{in: in, out: out}, nil
 }
