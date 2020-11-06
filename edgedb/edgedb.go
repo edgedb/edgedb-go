@@ -41,11 +41,12 @@ var (
 
 // Client client
 type Client struct {
-	pool          pool.Pool
-	buffer        [8192]byte
-	typeIDCache   *cache.Cache
-	inCodecCache  *cache.Cache
-	outCodecCache *cache.Cache
+	pool           pool.Pool
+	buffer         [8192]byte
+	typeIDCache    *cache.Cache
+	inCodecCache   *cache.Cache
+	outCodecCache  *cache.Cache
+	serverSettings map[string]string
 }
 
 // Close the db connection
@@ -69,7 +70,7 @@ func (c *Client) Execute(ctx context.Context, query string) (err error) {
 		}
 	}()
 
-	return scriptFlow(ctx, conn, query)
+	return c.scriptFlow(ctx, conn, query)
 }
 
 // QueryOne runs a singleton-returning query and returns its element.

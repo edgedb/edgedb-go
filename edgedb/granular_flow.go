@@ -256,7 +256,10 @@ func (c *Client) execute(
 		case message.ErrorResponse:
 			return decodeError(&msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			err = c.fallThrough(mType, &msg)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -330,7 +333,10 @@ func (c *Client) optimistic(
 		case message.ErrorResponse:
 			return decodeError(&msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			err = c.fallThrough(mType, &msg)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
