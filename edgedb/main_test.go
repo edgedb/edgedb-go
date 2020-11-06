@@ -35,7 +35,7 @@ import (
 // initialized by TestMain
 var (
 	server Options
-	client *Client
+	client *Conn
 )
 
 func executeOrPanic(command string) {
