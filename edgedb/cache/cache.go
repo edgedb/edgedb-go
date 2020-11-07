@@ -28,7 +28,7 @@ type Cache struct {
 	cap int
 	ch  chan map[interface{}]*node
 
-	// root.prev is the taail
+	// root.prev is the tail
 	// root.next is the head
 	root node
 }
