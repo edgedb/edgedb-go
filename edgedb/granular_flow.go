@@ -256,9 +256,9 @@ func (c *Client) execute(
 		case message.ErrorResponse:
 			return decodeError(&msg)
 		default:
-			err = c.fallThrough(mType, &msg)
-			if err != nil {
-				return err
+			e := c.fallThrough(mType, &msg)
+			if e != nil {
+				return e
 			}
 		}
 	}
@@ -333,9 +333,9 @@ func (c *Client) optimistic(
 		case message.ErrorResponse:
 			return decodeError(&msg)
 		default:
-			err = c.fallThrough(mType, &msg)
-			if err != nil {
-				return err
+			e := c.fallThrough(mType, &msg)
+			if e != nil {
+				return e
 			}
 		}
 	}
