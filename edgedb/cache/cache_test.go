@@ -17,6 +17,7 @@
 package cache
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,7 +67,7 @@ func TestCachePutConcurencySafe(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		go func() {
 			for i := 0; i < 1000; i++ {
-				cache.Put("key", "val")
+				cache.Put(rand.Intn(30), "val")
 			}
 			done <- struct{}{}
 		}()

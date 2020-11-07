@@ -47,6 +47,7 @@ func New(cap int) *Cache {
 
 // Get returns a value from the cache.
 func (c *Cache) Get(id interface{}) (interface{}, bool) {
+	// ensure map is only used by one go routine at a time.
 	m := <-c.ch
 	defer func() { c.ch <- m }()
 
@@ -60,6 +61,7 @@ func (c *Cache) Get(id interface{}) (interface{}, bool) {
 
 // Put adds a value to the cache.
 func (c *Cache) Put(key interface{}, val interface{}) {
+	// ensure map is only used by one go routine at a time.
 	m := <-c.ch
 	defer func() { c.ch <- m }()
 
@@ -69,7 +71,7 @@ func (c *Cache) Put(key interface{}, val interface{}) {
 		return
 	}
 
-	if len(m) >= c.cap {
+	for len(m) >= c.cap {
 		oldest := c.root.prev
 		delete(m, oldest.key)
 		c.remove(oldest)

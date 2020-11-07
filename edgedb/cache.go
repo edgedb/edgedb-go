@@ -39,6 +39,7 @@ Optimistic execute flow:
 
 3. use codecs in optimistic execute
 */
+
 import (
 	"reflect"
 
@@ -96,21 +97,4 @@ func (c *Client) putTypeIDs(q query, ids idPair) {
 		expCard: q.expCard,
 	}
 	c.typeIDCache.Put(key, ids)
-}
-
-func (c *Client) getCodec(
-	id types.UUID,
-	tp reflect.Type,
-) (codecs.Codec, bool) {
-	key := codecKey{ID: id, Type: tp}
-	codec, ok := c.codecCache.Get(key)
-	return codec.(codecs.Codec), ok
-}
-
-func (c *Client) putCodecs(ids idPair, tp reflect.Type, cdcs codecPair) {
-	key := codecKey{ID: ids.out, Type: tp}
-	c.codecCache.Put(key, cdcs.out)
-
-	key = codecKey{ID: ids.in}
-	c.codecCache.Put(key, cdcs.in)
 }

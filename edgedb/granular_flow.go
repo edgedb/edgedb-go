@@ -45,7 +45,7 @@ func (c *Client) granularFlow(
 		return c.pesimistic(ctx, conn, out, q, tp)
 	}
 
-	in, ok := c.getCodec(ids.in, nil)
+	in, ok := c.inCodecCache.Get(ids.in)
 	if !ok {
 		if desc, OK := descCache.Get(ids.in); OK {
 			d := desc.([]byte)
@@ -58,7 +58,7 @@ func (c *Client) granularFlow(
 		}
 	}
 
-	cOut, ok := c.getCodec(ids.out, tp)
+	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: tp})
 	if !ok {
 		if desc, ok := descCache.Get(ids.out); ok {
 			d := desc.([]byte)
@@ -71,7 +71,7 @@ func (c *Client) granularFlow(
 		}
 	}
 
-	cdsc := codecPair{in: in, out: cOut}
+	cdsc := codecPair{in: in.(codecs.Codec), out: cOut.(codecs.Codec)}
 	return c.optimistic(ctx, conn, out, q, tp, cdsc)
 }
 
@@ -110,7 +110,8 @@ func (c *Client) pesimistic(
 		}
 	}
 
-	c.putCodecs(ids, tp, cdcs)
+	c.inCodecCache.Put(ids.in, cdcs.in)
+	c.outCodecCache.Put(codecKey{ID: ids.out, Type: tp}, cdcs.out)
 	return c.execute(ctx, conn, out, q, tp, cdcs)
 }
 

@@ -41,10 +41,11 @@ var (
 
 // Client client
 type Client struct {
-	pool        pool.Pool
-	buffer      [8192]byte
-	typeIDCache *cache.Cache
-	codecCache  *cache.Cache
+	pool          pool.Pool
+	buffer        [8192]byte
+	typeIDCache   *cache.Cache
+	inCodecCache  *cache.Cache
+	outCodecCache *cache.Cache
 }
 
 // Close the db connection
@@ -249,9 +250,10 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	}
 
 	client = &Client{
-		pool:        p,
-		typeIDCache: cache.New(1_000),
-		codecCache:  cache.New(1_000),
+		pool:          p,
+		typeIDCache:   cache.New(1_000),
+		inCodecCache:  cache.New(1_000),
+		outCodecCache: cache.New(1_000),
 	}
 	return client, nil
 }
