@@ -16,8 +16,6 @@
 
 package edgedb
 
-// todo add context.Context
-
 import (
 	"context"
 	"errors"
@@ -26,11 +24,10 @@ import (
 
 	"github.com/fatih/pool"
 
+	"github.com/edgedb/edgedb-go/edgedb/cache"
 	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
-	"github.com/edgedb/edgedb-go/edgedb/types"
 )
 
 // todo add examples
@@ -42,28 +39,13 @@ var (
 	ErrorZeroResults = errors.New("zero results")
 )
 
-type queryCodecs struct {
-	in  codecs.Codec
-	out codecs.Codec
-}
-
-type queryCacheKey struct {
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	t       reflect.Type
-}
-
-// todo rename Conn to Client
-
 // Client client
 type Client struct {
-	pool   pool.Pool
-	buffer [8192]byte
-
-	// todo caches are not thread safe
-	descriptors map[types.UUID][]byte
-	codecs      map[queryCacheKey]queryCodecs
+	pool          pool.Pool
+	buffer        [8192]byte
+	typeIDCache   *cache.Cache
+	inCodecCache  *cache.Cache
+	outCodecCache *cache.Cache
 }
 
 // Close the db connection
@@ -268,11 +250,11 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 	}
 
 	client = &Client{
-		pool:        p,
-		descriptors: make(map[types.UUID][]byte),
-		codecs:      make(map[queryCacheKey]queryCodecs),
+		pool:          p,
+		typeIDCache:   cache.New(1_000),
+		inCodecCache:  cache.New(1_000),
+		outCodecCache: cache.New(1_000),
 	}
-
 	return client, nil
 }
 

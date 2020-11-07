@@ -27,46 +27,52 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
-	"github.com/edgedb/edgedb-go/edgedb/types"
 )
-
-func (c *Client) queryCodecs(q query, t reflect.Type) (queryCodecs, bool) {
-	// todo this isn't thread safe
-	key := queryCacheKey{q.cmd, q.fmt, q.expCard, t}
-	codecs, ok := c.codecs[key]
-	return codecs, ok
-}
-
-func (c *Client) cacheQueryCodecs(
-	q query,
-	t reflect.Type,
-	in,
-	out codecs.Codec,
-) {
-	if in == nil {
-		panic("in codec is nil")
-	}
-
-	if out == nil {
-		panic("out codec is nil")
-	}
-
-	// todo this isn't thread safe
-	key := queryCacheKey{q.cmd, q.fmt, q.expCard, t}
-	c.codecs[key] = queryCodecs{in: in, out: out}
-}
 
 func (c *Client) granularFlow(
 	ctx context.Context,
 	conn net.Conn,
 	out reflect.Value,
 	q query,
-) error {
-	if _, ok := c.queryCodecs(q, out.Type()); ok {
-		return c.optimistic(ctx, conn, out, q)
+) (err error) {
+	tp := out.Type()
+	if !q.flat() {
+		tp = tp.Elem()
 	}
 
-	return c.pesimistic(ctx, conn, out, q)
+	ids, ok := c.getTypeIDs(q)
+	if !ok {
+		return c.pesimistic(ctx, conn, out, q, tp)
+	}
+
+	in, ok := c.inCodecCache.Get(ids.in)
+	if !ok {
+		if desc, OK := descCache.Get(ids.in); OK {
+			d := desc.([]byte)
+			in, err = codecs.BuildCodec(&d)
+			if err != nil {
+				return err
+			}
+		} else {
+			return c.pesimistic(ctx, conn, out, q, tp)
+		}
+	}
+
+	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: tp})
+	if !ok {
+		if desc, ok := descCache.Get(ids.out); ok {
+			d := desc.([]byte)
+			cOut, err = codecs.BuildTypedCodec(&d, tp)
+			if err != nil {
+				return err
+			}
+		} else {
+			return c.pesimistic(ctx, conn, out, q, tp)
+		}
+	}
+
+	cdsc := codecPair{in: in.(codecs.Codec), out: cOut.(codecs.Codec)}
+	return c.optimistic(ctx, conn, out, q, tp, cdsc)
 }
 
 func (c *Client) pesimistic(
@@ -74,53 +80,46 @@ func (c *Client) pesimistic(
 	conn net.Conn,
 	out reflect.Value,
 	q query,
+	tp reflect.Type,
 ) error {
-	outType := out.Type()
-	if !q.flat() {
-		outType = outType.Elem()
+	ids, err := prepare(ctx, conn, q)
+	if err != nil {
+		return err
 	}
+	c.putTypeIDs(q, ids)
 
-	inID, outID, err := prepare(ctx, conn, q)
+	descs, err := c.describe(ctx, conn)
+	if err != nil {
+		return err
+	}
+	descCache.Put(ids.in, descs.in)
+	descCache.Put(ids.out, descs.out)
+
+	var cdcs codecPair
+	cdcs.in, err = codecs.BuildCodec(&descs.in)
 	if err != nil {
 		return err
 	}
 
-	dIn, inOK := c.descriptors[inID]
-	dOut, outOK := c.descriptors[outID]
-	if !inOK || !outOK {
-		err = c.describe(ctx, conn)
-		if err != nil {
-			return err
-		}
-
-		dIn = c.descriptors[inID]
-		dOut = c.descriptors[outID]
-	}
-
-	cIn, err := codecs.BuildCodec(&dIn)
-	if err != nil {
-		return err
-	}
-
-	var cOut codecs.Codec
 	if q.fmt == format.JSON {
-		cOut = codecs.JSONBytes
+		cdcs.out = codecs.JSONBytes
 	} else {
-		cOut, err = codecs.BuildTypedCodec(&dOut, outType)
+		cdcs.out, err = codecs.BuildTypedCodec(&descs.out, tp)
 		if err != nil {
 			return err
 		}
 	}
 
-	c.cacheQueryCodecs(q, outType, cIn, cOut)
-	return c.execute(ctx, conn, out, q)
+	c.inCodecCache.Put(ids.in, cdcs.in)
+	c.outCodecCache.Put(codecKey{ID: ids.out, Type: tp}, cdcs.out)
+	return c.execute(ctx, conn, out, q, tp, cdcs)
 }
 
 func prepare(
 	ctx context.Context,
 	conn net.Conn,
 	q query,
-) (in types.UUID, out types.UUID, err error) {
+) (ids idPair, err error) {
 	buf := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
 	protocol.PushUint8(&buf, q.fmt)
@@ -133,7 +132,7 @@ func prepare(
 
 	err = writeAndRead(ctx, conn, &buf)
 	if err != nil {
-		return in, out, err
+		return ids, err
 	}
 
 	for len(buf) > 4 {
@@ -148,20 +147,25 @@ func prepare(
 			// todo assert cardinality matches query
 			protocol.PopUint8(&msg) // cardianlity
 
-			in = protocol.PopUUID(&msg)  // input type id
-			out = protocol.PopUUID(&msg) // output type id
+			ids = idPair{
+				in:  protocol.PopUUID(&msg),
+				out: protocol.PopUUID(&msg),
+			}
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return in, out, decodeError(&msg)
+			return ids, decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
-	return in, out, nil
+	return ids, nil
 }
 
-func (c *Client) describe(ctx context.Context, conn net.Conn) error {
+func (c *Client) describe(
+	ctx context.Context,
+	conn net.Conn,
+) (descs descPair, err error) {
 	buf := []byte{message.DescribeStatement, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
 	protocol.PushUint8(&buf, aspect.DataDescription)
@@ -170,9 +174,9 @@ func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	err := writeAndRead(ctx, conn, &buf)
+	err = writeAndRead(ctx, conn, &buf)
 	if err != nil {
-		return err
+		return descs, err
 	}
 
 	for len(buf) > 4 {
@@ -186,27 +190,21 @@ func (c *Client) describe(ctx context.Context, conn net.Conn) error {
 			protocol.PopUint8(&msg)  // cardianlity
 
 			// input descriptor
-			id := protocol.PopUUID(&msg)
-			d := protocol.PopBytes(&msg)
-			o := make([]byte, len(d))
-			copy(o, d)
-			c.descriptors[id] = o
+			protocol.PopUUID(&msg)
+			descs.in = append(descs.in, protocol.PopBytes(&msg)...)
 
 			// output descriptor
-			id = protocol.PopUUID(&msg)
-			d = protocol.PopBytes(&msg)
-			o = make([]byte, len(d))
-			copy(o, d)
-			c.descriptors[id] = o
+			protocol.PopUUID(&msg)
+			descs.out = append(descs.out, protocol.PopBytes(&msg)...)
 		case message.ReadyForCommand:
 		case message.ErrorResponse:
-			return decodeError(&msg)
+			return descs, decodeError(&msg)
 		default:
 			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
 		}
 	}
 
-	return nil
+	return descs, nil
 }
 
 func (c *Client) execute(
@@ -214,13 +212,9 @@ func (c *Client) execute(
 	conn net.Conn,
 	out reflect.Value,
 	q query,
+	tp reflect.Type,
+	cdcs codecPair,
 ) error {
-	outType := out.Type()
-	if !q.flat() {
-		outType = outType.Elem()
-	}
-
-	cdcs, _ := c.queryCodecs(q, outType)
 	buf := []byte{message.Execute, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0)       // no headers
 	protocol.PushBytes(&buf, []byte{}) // no statement name
@@ -250,7 +244,7 @@ func (c *Client) execute(
 			protocol.PopUint16(&msg) // number of data elements (always 1)
 
 			if !q.flat() {
-				val := reflect.New(outType).Elem()
+				val := reflect.New(tp).Elem()
 				cdcs.out.Decode(&msg, val)
 				o = reflect.Append(o, val)
 			} else {
@@ -278,13 +272,9 @@ func (c *Client) optimistic(
 	conn net.Conn,
 	out reflect.Value,
 	q query,
+	tp reflect.Type,
+	cdcs codecPair,
 ) error {
-	outType := out.Type()
-	if !q.flat() {
-		outType = outType.Elem()
-	}
-
-	cdcs, _ := c.queryCodecs(q, out.Type())
 	inID := cdcs.in.ID()
 	outID := cdcs.out.ID()
 
@@ -328,7 +318,7 @@ func (c *Client) optimistic(
 			msg = msg[6:]
 
 			if !q.flat() {
-				val := reflect.New(outType).Elem()
+				val := reflect.New(tp).Elem()
 				cdcs.out.Decode(&msg, val)
 				o = reflect.Append(o, val)
 			} else {
