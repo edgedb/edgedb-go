@@ -76,7 +76,7 @@ type queryKey struct {
 	expCard uint8
 }
 
-func (c *Conn) getTypeIDs(q query) (idPair, bool) {
+func (c *Client) getTypeIDs(q query) (idPair, bool) {
 	key := queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
@@ -90,7 +90,7 @@ func (c *Conn) getTypeIDs(q query) (idPair, bool) {
 	return idPair{}, false
 }
 
-func (c *Conn) putTypeIDs(q query, ids idPair) {
+func (c *Client) putTypeIDs(q query, ids idPair) {
 	key := queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,

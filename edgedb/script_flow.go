@@ -19,18 +19,19 @@ package edgedb
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 )
 
-func (c *Conn) scriptFlow(ctx context.Context, query string) error {
+func scriptFlow(ctx context.Context, conn net.Conn, query string) error {
 	buf := []byte{message.ExecuteScript, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
 	protocol.PushString(&buf, query)
 	protocol.PutMsgLength(buf)
 
-	err := c.writeAndRead(ctx, &buf)
+	err := writeAndRead(ctx, conn, &buf)
 	if err != nil {
 		return err
 	}
