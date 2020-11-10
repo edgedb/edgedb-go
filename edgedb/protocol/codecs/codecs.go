@@ -83,6 +83,7 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 		default:
 			if 0x80 <= dType && dType <= 0xff {
 				// ignore unknown type annotations
+				protocol.PopBytes(bts)
 				break
 			}
 
