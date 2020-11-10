@@ -22,6 +22,8 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/fatih/pool"
+
 	"github.com/edgedb/edgedb-go/edgedb/cache"
 	"github.com/edgedb/edgedb-go/edgedb/marshal"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
@@ -37,9 +39,9 @@ var (
 	ErrorZeroResults = errors.New("zero results")
 )
 
-// Conn is a connection to an EdgeDB server.
-type Conn struct {
-	conn          net.Conn
+// Client client
+type Client struct {
+	pool          pool.Pool
 	buffer        [8192]byte
 	typeIDCache   *cache.Cache
 	inCodecCache  *cache.Cache
@@ -47,19 +49,33 @@ type Conn struct {
 }
 
 // Close the db connection
-func (c *Conn) Close() error {
-	return c.conn.Close()
+func (c *Client) Close() (err error) {
+	// todo send Terminate on each connection that needs to be closed.
+	defer c.pool.Close()
+	return nil
 }
 
 // Execute an EdgeQL command (or commands).
-func (c *Conn) Execute(ctx context.Context, query string) error {
-	return c.scriptFlow(ctx, query)
+func (c *Client) Execute(ctx context.Context, query string) (err error) {
+	conn, err := c.pool.Get()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		e := conn.Close()
+		if err == nil {
+			err = e
+		}
+	}()
+
+	return scriptFlow(ctx, conn, query)
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
-func (c *Conn) QueryOne(
+func (c *Client) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -70,6 +86,18 @@ func (c *Conn) QueryOne(
 		return err
 	}
 
+	conn, err := c.pool.Get()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		e := conn.Close()
+		if e != nil && err == nil {
+			err = e
+		}
+	}()
+
 	q := query{
 		cmd:     cmd,
 		fmt:     format.Binary,
@@ -77,7 +105,7 @@ func (c *Conn) QueryOne(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, val, q)
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return err
 	}
@@ -86,7 +114,7 @@ func (c *Conn) QueryOne(
 }
 
 // Query runs a query and returns the results.
-func (c *Conn) Query(
+func (c *Client) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -97,6 +125,18 @@ func (c *Conn) Query(
 		return err
 	}
 
+	conn, err := c.pool.Get()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		e := conn.Close()
+		if e != nil && err == nil {
+			err = e
+		}
+	}()
+
 	q := query{
 		cmd:     cmd,
 		fmt:     format.Binary,
@@ -104,7 +144,7 @@ func (c *Conn) Query(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, val, q)
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return err
 	}
@@ -113,11 +153,23 @@ func (c *Conn) Query(
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (c *Conn) QueryJSON(
+func (c *Client) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	args ...interface{},
 ) ([]byte, error) {
+	conn, err := c.pool.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		e := conn.Close()
+		if e != nil && err == nil {
+			err = e
+		}
+	}()
+
 	q := query{
 		cmd:     cmd,
 		fmt:     format.JSON,
@@ -127,7 +179,7 @@ func (c *Conn) QueryJSON(
 
 	var result []byte
 	val := reflect.ValueOf(&result).Elem()
-	err := c.granularFlow(ctx, val, q)
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return nil, err
 	}
@@ -139,11 +191,23 @@ func (c *Conn) QueryJSON(
 // and return its element in JSON.
 // If the query executes successfully but doesn't return a result
 // []byte{}, ErrorZeroResults is returned.
-func (c *Conn) QueryOneJSON(
+func (c *Client) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	args ...interface{},
 ) ([]byte, error) {
+	conn, err := c.pool.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		e := conn.Close()
+		if e != nil && err == nil {
+			err = e
+		}
+	}()
+
 	q := query{
 		cmd:     cmd,
 		fmt:     format.JSON,
@@ -153,7 +217,7 @@ func (c *Conn) QueryOneJSON(
 
 	var result []byte
 	val := reflect.ValueOf(&result).Elem()
-	err := c.granularFlow(ctx, val, q)
+	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
 		return nil, err
 	}
@@ -166,36 +230,53 @@ func (c *Conn) QueryOneJSON(
 }
 
 // Connect establishes a connection to an EdgeDB server.
-func Connect(ctx context.Context, opts Options) (*Conn, error) {
-	var d net.Dialer
-	c, err := d.DialContext(ctx, opts.network(), opts.address())
+func Connect(ctx context.Context, opts Options) (client *Client, err error) {
+	// todo making the pool bigger slows down the tests,
+	// and uses way more memory :thinking:
+	p, err := pool.NewChannelPool(1, 1, func() (conn net.Conn, e error) {
+		var d net.Dialer
+		// todo closing over the context is the wrong thing to do.
+		conn, e = d.DialContext(ctx, opts.network(), opts.address())
+		if e != nil {
+			return nil, e
+		}
+
+		e = connect(ctx, conn, &opts)
+		return conn, e
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	conn := &Conn{
-		conn:          c,
+	client = &Client{
+		pool:          p,
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
 		outCodecCache: cache.New(1_000),
 	}
-
-	err = conn.connect(ctx, &opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
+	return client, nil
 }
 
-func (c *Conn) writeAndRead(ctx context.Context, buf *[]byte) error {
+func writeAndRead(
+	ctx context.Context,
+	conn net.Conn,
+	buf *[]byte,
+) (err error) {
+	defer func() {
+		// todo don't mark unusable on timeout
+		if err != nil {
+			conn.(*pool.PoolConn).MarkUnusable()
+		}
+	}()
+
 	deadline, _ := ctx.Deadline()
-	err := c.conn.SetDeadline(deadline)
+	err = conn.SetDeadline(deadline)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.conn.Write(*buf)
+	_, err = conn.Write(*buf)
 	if err != nil {
 		return err
 	}
@@ -203,7 +284,7 @@ func (c *Conn) writeAndRead(ctx context.Context, buf *[]byte) error {
 	// expand slice length to full capacity
 	*buf = (*buf)[:cap(*buf)]
 
-	n, err := c.conn.Read(*buf)
+	n, err := conn.Read(*buf)
 	*buf = (*buf)[:n]
 
 	if n < cap(*buf) {
@@ -213,7 +294,7 @@ func (c *Conn) writeAndRead(ctx context.Context, buf *[]byte) error {
 	n = 1024 // todo evaluate temporary buffer size
 	tmp := make([]byte, n)
 	for n == 1024 {
-		n, err = c.conn.Read(tmp)
+		n, err = conn.Read(tmp)
 		*buf = append(*buf, tmp[:n]...)
 	}
 
