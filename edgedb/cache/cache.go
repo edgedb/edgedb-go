@@ -16,6 +16,8 @@
 
 package cache
 
+import "sync"
+
 type node struct {
 	key  interface{}
 	val  interface{}
@@ -26,7 +28,8 @@ type node struct {
 // Cache is a thread safe LRU cache with O(1) time operations.
 type Cache struct {
 	cap int
-	ch  chan map[interface{}]*node
+	mp  map[interface{}]*node
+	mu  sync.Mutex
 
 	// root.prev is the tail
 	// root.next is the head
@@ -35,10 +38,7 @@ type Cache struct {
 
 // New returns a new cache.
 func New(cap int) *Cache {
-	ch := make(chan map[interface{}]*node, 1)
-	ch <- make(map[interface{}]*node, cap)
-
-	c := Cache{cap: cap, ch: ch}
+	c := Cache{cap: cap, mp: make(map[interface{}]*node, cap)}
 	c.root.next = &c.root
 	c.root.prev = &c.root
 
@@ -47,11 +47,11 @@ func New(cap int) *Cache {
 
 // Get returns a value from the cache.
 func (c *Cache) Get(id interface{}) (interface{}, bool) {
-	// ensure map is only used by one go routine at a time.
-	m := <-c.ch
-	defer func() { c.ch <- m }()
+	// ensure cache is only used by one go routine at a time.
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if n, ok := m[id]; ok {
+	if n, ok := c.mp[id]; ok {
 		c.moveToFront(n)
 		return n.val, true
 	}
@@ -61,25 +61,25 @@ func (c *Cache) Get(id interface{}) (interface{}, bool) {
 
 // Put adds a value to the cache.
 func (c *Cache) Put(key interface{}, val interface{}) {
-	// ensure map is only used by one go routine at a time.
-	m := <-c.ch
-	defer func() { c.ch <- m }()
+	// ensure cache is only used by one go routine at a time.
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if n, ok := m[key]; ok {
+	if n, ok := c.mp[key]; ok {
 		n.val = val
 		c.moveToFront(n)
 		return
 	}
 
-	for len(m) >= c.cap {
+	for len(c.mp) >= c.cap {
 		oldest := c.root.prev
-		delete(m, oldest.key)
+		delete(c.mp, oldest.key)
 		c.remove(oldest)
 	}
 
 	n := &node{key: key, val: val}
 	c.pushFront(n)
-	m[key] = n
+	c.mp[key] = n
 }
 
 func (c *Cache) moveToFront(n *node) {
