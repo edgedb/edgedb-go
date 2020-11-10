@@ -24,10 +24,10 @@ import (
 
 	"github.com/fatih/pool"
 
-	"github.com/edgedb/edgedb-go/edgedb/cache"
-	"github.com/edgedb/edgedb-go/edgedb/marshal"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
+	"github.com/edgedb/edgedb-go/cache"
+	"github.com/edgedb/edgedb-go/marshal"
+	"github.com/edgedb/edgedb-go/protocol/cardinality"
+	"github.com/edgedb/edgedb-go/protocol/format"
 )
 
 // todo add examples

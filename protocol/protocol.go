@@ -19,7 +19,7 @@ package protocol
 import (
 	"encoding/binary"
 
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/types"
 )
 
 // PopUint8 removes a uint8 from the buffer.

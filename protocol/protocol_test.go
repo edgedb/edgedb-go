@@ -19,7 +19,7 @@ package protocol
 import (
 	"testing"
 
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 )
 

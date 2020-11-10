@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/edgedb/marshal"
-	"github.com/edgedb/edgedb-go/edgedb/protocol"
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/marshal"
+	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/types"
 )
 
 func popNamedTupleCodec(

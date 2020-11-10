@@ -17,8 +17,8 @@
 package edgedb
 
 import (
-	"github.com/edgedb/edgedb-go/edgedb/protocol/cardinality"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
+	"github.com/edgedb/edgedb-go/protocol/cardinality"
+	"github.com/edgedb/edgedb-go/protocol/format"
 )
 
 type query struct {

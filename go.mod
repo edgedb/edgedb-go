@@ -1,23 +1,17 @@
-module github.com/edgedb/edgedb-go/edgedb
+module github.com/edgedb/edgedb-go
 
 go 1.15
 
 require (
-	cloud.google.com/go v0.66.0 // indirect
-	cloud.google.com/go/bigtable v1.6.0 // indirect
-	cloud.google.com/go/firestore v1.3.0 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/pool v3.0.0+incompatible
-	github.com/gin-gonic/contrib v0.0.0-20200913005814-1c32036e7ea4 // indirect
-	github.com/gin-gonic/gin v1.6.3 // indirect
-	github.com/go-playground/locales v0.13.0 // indirect
-	github.com/golangci/golangci-lint v1.31.0 // indirect
+	github.com/go-playground/assert/v2 v2.0.1
+	github.com/kr/text v0.2.0 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xdg/stringprep v1.0.0 // indirect
-	go.opencensus.io v0.22.4 // indirect
-	google.golang.org/api v0.32.0 // indirect
-	google.golang.org/grpc v1.32.0 // indirect
-	google.golang.org/grpc/examples v0.0.0-20200924182952-21f897eab8af // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
+	golang.org/x/text v0.3.3 // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )

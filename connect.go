@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/edgedb/edgedb-go/edgedb/protocol"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
+	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/message"
 	"github.com/xdg/scram"
 )
 

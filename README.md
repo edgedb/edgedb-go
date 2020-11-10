@@ -8,7 +8,7 @@ Requires go 1.11 or higher.
 This project is far from production ready. Contributions welcome! 😊
 
 ## Installation
-$ go get https://github.com/edgedb/edgedb-go/edgedb
+$ go get https://github.com/edgedb/edgedb-go
 
 ## Basic Usage
 Follow the [EdgeDB tutorial](https://edgedb.com/docs/tutorial/index)
@@ -21,7 +21,7 @@ import (
   "fmt"
   "log"
 
-  "github.com/fmoor/edgedb-golang/edgedb"
+  "github.com/edgedb/edgedb-go"
 )
 
 func main() {
@@ -48,7 +48,7 @@ A local installation of EdgeDB is required to run tests.
 Download EdgeDB from [here](https://edgedb.com/download)
 or [build it manually](https://edgedb.com/docs/internals/dev/).
 
-To run the test suite run `make test` from the `edgedb/` directory.
+To run the test suite run `make test`.
 To run lints `make lint`.
 To format the code `make format`.
 
