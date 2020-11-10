@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"fmt"
-	"net"
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
@@ -29,9 +28,8 @@ import (
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 )
 
-func (c *Client) granularFlow(
+func (c *Conn) granularFlow(
 	ctx context.Context,
-	conn net.Conn,
 	out reflect.Value,
 	q query,
 ) (err error) {
@@ -42,7 +40,7 @@ func (c *Client) granularFlow(
 
 	ids, ok := c.getTypeIDs(q)
 	if !ok {
-		return c.pesimistic(ctx, conn, out, q, tp)
+		return c.pesimistic(ctx, out, q, tp)
 	}
 
 	in, ok := c.inCodecCache.Get(ids.in)
@@ -54,7 +52,7 @@ func (c *Client) granularFlow(
 				return err
 			}
 		} else {
-			return c.pesimistic(ctx, conn, out, q, tp)
+			return c.pesimistic(ctx, out, q, tp)
 		}
 	}
 
@@ -67,28 +65,27 @@ func (c *Client) granularFlow(
 				return err
 			}
 		} else {
-			return c.pesimistic(ctx, conn, out, q, tp)
+			return c.pesimistic(ctx, out, q, tp)
 		}
 	}
 
 	cdsc := codecPair{in: in.(codecs.Codec), out: cOut.(codecs.Codec)}
-	return c.optimistic(ctx, conn, out, q, tp, cdsc)
+	return c.optimistic(ctx, out, q, tp, cdsc)
 }
 
-func (c *Client) pesimistic(
+func (c *Conn) pesimistic(
 	ctx context.Context,
-	conn net.Conn,
 	out reflect.Value,
 	q query,
 	tp reflect.Type,
 ) error {
-	ids, err := prepare(ctx, conn, q)
+	ids, err := c.prepare(ctx, q)
 	if err != nil {
 		return err
 	}
 	c.putTypeIDs(q, ids)
 
-	descs, err := c.describe(ctx, conn)
+	descs, err := c.describe(ctx)
 	if err != nil {
 		return err
 	}
@@ -112,14 +109,10 @@ func (c *Client) pesimistic(
 
 	c.inCodecCache.Put(ids.in, cdcs.in)
 	c.outCodecCache.Put(codecKey{ID: ids.out, Type: tp}, cdcs.out)
-	return c.execute(ctx, conn, out, q, tp, cdcs)
+	return c.execute(ctx, out, q, tp, cdcs)
 }
 
-func prepare(
-	ctx context.Context,
-	conn net.Conn,
-	q query,
-) (ids idPair, err error) {
+func (c *Conn) prepare(ctx context.Context, q query) (ids idPair, err error) {
 	buf := []byte{message.Prepare, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
 	protocol.PushUint8(&buf, q.fmt)
@@ -130,7 +123,7 @@ func prepare(
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return ids, err
 	}
@@ -162,10 +155,7 @@ func prepare(
 	return ids, nil
 }
 
-func (c *Client) describe(
-	ctx context.Context,
-	conn net.Conn,
-) (descs descPair, err error) {
+func (c *Conn) describe(ctx context.Context) (descs descPair, err error) {
 	buf := []byte{message.DescribeStatement, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // no headers
 	protocol.PushUint8(&buf, aspect.DataDescription)
@@ -174,7 +164,7 @@ func (c *Client) describe(
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return descs, err
 	}
@@ -207,9 +197,8 @@ func (c *Client) describe(
 	return descs, nil
 }
 
-func (c *Client) execute(
+func (c *Conn) execute(
 	ctx context.Context,
-	conn net.Conn,
 	out reflect.Value,
 	q query,
 	tp reflect.Type,
@@ -223,7 +212,7 @@ func (c *Client) execute(
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	err := writeAndRead(ctx, conn, &buf)
+	err := c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return err
 	}
@@ -267,9 +256,8 @@ func (c *Client) execute(
 	return err
 }
 
-func (c *Client) optimistic(
+func (c *Conn) optimistic(
 	ctx context.Context,
-	conn net.Conn,
 	out reflect.Value,
 	q query,
 	tp reflect.Type,
@@ -295,7 +283,7 @@ func (c *Client) optimistic(
 
 	buf = append(buf, message.Sync, 0, 0, 0, 4)
 
-	err := writeAndRead(ctx, conn, &buf)
+	err := c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return err
 	}

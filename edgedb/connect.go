@@ -19,14 +19,13 @@ package edgedb
 import (
 	"context"
 	"fmt"
-	"net"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 	"github.com/xdg/scram"
 )
 
-func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
+func (c *Conn) connect(ctx context.Context, opts *Options) error {
 	buf := []byte{message.ClientHandshake, 0, 0, 0, 0}
 	protocol.PushUint16(&buf, 0) // major version
 	protocol.PushUint16(&buf, 8) // minor version
@@ -38,7 +37,7 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 	protocol.PushUint16(&buf, 0) // no extensions
 	protocol.PutMsgLength(buf)
 
-	err = writeAndRead(ctx, conn, &buf)
+	err := c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return err
 	}
@@ -57,17 +56,16 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 			minor := protocol.PopUint16(&msg)
 
 			if major != 0 || minor != 8 {
-				err = conn.Close()
+				err = c.conn.Close()
 				if err != nil {
 					return err
 				}
 
-				err = fmt.Errorf(
+				return fmt.Errorf(
 					"unsupported protocol version: %v.%v",
 					major,
 					minor,
 				)
-				return err
 			}
 		case message.ServerKeyData:
 		case message.ReadyForCommand:
@@ -82,7 +80,7 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 				continue
 			}
 
-			err := authenticate(ctx, conn, opts)
+			err := c.authenticate(ctx, opts)
 			if err != nil {
 				return err
 			}
@@ -93,11 +91,7 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 	return nil
 }
 
-func authenticate(
-	ctx context.Context,
-	conn net.Conn,
-	opts *Options,
-) (err error) {
+func (c *Conn) authenticate(ctx context.Context, opts *Options) error {
 	client, err := scram.SHA256.NewClient(opts.User, opts.Password, "")
 	if err != nil {
 		panic(err)
@@ -114,7 +108,7 @@ func authenticate(
 	protocol.PushString(&buf, scramMsg)
 	protocol.PutMsgLength(buf)
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return err
 	}
@@ -147,7 +141,7 @@ func authenticate(
 	protocol.PushString(&buf, scramMsg)
 	protocol.PutMsgLength(buf)
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = c.writeAndRead(ctx, &buf)
 	if err != nil {
 		return err
 	}
