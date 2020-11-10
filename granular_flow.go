@@ -22,11 +22,11 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/edgedb/protocol"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/aspect"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/format"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
+	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/aspect"
+	"github.com/edgedb/edgedb-go/protocol/codecs"
+	"github.com/edgedb/edgedb-go/protocol/format"
+	"github.com/edgedb/edgedb-go/protocol/message"
 )
 
 func (c *Client) granularFlow(

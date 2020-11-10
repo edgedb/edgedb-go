@@ -20,8 +20,8 @@ import (
 	"context"
 	"net"
 
-	"github.com/edgedb/edgedb-go/edgedb/protocol"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
+	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/message"
 )
 
 func (c *Client) scriptFlow(

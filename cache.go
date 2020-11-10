@@ -43,9 +43,9 @@ Optimistic execute flow:
 import (
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/edgedb/cache"
-	"github.com/edgedb/edgedb-go/edgedb/protocol/codecs"
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/cache"
+	"github.com/edgedb/edgedb-go/protocol/codecs"
+	"github.com/edgedb/edgedb-go/types"
 )
 
 var descCache = cache.New(1_000)

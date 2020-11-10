@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

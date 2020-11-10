@@ -19,7 +19,7 @@ package edgedb
 import (
 	"errors"
 
-	"github.com/edgedb/edgedb-go/edgedb/protocol"
+	"github.com/edgedb/edgedb-go/protocol"
 )
 
 func decodeError(bts *[]byte) error {

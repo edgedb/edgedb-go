@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/edgedb/protocol"
-	"github.com/edgedb/edgedb-go/edgedb/types"
+	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/types"
 )
 
 func popSetCodec(
