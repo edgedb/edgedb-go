@@ -17,43 +17,28 @@
 package edgedb
 
 import (
-	"context"
-	"net"
+	"fmt"
+	"log"
 
 	"github.com/edgedb/edgedb-go/edgedb/protocol"
 	"github.com/edgedb/edgedb-go/edgedb/protocol/message"
 )
 
-func (c *Client) scriptFlow(
-	ctx context.Context,
-	conn net.Conn,
-	query string,
-) error {
-	buf := []byte{message.ExecuteScript, 0, 0, 0, 0}
-	protocol.PushUint16(&buf, 0) // no headers
-	protocol.PushString(&buf, query)
-	protocol.PutMsgLength(buf)
-
-	err := writeAndRead(ctx, conn, &buf)
-	if err != nil {
-		return err
-	}
-
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
-
-		switch mType {
-		case message.CommandComplete:
-		case message.ReadyForCommand:
-		case message.ErrorResponse:
-			return decodeError(&msg)
-		default:
-			err = c.fallThrough(mType, &msg)
-			if err != nil {
-				return err
-			}
-		}
+func (c *Client) fallThrough(mType uint8, msg *[]byte) error {
+	switch mType {
+	case message.ParameterStatus:
+		protocol.PopUint32(msg) // message length
+		name := protocol.PopString(msg)
+		value := protocol.PopString(msg)
+		c.serverSettings[name] = value
+	case message.LogMessage:
+		protocol.PopUint32(msg) // message length
+		severity := string([]byte{protocol.PopUint8(msg)})
+		code := protocol.PopUint32(msg)
+		message := protocol.PopString(msg)
+		log.Println("SERVER MESSAGE", severity, code, message)
+	default:
+		return fmt.Errorf("unexpected message type: 0x%x", mType)
 	}
 
 	return nil
