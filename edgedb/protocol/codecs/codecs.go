@@ -53,11 +53,11 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 	codecs := []Codec{}
 
 	for len(*bts) > 0 {
-		descriptorType := protocol.PopUint8(bts)
+		dType := protocol.PopUint8(bts)
 		id := protocol.PopUUID(bts)
 		var codec Codec
 
-		switch descriptorType {
+		switch dType {
 		case setType:
 			codec = popSetCodec(bts, id, codecs)
 		case objectType:
@@ -81,18 +81,18 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 			// todo implement enum type descriptor
 			return nil, errors.New("enum type descriptor not implemented")
 		default:
-			// todo ignore special types
-			return nil, fmt.Errorf(
-				"unknown descriptor type 0x%x",
-				descriptorType,
-			)
+			if 0x80 <= dType && dType <= 0xff {
+				// ignore unknown type annotations
+				break
+			}
+
+			return nil, fmt.Errorf("unknown descriptor type 0x%x", dType)
 		}
 
 		codecs = append(codecs, codec)
 	}
 
-	root := codecs[len(codecs)-1]
-	return root, nil
+	return codecs[len(codecs)-1], nil
 }
 
 // BuildTypedCodec builds a codec for decoding into a specific type.
