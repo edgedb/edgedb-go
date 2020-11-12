@@ -20,20 +20,20 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popArrayCodec(
-	bts *[]byte,
+	msg *buff.Message,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	i := protocol.PopUint16(bts) // element type descriptor index
+	i := msg.PopUint16() // element type descriptor index
 
-	n := int(protocol.PopUint16(bts)) // number of array dimensions
+	n := int(msg.PopUint16()) // number of array dimensions
 	for i := 0; i < n; i++ {
-		protocol.PopUint32(bts) // array dimension
+		msg.PopUint32() // array dimension
 	}
 
 	return &Array{id: id, child: codecs[i]}
@@ -66,49 +66,46 @@ func (c *Array) Type() reflect.Type {
 }
 
 // Decode an array.
-func (c *Array) Decode(bts *[]byte, out reflect.Value) {
-	buf := protocol.PopBytes(bts)
+func (c *Array) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
 
 	// number of dimensions is 1 or 0
-	dimCount := protocol.PopUint32(&buf)
+	dimCount := msg.PopUint32()
 	if dimCount == 0 {
 		return
 	}
 
-	protocol.PopUint32(&buf) // reserved
-	protocol.PopUint32(&buf) // reserved
+	msg.PopUint32() // reserved
+	msg.PopUint32() // reserved
 
-	upper := int32(protocol.PopUint32(&buf))
-	lower := int32(protocol.PopUint32(&buf))
+	upper := int32(msg.PopUint32())
+	lower := int32(msg.PopUint32())
 	n := int(upper - lower + 1)
 
+	// todo could reuse existing slice if it is long enough :thinking:
 	tmp := reflect.MakeSlice(c.t, n, n)
 	for i := 0; i < n; i++ {
-		c.child.Decode(&buf, tmp.Index(i))
+		c.child.Decode(msg, tmp.Index(i))
 	}
 
 	out.Set(tmp)
 }
 
 // Encode an array.
-func (c *Array) Encode(bts *[]byte, val interface{}) {
-	// the data length is not know until all values have been encoded
-	// put the data in temporary slice to get the length
-	tmp := []byte{}
-
+func (c *Array) Encode(buf *buff.Writer, val interface{}) {
 	in := val.([]interface{})
 	elmCount := len(in)
 
-	protocol.PushUint32(&tmp, 1)                // number of dimensions
-	protocol.PushUint32(&tmp, 0)                // reserved
-	protocol.PushUint32(&tmp, 0)                // reserved
-	protocol.PushUint32(&tmp, uint32(elmCount)) // dimension.upper
-	protocol.PushUint32(&tmp, 1)                // dimension.lower
+	buf.BeginBytes()
+	buf.PushUint32(1)                // number of dimensions
+	buf.PushUint32(0)                // reserved
+	buf.PushUint32(0)                // reserved
+	buf.PushUint32(uint32(elmCount)) // dimension.upper
+	buf.PushUint32(1)                // dimension.lower
 
 	for i := 0; i < elmCount; i++ {
-		c.child.Encode(&tmp, in[i])
+		c.child.Encode(buf, in[i])
 	}
 
-	protocol.PushUint32(bts, uint32(len(tmp)))
-	*bts = append(*bts, tmp...)
+	buf.EndBytes()
 }

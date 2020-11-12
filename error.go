@@ -19,14 +19,10 @@ package edgedb
 import (
 	"errors"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 )
 
-func decodeError(bts *[]byte) error {
-	// skip the following fields
-	// message length
-	// severity
-	// code
-	*bts = (*bts)[9:]
-	return errors.New(protocol.PopString(bts))
+func decodeError(msg *buff.Message) error {
+	msg.Discard(5) // skip severity & code
+	return errors.New(msg.PopString())
 }

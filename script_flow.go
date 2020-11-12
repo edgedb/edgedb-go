@@ -20,7 +20,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/protocol/message"
 )
 
@@ -29,31 +29,36 @@ func (c *Client) scriptFlow(
 	conn net.Conn,
 	query string,
 ) error {
-	buf := []byte{message.ExecuteScript, 0, 0, 0, 0}
-	protocol.PushUint16(&buf, 0) // no headers
-	protocol.PushString(&buf, query)
-	protocol.PutMsgLength(buf)
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(message.ExecuteScript)
+	buf.PushUint16(0) // no headers
+	buf.PushString(query)
+	buf.EndMessage()
 
-	err := writeAndRead(ctx, conn, &buf)
+	err := writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.CommandComplete:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopBytes()  // command status
 		case message.ReadyForCommand:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(&msg)
+			return decodeError(msg)
 		default:
-			err = c.fallThrough(mType, &msg)
+			err = c.fallThrough(msg)
 			if err != nil {
 				return err
 			}
 		}
+		msg.Finish()
 	}
 
 	return nil

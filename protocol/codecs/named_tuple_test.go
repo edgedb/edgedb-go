@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func TestSetNamedTupleType(t *testing.T) {
 }
 
 func TestDecodeNamedTuple(t *testing.T) {
-	bts := []byte{
+	msg := buff.NewMessage([]byte{
 		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -58,7 +59,7 @@ func TestDecodeNamedTuple(t *testing.T) {
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 4,
 		0, 0, 0, 6,
-	}
+	})
 
 	codec := &NamedTuple{fields: []*objectField{
 		{index: []int{0}, codec: &Int32{}},
@@ -72,12 +73,11 @@ func TestDecodeNamedTuple(t *testing.T) {
 
 	var result SomeThing
 	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(&bts, val)
+	codec.Decode(msg, val)
 
 	expected := SomeThing{A: 5, B: 6}
 
 	assert.Equal(t, expected, result)
-	assert.Equal(t, []byte{}, bts)
 }
 
 func BenchmarkDecodeNamedTuple(b *testing.B) {
@@ -106,11 +106,11 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 		{index: []int{1}, codec: &Int32{}},
 	}}
 
-	var buf []byte
+	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf = data
-		codec.Decode(&buf, val)
+		msg = buff.NewMessage(data)
+		codec.Decode(msg, val)
 	}
 }
 
@@ -120,13 +120,17 @@ func TestEncodeNamedTuple(t *testing.T) {
 		{name: "b", codec: &Int32{}},
 	}}
 
-	bts := []byte{}
-	codec.Encode(&bts, []interface{}{map[string]interface{}{
+	bts := buff.NewWriter(nil)
+	bts.BeginMessage(0xff)
+	codec.Encode(bts, []interface{}{map[string]interface{}{
 		"a": int32(5),
 		"b": int32(6),
 	}})
+	bts.EndMessage()
 
 	expected := []byte{
+		0xff,          // message type
+		0, 0, 0, 0x24, // message length
 		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -139,5 +143,5 @@ func TestEncodeNamedTuple(t *testing.T) {
 		0, 0, 0, 6,
 	}
 
-	assert.Equal(t, expected, bts)
+	assert.Equal(t, expected, *bts.Unwrap())
 }

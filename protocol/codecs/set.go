@@ -20,16 +20,16 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popSetCodec(
-	bts *[]byte,
+	msg *buff.Message,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	n := protocol.PopUint16(bts)
+	n := msg.PopUint16()
 	// todo type value
 	return &Set{id: id, child: codecs[n]}
 }
@@ -61,30 +61,31 @@ func (c *Set) Type() reflect.Type {
 }
 
 // Decode a set
-func (c *Set) Decode(bts *[]byte, out reflect.Value) {
-	buf := protocol.PopBytes(bts)
+func (c *Set) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
 
-	dimCount := protocol.PopUint32(&buf) // number of dimensions, either 0 or 1
+	dimCount := msg.PopUint32() // number of dimensions, either 0 or 1
 	if dimCount == 0 {
+		msg.Discard(8) // skip 2 reserved fields
 		return
 	}
 
-	protocol.PopUint32(&buf) // reserved
-	protocol.PopUint32(&buf) // reserved
+	msg.PopUint32() // reserved
+	msg.PopUint32() // reserved
 
-	upper := int32(protocol.PopUint32(&buf))
-	lower := int32(protocol.PopUint32(&buf))
+	upper := int32(msg.PopUint32())
+	lower := int32(msg.PopUint32())
 	n := int(upper - lower + 1)
 	tmp := reflect.MakeSlice(c.t, n, n)
 
 	for i := 0; i < n; i++ {
-		c.child.Decode(&buf, tmp.Index(i))
+		c.child.Decode(msg, tmp.Index(i))
 	}
 
 	out.Set(tmp)
 }
 
 // Encode a set
-func (c *Set) Encode(bts *[]byte, val interface{}) {
+func (c *Set) Encode(buf *buff.Writer, val interface{}) {
 	panic("not implemented")
 }
