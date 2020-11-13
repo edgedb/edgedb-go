@@ -179,7 +179,8 @@ func (c *Str) Type() reflect.Type {
 
 // Decode a string.
 func (c *Str) Decode(msg *buff.Message, out reflect.Value) {
-	out.SetString(msg.PopString())
+	p := (*string)(unsafe.Pointer(out.UnsafeAddr()))
+	*p = msg.PopString()
 }
 
 // Encode a string.
