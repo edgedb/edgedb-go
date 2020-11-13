@@ -20,11 +20,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDecodeArray(t *testing.T) {
-	bts := []byte{
+	buf := buff.NewMessage([]byte{
 		0, 0, 0, 56, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
@@ -40,7 +41,7 @@ func TestDecodeArray(t *testing.T) {
 		// element 2
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
-	}
+	})
 
 	codec := &Array{
 		child: &Int64{},
@@ -49,23 +50,27 @@ func TestDecodeArray(t *testing.T) {
 
 	var result []int64
 	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(&bts, val)
+	codec.Decode(buf, val)
 
 	expected := []int64{3, 5, 8}
 
 	assert.Equal(t, expected, result)
-	assert.Equal(t, []byte{}, bts)
 }
 
 func TestEncodeArray(t *testing.T) {
-	bts := []byte{}
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(0xff)
+
 	codec := &Array{
 		child: &Int64{},
 		t:     nil,
 	}
-	codec.Encode(&bts, []interface{}{int64(3), int64(5), int64(8)})
+	codec.Encode(buf, []interface{}{int64(3), int64(5), int64(8)})
+	buf.EndMessage()
 
 	expected := []byte{
+		0xff,          // message type
+		0, 0, 0, 0x40, // message length
 		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
@@ -83,5 +88,5 @@ func TestEncodeArray(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	}
 
-	assert.Equal(t, expected, bts)
+	assert.Equal(t, expected, *buf.Unwrap())
 }

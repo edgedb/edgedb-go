@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,7 @@ func TestDecodeObject(t *testing.T) {
 		{index: []int{2}, codec: &Int64{}},
 	}}
 
-	bts := []byte{
+	msg := buff.NewMessage([]byte{
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
@@ -67,7 +68,7 @@ func TestDecodeObject(t *testing.T) {
 		// field 2
 		0, 0, 0, 0, // reserved
 		0xff, 0xff, 0xff, 0xff, // data length (-1)
-	}
+	})
 
 	type SomeThing struct {
 		A string
@@ -77,11 +78,10 @@ func TestDecodeObject(t *testing.T) {
 
 	var result SomeThing
 	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(&bts, val)
+	codec.Decode(msg, val)
 
 	expected := SomeThing{A: "four", B: 4, C: 0}
 	assert.Equal(t, expected, result)
-	assert.Equal(t, []byte{}, bts)
 }
 
 func BenchmarkDecodeObject(b *testing.B) {
@@ -115,10 +115,10 @@ func BenchmarkDecodeObject(b *testing.B) {
 		{index: []int{2}, codec: &Int64{}},
 	}}
 
-	var buf []byte
+	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf = data
-		codec.Decode(&buf, val) // nolint
+		msg = buff.NewMessage(data)
+		codec.Decode(msg, val)
 	}
 }

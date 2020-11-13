@@ -20,12 +20,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDecodeTuple(t *testing.T) {
-	bts := []byte{
+	buf := buff.NewMessage([]byte{
 		0, 0, 0, 32, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -34,9 +35,9 @@ func TestDecodeTuple(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 2,
 		// element 1
 		0, 0, 0, 0, // reserved
-		0, 0, 0, 8, // data length
+		0, 0, 0, 4, // data length
 		0, 0, 0, 3,
-	}
+	})
 
 	codec := &Tuple{fields: []Codec{
 		&Int64{t: reflect.TypeOf(int64(0))},
@@ -45,32 +46,39 @@ func TestDecodeTuple(t *testing.T) {
 
 	var result []interface{}
 	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(&bts, val)
+	codec.Decode(buf, val)
 
 	expected := []interface{}{int64(2), int32(3)}
 	assert.Equal(t, expected, result)
-	assert.Equal(t, []byte{}, bts)
 }
 
 func TestEncodeNullTuple(t *testing.T) {
-	bts := []byte{}
-	(&Tuple{}).Encode(&bts, []interface{}{})
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(0xff)
+	(&Tuple{}).Encode(buf, []interface{}{})
+	buf.EndMessage()
 
 	expected := []byte{
+		0xff,         // message type
+		0, 0, 0, 0xc, // message length
 		0, 0, 0, 4, // data length
 		0, 0, 0, 0, // number of elements
 	}
 
-	assert.Equal(t, expected, bts)
+	assert.Equal(t, expected, *buf.Unwrap())
 }
 
 func TestEncodeTuple(t *testing.T) {
-	bts := []byte{}
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(0xff)
 
 	codec := &Tuple{fields: []Codec{&Int64{}, &Int64{}}}
-	codec.Encode(&bts, []interface{}{int64(2), int64(3)})
+	codec.Encode(buf, []interface{}{int64(2), int64(3)})
+	buf.EndMessage()
 
 	expected := []byte{
+		0xff,          // message type
+		0, 0, 0, 0x2c, // message length
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -83,19 +91,19 @@ func TestEncodeTuple(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 3,
 	}
 
-	assert.Equal(t, expected, bts)
+	assert.Equal(t, expected, *buf.Unwrap())
 }
 
 func BenchmarkEncodeTuple(b *testing.B) {
 	codec := Tuple{fields: []Codec{&UUID{}}}
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
 	ids := []interface{}{id}
-	data := [2000]byte{}
+	buf := buff.NewWriter(nil)
 
-	var buf []byte
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf = data[:0]
-		codec.Encode(&buf, ids) // nolint
+		buf.Reset()
+		buf.BeginMessage(0)
+		codec.Encode(buf, ids)
 	}
 }

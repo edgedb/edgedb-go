@@ -21,21 +21,21 @@ import (
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/marshal"
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popNamedTupleCodec(
-	bts *[]byte,
+	msg *buff.Message,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []*objectField{}
 
-	elmCount := int(protocol.PopUint16(bts))
+	elmCount := int(msg.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		name := protocol.PopString(bts)
-		index := protocol.PopUint16(bts)
+		name := msg.PopString()
+		index := msg.PopUint16()
 
 		if name == "__tid__" {
 			continue
@@ -94,40 +94,40 @@ func (c *NamedTuple) Type() reflect.Type {
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(bts *[]byte, out reflect.Value) {
-	buf := protocol.PopBytes(bts)
-	elmCount := int(int32(protocol.PopUint32(&buf)))
+func (c *NamedTuple) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	elmCount := int(int32(msg.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
-		protocol.PopUint32(&buf) // reserved
+		msg.PopUint32() // reserved
 		field := c.fields[i]
 		val := out.FieldByIndex(field.index)
-		field.codec.Decode(&buf, val)
+		field.codec.Decode(msg, val)
 	}
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(bts *[]byte, val interface{}) {
-	// don't know the data length yet
-	// put everything in a new slice to get the length
-	tmp := []byte{}
-
+func (c *NamedTuple) Encode(buf *buff.Writer, val interface{}) {
 	elmCount := len(c.fields)
-	protocol.PushUint32(&tmp, uint32(elmCount))
+
+	buf.BeginBytes()
+	buf.PushUint32(uint32(elmCount))
 
 	args := val.([]interface{})
 	if len(args) != 1 {
-		panic(fmt.Sprintf("wrong number of arguments: %v", args))
+		panic(fmt.Sprintf(
+			"wrong number of arguments, expected 1 got: %v",
+			args,
+		))
 	}
 
 	in := args[0].(map[string]interface{})
 
 	for i := 0; i < elmCount; i++ {
-		protocol.PushUint32(&tmp, 0) // reserved
+		buf.PushUint32(0) // reserved
 		field := c.fields[i]
-		field.codec.Encode(&tmp, in[field.name])
+		field.codec.Encode(buf, in[field.name])
 	}
 
-	protocol.PushUint32(bts, uint32(len(tmp)))
-	*bts = append(*bts, tmp...)
+	buf.EndBytes()
 }

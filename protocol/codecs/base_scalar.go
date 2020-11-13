@@ -25,7 +25,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
@@ -137,18 +137,15 @@ func (c *UUID) Type() reflect.Type {
 }
 
 // Decode a UUID.
-func (c *UUID) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
+func (c *UUID) Decode(msg *buff.Message, out reflect.Value) {
 	p := (*types.UUID)(unsafe.Pointer(out.UnsafeAddr()))
-	copy((*p)[:], (*bts)[:16])
-	*bts = (*bts)[16:]
+	copy((*p)[:], msg.PopBytes())
 }
 
 // Encode a UUID.
-func (c *UUID) Encode(bts *[]byte, val interface{}) {
+func (c *UUID) Encode(buf *buff.Writer, val interface{}) {
 	tmp := val.(types.UUID)
-	*bts = append(*bts, 0, 0, 0, 16)
-	*bts = append(*bts, tmp[:]...)
+	buf.PushBytes(tmp[:])
 }
 
 // Str is an EdgeDB string type codec.
@@ -176,13 +173,13 @@ func (c *Str) Type() reflect.Type {
 }
 
 // Decode a string.
-func (c *Str) Decode(bts *[]byte, out reflect.Value) {
-	out.SetString(protocol.PopString(bts))
+func (c *Str) Decode(msg *buff.Message, out reflect.Value) {
+	out.SetString(msg.PopString())
 }
 
 // Encode a string.
-func (c *Str) Encode(bts *[]byte, val interface{}) {
-	protocol.PushString(bts, val.(string))
+func (c *Str) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushString(val.(string))
 }
 
 // Bytes is an EdgeDB bytes type codec.
@@ -210,16 +207,17 @@ func (c *Bytes) Type() reflect.Type {
 }
 
 // Decode []byte.
-func (c *Bytes) Decode(bts *[]byte, out reflect.Value) {
-	b := protocol.PopBytes(bts)
+func (c *Bytes) Decode(msg *buff.Message, out reflect.Value) {
+	b := msg.PopBytes()
+	// todo use out's memory if it has enough allocated :thinking:
 	o := make([]byte, len(b))
 	copy(o, b)
 	out.SetBytes(o)
 }
 
 // Encode []byte.
-func (c *Bytes) Encode(bts *[]byte, val interface{}) {
-	protocol.PushBytes(bts, val.([]byte))
+func (c *Bytes) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushBytes(val.([]byte))
 }
 
 // Int16 is an EdgeDB int64 type codec.
@@ -247,15 +245,15 @@ func (c *Int16) Type() reflect.Type {
 }
 
 // Decode an int16.
-func (c *Int16) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	*(*uint16)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint16(bts)
+func (c *Int16) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	*(*uint16)(unsafe.Pointer(out.UnsafeAddr())) = msg.PopUint16()
 }
 
 // Encode an int16.
-func (c *Int16) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, 2) // data length
-	protocol.PushUint16(bts, uint16(val.(int16)))
+func (c *Int16) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushUint32(2) // data length
+	buf.PushUint16(uint16(val.(int16)))
 }
 
 // Int32 is an EdgeDB int32 type codec.
@@ -283,15 +281,15 @@ func (c *Int32) Type() reflect.Type {
 }
 
 // Decode an int32.
-func (c *Int32) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	*(*uint32)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint32(bts)
+func (c *Int32) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	*(*uint32)(unsafe.Pointer(out.UnsafeAddr())) = msg.PopUint32()
 }
 
 // Encode an int32.
-func (c *Int32) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, 4) // data length
-	protocol.PushUint32(bts, uint32(val.(int32)))
+func (c *Int32) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushUint32(4) // data length
+	buf.PushUint32(uint32(val.(int32)))
 }
 
 // Int64 is an EdgeDB int64 typep codec.
@@ -319,15 +317,15 @@ func (c *Int64) Type() reflect.Type {
 }
 
 // Decode an int64.
-func (c *Int64) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	*(*uint64)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint64(bts)
+func (c *Int64) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	*(*uint64)(unsafe.Pointer(out.UnsafeAddr())) = msg.PopUint64()
 }
 
 // Encode an int64.
-func (c *Int64) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, 8) // data length
-	protocol.PushUint64(bts, uint64(val.(int64)))
+func (c *Int64) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushUint32(8) // data length
+	buf.PushUint64(uint64(val.(int64)))
 }
 
 // Float32 is an EdgeDB float32 type codec.
@@ -355,15 +353,15 @@ func (c *Float32) Type() reflect.Type {
 }
 
 // Decode a float32.
-func (c *Float32) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	*(*uint32)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint32(bts)
+func (c *Float32) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	*(*uint32)(unsafe.Pointer(out.UnsafeAddr())) = msg.PopUint32()
 }
 
 // Encode a float32.
-func (c *Float32) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, 4)
-	protocol.PushUint32(bts, math.Float32bits(val.(float32)))
+func (c *Float32) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushUint32(4)
+	buf.PushUint32(math.Float32bits(val.(float32)))
 }
 
 // Float64 is an EdgeDB float64 type codec.
@@ -391,15 +389,15 @@ func (c *Float64) Type() reflect.Type {
 }
 
 // Decode a float64.
-func (c *Float64) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	*(*uint64)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint64(bts)
+func (c *Float64) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	*(*uint64)(unsafe.Pointer(out.UnsafeAddr())) = msg.PopUint64()
 }
 
 // Encode a float64.
-func (c *Float64) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, 8)
-	protocol.PushUint64(bts, math.Float64bits(val.(float64)))
+func (c *Float64) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushUint32(8)
+	buf.PushUint64(math.Float64bits(val.(float64)))
 }
 
 // Bool is an EdgeDB bool type codec.
@@ -427,14 +425,14 @@ func (c *Bool) Type() reflect.Type {
 }
 
 // Decode a bool.
-func (c *Bool) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	*(*uint8)(unsafe.Pointer(out.UnsafeAddr())) = protocol.PopUint8(bts)
+func (c *Bool) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	*(*uint8)(unsafe.Pointer(out.UnsafeAddr())) = msg.PopUint8()
 }
 
 // Encode a bool.
-func (c *Bool) Encode(bts *[]byte, val interface{}) {
-	protocol.PushUint32(bts, 1) // data length
+func (c *Bool) Encode(buf *buff.Writer, val interface{}) {
+	buf.PushUint32(1) // data length
 
 	// convert bool to uint8
 	var out uint8 = 0
@@ -442,7 +440,7 @@ func (c *Bool) Encode(bts *[]byte, val interface{}) {
 		out = 1
 	}
 
-	protocol.PushUint8(bts, out)
+	buf.PushUint8(out)
 }
 
 // DateTime is an EdgeDB datetime type codec.
@@ -470,9 +468,9 @@ func (c *DateTime) Type() reflect.Type {
 }
 
 // Decode a datetime.
-func (c *DateTime) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	val := int64(protocol.PopUint64(bts))
+func (c *DateTime) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	val := int64(msg.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
 	t := time.Unix(946_684_800+seconds, 1_000*microseconds).UTC()
@@ -480,13 +478,13 @@ func (c *DateTime) Decode(bts *[]byte, out reflect.Value) {
 }
 
 // Encode a datetime.
-func (c *DateTime) Encode(bts *[]byte, val interface{}) {
+func (c *DateTime) Encode(buf *buff.Writer, val interface{}) {
 	date := val.(time.Time)
 	seconds := date.Unix() - 946_684_800
 	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
 	microseconds := seconds*1_000_000 + nanoseconds/1_000
-	protocol.PushUint32(bts, 8) // data length
-	protocol.PushUint64(bts, uint64(microseconds))
+	buf.PushUint32(8) // data length
+	buf.PushUint64(uint64(microseconds))
 }
 
 // Duration is an EdgeDB duration codec.
@@ -514,23 +512,26 @@ func (c *Duration) Type() reflect.Type {
 }
 
 // Decode a duration.
-func (c *Duration) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	microseconds := int64(protocol.PopUint64(bts))
-	protocol.PopUint32(bts) // reserved
-	protocol.PopUint32(bts) // reserved
+func (c *Duration) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	microseconds := int64(msg.PopUint64())
+	msg.PopUint32() // reserved
+	msg.PopUint32() // reserved
 	d := time.Duration(microseconds * 1_000)
 	out.Set(reflect.ValueOf(d))
 }
 
 // Encode a duration.
-func (c *Duration) Encode(bts *[]byte, val interface{}) {
+func (c *Duration) Encode(buf *buff.Writer, val interface{}) {
 	duration := val.(time.Duration)
-	protocol.PushUint32(bts, 16) // data length
-	protocol.PushUint64(bts, uint64(duration/1_000))
-	protocol.PushUint32(bts, 0) // reserved
-	protocol.PushUint32(bts, 0) // reserved
+	buf.PushUint32(16) // data length
+	buf.PushUint64(uint64(duration / 1_000))
+	buf.PushUint32(0) // reserved
+	buf.PushUint32(0) // reserved
 }
+
+// todo what type should JSON be decoded to :thinking:
+// maybe don't encode/decode json? let the user wrangle bytes?
 
 // JSON is an EdgeDB json type codec.
 type JSON struct {
@@ -557,27 +558,21 @@ func (c *JSON) Type() reflect.Type {
 }
 
 // Decode json.
-func (c *JSON) Decode(bts *[]byte, out reflect.Value) {
-	n := protocol.PopUint32(bts) // data length
-	protocol.PopUint8(bts)       // json format, always 1
-
-	var val interface{}
-	err := json.Unmarshal((*bts)[:n-1], &val)
-	if err != nil {
-		panic(err)
-	}
-
-	*bts = (*bts)[n-1:]
-	out.Set(reflect.ValueOf(val))
+func (c *JSON) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopBytes()
 }
 
 // Encode json.
-func (c *JSON) Encode(bts *[]byte, val interface{}) {
-	buf, err := json.Marshal(val)
+func (c *JSON) Encode(buf *buff.Writer, val interface{}) {
+	bts, err := json.Marshal(val)
 	if err != nil {
 		panic(err)
 	}
-	protocol.PushUint32(bts, uint32(1+len(buf))) // data length
-	protocol.PushUint8(bts, 1)                   // json format, always 1
-	*bts = append(*bts, buf...)
+
+	// prepend json format, always 1
+	bts = append(bts, 0)
+	copy(bts[1:], bts)
+	bts[0] = 1
+
+	buf.PushBytes(bts)
 }

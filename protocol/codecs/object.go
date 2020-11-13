@@ -21,22 +21,22 @@ import (
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/marshal"
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popObjectCodec(
-	bts *[]byte,
+	msg *buff.Message,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []*objectField{}
 
-	elmCount := int(protocol.PopUint16(bts))
+	elmCount := int(msg.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		flags := protocol.PopUint8(bts)
-		name := protocol.PopString(bts)
-		index := protocol.PopUint16(bts)
+		flags := msg.PopUint8()
+		name := msg.PopString()
+		index := msg.PopUint16()
 
 		field := &objectField{
 			isImplicit:     flags&0b1 != 0,
@@ -104,29 +104,30 @@ func (c *Object) Type() reflect.Type {
 }
 
 // Decode an object
-func (c *Object) Decode(bts *[]byte, out reflect.Value) {
-	protocol.PopUint32(bts) // data length
-	protocol.PopUint32(bts) // element count
+func (c *Object) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+	msg.PopUint32() // element count
 
 	for _, field := range c.fields {
-		protocol.PopUint32(bts) // reserved
+		msg.PopUint32() // reserved
 
-		switch int32(protocol.PeekUint32(bts)) {
+		switch int32(msg.PeekUint32()) {
 		case -1:
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			protocol.PopUint32(bts)
+			msg.PopUint32()
 		default:
 			if field.name == "__tid__" {
-				*bts = (*bts)[20:]
-			} else {
-				field.codec.Decode(bts, out.FieldByIndex(field.index))
+				msg.PopBytes()
+				break
 			}
+
+			field.codec.Decode(msg, out.FieldByIndex(field.index))
 		}
 	}
 }
 
 // Encode an object
-func (c *Object) Encode(bts *[]byte, val interface{}) {
+func (c *Object) Encode(buf *buff.Writer, val interface{}) {
 	panic("objects can't be query parameters")
 }

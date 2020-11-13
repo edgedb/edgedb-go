@@ -20,25 +20,23 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/protocol/message"
 )
 
-func (c *Client) fallThrough(mType uint8, msg *[]byte) error {
-	switch mType {
+func (c *Client) fallThrough(msg *buff.Message) error {
+	switch msg.Type {
 	case message.ParameterStatus:
-		protocol.PopUint32(msg) // message length
-		name := protocol.PopString(msg)
-		value := protocol.PopString(msg)
+		name := msg.PopString()
+		value := msg.PopString()
 		c.serverSettings[name] = value
 	case message.LogMessage:
-		protocol.PopUint32(msg) // message length
-		severity := string([]byte{protocol.PopUint8(msg)})
-		code := protocol.PopUint32(msg)
-		message := protocol.PopString(msg)
+		severity := string([]byte{msg.PopUint8()})
+		code := msg.PopUint32()
+		message := msg.PopString()
 		log.Println("SERVER MESSAGE", severity, code, message)
 	default:
-		return fmt.Errorf("unexpected message type: 0x%x", mType)
+		return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
 	}
 
 	return nil

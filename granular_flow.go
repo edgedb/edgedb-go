@@ -22,8 +22,8 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/protocol"
 	"github.com/edgedb/edgedb-go/protocol/aspect"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/protocol/codecs"
 	"github.com/edgedb/edgedb-go/protocol/format"
 	"github.com/edgedb/edgedb-go/protocol/message"
@@ -48,8 +48,8 @@ func (c *Client) granularFlow(
 	in, ok := c.inCodecCache.Get(ids.in)
 	if !ok {
 		if desc, OK := descCache.Get(ids.in); OK {
-			d := desc.([]byte)
-			in, err = codecs.BuildCodec(&d)
+			buf := buff.NewMessage(desc.([]byte))
+			in, err = codecs.BuildCodec(buf)
 			if err != nil {
 				return err
 			}
@@ -61,8 +61,8 @@ func (c *Client) granularFlow(
 	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: tp})
 	if !ok {
 		if desc, ok := descCache.Get(ids.out); ok {
-			d := desc.([]byte)
-			cOut, err = codecs.BuildTypedCodec(&d, tp)
+			buf := buff.NewMessage(desc.([]byte))
+			cOut, err = codecs.BuildTypedCodec(buf, tp)
 			if err != nil {
 				return err
 			}
@@ -96,7 +96,7 @@ func (c *Client) pesimistic(
 	descCache.Put(ids.out, descs.out)
 
 	var cdcs codecPair
-	cdcs.in, err = codecs.BuildCodec(&descs.in)
+	cdcs.in, err = codecs.BuildCodec(buff.NewMessage(descs.in))
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (c *Client) pesimistic(
 	if q.fmt == format.JSON {
 		cdcs.out = codecs.JSONBytes
 	} else {
-		cdcs.out, err = codecs.BuildTypedCodec(&descs.out, tp)
+		cdcs.out, err = codecs.BuildTypedCodec(buff.NewMessage(descs.out), tp)
 		if err != nil {
 			return err
 		}
@@ -120,43 +120,47 @@ func prepare(
 	conn net.Conn,
 	q query,
 ) (ids idPair, err error) {
-	buf := []byte{message.Prepare, 0, 0, 0, 0}
-	protocol.PushUint16(&buf, 0) // no headers
-	protocol.PushUint8(&buf, q.fmt)
-	protocol.PushUint8(&buf, q.expCard)
-	protocol.PushBytes(&buf, []byte{}) // no statement name
-	protocol.PushString(&buf, q.cmd)
-	protocol.PutMsgLength(buf)
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(message.Prepare)
+	buf.PushUint16(0) // no headers
+	buf.PushUint8(q.fmt)
+	buf.PushUint8(q.expCard)
+	buf.PushBytes([]byte{}) // no statement name
+	buf.PushString(q.cmd)
+	buf.EndMessage()
 
-	buf = append(buf, message.Sync, 0, 0, 0, 4)
+	buf.BeginMessage(message.Sync)
+	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return ids, err
 	}
 
-	for len(buf) > 4 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.PrepareComplete:
-			protocol.PopUint32(&msg) // message length
-			protocol.PopUint16(&msg) // number of headers, assume 0
+			msg.PopUint16() // number of headers, assume 0
 
 			// todo assert cardinality matches query
-			protocol.PopUint8(&msg) // cardianlity
+			msg.PopUint8() // cardianlity
 
 			ids = idPair{
-				in:  protocol.PopUUID(&msg),
-				out: protocol.PopUUID(&msg),
+				in:  msg.PopUUID(),
+				out: msg.PopUUID(),
 			}
 		case message.ReadyForCommand:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return ids, decodeError(&msg)
+			return ids, decodeError(msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			return ids, fmt.Errorf("unexpected message type: 0x%x", msg.Type)
 		}
+
+		msg.Finish()
 	}
 
 	return ids, nil
@@ -166,42 +170,46 @@ func (c *Client) describe(
 	ctx context.Context,
 	conn net.Conn,
 ) (descs descPair, err error) {
-	buf := []byte{message.DescribeStatement, 0, 0, 0, 0}
-	protocol.PushUint16(&buf, 0) // no headers
-	protocol.PushUint8(&buf, aspect.DataDescription)
-	protocol.PushUint32(&buf, 0) // no statement name
-	protocol.PutMsgLength(buf)
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(message.DescribeStatement)
+	buf.PushUint16(0) // no headers
+	buf.PushUint8(aspect.DataDescription)
+	buf.PushUint32(0) // no statement name
+	buf.EndMessage()
 
-	buf = append(buf, message.Sync, 0, 0, 0, 4)
+	buf.BeginMessage(message.Sync)
+	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return descs, err
 	}
 
-	for len(buf) > 4 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.CommandDataDescription:
-			protocol.PopUint32(&msg) // message length
-			protocol.PopUint16(&msg) // num headers is always 0
-			protocol.PopUint8(&msg)  // cardianlity
+			msg.PopUint16() // num headers is always 0
+			msg.PopUint8()  // cardianlity
 
 			// input descriptor
-			protocol.PopUUID(&msg)
-			descs.in = append(descs.in, protocol.PopBytes(&msg)...)
+			msg.PopUUID()
+			descs.in = msg.PopBytes()
 
 			// output descriptor
-			protocol.PopUUID(&msg)
-			descs.out = append(descs.out, protocol.PopBytes(&msg)...)
+			msg.PopUUID()
+			descs.out = msg.PopBytes()
 		case message.ReadyForCommand:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return descs, decodeError(&msg)
+			return descs, decodeError(msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			return descs, fmt.Errorf("unexpected message type: 0x%x", msg.Type)
 		}
+
+		msg.Finish()
 	}
 
 	return descs, nil
@@ -215,56 +223,58 @@ func (c *Client) execute(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	buf := []byte{message.Execute, 0, 0, 0, 0}
-	protocol.PushUint16(&buf, 0)       // no headers
-	protocol.PushBytes(&buf, []byte{}) // no statement name
-	cdcs.in.Encode(&buf, q.args)
-	protocol.PutMsgLength(buf)
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(message.Execute)
+	buf.PushUint16(0)       // no headers
+	buf.PushBytes([]byte{}) // no statement name
+	cdcs.in.Encode(buf, q.args)
+	buf.EndMessage()
 
-	buf = append(buf, message.Sync, 0, 0, 0, 4)
+	buf.BeginMessage(message.Sync)
+	buf.EndMessage()
 
-	err := writeAndRead(ctx, conn, &buf)
+	err := writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
-	o := out
-	if !q.flat() {
-		out.SetLen(0)
-	}
-
+	tmp := out
 	err = ErrorZeroResults
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.Data:
-			protocol.PopUint32(&msg) // message length
-			protocol.PopUint16(&msg) // number of data elements (always 1)
+			msg.PopUint16() // number of data elements (always 1)
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(&msg, val)
-				o = reflect.Append(o, val)
+				cdcs.out.Decode(msg, val)
+				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(&msg, out)
+				cdcs.out.Decode(msg, out)
 			}
+
 			err = nil
 		case message.CommandComplete:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopBytes()  // command status
 		case message.ReadyForCommand:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(&msg)
+			return decodeError(msg)
 		default:
-			e := c.fallThrough(mType, &msg)
+			e := c.fallThrough(msg)
 			if e != nil {
 				return e
 			}
 		}
+		msg.Finish()
 	}
 
 	if !q.flat() {
-		out.Set(o)
+		out.Set(tmp)
 	}
 
 	return err
@@ -278,70 +288,61 @@ func (c *Client) optimistic(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	inID := cdcs.in.ID()
-	outID := cdcs.out.ID()
+	buf := buff.NewWriter(c.buffer[:0])
+	buf.BeginMessage(message.OptimisticExecute)
+	buf.PushUint16(0) // no headers
+	buf.PushUint8(q.fmt)
+	buf.PushUint8(q.expCard)
+	buf.PushString(q.cmd)
+	buf.PushUUID(cdcs.in.ID())
+	buf.PushUUID(cdcs.out.ID())
+	cdcs.in.Encode(buf, q.args)
+	buf.EndMessage()
 
-	buf := c.buffer[:0]
-	buf = append(buf,
-		message.OptimisticExecute,
-		0, 0, 0, 0, // message length slot, to be filled in later
-		0, 0, // no headers
-		q.fmt,
-		q.expCard,
-	)
+	buf.BeginMessage(message.Sync)
+	buf.EndMessage()
 
-	protocol.PushString(&buf, q.cmd)
-	buf = append(buf, inID[:]...)
-	buf = append(buf, outID[:]...)
-	cdcs.in.Encode(&buf, q.args)
-	protocol.PutMsgLength(buf)
-
-	buf = append(buf, message.Sync, 0, 0, 0, 4)
-
-	err := writeAndRead(ctx, conn, &buf)
+	err := writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
-	o := out
-	if !q.flat() {
-		out.SetLen(0)
-	}
-
+	tmp := out
 	err = ErrorZeroResults
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.Data:
-			// skip the following fields
-			// message length
-			// number of data elements (always 1)
-			msg = msg[6:]
+			msg.PopUint16() // number of data elements (always 1)
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(&msg, val)
-				o = reflect.Append(o, val)
+				cdcs.out.Decode(msg, val)
+				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(&msg, out)
+				cdcs.out.Decode(msg, out)
 			}
 			err = nil
 		case message.CommandComplete:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopBytes()  // command status
 		case message.ReadyForCommand:
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(&msg)
+			return decodeError(msg)
 		default:
-			e := c.fallThrough(mType, &msg)
+			e := c.fallThrough(msg)
 			if e != nil {
 				return e
 			}
 		}
+		msg.Finish()
 	}
 
 	if !q.flat() {
-		out.Set(o)
+		out.Set(tmp)
 	}
 
 	return err

@@ -19,25 +19,24 @@ package codecs
 // todo improve tuple support  :thinking:
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popTupleCodec(
-	bts *[]byte,
+	msg *buff.Message,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []Codec{}
 
-	elmCount := int(protocol.PopUint16(bts))
+	elmCount := int(msg.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		index := protocol.PopUint16(bts)
+		index := msg.PopUint16()
 		fields = append(fields, codecs[index])
 	}
 
@@ -84,16 +83,18 @@ func (c *Tuple) Type() reflect.Type {
 }
 
 // Decode a tuple.
-func (c *Tuple) Decode(bts *[]byte, out reflect.Value) {
-	buf := protocol.PopBytes(bts)
-	n := int(int32(protocol.PopUint32(&buf)))
+func (c *Tuple) Decode(msg *buff.Message, out reflect.Value) {
+	msg.PopUint32() // data length
+
+	n := int(int32(msg.PopUint32()))
+	// todo reuse out's memory if it has enough allocated :thinking:
 	tmp := reflect.MakeSlice(interfaceSliceType, 0, n)
 
 	for i := 0; i < n; i++ {
-		protocol.PopUint32(&buf) // reserved
+		msg.PopUint32() // reserved
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.Decode(&buf, val)
+		field.Decode(msg, val)
 		tmp = reflect.Append(tmp, val)
 	}
 
@@ -101,21 +102,17 @@ func (c *Tuple) Decode(bts *[]byte, out reflect.Value) {
 }
 
 // Encode a tuple.
-func (c *Tuple) Encode(bts *[]byte, val interface{}) {
-	p := len(*bts)
-
-	// data length slot to be filled in at end
-	*bts = append(*bts, 0, 0, 0, 0)
+func (c *Tuple) Encode(buf *buff.Writer, val interface{}) {
+	buf.BeginBytes()
 
 	elmCount := len(c.fields)
-	protocol.PushUint32(bts, uint32(elmCount))
+	buf.PushUint32(uint32(elmCount))
 
 	in := val.([]interface{})
 	for i := 0; i < elmCount; i++ {
-		*bts = append(*bts, 0, 0, 0, 0) // reserved
-		c.fields[i].Encode(bts, in[i])
+		buf.PushUint32(0) // reserved
+		c.fields[i].Encode(buf, in[i])
 	}
 
-	n := len(*bts)
-	binary.BigEndian.PutUint32((*bts)[p:], uint32(n-p-4))
+	buf.EndBytes()
 }

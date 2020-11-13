@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
@@ -41,27 +41,27 @@ const (
 // Codec interface
 type Codec interface {
 	// todo update name
-	Decode(*[]byte, reflect.Value)
-	Encode(*[]byte, interface{})
+	Decode(*buff.Message, reflect.Value)
+	Encode(*buff.Writer, interface{})
 	ID() types.UUID
 	Type() reflect.Type
 	setType(reflect.Type) error
 }
 
 // BuildCodec a decoder
-func BuildCodec(bts *[]byte) (Codec, error) {
+func BuildCodec(msg *buff.Message) (Codec, error) {
 	codecs := []Codec{}
 
-	for len(*bts) > 0 {
-		dType := protocol.PopUint8(bts)
-		id := protocol.PopUUID(bts)
+	for msg.Len() > 0 {
+		dType := msg.PopUint8()
+		id := msg.PopUUID()
 		var codec Codec
 
 		switch dType {
 		case setType:
-			codec = popSetCodec(bts, id, codecs)
+			codec = popSetCodec(msg, id, codecs)
 		case objectType:
-			codec = popObjectCodec(bts, id, codecs)
+			codec = popObjectCodec(msg, id, codecs)
 		case baseScalarType:
 			var err error
 			codec, err = baseScalarCodec(id)
@@ -72,18 +72,18 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 			// todo implement scalar type descriptor
 			return nil, errors.New("scalar type descriptor not implemented")
 		case tupleType:
-			codec = popTupleCodec(bts, id, codecs)
+			codec = popTupleCodec(msg, id, codecs)
 		case namedTupleType:
-			codec = popNamedTupleCodec(bts, id, codecs)
+			codec = popNamedTupleCodec(msg, id, codecs)
 		case arrayType:
-			codec = popArrayCodec(bts, id, codecs)
+			codec = popArrayCodec(msg, id, codecs)
 		case enumType:
 			// todo implement enum type descriptor
 			return nil, errors.New("enum type descriptor not implemented")
 		default:
 			if 0x80 <= dType && dType <= 0xff {
 				// ignore unknown type annotations
-				protocol.PopBytes(bts)
+				msg.PopBytes()
 				break
 			}
 
@@ -97,8 +97,8 @@ func BuildCodec(bts *[]byte) (Codec, error) {
 }
 
 // BuildTypedCodec builds a codec for decoding into a specific type.
-func BuildTypedCodec(bts *[]byte, t reflect.Type) (Codec, error) {
-	codec, err := BuildCodec(bts)
+func BuildTypedCodec(msg *buff.Message, t reflect.Type) (Codec, error) {
+	codec, err := BuildCodec(msg)
 	if err != nil {
 		return nil, err
 	}

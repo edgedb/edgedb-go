@@ -21,40 +21,39 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/edgedb/edgedb-go/protocol"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/protocol/message"
 	"github.com/xdg/scram"
 )
 
 func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
-	buf := []byte{message.ClientHandshake, 0, 0, 0, 0}
-	protocol.PushUint16(&buf, 0) // major version
-	protocol.PushUint16(&buf, 8) // minor version
-	protocol.PushUint16(&buf, 2) // number of parameters
-	protocol.PushString(&buf, "database")
-	protocol.PushString(&buf, opts.Database)
-	protocol.PushString(&buf, "user")
-	protocol.PushString(&buf, opts.User)
-	protocol.PushUint16(&buf, 0) // no extensions
-	protocol.PutMsgLength(buf)
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(message.ClientHandshake)
+	buf.PushUint16(0) // major version
+	buf.PushUint16(8) // minor version
+	buf.PushUint16(2) // number of parameters
+	buf.PushString("database")
+	buf.PushString(opts.Database)
+	buf.PushString("user")
+	buf.PushString(opts.User)
+	buf.PushUint16(0) // no extensions
+	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.ServerHandshake:
 			// The client _MUST_ close the connection
 			// if the protocol version can't be supported.
 			// https://edgedb.com/docs/internals/protocol/overview
-			protocol.PopUint32(&msg) // message length
-			major := protocol.PopUint16(&msg)
-			minor := protocol.PopUint16(&msg)
+			major := msg.PopUint16()
+			minor := msg.PopUint16()
 
 			if major != 0 || minor != 8 {
 				err = conn.Close()
@@ -70,25 +69,31 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 				return err
 			}
 		case message.ServerKeyData:
+			msg.Discard(32) // key data
 		case message.ReadyForCommand:
-			return nil
-		case message.ErrorResponse:
-			return decodeError(&msg)
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.Authentication:
-			protocol.PopUint32(&msg) // message length
-			authStatus := protocol.PopUint32(&msg)
-
-			if authStatus == 0 {
+			if msg.PopUint32() == 0 { // auth status
 				continue
+			}
+
+			// skip supported SASL methods
+			n := int(msg.PopUint32()) // method count
+			for i := 0; i < n; i++ {
+				msg.PopBytes()
 			}
 
 			err := authenticate(ctx, conn, opts)
 			if err != nil {
 				return err
 			}
+		case message.ErrorResponse:
+			return decodeError(msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
 		}
+		msg.Finish()
 	}
 	return nil
 }
@@ -109,81 +114,81 @@ func authenticate(
 		panic(err)
 	}
 
-	buf := []byte{message.AuthenticationSASLInitialResponse, 0, 0, 0, 0}
-	protocol.PushString(&buf, "SCRAM-SHA-256")
-	protocol.PushString(&buf, scramMsg)
-	protocol.PutMsgLength(buf)
+	buf := buff.NewWriter(nil)
+	buf.BeginMessage(message.AuthenticationSASLInitialResponse)
+	buf.PushString("SCRAM-SHA-256")
+	buf.PushString(scramMsg)
+	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
-	mType := protocol.PopUint8(&buf)
-
-	switch mType {
+	msg := buf.PopMessage()
+	switch msg.Type {
 	case message.Authentication:
-		protocol.PopUint32(&buf) // message length
-		authStatus := protocol.PopUint32(&buf)
+		authStatus := msg.PopUint32()
 		if authStatus != 0xb {
-			panic(fmt.Sprintf(
+			return fmt.Errorf(
 				"unexpected authentication status: 0x%x",
 				authStatus,
-			))
+			)
 		}
 
-		scramRcv := protocol.PopString(&buf)
+		scramRcv := msg.PopString()
 		scramMsg, err = conv.Step(scramRcv)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	case message.ErrorResponse:
-		return decodeError(&buf)
+		return decodeError(msg)
 	default:
-		panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+		return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
 	}
+	msg.Finish()
 
-	buf = []byte{message.AuthenticationSASLResponse, 0, 0, 0, 0}
-	protocol.PushString(&buf, scramMsg)
-	protocol.PutMsgLength(buf)
+	buf.Reset()
+	buf.BeginMessage(message.AuthenticationSASLResponse)
+	buf.PushString(scramMsg)
+	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, &buf)
+	err = writeAndRead(ctx, conn, buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
-	for len(buf) > 0 {
-		msg := protocol.PopMessage(&buf)
-		mType := protocol.PopUint8(&msg)
+	for buf.Next() {
+		msg := buf.PopMessage()
 
-		switch mType {
+		switch msg.Type {
 		case message.Authentication:
-			protocol.PopUint32(&msg) // message length
-			authStatus := protocol.PopUint32(&msg)
-
+			authStatus := msg.PopUint32()
 			switch authStatus {
 			case 0:
-				continue
 			case 0xc:
-				scramRcv := protocol.PopString(&msg)
+				scramRcv := msg.PopString()
 				_, err = conv.Step(scramRcv)
 				if err != nil {
-					panic(err)
+					return err
 				}
 			default:
-				panic(fmt.Sprintf(
+				return fmt.Errorf(
 					"unexpected authentication status: 0x%x",
 					authStatus,
-				))
+				)
 			}
 		case message.ServerKeyData:
+			msg.Discard(32) // key data
 		case message.ReadyForCommand:
-			return nil
+			msg.PopUint16() // header count (assume 0)
+			msg.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(&msg)
+			return decodeError(msg)
 		default:
-			panic(fmt.Sprintf("unexpected message type: 0x%x", mType))
+			return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
 		}
+		msg.Finish()
 	}
 
 	return nil
