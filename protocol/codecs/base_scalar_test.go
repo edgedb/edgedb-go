@@ -47,15 +47,15 @@ func BenchmarkDecodeUUID(b *testing.B) {
 		0, 0, 0, 16, // data length
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	}
+	msg := buff.NewMessage(data)
 
 	var result types.UUID
 	val := reflect.ValueOf(&result).Elem()
 	codec := &UUID{}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
+		msg.Bts = data
 		codec.Decode(msg, val)
 	}
 }
@@ -111,15 +111,15 @@ func BenchmarkDecodeString(b *testing.B) {
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
+	msg := buff.NewMessage(data)
 
 	var result string
 	val := reflect.ValueOf(&result).Elem()
 	codec := &Str{}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
+		msg.Bts = data
 		codec.Decode(msg, val)
 	}
 }
@@ -207,14 +207,15 @@ func BenchmarkDecodeInt16(b *testing.B) {
 		0, 0, 0, 2, // data length
 		1, 2, // int16
 	}
+	msg := buff.NewMessage(data)
+
 	var result int16
 	val := reflect.ValueOf(&result).Elem()
 	codec := &Int16{}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
+		msg.Bts = data
 		codec.Decode(msg, val)
 	}
 }
@@ -249,14 +250,15 @@ func BenchmarkDecodeInt32(b *testing.B) {
 		0, 0, 0, 4, // data length
 		1, 2, 3, 4, // int32
 	}
+	msg := buff.NewMessage(data)
+
 	var result int32
 	val := reflect.ValueOf(&result).Elem()
 	codec := &Int32{}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
+		msg.Bts = data
 		codec.Decode(msg, val)
 	}
 }
@@ -291,14 +293,15 @@ func BenchmarkDecodeInt64(b *testing.B) {
 		0, 0, 0, 8, // data length
 		1, 2, 3, 4, 5, 6, 7, 8, // int64
 	}
+	msg := buff.NewMessage(data)
+
 	var result int64
 	val := reflect.ValueOf(&result).Elem()
 	codec := &Int64{}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
+		msg.Bts = data
 		codec.Decode(msg, val)
 	}
 }
