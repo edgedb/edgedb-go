@@ -138,8 +138,13 @@ func (c *UUID) Type() reflect.Type {
 
 // Decode a UUID.
 func (c *UUID) Decode(msg *buff.Message, out reflect.Value) {
+	if len(msg.Bts) < 20 {
+		panic("buffer overread")
+	}
+
 	p := (*types.UUID)(unsafe.Pointer(out.UnsafeAddr()))
-	copy((*p)[:], msg.PopBytes())
+	copy((*p)[:], msg.Bts[4:20])
+	msg.Bts = msg.Bts[20:]
 }
 
 // Encode a UUID.
