@@ -209,10 +209,15 @@ func (c *Bytes) Type() reflect.Type {
 // Decode []byte.
 func (c *Bytes) Decode(msg *buff.Message, out reflect.Value) {
 	b := msg.PopBytes()
-	// todo use out's memory if it has enough allocated :thinking:
-	o := make([]byte, len(b))
-	copy(o, b)
-	out.SetBytes(o)
+	p := (*[]byte)(unsafe.Pointer(out.UnsafeAddr()))
+
+	if cap(*p) >= len(b) {
+		*p = (*p)[:len(b)]
+	} else {
+		*p = make([]byte, len(b))
+	}
+
+	copy(*p, b)
 }
 
 // Encode []byte.

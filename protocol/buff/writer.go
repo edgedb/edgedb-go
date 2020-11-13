@@ -172,7 +172,7 @@ func (b *Writer) PopMessage() *Message {
 	}
 
 	msg := &Message{
-		bts:  b.bts[b.mPos+5 : b.mPos+pos],
+		Bts:  b.bts[b.mPos+5 : b.mPos+pos],
 		Type: b.bts[b.mPos],
 	}
 	b.mPos += pos

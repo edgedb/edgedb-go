@@ -163,15 +163,15 @@ func BenchmarkDecodeBytes(b *testing.B) {
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
+	msg := buff.NewMessage(data)
 
 	var result []byte
 	val := reflect.ValueOf(&result).Elem()
 	codec := &Bytes{}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
+		msg.Bts = data
 		codec.Decode(msg, val)
 	}
 }
