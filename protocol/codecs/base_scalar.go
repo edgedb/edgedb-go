@@ -180,9 +180,7 @@ func (c *Str) Type() reflect.Type {
 
 // Decode a string.
 func (c *Str) Decode(msg *buff.Message, out unsafe.Pointer) {
-	p := (*string)(out)
-	// todo perhaps cast slice header to string header :thinking:
-	*p = msg.PopString()
+	*(*string)(out) = msg.PopString()
 }
 
 // Encode a string.
