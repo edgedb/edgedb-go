@@ -19,6 +19,8 @@ package buff
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/types"
 )
@@ -31,7 +33,13 @@ type Message struct {
 
 // NewMessage returns a new Message.
 func NewMessage(bts []byte) *Message {
-	return &Message{Bts: bts}
+	msg := &Message{Bts: bts}
+
+	// don't allow overread
+	header := (*reflect.SliceHeader)(unsafe.Pointer(&msg.Bts))
+	header.Cap = header.Len
+
+	return msg
 }
 
 // Finish asserts that the message has been fully read.
@@ -65,7 +73,6 @@ func (b *Message) Discard(n int) {
 
 // PopUint8 returns the next byte and advances the buffer.
 func (b *Message) PopUint8() uint8 {
-	b.AssertAllocated(1)
 	val := b.Bts[0]
 	b.Bts = b.Bts[1:]
 	return val
@@ -73,7 +80,6 @@ func (b *Message) PopUint8() uint8 {
 
 // PopUint16 reads a uint16 and advances the buffer.
 func (b *Message) PopUint16() uint16 {
-	b.AssertAllocated(2)
 	val := binary.BigEndian.Uint16(b.Bts)
 	b.Bts = b.Bts[2:]
 	return val
@@ -88,21 +94,18 @@ func (b *Message) PopUint32() uint32 {
 
 // PeekUint32 reads a uint32 but does not advance the buffer.
 func (b *Message) PeekUint32() uint32 {
-	b.AssertAllocated(4)
 	return binary.BigEndian.Uint32(b.Bts)
 }
 
 // PopUint64 reads a uint64 and advances the buffer.
 func (b *Message) PopUint64() uint64 {
-	b.AssertAllocated(8)
-	val := binary.BigEndian.Uint64(b.Bts)
+	val := binary.BigEndian.Uint64(b.Bts[:8])
 	b.Bts = b.Bts[8:]
 	return val
 }
 
 // PopUUID reads a types.UUID and advances the buffer.
 func (b *Message) PopUUID() types.UUID {
-	b.AssertAllocated(16)
 	var id types.UUID
 	copy(id[:], b.Bts[:16])
 	b.Bts = b.Bts[16:]
