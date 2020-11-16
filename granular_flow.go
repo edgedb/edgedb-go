@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/aspect"
 	"github.com/edgedb/edgedb-go/protocol/buff"
@@ -249,10 +250,10 @@ func (c *Client) execute(
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(msg, val)
+				cdcs.out.Decode(msg, unsafe.Pointer(val.UnsafeAddr()))
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(msg, out)
+				cdcs.out.Decode(msg, unsafe.Pointer(out.UnsafeAddr()))
 			}
 
 			err = nil
@@ -318,10 +319,10 @@ func (c *Client) optimistic(
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(msg, val)
+				cdcs.out.Decode(msg, unsafe.Pointer(val.UnsafeAddr()))
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(msg, out)
+				cdcs.out.Decode(msg, unsafe.Pointer(out.UnsafeAddr()))
 			}
 			err = nil
 		case message.CommandComplete:

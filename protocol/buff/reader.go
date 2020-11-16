@@ -50,21 +50,22 @@ func (b *Message) Len() int {
 	return len(b.Bts)
 }
 
-// Discard skips the next n bytes.
-func (b *Message) Discard(n int) {
+// AssertAllocated panics if there aren't n bytes in the buffer.
+func (b *Message) AssertAllocated(n int) {
 	if len(b.Bts) < n {
 		panic("buffer overread")
 	}
+}
 
+// Discard skips the next n bytes.
+func (b *Message) Discard(n int) {
+	b.AssertAllocated(n)
 	b.Bts = b.Bts[n:]
 }
 
 // PopUint8 returns the next byte and advances the buffer.
 func (b *Message) PopUint8() uint8 {
-	if len(b.Bts) < 1 {
-		panic("buffer overread")
-	}
-
+	b.AssertAllocated(1)
 	val := b.Bts[0]
 	b.Bts = b.Bts[1:]
 	return val
@@ -72,10 +73,7 @@ func (b *Message) PopUint8() uint8 {
 
 // PopUint16 reads a uint16 and advances the buffer.
 func (b *Message) PopUint16() uint16 {
-	if len(b.Bts) < 2 {
-		panic("buffer overread")
-	}
-
+	b.AssertAllocated(2)
 	val := binary.BigEndian.Uint16(b.Bts)
 	b.Bts = b.Bts[2:]
 	return val
@@ -90,19 +88,13 @@ func (b *Message) PopUint32() uint32 {
 
 // PeekUint32 reads a uint32 but does not advance the buffer.
 func (b *Message) PeekUint32() uint32 {
-	if len(b.Bts) < 4 {
-		panic("buffer overread")
-	}
-
+	b.AssertAllocated(4)
 	return binary.BigEndian.Uint32(b.Bts)
 }
 
 // PopUint64 reads a uint64 and advances the buffer.
 func (b *Message) PopUint64() uint64 {
-	if len(b.Bts) < 8 {
-		panic("buffer overread")
-	}
-
+	b.AssertAllocated(8)
 	val := binary.BigEndian.Uint64(b.Bts)
 	b.Bts = b.Bts[8:]
 	return val
@@ -110,10 +102,7 @@ func (b *Message) PopUint64() uint64 {
 
 // PopUUID reads a types.UUID and advances the buffer.
 func (b *Message) PopUUID() types.UUID {
-	if len(b.Bts) < 16 {
-		panic("buffer overread")
-	}
-
+	b.AssertAllocated(16)
 	var id types.UUID
 	copy(id[:], b.Bts[:16])
 	b.Bts = b.Bts[16:]
@@ -124,11 +113,7 @@ func (b *Message) PopUUID() types.UUID {
 // The returned slice is owned by the buffer.
 func (b *Message) PopBytes() []byte {
 	n := int(b.PopUint32())
-
-	if len(b.Bts) < n {
-		panic("buffer overread")
-	}
-
+	b.AssertAllocated(n)
 	val := b.Bts[:n]
 	b.Bts = b.Bts[n:]
 	return val

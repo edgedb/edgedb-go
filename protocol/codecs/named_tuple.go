@@ -19,6 +19,7 @@ package codecs
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/marshal"
 	"github.com/edgedb/edgedb-go/protocol/buff"
@@ -57,7 +58,7 @@ func popNamedTupleCodec(
 type NamedTuple struct {
 	id     types.UUID
 	fields []*objectField
-	t      reflect.Type
+	typ    reflect.Type
 }
 
 // ID returns the descriptor id.
@@ -65,44 +66,43 @@ func (c *NamedTuple) ID() types.UUID {
 	return c.id
 }
 
-func (c *NamedTuple) setType(t reflect.Type) error {
-	if t.Kind() != reflect.Struct {
-		return fmt.Errorf("expected Struct got %v", t.Kind())
+func (c *NamedTuple) setType(typ reflect.Type) error {
+	if typ.Kind() != reflect.Struct {
+		return fmt.Errorf("expected Struct got %v", typ.Kind())
 	}
 
 	for i := 0; i < len(c.fields); i++ {
 		field := c.fields[i]
 
-		if f, ok := marshal.StructField(t, field.name); ok {
-			field.index = f.Index
+		if f, ok := marshal.StructField(typ, field.name); ok {
+			field.offset = f.Offset
 			if err := field.codec.setType(f.Type); err != nil {
 				return err
 			}
 			continue
 		}
 
-		return fmt.Errorf("%v struct is missing field %q", t, field.name)
+		return fmt.Errorf("%v struct is missing field %q", typ, field.name)
 	}
 
-	c.t = t
+	c.typ = typ
 	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
 func (c *NamedTuple) Type() reflect.Type {
-	return c.t
+	return c.typ
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(msg *buff.Message, out reflect.Value) {
+func (c *NamedTuple) Decode(msg *buff.Message, out unsafe.Pointer) {
 	msg.PopUint32() // data length
 	elmCount := int(int32(msg.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
 		msg.PopUint32() // reserved
 		field := c.fields[i]
-		val := out.FieldByIndex(field.index)
-		field.codec.Decode(msg, val)
+		field.codec.Decode(msg, pAdd(out, field.offset))
 	}
 }
 

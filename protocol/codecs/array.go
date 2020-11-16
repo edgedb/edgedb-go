@@ -19,6 +19,7 @@ package codecs
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -43,16 +44,18 @@ func popArrayCodec(
 type Array struct {
 	id    types.UUID
 	child Codec
-	t     reflect.Type
+	typ   reflect.Type
+	step  int
 }
 
-func (c *Array) setType(t reflect.Type) error {
-	if t.Kind() != reflect.Slice {
-		return fmt.Errorf("expected Slice got %v", t.Kind())
+func (c *Array) setType(typ reflect.Type) error {
+	if typ.Kind() != reflect.Slice {
+		return fmt.Errorf("expected Slice got %v", typ.Kind())
 	}
 
-	c.t = t
-	return c.child.setType(t.Elem())
+	c.typ = typ
+	c.step = calcStep(typ.Elem())
+	return c.child.setType(typ.Elem())
 }
 
 // ID returns the descriptor id.
@@ -66,29 +69,34 @@ func (c *Array) Type() reflect.Type {
 }
 
 // Decode an array.
-func (c *Array) Decode(msg *buff.Message, out reflect.Value) {
-	msg.PopUint32() // data length
+func (c *Array) Decode(msg *buff.Message, out unsafe.Pointer) {
+	msg.Discard(4) // data length
 
 	// number of dimensions is 1 or 0
-	dimCount := msg.PopUint32()
-	if dimCount == 0 {
+	if msg.PopUint32() == 0 {
+		msg.Discard(8) // reserved
 		return
 	}
 
-	msg.PopUint32() // reserved
-	msg.PopUint32() // reserved
+	msg.Discard(8) // reserved
 
 	upper := int32(msg.PopUint32())
 	lower := int32(msg.PopUint32())
 	n := int(upper - lower + 1)
 
-	// todo could reuse existing slice if it is long enough :thinking:
-	tmp := reflect.MakeSlice(c.t, n, n)
-	for i := 0; i < n; i++ {
-		c.child.Decode(msg, tmp.Index(i))
+	slice := (*sliceHeader)(out)
+	if slice.Cap < n {
+		val := reflect.New(c.typ)
+		val.Elem().Set(reflect.MakeSlice(c.typ, n, n))
+		p := unsafe.Pointer(val.Pointer())
+		*slice = *(*sliceHeader)(p)
+	} else {
+		slice.Len = n
 	}
 
-	out.Set(tmp)
+	for i := 0; i < n; i++ {
+		c.child.Decode(msg, pAdd(slice.Data, uintptr(i*c.step)))
+	}
 }
 
 // Encode an array.

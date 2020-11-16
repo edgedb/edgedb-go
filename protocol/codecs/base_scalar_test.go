@@ -17,9 +17,9 @@
 package codecs
 
 import (
-	"reflect"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -35,8 +35,7 @@ func TestDecodeUUID(t *testing.T) {
 	codec := &UUID{}
 
 	var result types.UUID
-	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	expected := types.UUID{0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8}
 	assert.Equal(t, expected, result)
@@ -50,13 +49,13 @@ func BenchmarkDecodeUUID(b *testing.B) {
 	msg := buff.NewMessage(data)
 
 	var result types.UUID
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &UUID{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
@@ -78,12 +77,11 @@ func TestEncodeUUID(t *testing.T) {
 func BenchmarkEncodeUUID(b *testing.B) {
 	codec := &UUID{}
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
-	data := [2000]byte{}
+	buf := buff.NewWriter(make([]byte, 2000))
 
-	var buf *buff.Writer
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf = buff.NewWriter(data[:0])
+		buf.Reset()
 		codec.Encode(buf, id)
 	}
 }
@@ -96,8 +94,7 @@ func TestDecodeString(t *testing.T) {
 	msg := buff.NewMessage(data)
 
 	var result string
-	val := reflect.ValueOf(&result).Elem()
-	(&Str{}).Decode(msg, val)
+	(&Str{}).Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, "hello", result)
 
@@ -114,13 +111,13 @@ func BenchmarkDecodeString(b *testing.B) {
 	msg := buff.NewMessage(data)
 
 	var result string
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &Str{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
@@ -146,8 +143,7 @@ func TestDecodeBytes(t *testing.T) {
 	codec := Bytes{}
 
 	var result []byte
-	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	expected := []byte{104, 101, 108, 108, 111}
 
@@ -166,13 +162,13 @@ func BenchmarkDecodeBytes(b *testing.B) {
 	msg := buff.NewMessage(data)
 
 	var result []byte
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &Bytes{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
@@ -195,9 +191,8 @@ func TestDecodeInt16(t *testing.T) {
 	})
 
 	var result int16
-	val := reflect.ValueOf(&result).Elem()
 	codec := Int16{}
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, int16(7), result)
 }
@@ -210,13 +205,13 @@ func BenchmarkDecodeInt16(b *testing.B) {
 	msg := buff.NewMessage(data)
 
 	var result int16
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &Int16{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
@@ -239,8 +234,7 @@ func TestDecodeInt32(t *testing.T) {
 	})
 
 	var result int32
-	val := reflect.ValueOf(&result).Elem()
-	(&Int32{}).Decode(msg, val)
+	(&Int32{}).Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, int32(7), result)
 }
@@ -253,13 +247,13 @@ func BenchmarkDecodeInt32(b *testing.B) {
 	msg := buff.NewMessage(data)
 
 	var result int32
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &Int32{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
@@ -282,8 +276,7 @@ func TestDecodeInt64(t *testing.T) {
 	})
 
 	var result int64
-	val := reflect.ValueOf(&result).Elem()
-	(&Int64{}).Decode(msg, val)
+	(&Int64{}).Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, int64(72623859790382856), result)
 }
@@ -296,13 +289,13 @@ func BenchmarkDecodeInt64(b *testing.B) {
 	msg := buff.NewMessage(data)
 
 	var result int64
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &Int64{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
@@ -325,9 +318,8 @@ func TestDecodeFloat32(t *testing.T) {
 	})
 
 	var result float32
-	val := reflect.ValueOf(&result).Elem()
 	codec := &Float32{}
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, float32(-32), result)
 }
@@ -351,9 +343,8 @@ func TestDecodeFloat64(t *testing.T) {
 	})
 
 	var result float64
-	val := reflect.ValueOf(&result).Elem()
 	codec := &Float64{}
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, float64(-64), result)
 }
@@ -377,9 +368,8 @@ func TestDecodeBool(t *testing.T) {
 	})
 
 	var result bool
-	val := reflect.ValueOf(&result).Elem()
 	codec := &Bool{}
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, true, result)
 }
@@ -403,9 +393,8 @@ func TestDecodeDateTime(t *testing.T) {
 	})
 
 	var result time.Time
-	val := reflect.ValueOf(&result).Elem()
 	codec := &DateTime{}
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	expected := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	assert.Equal(t, expected, result)
@@ -432,9 +421,8 @@ func TestDecodeDuration(t *testing.T) {
 	})
 
 	var result time.Duration
-	val := reflect.ValueOf(&result).Elem()
 	codec := &Duration{}
-	codec.Decode(msg, val)
+	codec.Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, time.Duration(1_000_000_000), result)
 }
@@ -468,7 +456,7 @@ func TestDecodeJSON(t *testing.T) {
 	})
 
 	var result interface{}
-	(&JSON{}).Decode(msg, reflect.ValueOf(1))
+	(&JSON{}).Decode(msg, unsafe.Pointer(&result))
 	expected := map[string]interface{}{"hello": "world"}
 
 	assert.Equal(t, expected, result)

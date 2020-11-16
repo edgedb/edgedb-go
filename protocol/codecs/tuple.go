@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -44,13 +45,12 @@ func popTupleCodec(
 	return &Tuple{id: id, fields: fields}
 }
 
-var interfaceSliceType reflect.Type = reflect.TypeOf([]interface{}{})
-
 // Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
 	id     types.UUID
 	fields []Codec
-	t      reflect.Type
+	typ    reflect.Type
+	step   int
 }
 
 // ID returns the descriptor id.
@@ -58,13 +58,13 @@ func (c *Tuple) ID() types.UUID {
 	return c.id
 }
 
-func (c *Tuple) setType(t reflect.Type) error {
-	if t.Kind() != reflect.Slice {
-		return fmt.Errorf("expected Slice got %v", t.Kind())
+func (c *Tuple) setType(typ reflect.Type) error {
+	if typ.Kind() != reflect.Slice {
+		return fmt.Errorf("expected Slice got %v", typ.Kind())
 	}
 
-	if t.Elem().Kind() != reflect.Interface {
-		return fmt.Errorf("expected Interface got %v", t.Elem().Kind())
+	if typ.Elem().Kind() != reflect.Interface {
+		return fmt.Errorf("expected Interface got %v", typ.Elem().Kind())
 	}
 
 	for _, field := range c.fields {
@@ -73,32 +73,34 @@ func (c *Tuple) setType(t reflect.Type) error {
 		}
 	}
 
-	c.t = t
+	c.typ = typ
+	c.step = 16
 	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
 func (c *Tuple) Type() reflect.Type {
-	return c.t
+	return c.typ
 }
 
 // Decode a tuple.
-func (c *Tuple) Decode(msg *buff.Message, out reflect.Value) {
-	msg.PopUint32() // data length
+func (c *Tuple) Decode(msg *buff.Message, out unsafe.Pointer) {
+	msg.Discard(4) // data length
 
 	n := int(int32(msg.PopUint32()))
-	// todo reuse out's memory if it has enough allocated :thinking:
-	tmp := reflect.MakeSlice(interfaceSliceType, 0, n)
+	slice := reflect.MakeSlice(c.typ, 0, n)
 
 	for i := 0; i < n; i++ {
-		msg.PopUint32() // reserved
+		msg.Discard(4) // reserved
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.Decode(msg, val)
-		tmp = reflect.Append(tmp, val)
+		field.Decode(msg, unsafe.Pointer(val.UnsafeAddr()))
+		slice = reflect.Append(slice, val)
 	}
 
-	out.Set(tmp)
+	val := reflect.New(c.typ)
+	val.Elem().Set(slice)
+	*(*sliceHeader)(out) = *(*sliceHeader)(unsafe.Pointer(val.Pointer()))
 }
 
 // Encode a tuple.

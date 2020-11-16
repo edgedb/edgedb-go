@@ -18,12 +18,26 @@ package codecs
 
 import (
 	"reflect"
+	"runtime/debug"
 	"testing"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestTupleSetType(t *testing.T) {
+	codec := &Tuple{fields: []Codec{
+		&Int64{typ: int64Type},
+		&Int32{typ: int32Type},
+	}}
+	err := codec.setType(reflect.TypeOf([]interface{}{}))
+	require.Nil(t, err)
+
+	assert.Equal(t, 16, codec.step)
+}
 
 func TestDecodeTuple(t *testing.T) {
 	buf := buff.NewMessage([]byte{
@@ -39,14 +53,19 @@ func TestDecodeTuple(t *testing.T) {
 		0, 0, 0, 3,
 	})
 
-	codec := &Tuple{fields: []Codec{
-		&Int64{t: reflect.TypeOf(int64(0))},
-		&Int32{t: reflect.TypeOf(int32(0))},
-	}}
-
 	var result []interface{}
-	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(buf, val)
+
+	codec := &Tuple{fields: []Codec{
+		&Int64{typ: int64Type},
+		&Int32{typ: int32Type},
+	}}
+	err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	codec.Decode(buf, unsafe.Pointer(&result))
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
 
 	expected := []interface{}{int64(2), int32(3)}
 	assert.Equal(t, expected, result)

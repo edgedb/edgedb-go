@@ -18,11 +18,22 @@ package codecs
 
 import (
 	"reflect"
+	"runtime/debug"
 	"testing"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestArraySetType(t *testing.T) {
+	codec := &Array{child: &Int64{typ: int64Type}}
+	err := codec.setType(reflect.TypeOf([]int64{}))
+	require.Nil(t, err)
+
+	assert.Equal(t, 8, codec.step)
+}
 
 func TestDecodeArray(t *testing.T) {
 	buf := buff.NewMessage([]byte{
@@ -43,17 +54,18 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	})
 
-	codec := &Array{
-		child: &Int64{},
-		t:     reflect.TypeOf([]int64{}),
-	}
-
 	var result []int64
-	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(buf, val)
+
+	codec := &Array{child: &Int64{typ: int64Type}}
+	err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	codec.Decode(buf, unsafe.Pointer(&result))
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
 
 	expected := []int64{3, 5, 8}
-
 	assert.Equal(t, expected, result)
 }
 
@@ -61,10 +73,7 @@ func TestEncodeArray(t *testing.T) {
 	buf := buff.NewWriter(nil)
 	buf.BeginMessage(0xff)
 
-	codec := &Array{
-		child: &Int64{},
-		t:     nil,
-	}
+	codec := &Array{child: &Int64{}}
 	codec.Encode(buf, []interface{}{int64(3), int64(5), int64(8)})
 	buf.EndMessage()
 

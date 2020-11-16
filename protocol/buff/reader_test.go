@@ -45,6 +45,7 @@ func BenchmarkPopUint8(b *testing.B) {
 	data := []byte{0xff}
 	msg := NewMessage(nil)
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Bts = data
 		msg.PopUint8()

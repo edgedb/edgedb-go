@@ -19,6 +19,7 @@ package codecs
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/marshal"
 	"github.com/edgedb/edgedb-go/protocol/buff"
@@ -55,7 +56,7 @@ func popObjectCodec(
 
 type objectField struct {
 	name           string
-	index          []int
+	offset         uintptr
 	codec          Codec
 	isImplicit     bool
 	isLinkProperty bool
@@ -66,7 +67,7 @@ type objectField struct {
 type Object struct {
 	id     types.UUID
 	fields []*objectField
-	t      reflect.Type
+	typ    reflect.Type
 }
 
 // ID returns the descriptor id.
@@ -74,9 +75,9 @@ func (c *Object) ID() types.UUID {
 	return c.id
 }
 
-func (c *Object) setType(t reflect.Type) error {
-	if t.Kind() != reflect.Struct {
-		return fmt.Errorf("expected Struct got %v", t.Kind())
+func (c *Object) setType(typ reflect.Type) error {
+	if typ.Kind() != reflect.Struct {
+		return fmt.Errorf("expected Struct got %v", typ.Kind())
 	}
 
 	for _, field := range c.fields {
@@ -84,45 +85,45 @@ func (c *Object) setType(t reflect.Type) error {
 			continue
 		}
 
-		if f, ok := marshal.StructField(t, field.name); ok {
-			field.index = f.Index
+		if f, ok := marshal.StructField(typ, field.name); ok {
+			field.offset = f.Offset
 			if err := field.codec.setType(f.Type); err != nil {
 				return err
 			}
 		} else {
-			return fmt.Errorf("%v struct is missing field %q", t, field.name)
+			return fmt.Errorf("%v struct is missing field %q", typ, field.name)
 		}
 	}
 
-	c.t = t
+	c.typ = typ
 	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
 func (c *Object) Type() reflect.Type {
-	return c.t
+	return c.typ
 }
 
 // Decode an object
-func (c *Object) Decode(msg *buff.Message, out reflect.Value) {
-	msg.PopUint32() // data length
-	msg.PopUint32() // element count
+func (c *Object) Decode(msg *buff.Message, out unsafe.Pointer) {
+	msg.Discard(8) // data length & element count
 
 	for _, field := range c.fields {
-		msg.PopUint32() // reserved
+		msg.Discard(4) // reserved
 
 		switch int32(msg.PeekUint32()) {
 		case -1:
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			msg.PopUint32()
+			msg.Discard(4)
 		default:
 			if field.name == "__tid__" {
-				msg.PopBytes()
+				msg.Discard(20)
 				break
 			}
 
-			field.codec.Decode(msg, out.FieldByIndex(field.index))
+			p := pAdd(out, field.offset)
+			field.codec.Decode(msg, p)
 		}
 	}
 }

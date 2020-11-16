@@ -19,6 +19,7 @@ package codecs
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -38,7 +39,8 @@ func popSetCodec(
 type Set struct {
 	id    types.UUID
 	child Codec
-	t     reflect.Type
+	typ   reflect.Type
+	step  int
 }
 
 // ID returns the descriptor id.
@@ -46,43 +48,50 @@ func (c *Set) ID() types.UUID {
 	return c.id
 }
 
-func (c *Set) setType(t reflect.Type) error {
-	if t.Kind() != reflect.Slice {
-		return fmt.Errorf("expected Slice got %v", t.Kind())
+func (c *Set) setType(typ reflect.Type) error {
+	if typ.Kind() != reflect.Slice {
+		return fmt.Errorf("expected Slice got %v", typ.Kind())
 	}
 
-	c.t = t
-	return c.child.setType(t.Elem())
+	c.typ = typ
+	c.step = calcStep(typ.Elem())
+	return c.child.setType(typ.Elem())
 }
 
 // Type returns the reflect.Type that this codec decodes to.
 func (c *Set) Type() reflect.Type {
-	return c.t
+	return c.typ
 }
 
 // Decode a set
-func (c *Set) Decode(msg *buff.Message, out reflect.Value) {
-	msg.PopUint32() // data length
+func (c *Set) Decode(msg *buff.Message, out unsafe.Pointer) {
+	msg.Discard(4) // data length
 
-	dimCount := msg.PopUint32() // number of dimensions, either 0 or 1
-	if dimCount == 0 {
+	// number of dimensions, either 0 or 1
+	if msg.PopUint32() == 0 {
 		msg.Discard(8) // skip 2 reserved fields
 		return
 	}
 
-	msg.PopUint32() // reserved
-	msg.PopUint32() // reserved
+	msg.Discard(8) // reserved
 
 	upper := int32(msg.PopUint32())
 	lower := int32(msg.PopUint32())
 	n := int(upper - lower + 1)
-	tmp := reflect.MakeSlice(c.t, n, n)
 
-	for i := 0; i < n; i++ {
-		c.child.Decode(msg, tmp.Index(i))
+	slice := (*sliceHeader)(out)
+	if slice.Cap < n {
+		val := reflect.New(c.typ)
+		val.Elem().Set(reflect.MakeSlice(c.typ, n, n))
+		p := unsafe.Pointer(val.Pointer())
+		*slice = *(*sliceHeader)(p)
+	} else {
+		slice.Len = n
 	}
 
-	out.Set(tmp)
+	for i := 0; i < n; i++ {
+		c.child.Decode(msg, pAdd(slice.Data, uintptr(i*c.step)))
+	}
 }
 
 // Encode a set

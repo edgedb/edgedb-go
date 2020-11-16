@@ -18,7 +18,9 @@ package codecs
 
 import (
 	"reflect"
+	"runtime/debug"
 	"testing"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -26,25 +28,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetNamedTupleType(t *testing.T) {
-	codec := &NamedTuple{fields: []*objectField{
-		{name: "id", codec: &UUID{t: uuidType}},
-		{name: "name", codec: &Str{t: strType}},
-		{name: "count", codec: &Int64{t: int64Type}},
-	}}
-
+func TestNamedTupleSetType(t *testing.T) {
 	type Thing struct {
-		ID    types.UUID `edgedb:"id"`
+		Bool  bool       `edgedb:"bool"`
+		Small int16      `edgedb:"small"`
+		Med   int32      `edgedb:"med"`
+		Large int64      `edgedb:"large"`
 		Name  string     `edgedb:"name"`
-		Count int64      `edgedb:"count"`
+		ID    types.UUID `edgedb:"id"`
 	}
 
+	codec := &NamedTuple{fields: []*objectField{
+		{name: "bool", codec: &Bool{typ: boolType}},
+		{name: "small", codec: &Int16{typ: int16Type}},
+		{name: "med", codec: &Int32{typ: int32Type}},
+		{name: "large", codec: &Int64{typ: int64Type}},
+		{name: "name", codec: &Str{typ: strType}},
+		{name: "id", codec: &UUID{typ: uuidType}},
+	}}
 	err := codec.setType(reflect.TypeOf(Thing{}))
 	require.Nil(t, err)
 
-	assert.Equal(t, []int{0}, codec.fields[0].index)
-	assert.Equal(t, []int{1}, codec.fields[1].index)
-	assert.Equal(t, []int{2}, codec.fields[2].index)
+	assert.Equal(t, uintptr(0), codec.fields[0].offset)
+	assert.Equal(t, uintptr(2), codec.fields[1].offset)
+	assert.Equal(t, uintptr(4), codec.fields[2].offset)
+	assert.Equal(t, uintptr(8), codec.fields[3].offset)
+	assert.Equal(t, uintptr(16), codec.fields[4].offset)
+	assert.Equal(t, uintptr(32), codec.fields[5].offset)
 }
 
 func TestDecodeNamedTuple(t *testing.T) {
@@ -61,22 +71,26 @@ func TestDecodeNamedTuple(t *testing.T) {
 		0, 0, 0, 6,
 	})
 
-	codec := &NamedTuple{fields: []*objectField{
-		{index: []int{0}, codec: &Int32{}},
-		{index: []int{1}, codec: &Int32{}},
-	}}
-
 	type SomeThing struct {
 		A int32
 		B int32
 	}
 
 	var result SomeThing
-	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(msg, val)
+
+	codec := &NamedTuple{fields: []*objectField{
+		{name: "A", codec: &Int32{typ: int32Type}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+	}}
+	err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	codec.Decode(msg, unsafe.Pointer(&result))
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
 
 	expected := SomeThing{A: 5, B: 6}
-
 	assert.Equal(t, expected, result)
 }
 
@@ -100,17 +114,18 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 	}
 
 	var result SomeThing
-	val := reflect.ValueOf(&result).Elem()
+	ptr := unsafe.Pointer(&result)
 	codec := &NamedTuple{fields: []*objectField{
-		{index: []int{0}, codec: &Int32{}},
-		{index: []int{1}, codec: &Int32{}},
+		{offset: 0, codec: &Int32{}},
+		// todo fix offsets
+		{offset: 0, codec: &Int32{}},
 	}}
 
 	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg = buff.NewMessage(data)
-		codec.Decode(msg, val)
+		codec.Decode(msg, ptr)
 	}
 }
 
