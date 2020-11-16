@@ -297,8 +297,8 @@ func (c *Int32) Type() reflect.Type {
 
 // Decode an int32.
 func (c *Int32) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.Discard(4) // data length
-	*(*uint32)(out) = msg.PopUint32()
+	*(*uint32)(out) = binary.BigEndian.Uint32(msg.Bts[4:8])
+	msg.Bts = msg.Bts[8:]
 }
 
 // Encode an int32.
