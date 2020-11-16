@@ -17,6 +17,7 @@
 package codecs
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -332,8 +333,8 @@ func (c *Int64) Type() reflect.Type {
 
 // Decode an int64.
 func (c *Int64) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	*(*uint64)(out) = msg.PopUint64()
+	*(*uint64)(out) = binary.BigEndian.Uint64(msg.Bts[4:12])
+	msg.Bts = msg.Bts[12:]
 }
 
 // Encode an int64.
