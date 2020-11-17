@@ -270,10 +270,10 @@ func TestPopMessage(t *testing.T) {
 	buf.EndMessage()
 
 	msg := buf.PopMessage()
-	assert.Equal(t, []byte{1}, msg.bts)
+	assert.Equal(t, []byte{1}, msg.Bts)
 
 	msg = buf.PopMessage()
-	assert.Equal(t, []byte{2}, msg.bts)
+	assert.Equal(t, []byte{2}, msg.Bts)
 
 	assert.Panics(t, func() { buf.PopMessage() })
 }

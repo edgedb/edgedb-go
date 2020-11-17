@@ -19,25 +19,33 @@ package buff
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/types"
 )
 
 // Message is a Reader with a Type attribute.
 type Message struct {
-	bts  []byte
+	Bts  []byte
 	Type uint8
 }
 
 // NewMessage returns a new Message.
 func NewMessage(bts []byte) *Message {
-	return &Message{bts: bts}
+	msg := &Message{Bts: bts}
+
+	// don't allow overread
+	header := (*reflect.SliceHeader)(unsafe.Pointer(&msg.Bts))
+	header.Cap = header.Len
+
+	return msg
 }
 
 // Finish asserts that the message has been fully read.
 // It panics if it has not.
 func (b *Message) Finish() {
-	if len(b.bts) > 0 {
+	if len(b.Bts) > 0 {
 		panic(fmt.Sprintf(
 			"cannot finish: unread data in buffer (message type: 0x%x)",
 			b.Type,
@@ -47,76 +55,60 @@ func (b *Message) Finish() {
 
 // Len returns the number of bytes remaining to be read.
 func (b *Message) Len() int {
-	return len(b.bts)
+	return len(b.Bts)
+}
+
+// AssertAllocated panics if there aren't n bytes in the buffer.
+func (b *Message) AssertAllocated(n int) {
+	if len(b.Bts) < n {
+		panic("buffer overread")
+	}
 }
 
 // Discard skips the next n bytes.
 func (b *Message) Discard(n int) {
-	if len(b.bts) < n {
-		panic("buffer overread")
-	}
-
-	b.bts = b.bts[n:]
+	b.AssertAllocated(n)
+	b.Bts = b.Bts[n:]
 }
 
 // PopUint8 returns the next byte and advances the buffer.
 func (b *Message) PopUint8() uint8 {
-	if len(b.bts) < 1 {
-		panic("buffer overread")
-	}
-
-	val := b.bts[0]
-	b.bts = b.bts[1:]
+	val := b.Bts[0]
+	b.Bts = b.Bts[1:]
 	return val
 }
 
 // PopUint16 reads a uint16 and advances the buffer.
 func (b *Message) PopUint16() uint16 {
-	if len(b.bts) < 2 {
-		panic("buffer overread")
-	}
-
-	val := binary.BigEndian.Uint16(b.bts)
-	b.bts = b.bts[2:]
+	val := binary.BigEndian.Uint16(b.Bts)
+	b.Bts = b.Bts[2:]
 	return val
 }
 
 // PopUint32 reads a uint32 and advances the buffer.
 func (b *Message) PopUint32() uint32 {
 	val := b.PeekUint32()
-	b.bts = b.bts[4:]
+	b.Bts = b.Bts[4:]
 	return val
 }
 
 // PeekUint32 reads a uint32 but does not advance the buffer.
 func (b *Message) PeekUint32() uint32 {
-	if len(b.bts) < 4 {
-		panic("buffer overread")
-	}
-
-	return binary.BigEndian.Uint32(b.bts)
+	return binary.BigEndian.Uint32(b.Bts)
 }
 
 // PopUint64 reads a uint64 and advances the buffer.
 func (b *Message) PopUint64() uint64 {
-	if len(b.bts) < 8 {
-		panic("buffer overread")
-	}
-
-	val := binary.BigEndian.Uint64(b.bts)
-	b.bts = b.bts[8:]
+	val := binary.BigEndian.Uint64(b.Bts[:8])
+	b.Bts = b.Bts[8:]
 	return val
 }
 
 // PopUUID reads a types.UUID and advances the buffer.
 func (b *Message) PopUUID() types.UUID {
-	if len(b.bts) < 16 {
-		panic("buffer overread")
-	}
-
 	var id types.UUID
-	copy(id[:], b.bts[:16])
-	b.bts = b.bts[16:]
+	copy(id[:], b.Bts[:16])
+	b.Bts = b.Bts[16:]
 	return id
 }
 
@@ -124,13 +116,9 @@ func (b *Message) PopUUID() types.UUID {
 // The returned slice is owned by the buffer.
 func (b *Message) PopBytes() []byte {
 	n := int(b.PopUint32())
-
-	if len(b.bts) < n {
-		panic("buffer overread")
-	}
-
-	val := b.bts[:n]
-	b.bts = b.bts[n:]
+	b.AssertAllocated(n)
+	val := b.Bts[:n]
+	b.Bts = b.Bts[n:]
 	return val
 }
 

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -41,7 +42,7 @@ const (
 // Codec interface
 type Codec interface {
 	// todo update name
-	Decode(*buff.Message, reflect.Value)
+	Decode(*buff.Message, unsafe.Pointer)
 	Encode(*buff.Writer, interface{})
 	ID() types.UUID
 	Type() reflect.Type
@@ -111,4 +112,29 @@ func BuildTypedCodec(msg *buff.Message, t reflect.Type) (Codec, error) {
 	}
 
 	return codec, nil
+}
+
+// todo test
+func pAdd(p unsafe.Pointer, i uintptr) unsafe.Pointer {
+	return unsafe.Pointer(uintptr(p) + i)
+}
+
+// todo test
+func calcStep(tp reflect.Type) int {
+	step := int(tp.Size())
+	a := tp.Align()
+
+	if step%a > 0 {
+		step = step/a + a
+	}
+
+	return step
+}
+
+// the following structs represent the memory layout of builtin types.
+
+type sliceHeader struct {
+	Data unsafe.Pointer
+	Len  int
+	Cap  int
 }

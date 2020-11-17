@@ -157,11 +157,12 @@ func (c *Client) Query(
 func (c *Client) QueryJSON(
 	ctx context.Context,
 	cmd string,
+	out *[]byte,
 	args ...interface{},
-) ([]byte, error) {
+) error {
 	conn, err := c.pool.Get()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer func() {
@@ -178,14 +179,13 @@ func (c *Client) QueryJSON(
 		args:    args,
 	}
 
-	var result []byte
-	val := reflect.ValueOf(&result).Elem()
+	val := reflect.ValueOf(out).Elem()
 	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
 // QueryOneJSON runs a singleton-returning query
@@ -195,11 +195,12 @@ func (c *Client) QueryJSON(
 func (c *Client) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
+	out *[]byte,
 	args ...interface{},
-) ([]byte, error) {
+) error {
 	conn, err := c.pool.Get()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer func() {
@@ -216,18 +217,17 @@ func (c *Client) QueryOneJSON(
 		args:    args,
 	}
 
-	var result []byte
-	val := reflect.ValueOf(&result).Elem()
+	val := reflect.ValueOf(out).Elem()
 	err = c.granularFlow(ctx, conn, val, q)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if len(result) == 0 {
-		return nil, ErrorZeroResults
+	if len(*out) == 0 {
+		return ErrorZeroResults
 	}
 
-	return result, nil
+	return nil
 }
 
 // Connect establishes a connection to an EdgeDB server.

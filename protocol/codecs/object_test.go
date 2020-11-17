@@ -18,7 +18,9 @@ package codecs
 
 import (
 	"reflect"
+	"runtime/debug"
 	"testing"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/types"
@@ -27,33 +29,36 @@ import (
 )
 
 func TestSetObjectType(t *testing.T) {
-	codec := &Object{fields: []*objectField{
-		{name: "id", codec: &UUID{t: uuidType}},
-		{name: "name", codec: &Str{t: strType}},
-		{name: "count", codec: &Int64{t: int64Type}},
-	}}
-
 	type Thing struct {
-		ID    types.UUID `edgedb:"id"`
+		Bool  bool       `edgedb:"bool"`
+		Small int16      `edgedb:"small"`
+		Med   int32      `edgedb:"med"`
+		Large int64      `edgedb:"large"`
 		Name  string     `edgedb:"name"`
-		Count int64      `edgedb:"count"`
+		ID    types.UUID `edgedb:"id"`
 	}
+
+	codec := &Object{fields: []*objectField{
+		{name: "bool", codec: &Bool{typ: boolType}},
+		{name: "small", codec: &Int16{typ: int16Type}},
+		{name: "med", codec: &Int32{typ: int32Type}},
+		{name: "large", codec: &Int64{typ: int64Type}},
+		{name: "name", codec: &Str{typ: strType}},
+		{name: "id", codec: &UUID{typ: uuidType}},
+	}}
 
 	err := codec.setType(reflect.TypeOf(Thing{}))
 	require.Nil(t, err)
 
-	assert.Equal(t, []int{0}, codec.fields[0].index)
-	assert.Equal(t, []int{1}, codec.fields[1].index)
-	assert.Equal(t, []int{2}, codec.fields[2].index)
+	assert.Equal(t, uintptr(0), codec.fields[0].offset)
+	assert.Equal(t, uintptr(2), codec.fields[1].offset)
+	assert.Equal(t, uintptr(4), codec.fields[2].offset)
+	assert.Equal(t, uintptr(8), codec.fields[3].offset)
+	assert.Equal(t, uintptr(16), codec.fields[4].offset)
+	assert.Equal(t, uintptr(32), codec.fields[5].offset)
 }
 
 func TestDecodeObject(t *testing.T) {
-	codec := &Object{fields: []*objectField{
-		{index: []int{0}, codec: &Str{}},
-		{index: []int{1}, codec: &Int32{}},
-		{index: []int{2}, codec: &Int64{}},
-	}}
-
 	msg := buff.NewMessage([]byte{
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
@@ -77,8 +82,19 @@ func TestDecodeObject(t *testing.T) {
 	}
 
 	var result SomeThing
-	val := reflect.ValueOf(&result).Elem()
-	codec.Decode(msg, val)
+
+	codec := &Object{fields: []*objectField{
+		{name: "A", codec: &Str{typ: strType}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+		{name: "C", codec: &Int64{typ: int64Type}},
+	}}
+	err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	codec.Decode(msg, unsafe.Pointer(&result))
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
 
 	expected := SomeThing{A: "four", B: 4, C: 0}
 	assert.Equal(t, expected, result)
@@ -100,6 +116,7 @@ func BenchmarkDecodeObject(b *testing.B) {
 		0, 0, 0, 0, // reserved
 		0xff, 0xff, 0xff, 0xff, // data length (-1)
 	}
+	msg := buff.NewMessage(data)
 
 	type SomeThing struct {
 		A string
@@ -108,17 +125,19 @@ func BenchmarkDecodeObject(b *testing.B) {
 	}
 
 	var result SomeThing
-	val := reflect.ValueOf(&result).Elem()
-	codec := &Object{fields: []*objectField{
-		{index: []int{0}, codec: &Str{}},
-		{index: []int{1}, codec: &Int32{}},
-		{index: []int{2}, codec: &Int64{}},
-	}}
+	ptr := unsafe.Pointer(&result)
 
-	var msg *buff.Message
+	codec := &Object{fields: []*objectField{
+		{name: "A", codec: &Str{typ: strType}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+		{name: "C", codec: &Int64{typ: int64Type}},
+	}}
+	err := codec.setType(reflect.TypeOf(result))
+	require.Nil(b, err)
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
-		codec.Decode(msg, val)
+		msg.Bts = data
+		codec.Decode(msg, ptr)
 	}
 }
