@@ -40,7 +40,9 @@ func TestTupleSetType(t *testing.T) {
 }
 
 func TestDecodeTuple(t *testing.T) {
-	buf := buff.NewMessage([]byte{
+	buf := buff.New([]byte{
+		0,
+		0, 0, 0, 40,
 		0, 0, 0, 32, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -52,6 +54,7 @@ func TestDecodeTuple(t *testing.T) {
 		0, 0, 0, 4, // data length
 		0, 0, 0, 3,
 	})
+	buf.Next()
 
 	var result []interface{}
 
@@ -72,7 +75,7 @@ func TestDecodeTuple(t *testing.T) {
 }
 
 func TestEncodeNullTuple(t *testing.T) {
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 	buf.BeginMessage(0xff)
 	(&Tuple{}).Encode(buf, []interface{}{})
 	buf.EndMessage()
@@ -88,7 +91,7 @@ func TestEncodeNullTuple(t *testing.T) {
 }
 
 func TestEncodeTuple(t *testing.T) {
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 	buf.BeginMessage(0xff)
 
 	codec := &Tuple{fields: []Codec{&Int64{}, &Int64{}}}
@@ -117,7 +120,7 @@ func BenchmarkEncodeTuple(b *testing.B) {
 	codec := Tuple{fields: []Codec{&UUID{}}}
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
 	ids := []interface{}{id}
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

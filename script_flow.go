@@ -29,7 +29,7 @@ func (c *Client) scriptFlow(
 	conn net.Conn,
 	query string,
 ) error {
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 	buf.BeginMessage(message.ExecuteScript)
 	buf.PushUint16(0) // no headers
 	buf.PushString(query)
@@ -41,24 +41,21 @@ func (c *Client) scriptFlow(
 	}
 
 	for buf.Next() {
-		msg := buf.PopMessage()
-
-		switch msg.Type {
+		switch buf.MsgType {
 		case message.CommandComplete:
-			msg.PopUint16() // header count (assume 0)
-			msg.PopBytes()  // command status
+			buf.PopUint16() // header count (assume 0)
+			buf.PopBytes()  // command status
 		case message.ReadyForCommand:
-			msg.PopUint16() // header count (assume 0)
-			msg.PopUint8()  // transaction state
+			buf.PopUint16() // header count (assume 0)
+			buf.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(msg)
+			return decodeError(buf)
 		default:
-			err = c.fallThrough(msg)
+			err = c.fallThrough(buf)
 			if err != nil {
 				return err
 			}
 		}
-		msg.Finish()
 	}
 
 	return nil

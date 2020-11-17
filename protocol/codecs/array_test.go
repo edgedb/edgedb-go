@@ -36,7 +36,9 @@ func TestArraySetType(t *testing.T) {
 }
 
 func TestDecodeArray(t *testing.T) {
-	buf := buff.NewMessage([]byte{
+	buf := buff.New([]byte{
+		0xa,
+		0, 0, 0, 64,
 		0, 0, 0, 56, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
@@ -53,6 +55,7 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	})
+	buf.Next()
 
 	var result []int64
 
@@ -70,7 +73,7 @@ func TestDecodeArray(t *testing.T) {
 }
 
 func TestEncodeArray(t *testing.T) {
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 	buf.BeginMessage(0xff)
 
 	codec := &Array{child: &Int64{}}

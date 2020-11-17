@@ -27,16 +27,16 @@ import (
 )
 
 func popNamedTupleCodec(
-	msg *buff.Message,
+	buf *buff.Buff,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []*objectField{}
 
-	elmCount := int(msg.PopUint16())
+	elmCount := int(buf.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		name := msg.PopString()
-		index := msg.PopUint16()
+		name := buf.PopString()
+		index := buf.PopUint16()
 
 		if name == "__tid__" {
 			continue
@@ -95,19 +95,19 @@ func (c *NamedTuple) Type() reflect.Type {
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	elmCount := int(int32(msg.PopUint32()))
+func (c *NamedTuple) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.PopUint32() // data length
+	elmCount := int(int32(buf.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
-		msg.PopUint32() // reserved
+		buf.PopUint32() // reserved
 		field := c.fields[i]
-		field.codec.Decode(msg, pAdd(out, field.offset))
+		field.codec.Decode(buf, pAdd(out, field.offset))
 	}
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(buf *buff.Writer, val interface{}) {
+func (c *NamedTuple) Encode(buf *buff.Buff, val interface{}) {
 	elmCount := len(c.fields)
 
 	buf.BeginBytes()

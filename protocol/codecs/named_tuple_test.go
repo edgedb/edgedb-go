@@ -58,7 +58,9 @@ func TestNamedTupleSetType(t *testing.T) {
 }
 
 func TestDecodeNamedTuple(t *testing.T) {
-	msg := buff.NewMessage([]byte{
+	buf := buff.New([]byte{
+		0,
+		0, 0, 0, 36,
 		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -70,6 +72,7 @@ func TestDecodeNamedTuple(t *testing.T) {
 		0, 0, 0, 4,
 		0, 0, 0, 6,
 	})
+	buf.Next()
 
 	type SomeThing struct {
 		A int32
@@ -84,7 +87,7 @@ func TestDecodeNamedTuple(t *testing.T) {
 	}}
 	err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(msg, unsafe.Pointer(&result))
+	codec.Decode(buf, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -96,6 +99,8 @@ func TestDecodeNamedTuple(t *testing.T) {
 
 func BenchmarkDecodeNamedTuple(b *testing.B) {
 	data := []byte{
+		0xa,
+		0, 0, 0, 32,
 		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -107,6 +112,8 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 		0, 0, 0, 4,
 		0, 0, 0, 6,
 	}
+	buf := buff.New(data)
+	buf.Next()
 
 	type SomeThing struct {
 		A int32
@@ -121,11 +128,10 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 		{offset: 0, codec: &Int32{}},
 	}}
 
-	var msg *buff.Message
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg = buff.NewMessage(data)
-		codec.Decode(msg, ptr)
+		buf.Msg = data[5:]
+		codec.Decode(buf, ptr)
 	}
 }
 
@@ -135,7 +141,7 @@ func TestEncodeNamedTuple(t *testing.T) {
 		{name: "b", codec: &Int32{}},
 	}}
 
-	bts := buff.NewWriter(nil)
+	bts := buff.New(nil)
 	bts.BeginMessage(0xff)
 	codec.Encode(bts, []interface{}{map[string]interface{}{
 		"a": int32(5),

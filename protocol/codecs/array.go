@@ -26,15 +26,15 @@ import (
 )
 
 func popArrayCodec(
-	msg *buff.Message,
+	buf *buff.Buff,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	i := msg.PopUint16() // element type descriptor index
+	i := buf.PopUint16() // element type descriptor index
 
-	n := int(msg.PopUint16()) // number of array dimensions
+	n := int(buf.PopUint16()) // number of array dimensions
 	for i := 0; i < n; i++ {
-		msg.PopUint32() // array dimension
+		buf.PopUint32() // array dimension
 	}
 
 	return &Array{id: id, child: codecs[i]}
@@ -69,19 +69,19 @@ func (c *Array) Type() reflect.Type {
 }
 
 // Decode an array.
-func (c *Array) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.Discard(4) // data length
+func (c *Array) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.Discard(4) // data length
 
 	// number of dimensions is 1 or 0
-	if msg.PopUint32() == 0 {
-		msg.Discard(8) // reserved
+	if buf.PopUint32() == 0 {
+		buf.Discard(8) // reserved
 		return
 	}
 
-	msg.Discard(8) // reserved
+	buf.Discard(8) // reserved
 
-	upper := int32(msg.PopUint32())
-	lower := int32(msg.PopUint32())
+	upper := int32(buf.PopUint32())
+	lower := int32(buf.PopUint32())
 	n := int(upper - lower + 1)
 
 	slice := (*sliceHeader)(out)
@@ -94,12 +94,12 @@ func (c *Array) Decode(msg *buff.Message, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.Decode(msg, pAdd(slice.Data, uintptr(i*c.step)))
+		c.child.Decode(buf, pAdd(slice.Data, uintptr(i*c.step)))
 	}
 }
 
 // Encode an array.
-func (c *Array) Encode(buf *buff.Writer, val interface{}) {
+func (c *Array) Encode(buf *buff.Buff, val interface{}) {
 	in := val.([]interface{})
 	elmCount := len(in)
 

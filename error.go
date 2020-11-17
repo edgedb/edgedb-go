@@ -22,7 +22,7 @@ import (
 	"github.com/edgedb/edgedb-go/protocol/buff"
 )
 
-func decodeError(msg *buff.Message) error {
-	msg.Discard(5) // skip severity & code
-	return errors.New(msg.PopString())
+func decodeError(buf *buff.Buff) error {
+	buf.Discard(5) // skip severity & code
+	return errors.New(buf.PopString())
 }
