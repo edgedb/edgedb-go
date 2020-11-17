@@ -139,10 +139,7 @@ func (c *UUID) Type() reflect.Type {
 
 // Decode a UUID.
 func (c *UUID) Decode(msg *buff.Message, out unsafe.Pointer) {
-	if len(msg.Bts) < 20 {
-		panic("buffer overread")
-	}
-
+	msg.AssertAllocated(20)
 	p := (*types.UUID)(out)
 	copy((*p)[:], msg.Bts[4:20])
 	msg.Bts = msg.Bts[20:]
@@ -224,7 +221,7 @@ func (c *Bytes) Decode(msg *buff.Message, out unsafe.Pointer) {
 		*p = make([]byte, n)
 	}
 
-	copy(*p, msg.Bts)
+	copy(*p, msg.Bts[:n])
 	msg.Bts = msg.Bts[n:]
 }
 
@@ -367,8 +364,8 @@ func (c *Float32) Type() reflect.Type {
 
 // Decode a float32.
 func (c *Float32) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	*(*uint32)(out) = msg.PopUint32()
+	*(*uint32)(out) = binary.BigEndian.Uint32(msg.Bts[4:8])
+	msg.Bts = msg.Bts[8:]
 }
 
 // Encode a float32.
@@ -403,8 +400,8 @@ func (c *Float64) Type() reflect.Type {
 
 // Decode a float64.
 func (c *Float64) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	*(*uint64)(out) = msg.PopUint64()
+	*(*uint64)(out) = binary.BigEndian.Uint64(msg.Bts[4:12])
+	msg.Bts = msg.Bts[12:]
 }
 
 // Encode a float64.

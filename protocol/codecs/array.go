@@ -88,8 +88,7 @@ func (c *Array) Decode(msg *buff.Message, out unsafe.Pointer) {
 	if slice.Cap < n {
 		val := reflect.New(c.typ)
 		val.Elem().Set(reflect.MakeSlice(c.typ, n, n))
-		p := unsafe.Pointer(val.Pointer())
-		*slice = *(*sliceHeader)(p)
+		*slice = *(*sliceHeader)(unsafe.Pointer(val.Pointer()))
 	} else {
 		slice.Len = n
 	}

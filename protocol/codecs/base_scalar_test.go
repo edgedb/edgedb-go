@@ -324,6 +324,24 @@ func TestDecodeFloat32(t *testing.T) {
 	assert.Equal(t, float32(-32), result)
 }
 
+func BenchmarkDecodeFloat32(b *testing.B) {
+	data := []byte{
+		0, 0, 0, 4, // data length
+		0xc2, 0, 0, 0,
+	}
+	msg := buff.NewMessage(data)
+
+	var result float32
+	ptr := unsafe.Pointer(&result)
+	codec := &Float32{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		msg.Bts = data
+		codec.Decode(msg, ptr)
+	}
+}
+
 func TestEncodeFloat32(t *testing.T) {
 	buf := buff.NewWriter(nil)
 	(&Float32{}).Encode(buf, float32(-32))
@@ -349,6 +367,24 @@ func TestDecodeFloat64(t *testing.T) {
 	assert.Equal(t, float64(-64), result)
 }
 
+func BenchmarkDecodeFloat64(b *testing.B) {
+	data := []byte{
+		0, 0, 0, 8, // data length
+		0xc0, 0x50, 0, 0, 0, 0, 0, 0,
+	}
+	msg := buff.NewMessage(data)
+
+	var result float64
+	ptr := unsafe.Pointer(&result)
+	codec := &Float64{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		msg.Bts = data
+		codec.Decode(msg, ptr)
+	}
+}
+
 func TestEncodeFloat64(t *testing.T) {
 	buf := buff.NewWriter(nil)
 	(&Float64{}).Encode(buf, float64(-64))
@@ -372,6 +408,24 @@ func TestDecodeBool(t *testing.T) {
 	codec.Decode(msg, unsafe.Pointer(&result))
 
 	assert.Equal(t, true, result)
+}
+
+func BenchmarkDecodeBool(b *testing.B) {
+	data := []byte{
+		0, 0, 0, 1, // data length
+		1,
+	}
+	msg := buff.NewMessage(data)
+
+	var result bool
+	ptr := unsafe.Pointer(&result)
+	codec := &Bool{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		msg.Bts = data
+		codec.Decode(msg, ptr)
+	}
 }
 
 func TestEncodeBool(t *testing.T) {
