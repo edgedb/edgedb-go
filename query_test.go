@@ -61,9 +61,11 @@ func TestNumberedQueryArguments(t *testing.T) {
 
 func TestQueryJSON(t *testing.T) {
 	ctx := context.Background()
-	result, err := client.QueryJSON(
+	var result []byte
+	err := client.QueryJSON(
 		ctx,
 		"SELECT {(a := 0, b := <int64>$0), (a := 42, b := <int64>$1)}",
+		&result,
 		int64(1),
 		int64(2),
 	)
@@ -82,9 +84,11 @@ func TestQueryJSON(t *testing.T) {
 
 func TestQueryOneJSON(t *testing.T) {
 	ctx := context.Background()
-	result, err := client.QueryOneJSON(
+	var result []byte
+	err := client.QueryOneJSON(
 		ctx,
 		"SELECT (a := 0, b := <int64>$0)",
+		&result,
 		int64(42),
 	)
 
@@ -98,7 +102,8 @@ func TestQueryOneJSON(t *testing.T) {
 
 func TestQueryOneJSONZeroResults(t *testing.T) {
 	ctx := context.Background()
-	result, err := client.QueryOneJSON(ctx, "SELECT <int64>{}")
+	var result []byte
+	err := client.QueryOneJSON(ctx, "SELECT <int64>{}", &result)
 
 	require.Equal(t, err, ErrorZeroResults)
 	assert.Equal(t, []byte(nil), result)
