@@ -138,15 +138,15 @@ func (c *UUID) Type() reflect.Type {
 }
 
 // Decode a UUID.
-func (c *UUID) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.AssertAllocated(20)
+func (c *UUID) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.AssertAllocated(20)
 	p := (*types.UUID)(out)
-	copy((*p)[:], msg.Bts[4:20])
-	msg.Bts = msg.Bts[20:]
+	copy((*p)[:], buf.Msg[4:20])
+	buf.Msg = buf.Msg[20:]
 }
 
 // Encode a UUID.
-func (c *UUID) Encode(buf *buff.Writer, val interface{}) {
+func (c *UUID) Encode(buf *buff.Buff, val interface{}) {
 	tmp := val.(types.UUID)
 	buf.PushBytes(tmp[:])
 }
@@ -176,12 +176,12 @@ func (c *Str) Type() reflect.Type {
 }
 
 // Decode a string.
-func (c *Str) Decode(msg *buff.Message, out unsafe.Pointer) {
-	*(*string)(out) = msg.PopString()
+func (c *Str) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	*(*string)(out) = buf.PopString()
 }
 
 // Encode a string.
-func (c *Str) Encode(buf *buff.Writer, val interface{}) {
+func (c *Str) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushString(val.(string))
 }
 
@@ -210,9 +210,9 @@ func (c *Bytes) Type() reflect.Type {
 }
 
 // Decode []byte.
-func (c *Bytes) Decode(msg *buff.Message, out unsafe.Pointer) {
-	n := int(msg.PopUint32())
-	msg.AssertAllocated(n)
+func (c *Bytes) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	n := int(buf.PopUint32())
+	buf.AssertAllocated(n)
 
 	p := (*[]byte)(out)
 	if cap(*p) >= n {
@@ -221,12 +221,12 @@ func (c *Bytes) Decode(msg *buff.Message, out unsafe.Pointer) {
 		*p = make([]byte, n)
 	}
 
-	copy(*p, msg.Bts[:n])
-	msg.Bts = msg.Bts[n:]
+	copy(*p, buf.Msg[:n])
+	buf.Msg = buf.Msg[n:]
 }
 
 // Encode []byte.
-func (c *Bytes) Encode(buf *buff.Writer, val interface{}) {
+func (c *Bytes) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushBytes(val.([]byte))
 }
 
@@ -255,13 +255,13 @@ func (c *Int16) Type() reflect.Type {
 }
 
 // Decode an int16.
-func (c *Int16) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.Discard(4) // data length
-	*(*uint16)(out) = msg.PopUint16()
+func (c *Int16) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.Discard(4) // data length
+	*(*uint16)(out) = buf.PopUint16()
 }
 
 // Encode an int16.
-func (c *Int16) Encode(buf *buff.Writer, val interface{}) {
+func (c *Int16) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushUint32(2) // data length
 	buf.PushUint16(uint16(val.(int16)))
 }
@@ -291,13 +291,13 @@ func (c *Int32) Type() reflect.Type {
 }
 
 // Decode an int32.
-func (c *Int32) Decode(msg *buff.Message, out unsafe.Pointer) {
-	*(*uint32)(out) = binary.BigEndian.Uint32(msg.Bts[4:8])
-	msg.Bts = msg.Bts[8:]
+func (c *Int32) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	*(*uint32)(out) = binary.BigEndian.Uint32(buf.Msg[4:8])
+	buf.Msg = buf.Msg[8:]
 }
 
 // Encode an int32.
-func (c *Int32) Encode(buf *buff.Writer, val interface{}) {
+func (c *Int32) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushUint32(4) // data length
 	buf.PushUint32(uint32(val.(int32)))
 }
@@ -327,13 +327,13 @@ func (c *Int64) Type() reflect.Type {
 }
 
 // Decode an int64.
-func (c *Int64) Decode(msg *buff.Message, out unsafe.Pointer) {
-	*(*uint64)(out) = binary.BigEndian.Uint64(msg.Bts[4:12])
-	msg.Bts = msg.Bts[12:]
+func (c *Int64) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	*(*uint64)(out) = binary.BigEndian.Uint64(buf.Msg[4:12])
+	buf.Msg = buf.Msg[12:]
 }
 
 // Encode an int64.
-func (c *Int64) Encode(buf *buff.Writer, val interface{}) {
+func (c *Int64) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushUint32(8) // data length
 	buf.PushUint64(uint64(val.(int64)))
 }
@@ -363,13 +363,13 @@ func (c *Float32) Type() reflect.Type {
 }
 
 // Decode a float32.
-func (c *Float32) Decode(msg *buff.Message, out unsafe.Pointer) {
-	*(*uint32)(out) = binary.BigEndian.Uint32(msg.Bts[4:8])
-	msg.Bts = msg.Bts[8:]
+func (c *Float32) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	*(*uint32)(out) = binary.BigEndian.Uint32(buf.Msg[4:8])
+	buf.Msg = buf.Msg[8:]
 }
 
 // Encode a float32.
-func (c *Float32) Encode(buf *buff.Writer, val interface{}) {
+func (c *Float32) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushUint32(4)
 	buf.PushUint32(math.Float32bits(val.(float32)))
 }
@@ -399,13 +399,13 @@ func (c *Float64) Type() reflect.Type {
 }
 
 // Decode a float64.
-func (c *Float64) Decode(msg *buff.Message, out unsafe.Pointer) {
-	*(*uint64)(out) = binary.BigEndian.Uint64(msg.Bts[4:12])
-	msg.Bts = msg.Bts[12:]
+func (c *Float64) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	*(*uint64)(out) = binary.BigEndian.Uint64(buf.Msg[4:12])
+	buf.Msg = buf.Msg[12:]
 }
 
 // Encode a float64.
-func (c *Float64) Encode(buf *buff.Writer, val interface{}) {
+func (c *Float64) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushUint32(8)
 	buf.PushUint64(math.Float64bits(val.(float64)))
 }
@@ -435,13 +435,13 @@ func (c *Bool) Type() reflect.Type {
 }
 
 // Decode a bool.
-func (c *Bool) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	*(*uint8)(out) = msg.PopUint8()
+func (c *Bool) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.PopUint32() // data length
+	*(*uint8)(out) = buf.PopUint8()
 }
 
 // Encode a bool.
-func (c *Bool) Encode(buf *buff.Writer, val interface{}) {
+func (c *Bool) Encode(buf *buff.Buff, val interface{}) {
 	buf.PushUint32(1) // data length
 
 	// convert bool to uint8
@@ -478,9 +478,9 @@ func (c *DateTime) Type() reflect.Type {
 }
 
 // Decode a datetime.
-func (c *DateTime) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	val := int64(msg.PopUint64())
+func (c *DateTime) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.PopUint32() // data length
+	val := int64(buf.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
 	*(*time.Time)(out) = time.Unix(
@@ -490,7 +490,7 @@ func (c *DateTime) Decode(msg *buff.Message, out unsafe.Pointer) {
 }
 
 // Encode a datetime.
-func (c *DateTime) Encode(buf *buff.Writer, val interface{}) {
+func (c *DateTime) Encode(buf *buff.Buff, val interface{}) {
 	date := val.(time.Time)
 	seconds := date.Unix() - 946_684_800
 	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
@@ -524,16 +524,16 @@ func (c *Duration) Type() reflect.Type {
 }
 
 // Decode a duration.
-func (c *Duration) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopUint32() // data length
-	microseconds := int64(msg.PopUint64())
-	msg.PopUint32() // reserved
-	msg.PopUint32() // reserved
+func (c *Duration) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.PopUint32() // data length
+	microseconds := int64(buf.PopUint64())
+	buf.PopUint32() // reserved
+	buf.PopUint32() // reserved
 	*(*int64)(out) = microseconds * 1_000
 }
 
 // Encode a duration.
-func (c *Duration) Encode(buf *buff.Writer, val interface{}) {
+func (c *Duration) Encode(buf *buff.Buff, val interface{}) {
 	duration := val.(time.Duration)
 	buf.PushUint32(16) // data length
 	buf.PushUint64(uint64(duration / 1_000))
@@ -569,12 +569,12 @@ func (c *JSON) Type() reflect.Type {
 }
 
 // Decode json.
-func (c *JSON) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.PopBytes()
+func (c *JSON) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.PopBytes()
 }
 
 // Encode json.
-func (c *JSON) Encode(buf *buff.Writer, val interface{}) {
+func (c *JSON) Encode(buf *buff.Buff, val interface{}) {
 	bts, err := json.Marshal(val)
 	if err != nil {
 		panic(err)

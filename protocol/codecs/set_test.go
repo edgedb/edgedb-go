@@ -36,7 +36,9 @@ func TestSetSetType(t *testing.T) {
 }
 
 func TestDecodeSet(t *testing.T) {
-	buf := buff.NewMessage([]byte{
+	buf := buff.New([]byte{
+		0,
+		0, 0, 0, 64,
 		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
@@ -53,6 +55,7 @@ func TestDecodeSet(t *testing.T) {
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	})
+	buf.Next()
 
 	var result []int64
 

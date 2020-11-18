@@ -26,11 +26,11 @@ import (
 )
 
 func popSetCodec(
-	msg *buff.Message,
+	buf *buff.Buff,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	n := msg.PopUint16()
+	n := buf.PopUint16()
 	// todo type value
 	return &Set{id: id, child: codecs[n]}
 }
@@ -64,19 +64,19 @@ func (c *Set) Type() reflect.Type {
 }
 
 // Decode a set
-func (c *Set) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.Discard(4) // data length
+func (c *Set) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.Discard(4) // data length
 
 	// number of dimensions, either 0 or 1
-	if msg.PopUint32() == 0 {
-		msg.Discard(8) // skip 2 reserved fields
+	if buf.PopUint32() == 0 {
+		buf.Discard(8) // skip 2 reserved fields
 		return
 	}
 
-	msg.Discard(8) // reserved
+	buf.Discard(8) // reserved
 
-	upper := int32(msg.PopUint32())
-	lower := int32(msg.PopUint32())
+	upper := int32(buf.PopUint32())
+	lower := int32(buf.PopUint32())
 	n := int(upper - lower + 1)
 
 	slice := (*sliceHeader)(out)
@@ -90,11 +90,11 @@ func (c *Set) Decode(msg *buff.Message, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.Decode(msg, pAdd(slice.Data, uintptr(i*c.step)))
+		c.child.Decode(buf, pAdd(slice.Data, uintptr(i*c.step)))
 	}
 }
 
 // Encode a set
-func (c *Set) Encode(buf *buff.Writer, val interface{}) {
+func (c *Set) Encode(buf *buff.Buff, val interface{}) {
 	panic("not implemented")
 }

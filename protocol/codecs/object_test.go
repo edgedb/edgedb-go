@@ -59,7 +59,9 @@ func TestSetObjectType(t *testing.T) {
 }
 
 func TestDecodeObject(t *testing.T) {
-	msg := buff.NewMessage([]byte{
+	buf := buff.New([]byte{
+		0,
+		0, 0, 0, 44,
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
@@ -74,6 +76,7 @@ func TestDecodeObject(t *testing.T) {
 		0, 0, 0, 0, // reserved
 		0xff, 0xff, 0xff, 0xff, // data length (-1)
 	})
+	buf.Next()
 
 	type SomeThing struct {
 		A string
@@ -90,7 +93,7 @@ func TestDecodeObject(t *testing.T) {
 	}}
 	err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(msg, unsafe.Pointer(&result))
+	codec.Decode(buf, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -116,7 +119,7 @@ func BenchmarkDecodeObject(b *testing.B) {
 		0, 0, 0, 0, // reserved
 		0xff, 0xff, 0xff, 0xff, // data length (-1)
 	}
-	msg := buff.NewMessage(data)
+	buf := buff.New(data)
 
 	type SomeThing struct {
 		A string
@@ -137,7 +140,7 @@ func BenchmarkDecodeObject(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		msg.Bts = data
-		codec.Decode(msg, ptr)
+		buf.Msg = data
+		codec.Decode(buf, ptr)
 	}
 }

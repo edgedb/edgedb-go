@@ -27,7 +27,7 @@ import (
 )
 
 func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 	buf.BeginMessage(message.ClientHandshake)
 	buf.PushUint16(0) // major version
 	buf.PushUint16(8) // minor version
@@ -45,15 +45,13 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 	}
 
 	for buf.Next() {
-		msg := buf.PopMessage()
-
-		switch msg.Type {
+		switch buf.MsgType {
 		case message.ServerHandshake:
 			// The client _MUST_ close the connection
 			// if the protocol version can't be supported.
 			// https://edgedb.com/docs/internals/protocol/overview
-			major := msg.PopUint16()
-			minor := msg.PopUint16()
+			major := buf.PopUint16()
+			minor := buf.PopUint16()
 
 			if major != 0 || minor != 8 {
 				err = conn.Close()
@@ -69,19 +67,19 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 				return err
 			}
 		case message.ServerKeyData:
-			msg.Discard(32) // key data
+			buf.Discard(32) // key data
 		case message.ReadyForCommand:
-			msg.PopUint16() // header count (assume 0)
-			msg.PopUint8()  // transaction state
+			buf.PopUint16() // header count (assume 0)
+			buf.PopUint8()  // transaction state
 		case message.Authentication:
-			if msg.PopUint32() == 0 { // auth status
+			if buf.PopUint32() == 0 { // auth status
 				continue
 			}
 
 			// skip supported SASL methods
-			n := int(msg.PopUint32()) // method count
+			n := int(buf.PopUint32()) // method count
 			for i := 0; i < n; i++ {
-				msg.PopBytes()
+				buf.PopBytes()
 			}
 
 			err := authenticate(ctx, conn, opts)
@@ -89,11 +87,10 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 				return err
 			}
 		case message.ErrorResponse:
-			return decodeError(msg)
+			return decodeError(buf)
 		default:
-			return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
+			return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
 		}
-		msg.Finish()
 	}
 	return nil
 }
@@ -114,7 +111,7 @@ func authenticate(
 		panic(err)
 	}
 
-	buf := buff.NewWriter(nil)
+	buf := buff.New(nil)
 	buf.BeginMessage(message.AuthenticationSASLInitialResponse)
 	buf.PushString("SCRAM-SHA-256")
 	buf.PushString(scramMsg)
@@ -125,10 +122,10 @@ func authenticate(
 		return err
 	}
 
-	msg := buf.PopMessage()
-	switch msg.Type {
+	buf.Next()
+	switch buf.MsgType {
 	case message.Authentication:
-		authStatus := msg.PopUint32()
+		authStatus := buf.PopUint32()
 		if authStatus != 0xb {
 			return fmt.Errorf(
 				"unexpected authentication status: 0x%x",
@@ -136,17 +133,17 @@ func authenticate(
 			)
 		}
 
-		scramRcv := msg.PopString()
+		scramRcv := buf.PopString()
 		scramMsg, err = conv.Step(scramRcv)
 		if err != nil {
 			return err
 		}
 	case message.ErrorResponse:
-		return decodeError(msg)
+		return decodeError(buf)
 	default:
-		return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
+		return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
 	}
-	msg.Finish()
+	buf.Finish()
 
 	buf.Reset()
 	buf.BeginMessage(message.AuthenticationSASLResponse)
@@ -159,15 +156,13 @@ func authenticate(
 	}
 
 	for buf.Next() {
-		msg := buf.PopMessage()
-
-		switch msg.Type {
+		switch buf.MsgType {
 		case message.Authentication:
-			authStatus := msg.PopUint32()
+			authStatus := buf.PopUint32()
 			switch authStatus {
 			case 0:
 			case 0xc:
-				scramRcv := msg.PopString()
+				scramRcv := buf.PopString()
 				_, err = conv.Step(scramRcv)
 				if err != nil {
 					return err
@@ -179,16 +174,15 @@ func authenticate(
 				)
 			}
 		case message.ServerKeyData:
-			msg.Discard(32) // key data
+			buf.Discard(32) // key data
 		case message.ReadyForCommand:
-			msg.PopUint16() // header count (assume 0)
-			msg.PopUint8()  // transaction state
+			buf.PopUint16() // header count (assume 0)
+			buf.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(msg)
+			return decodeError(buf)
 		default:
-			return fmt.Errorf("unexpected message type: 0x%x", msg.Type)
+			return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
 		}
-		msg.Finish()
 	}
 
 	return nil

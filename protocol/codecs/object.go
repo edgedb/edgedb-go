@@ -27,17 +27,17 @@ import (
 )
 
 func popObjectCodec(
-	msg *buff.Message,
+	buf *buff.Buff,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []*objectField{}
 
-	elmCount := int(msg.PopUint16())
+	elmCount := int(buf.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		flags := msg.PopUint8()
-		name := msg.PopString()
-		index := msg.PopUint16()
+		flags := buf.PopUint8()
+		name := buf.PopString()
+		index := buf.PopUint16()
 
 		field := &objectField{
 			isImplicit:     flags&0b1 != 0,
@@ -105,30 +105,30 @@ func (c *Object) Type() reflect.Type {
 }
 
 // Decode an object
-func (c *Object) Decode(msg *buff.Message, out unsafe.Pointer) {
-	msg.Discard(8) // data length & element count
+func (c *Object) Decode(buf *buff.Buff, out unsafe.Pointer) {
+	buf.Discard(8) // data length & element count
 
 	for _, field := range c.fields {
-		msg.Discard(4) // reserved
+		buf.Discard(4) // reserved
 
-		switch int32(msg.PeekUint32()) {
+		switch int32(buf.PeekUint32()) {
 		case -1:
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			msg.Discard(4)
+			buf.Discard(4)
 		default:
 			if field.name == "__tid__" {
-				msg.Discard(20)
+				buf.Discard(20)
 				break
 			}
 
 			p := pAdd(out, field.offset)
-			field.codec.Decode(msg, p)
+			field.codec.Decode(buf, p)
 		}
 	}
 }
 
 // Encode an object
-func (c *Object) Encode(buf *buff.Writer, val interface{}) {
+func (c *Object) Encode(buf *buff.Buff, val interface{}) {
 	panic("objects can't be query parameters")
 }

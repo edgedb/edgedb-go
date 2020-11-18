@@ -42,27 +42,27 @@ const (
 // Codec interface
 type Codec interface {
 	// todo update name
-	Decode(*buff.Message, unsafe.Pointer)
-	Encode(*buff.Writer, interface{})
+	Decode(*buff.Buff, unsafe.Pointer)
+	Encode(*buff.Buff, interface{})
 	ID() types.UUID
 	Type() reflect.Type
 	setType(reflect.Type) error
 }
 
 // BuildCodec a decoder
-func BuildCodec(msg *buff.Message) (Codec, error) {
+func BuildCodec(buf *buff.Buff) (Codec, error) {
 	codecs := []Codec{}
 
-	for msg.Len() > 0 {
-		dType := msg.PopUint8()
-		id := msg.PopUUID()
+	for buf.Len() > 0 {
+		dType := buf.PopUint8()
+		id := buf.PopUUID()
 		var codec Codec
 
 		switch dType {
 		case setType:
-			codec = popSetCodec(msg, id, codecs)
+			codec = popSetCodec(buf, id, codecs)
 		case objectType:
-			codec = popObjectCodec(msg, id, codecs)
+			codec = popObjectCodec(buf, id, codecs)
 		case baseScalarType:
 			var err error
 			codec, err = baseScalarCodec(id)
@@ -73,18 +73,18 @@ func BuildCodec(msg *buff.Message) (Codec, error) {
 			// todo implement scalar type descriptor
 			return nil, errors.New("scalar type descriptor not implemented")
 		case tupleType:
-			codec = popTupleCodec(msg, id, codecs)
+			codec = popTupleCodec(buf, id, codecs)
 		case namedTupleType:
-			codec = popNamedTupleCodec(msg, id, codecs)
+			codec = popNamedTupleCodec(buf, id, codecs)
 		case arrayType:
-			codec = popArrayCodec(msg, id, codecs)
+			codec = popArrayCodec(buf, id, codecs)
 		case enumType:
 			// todo implement enum type descriptor
 			return nil, errors.New("enum type descriptor not implemented")
 		default:
 			if 0x80 <= dType && dType <= 0xff {
 				// ignore unknown type annotations
-				msg.PopBytes()
+				buf.PopBytes()
 				break
 			}
 
@@ -98,8 +98,8 @@ func BuildCodec(msg *buff.Message) (Codec, error) {
 }
 
 // BuildTypedCodec builds a codec for decoding into a specific type.
-func BuildTypedCodec(msg *buff.Message, t reflect.Type) (Codec, error) {
-	codec, err := BuildCodec(msg)
+func BuildTypedCodec(buf *buff.Buff, t reflect.Type) (Codec, error) {
+	codec, err := BuildCodec(buf)
 	if err != nil {
 		return nil, err
 	}
