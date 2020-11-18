@@ -26,6 +26,7 @@ import (
 
 	"github.com/edgedb/edgedb-go/cache"
 	"github.com/edgedb/edgedb-go/marshal"
+	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/protocol/cardinality"
 	"github.com/edgedb/edgedb-go/protocol/format"
 )
@@ -42,7 +43,7 @@ var (
 // Client client
 type Client struct {
 	pool           pool.Pool
-	buffer         [8192]byte
+	buf            *buff.Buff
 	typeIDCache    *cache.Cache
 	inCodecCache   *cache.Cache
 	outCodecCache  *cache.Cache
@@ -252,6 +253,7 @@ func Connect(ctx context.Context, opts Options) (client *Client, err error) {
 
 	client = &Client{
 		pool:          p,
+		buf:           buff.New(make([]byte, 8192)),
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
 		outCodecCache: cache.New(1_000),

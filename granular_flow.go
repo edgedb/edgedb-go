@@ -83,7 +83,7 @@ func (c *Client) pesimistic(
 	q query,
 	tp reflect.Type,
 ) error {
-	ids, err := prepare(ctx, conn, q)
+	ids, err := c.prepare(ctx, conn, q)
 	if err != nil {
 		return err
 	}
@@ -116,49 +116,49 @@ func (c *Client) pesimistic(
 	return c.execute(ctx, conn, out, q, tp, cdcs)
 }
 
-func prepare(
+func (c *Client) prepare(
 	ctx context.Context,
 	conn net.Conn,
 	q query,
 ) (ids idPair, err error) {
-	buf := buff.New(nil)
-	buf.BeginMessage(message.Prepare)
-	buf.PushUint16(0) // no headers
-	buf.PushUint8(q.fmt)
-	buf.PushUint8(q.expCard)
-	buf.PushBytes([]byte{}) // no statement name
-	buf.PushString(q.cmd)
-	buf.EndMessage()
+	c.buf.Reset()
+	c.buf.BeginMessage(message.Prepare)
+	c.buf.PushUint16(0) // no headers
+	c.buf.PushUint8(q.fmt)
+	c.buf.PushUint8(q.expCard)
+	c.buf.PushBytes([]byte{}) // no statement name
+	c.buf.PushString(q.cmd)
+	c.buf.EndMessage()
 
-	buf.BeginMessage(message.Sync)
-	buf.EndMessage()
+	c.buf.BeginMessage(message.Sync)
+	c.buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, buf.Unwrap())
+	err = writeAndRead(ctx, conn, c.buf.Unwrap())
 	if err != nil {
 		return ids, err
 	}
 
-	for buf.Next() {
-		switch buf.MsgType {
+	for c.buf.Next() {
+		switch c.buf.MsgType {
 		case message.PrepareComplete:
-			buf.PopUint16() // number of headers, assume 0
+			c.buf.PopUint16() // number of headers, assume 0
 
 			// todo assert cardinality matches query
-			buf.PopUint8() // cardianlity
+			c.buf.PopUint8() // cardianlity
 
 			ids = idPair{
-				in:  buf.PopUUID(),
-				out: buf.PopUUID(),
+				in:  c.buf.PopUUID(),
+				out: c.buf.PopUUID(),
 			}
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			c.buf.PopUint16() // header count (assume 0)
+			c.buf.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return ids, decodeError(buf)
+			return ids, decodeError(c.buf)
 		default:
 			return ids, fmt.Errorf(
 				"unexpected message type: 0x%x",
-				buf.MsgType,
+				c.buf.MsgType,
 			)
 		}
 	}
@@ -170,43 +170,43 @@ func (c *Client) describe(
 	ctx context.Context,
 	conn net.Conn,
 ) (descs descPair, err error) {
-	buf := buff.New(c.buffer[:0])
-	buf.BeginMessage(message.DescribeStatement)
-	buf.PushUint16(0) // no headers
-	buf.PushUint8(aspect.DataDescription)
-	buf.PushUint32(0) // no statement name
-	buf.EndMessage()
+	c.buf.Reset()
+	c.buf.BeginMessage(message.DescribeStatement)
+	c.buf.PushUint16(0) // no headers
+	c.buf.PushUint8(aspect.DataDescription)
+	c.buf.PushUint32(0) // no statement name
+	c.buf.EndMessage()
 
-	buf.BeginMessage(message.Sync)
-	buf.EndMessage()
+	c.buf.BeginMessage(message.Sync)
+	c.buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, buf.Unwrap())
+	err = writeAndRead(ctx, conn, c.buf.Unwrap())
 	if err != nil {
 		return descs, err
 	}
 
-	for buf.Next() {
-		switch buf.MsgType {
+	for c.buf.Next() {
+		switch c.buf.MsgType {
 		case message.CommandDataDescription:
-			buf.PopUint16() // num headers is always 0
-			buf.PopUint8()  // cardianlity
+			c.buf.PopUint16() // num headers is always 0
+			c.buf.PopUint8()  // cardianlity
 
 			// input descriptor
-			buf.PopUUID()
-			descs.in = buf.PopBytes()
+			c.buf.PopUUID()
+			descs.in = c.buf.PopBytes()
 
 			// output descriptor
-			buf.PopUUID()
-			descs.out = buf.PopBytes()
+			c.buf.PopUUID()
+			descs.out = c.buf.PopBytes()
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			c.buf.PopUint16() // header count (assume 0)
+			c.buf.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return descs, decodeError(buf)
+			return descs, decodeError(c.buf)
 		default:
 			return descs, fmt.Errorf(
 				"unexpected message type: 0x%x",
-				buf.MsgType,
+				c.buf.MsgType,
 			)
 		}
 	}
@@ -222,47 +222,47 @@ func (c *Client) execute(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	buf := buff.New(c.buffer[:0])
-	buf.BeginMessage(message.Execute)
-	buf.PushUint16(0)       // no headers
-	buf.PushBytes([]byte{}) // no statement name
-	cdcs.in.Encode(buf, q.args)
-	buf.EndMessage()
+	c.buf.Reset()
+	c.buf.BeginMessage(message.Execute)
+	c.buf.PushUint16(0)       // no headers
+	c.buf.PushBytes([]byte{}) // no statement name
+	cdcs.in.Encode(c.buf, q.args)
+	c.buf.EndMessage()
 
-	buf.BeginMessage(message.Sync)
-	buf.EndMessage()
+	c.buf.BeginMessage(message.Sync)
+	c.buf.EndMessage()
 
-	err := writeAndRead(ctx, conn, buf.Unwrap())
+	err := writeAndRead(ctx, conn, c.buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
 	tmp := out
 	err = ErrorZeroResults
-	for buf.Next() {
-		switch buf.MsgType {
+	for c.buf.Next() {
+		switch c.buf.MsgType {
 		case message.Data:
-			buf.PopUint16() // number of data elements (always 1)
+			c.buf.PopUint16() // number of data elements (always 1)
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(buf, unsafe.Pointer(val.UnsafeAddr()))
+				cdcs.out.Decode(c.buf, unsafe.Pointer(val.UnsafeAddr()))
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(buf, unsafe.Pointer(out.UnsafeAddr()))
+				cdcs.out.Decode(c.buf, unsafe.Pointer(out.UnsafeAddr()))
 			}
 
 			err = nil
 		case message.CommandComplete:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopBytes()  // command status
+			c.buf.PopUint16() // header count (assume 0)
+			c.buf.PopBytes()  // command status
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			c.buf.PopUint16() // header count (assume 0)
+			c.buf.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(buf)
+			return decodeError(c.buf)
 		default:
-			e := c.fallThrough(buf)
+			e := c.fallThrough(c.buf)
 			if e != nil {
 				return e
 			}
@@ -284,50 +284,50 @@ func (c *Client) optimistic(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	buf := buff.New(c.buffer[:0])
-	buf.BeginMessage(message.OptimisticExecute)
-	buf.PushUint16(0) // no headers
-	buf.PushUint8(q.fmt)
-	buf.PushUint8(q.expCard)
-	buf.PushString(q.cmd)
-	buf.PushUUID(cdcs.in.ID())
-	buf.PushUUID(cdcs.out.ID())
-	cdcs.in.Encode(buf, q.args)
-	buf.EndMessage()
+	c.buf.Reset()
+	c.buf.BeginMessage(message.OptimisticExecute)
+	c.buf.PushUint16(0) // no headers
+	c.buf.PushUint8(q.fmt)
+	c.buf.PushUint8(q.expCard)
+	c.buf.PushString(q.cmd)
+	c.buf.PushUUID(cdcs.in.ID())
+	c.buf.PushUUID(cdcs.out.ID())
+	cdcs.in.Encode(c.buf, q.args)
+	c.buf.EndMessage()
 
-	buf.BeginMessage(message.Sync)
-	buf.EndMessage()
+	c.buf.BeginMessage(message.Sync)
+	c.buf.EndMessage()
 
-	err := writeAndRead(ctx, conn, buf.Unwrap())
+	err := writeAndRead(ctx, conn, c.buf.Unwrap())
 	if err != nil {
 		return err
 	}
 
 	tmp := out
 	err = ErrorZeroResults
-	for buf.Next() {
-		switch buf.MsgType {
+	for c.buf.Next() {
+		switch c.buf.MsgType {
 		case message.Data:
-			buf.PopUint16() // number of data elements (always 1)
+			c.buf.PopUint16() // number of data elements (always 1)
 
 			if !q.flat() {
 				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(buf, unsafe.Pointer(val.UnsafeAddr()))
+				cdcs.out.Decode(c.buf, unsafe.Pointer(val.UnsafeAddr()))
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(buf, unsafe.Pointer(out.UnsafeAddr()))
+				cdcs.out.Decode(c.buf, unsafe.Pointer(out.UnsafeAddr()))
 			}
 			err = nil
 		case message.CommandComplete:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopBytes()  // command status
+			c.buf.PopUint16() // header count (assume 0)
+			c.buf.PopBytes()  // command status
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			c.buf.PopUint16() // header count (assume 0)
+			c.buf.PopUint8()  // transaction state
 		case message.ErrorResponse:
-			return decodeError(buf)
+			return decodeError(c.buf)
 		default:
-			e := c.fallThrough(buf)
+			e := c.fallThrough(c.buf)
 			if e != nil {
 				return e
 			}
