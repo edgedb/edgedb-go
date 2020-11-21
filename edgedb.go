@@ -18,11 +18,7 @@ package edgedb
 
 import (
 	"context"
-	"errors"
 	"net"
-	"reflect"
-
-	"github.com/fatih/pool"
 
 	"github.com/edgedb/edgedb-go/cache"
 	"github.com/edgedb/edgedb-go/marshal"
@@ -32,16 +28,8 @@ import (
 
 // todo add examples
 
-var (
-	// todo should this be returned from Query() and QueryJSON()? :thinking:
-
-	// ErrorZeroResults is returned when a query has no results.
-	ErrorZeroResults = errors.New("zero results")
-)
-
-// Client client
-type Client struct {
-	pool           pool.Pool
+type baseConn struct {
+	conn           net.Conn
 	buffer         [8192]byte
 	typeIDCache    *cache.Cache
 	inCodecCache   *cache.Cache
@@ -49,34 +37,58 @@ type Client struct {
 	serverSettings map[string]string
 }
 
-// Close the db connection
-func (c *Client) Close() (err error) {
-	// todo send Terminate on each connection that needs to be closed.
-	defer c.pool.Close()
-	return nil
+// ConnectOne establishes a connection to an EdgeDB server.
+func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint
+	conn := &baseConn{
+		typeIDCache:   cache.New(1_000),
+		inCodecCache:  cache.New(1_000),
+		outCodecCache: cache.New(1_000),
+	}
+
+	if err := connectOne(ctx, &opts, conn); err != nil {
+		return nil, err
+	}
+
+	return &Conn{*conn}, nil
 }
 
-// Execute an EdgeQL command (or commands).
-func (c *Client) Execute(ctx context.Context, query string) (err error) {
-	conn, err := c.pool.Get()
+// connectOne expectes a singleConn that has a nil net.Conn.
+func connectOne(ctx context.Context, opts *Options, conn *baseConn) error {
+	var d net.Dialer
+	netConn, err := d.DialContext(ctx, opts.network(), opts.address())
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		e := conn.Close()
-		if err == nil {
-			err = e
-		}
-	}()
+	conn.conn = netConn
+	err = conn.connect(ctx, opts)
+	if err != nil {
+		return err
+	}
 
-	return c.scriptFlow(ctx, conn, query)
+	return nil
+}
+
+// Close the db connection
+func (c *baseConn) close() error {
+	err := c.terminate()
+	if err == nil {
+		return c.conn.Close()
+	}
+
+	c.conn.Close() // nolint:errcheck
+	return err
+}
+
+// Execute an EdgeQL command (or commands).
+func (c *baseConn) Execute(ctx context.Context, cmd string) (err error) {
+	return c.scriptFlow(ctx, c.conn, cmd)
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // ErrorZeroResults is returned.
-func (c *Client) QueryOne(
+func (c *baseConn) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -87,18 +99,6 @@ func (c *Client) QueryOne(
 		return err
 	}
 
-	conn, err := c.pool.Get()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		e := conn.Close()
-		if e != nil && err == nil {
-			err = e
-		}
-	}()
-
 	q := query{
 		cmd:     cmd,
 		fmt:     format.Binary,
@@ -106,7 +106,7 @@ func (c *Client) QueryOne(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, conn, val, q)
+	err = c.granularFlow(ctx, val, q)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (c *Client) QueryOne(
 }
 
 // Query runs a query and returns the results.
-func (c *Client) Query(
+func (c *baseConn) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -126,18 +126,6 @@ func (c *Client) Query(
 		return err
 	}
 
-	conn, err := c.pool.Get()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		e := conn.Close()
-		if e != nil && err == nil {
-			err = e
-		}
-	}()
-
 	q := query{
 		cmd:     cmd,
 		fmt:     format.Binary,
@@ -145,7 +133,7 @@ func (c *Client) Query(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, conn, val, q)
+	err = c.granularFlow(ctx, val, q)
 	if err != nil {
 		return err
 	}
@@ -154,23 +142,16 @@ func (c *Client) Query(
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (c *Client) QueryJSON(
+func (c *baseConn) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
 ) error {
-	conn, err := c.pool.Get()
+	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		e := conn.Close()
-		if e != nil && err == nil {
-			err = e
-		}
-	}()
 
 	q := query{
 		cmd:     cmd,
@@ -179,8 +160,7 @@ func (c *Client) QueryJSON(
 		args:    args,
 	}
 
-	val := reflect.ValueOf(out).Elem()
-	err = c.granularFlow(ctx, conn, val, q)
+	err = c.granularFlow(ctx, val, q)
 	if err != nil {
 		return err
 	}
@@ -192,23 +172,16 @@ func (c *Client) QueryJSON(
 // and return its element in JSON.
 // If the query executes successfully but doesn't return a result
 // []byte{}, ErrorZeroResults is returned.
-func (c *Client) QueryOneJSON(
+func (c *baseConn) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
 ) error {
-	conn, err := c.pool.Get()
+	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		e := conn.Close()
-		if e != nil && err == nil {
-			err = e
-		}
-	}()
 
 	q := query{
 		cmd:     cmd,
@@ -217,8 +190,7 @@ func (c *Client) QueryOneJSON(
 		args:    args,
 	}
 
-	val := reflect.ValueOf(out).Elem()
-	err = c.granularFlow(ctx, conn, val, q)
+	err = c.granularFlow(ctx, val, q)
 	if err != nil {
 		return err
 	}
@@ -230,54 +202,18 @@ func (c *Client) QueryOneJSON(
 	return nil
 }
 
-// Connect establishes a connection to an EdgeDB server.
-func Connect(ctx context.Context, opts Options) (client *Client, err error) {
-	// todo making the pool bigger slows down the tests,
-	// and uses way more memory :thinking:
-	p, err := pool.NewChannelPool(1, 1, func() (conn net.Conn, e error) {
-		var d net.Dialer
-		// todo closing over the context is the wrong thing to do.
-		conn, e = d.DialContext(ctx, opts.network(), opts.address())
-		if e != nil {
-			return nil, e
-		}
-
-		e = connect(ctx, conn, &opts)
-		return conn, e
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	client = &Client{
-		pool:          p,
-		typeIDCache:   cache.New(1_000),
-		inCodecCache:  cache.New(1_000),
-		outCodecCache: cache.New(1_000),
-	}
-	return client, nil
-}
-
-func writeAndRead(
+func (c *baseConn) writeAndRead(
 	ctx context.Context,
-	conn net.Conn,
 	buf *[]byte,
 ) (err error) {
-	defer func() {
-		// todo don't mark unusable on timeout
-		if err != nil {
-			conn.(*pool.PoolConn).MarkUnusable()
-		}
-	}()
-
+	// todo move set deadline up to query method.
 	deadline, _ := ctx.Deadline()
-	err = conn.SetDeadline(deadline)
+	err = c.conn.SetDeadline(deadline)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Write(*buf)
+	_, err = c.conn.Write(*buf)
 	if err != nil {
 		return err
 	}
@@ -285,7 +221,7 @@ func writeAndRead(
 	// expand slice length to full capacity
 	*buf = (*buf)[:cap(*buf)]
 
-	n, err := conn.Read(*buf)
+	n, err := c.conn.Read(*buf)
 	*buf = (*buf)[:n]
 
 	if n < cap(*buf) {
@@ -295,7 +231,7 @@ func writeAndRead(
 	n = 1024 // todo evaluate temporary buffer size
 	tmp := make([]byte, n)
 	for n == 1024 {
-		n, err = conn.Read(tmp)
+		n, err = c.conn.Read(tmp)
 		*buf = append(*buf, tmp[:n]...)
 	}
 

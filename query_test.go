@@ -30,7 +30,7 @@ import (
 func TestNamedQueryArguments(t *testing.T) {
 	ctx := context.Background()
 	var result [][]int64
-	err := client.Query(
+	err := conn.Query(
 		ctx,
 		"SELECT [<int64>$first, <int64>$second]",
 		&result,
@@ -47,7 +47,7 @@ func TestNamedQueryArguments(t *testing.T) {
 func TestNumberedQueryArguments(t *testing.T) {
 	ctx := context.Background()
 	result := [][]int64{}
-	err := client.Query(
+	err := conn.Query(
 		ctx,
 		"SELECT [<int64>$0, <int64>$1]",
 		&result,
@@ -62,7 +62,7 @@ func TestNumberedQueryArguments(t *testing.T) {
 func TestQueryJSON(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := client.QueryJSON(
+	err := conn.QueryJSON(
 		ctx,
 		"SELECT {(a := 0, b := <int64>$0), (a := 42, b := <int64>$1)}",
 		&result,
@@ -85,7 +85,7 @@ func TestQueryJSON(t *testing.T) {
 func TestQueryOneJSON(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := client.QueryOneJSON(
+	err := conn.QueryOneJSON(
 		ctx,
 		"SELECT (a := 0, b := <int64>$0)",
 		&result,
@@ -103,7 +103,7 @@ func TestQueryOneJSON(t *testing.T) {
 func TestQueryOneJSONZeroResults(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := client.QueryOneJSON(ctx, "SELECT <int64>{}", &result)
+	err := conn.QueryOneJSON(ctx, "SELECT <int64>{}", &result)
 
 	require.Equal(t, err, ErrorZeroResults)
 	assert.Equal(t, []byte(nil), result)
@@ -112,7 +112,7 @@ func TestQueryOneJSONZeroResults(t *testing.T) {
 func TestQueryOne(t *testing.T) {
 	ctx := context.Background()
 	var result int64
-	err := client.QueryOne(ctx, "SELECT 42", &result)
+	err := conn.QueryOne(ctx, "SELECT 42", &result)
 
 	assert.Nil(t, err)
 	assert.Equal(t, int64(42), result)
@@ -121,21 +121,21 @@ func TestQueryOne(t *testing.T) {
 func TestQueryOneZeroResults(t *testing.T) {
 	ctx := context.Background()
 	var result int64
-	err := client.QueryOne(ctx, "SELECT <int64>{}", &result)
+	err := conn.QueryOne(ctx, "SELECT <int64>{}", &result)
 
 	assert.Equal(t, ErrorZeroResults, err)
 }
 
 func TestError(t *testing.T) {
 	ctx := context.Background()
-	err := client.Execute(ctx, "malformed query;")
-	expected := errors.New("Unexpected 'malformed'")
-	assert.Equal(t, expected, err)
+	err := conn.Execute(ctx, "malformed query;")
+	assert.EqualError(t, err, "Unexpected 'malformed'")
+	assert.True(t, errors.Is(err, Error))
 }
 
 func TestQueryTimesOut(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
-	err := client.Execute(ctx, "SELECT 1;")
+	err := conn.Execute(ctx, "SELECT 1;")
 
 	assert.True(t, errors.Is(err, os.ErrDeadlineExceeded))
 	cancel()

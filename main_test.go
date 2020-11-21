@@ -34,13 +34,13 @@ import (
 
 // initialized by TestMain
 var (
-	server Options
-	client *Client
+	opts Options
+	conn *Conn
 )
 
 func executeOrPanic(command string) {
 	ctx := context.Background()
-	err := client.Execute(ctx, command)
+	err := conn.Execute(ctx, command)
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func getLocalServer() error {
 		return errors.New("credentials not found")
 	}
 
-	err = json.Unmarshal(data, &server)
+	err = json.Unmarshal(data, &opts)
 	if err != nil {
 		log.Printf("failed to parse credentials file: %q", credFileName)
 		return errors.New("credentials not found")
@@ -119,7 +119,7 @@ func startServer() (err error) {
 		log.Fatal(err)
 	}
 
-	server = Options{
+	opts = Options{
 		Host:     data.Host,
 		Port:     data.Port,
 		User:     "edgedb",
@@ -136,7 +136,7 @@ func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		if err != nil {
-			log.Println(err)
+			log.Println("error while cleaning up: ", err)
 		}
 		os.Exit(code)
 	}()
@@ -150,52 +150,65 @@ func TestMain(m *testing.M) {
 	}
 
 	ctx := context.Background()
-	client, err = Connect(ctx, server)
+	conn, err = ConnectOne(ctx, opts)
 	if err != nil {
 		panic(err)
 	}
 
 	defer func() {
-		err := client.Close()
-		if err != nil {
-			log.Println(err)
+		e := conn.Close()
+		if e != nil {
+			log.Println("while closing: ", e)
 		}
 	}()
 
-	executeOrPanic(`
-		START MIGRATION TO {
-			module default {
-				type User {
-					property name -> str;
+	query := `
+		SELECT (
+			SELECT schema::Type
+			FILTER .name = 'default::User'
+		).name
+		LIMIT 1;
+	`
+
+	var name string
+	err = conn.QueryOne(ctx, query, &name)
+	if errors.Is(err, ErrorZeroResults) {
+		executeOrPanic(`
+			START MIGRATION TO {
+				module default {
+					type User {
+						property name -> str;
+					}
 				}
+			};
+			POPULATE MIGRATION;
+			COMMIT MIGRATION;
+		`)
+		_ = conn.Execute(ctx, `
+			CREATE SUPERUSER ROLE user_with_password {
+				SET password := 'secret';
+			};
+		`)
+		executeOrPanic("CONFIGURE SYSTEM RESET Auth;")
+		executeOrPanic(`
+			CONFIGURE SYSTEM INSERT Auth {
+				comment := "no password",
+				priority := 1,
+				method := (INSERT Trust),
+				user := {'*'},
+			};
+		`)
+		executeOrPanic(`
+			CONFIGURE SYSTEM INSERT Auth {
+				comment := "password required",
+				priority := 0,
+				method := (INSERT SCRAM),
+				user := {'user_with_password'}
 			}
-		};
-		POPULATE MIGRATION;
-		COMMIT MIGRATION;
-	`)
-	_ = client.Execute(ctx, `
-		CREATE SUPERUSER ROLE user_with_password {
-			SET password := 'secret';
-		};
-	`)
-	executeOrPanic("CONFIGURE SYSTEM RESET Auth;")
-	executeOrPanic(`
-		CONFIGURE SYSTEM INSERT Auth {
-			comment := "no password",
-			priority := 1,
-			method := (INSERT Trust),
-			user := {'*'},
-		};
-	`)
-	executeOrPanic(`
-		CONFIGURE SYSTEM INSERT Auth {
-			comment := "password required",
-			priority := 0,
-			method := (INSERT SCRAM),
-			user := {'user_with_password'}
-		}
-	`)
+		`)
+	}
 
 	rand.Seed(time.Now().Unix())
+	log.Println("starting tests")
 	code = m.Run()
 }

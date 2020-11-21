@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,24 +27,27 @@ import (
 
 func TestAuth(t *testing.T) {
 	var host string
-	if server.admin {
+	if opts.admin {
 		host = "localhost"
 	} else {
-		host = server.Host
+		host = opts.Host
 	}
 
 	ctx := context.Background()
-	conn, err := Connect(ctx, Options{
+	conn, err := ConnectOne(ctx, Options{
 		Host:     host,
-		Port:     server.Port,
+		Port:     opts.Port,
 		User:     "user_with_password",
 		Password: "secret",
-		Database: server.Database,
+		Database: opts.Database,
 	})
 	assert.Nil(t, err)
 
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	var result string
 	err = conn.QueryOne(ctx, "SELECT 'It worked!';", &result)
+	cancel()
+
 	require.Nil(t, err)
 	assert.Equal(t, "It worked!", result)
 }

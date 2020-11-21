@@ -18,11 +18,33 @@ package edgedb
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 )
 
+var (
+	// Error is wrapped by all errors returned from the server.
+	Error = errors.New("")
+	// todo error API (hierarchy and wrap all returned errors)
+
+	// ErrorZeroResults is returned when a query has no results.
+	ErrorZeroResults = fmt.Errorf("zero results%w", Error)
+
+	// ErrorPoolClosed is returned by operations on closed pools.
+	ErrorPoolClosed error = fmt.Errorf("pool closed%w", Error)
+
+	// ErrorConnsInUse is returned when all connects are in use.
+	ErrorConnsInUse error = fmt.Errorf("all connections in use%w", Error)
+
+	// ErrorContextExpired is returned when an expired context is used.
+	ErrorContextExpired error = fmt.Errorf("context expired%w", Error)
+
+	// ErrorConfiguration is returned when invalid configuration is received.
+	ErrorConfiguration error = fmt.Errorf("%w", Error)
+)
+
 func decodeError(buf *buff.Buff) error {
 	buf.Discard(5) // skip severity & code
-	return errors.New(buf.PopString())
+	return fmt.Errorf("%v%w", buf.PopString(), Error)
 }

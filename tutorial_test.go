@@ -43,21 +43,22 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
-	ctx := context.Background()
-	rand.Seed(time.Now().UnixNano())
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
-	err := client.Execute(ctx, "CREATE DATABASE "+dbName)
+	err := conn.Execute(ctx, "CREATE DATABASE "+dbName)
 	require.Nil(t, err)
 
-	edb, err := Connect(
+	edb, err := ConnectOne(
 		ctx,
 		Options{
-			Host:     server.Host,
-			Port:     server.Port,
-			User:     server.User,
-			Password: server.Password,
+			Host:     opts.Host,
+			Port:     opts.Port,
+			User:     opts.User,
+			Password: opts.Password,
 			Database: dbName,
-			admin:    server.admin,
+			admin:    opts.admin,
 		},
 	)
 	if err != nil {

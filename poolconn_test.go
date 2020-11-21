@@ -17,27 +17,20 @@
 package edgedb
 
 import (
-	"fmt"
-	"log"
+	"testing"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
-	"github.com/edgedb/edgedb-go/protocol/message"
+	"github.com/stretchr/testify/assert"
 )
 
-func (c *baseConn) fallThrough(buf *buff.Buff) error {
-	switch buf.MsgType {
-	case message.ParameterStatus:
-		name := buf.PopString()
-		value := buf.PopString()
-		c.serverSettings[name] = value
-	case message.LogMessage:
-		severity := string([]byte{buf.PopUint8()})
-		code := buf.PopUint32()
-		message := buf.PopString()
-		log.Println("SERVER MESSAGE", severity, code, message)
-	default:
-		return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
-	}
+func TestReleasePoolConn(t *testing.T) {
+	pool := &Pool{releasedConns: make(chan *baseConn, 1)}
+	conn := &baseConn{}
+	poolConn := &PoolConn{pool: pool, baseConn: conn}
 
-	return nil
+	poolConn.Release()
+	result := <-pool.releasedConns
+	assert.Equal(t, conn, result)
+
+	expected := "connection was already released"
+	assert.PanicsWithValue(t, expected, func() { poolConn.Release() })
 }

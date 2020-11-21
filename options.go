@@ -31,6 +31,9 @@ type Options struct {
 	Database string `json:"database"`
 	Password string `json:"password"`
 	admin    bool
+
+	MaxConns int
+	MinConns int
 }
 
 func (o *Options) network() string {

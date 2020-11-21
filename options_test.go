@@ -25,53 +25,53 @@ import (
 )
 
 func TestParseHost(t *testing.T) {
-	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	o, err := DSN("edgedb://me@localhost:5656/somedb")
 	require.Nil(t, err)
-	assert.Equal(t, "localhost", opts.Host)
+	assert.Equal(t, "localhost", o.Host)
 }
 
 func TestParsePort(t *testing.T) {
-	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	o, err := DSN("edgedb://me@localhost:5656/somedb")
 	require.Nil(t, err)
-	assert.Equal(t, 5656, opts.Port)
+	assert.Equal(t, 5656, o.Port)
 }
 
 func TestParseUser(t *testing.T) {
-	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	o, err := DSN("edgedb://me@localhost:5656/somedb")
 	require.Nil(t, err)
-	assert.Equal(t, "me", opts.User)
+	assert.Equal(t, "me", o.User)
 }
 
 func TestParseDatabase(t *testing.T) {
-	opts, err := DSN("edgedb://me@localhost:5656/somedb")
+	o, err := DSN("edgedb://me@localhost:5656/somedb")
 	require.Nil(t, err)
-	assert.Equal(t, "somedb", opts.Database)
+	assert.Equal(t, "somedb", o.Database)
 }
 
 func TestParsePassword(t *testing.T) {
-	opts, err := DSN("edgedb://me:secret@localhost:5656/somedb")
+	o, err := DSN("edgedb://me:secret@localhost:5656/somedb")
 	require.Nil(t, err)
-	assert.Equal(t, "secret", opts.Password)
+	assert.Equal(t, "secret", o.Password)
 }
 
 func TestMissingPort(t *testing.T) {
-	opts, err := DSN("edgedb://me@localhost/somedb")
+	o, err := DSN("edgedb://me@localhost/somedb")
 	require.Nil(t, err)
-	assert.Equal(t, 5656, opts.Port)
+	assert.Equal(t, 5656, o.Port)
 }
 
 func TestDialHost(t *testing.T) {
-	opts := Options{Host: "some.com", Port: 1234}
-	assert.Equal(t, "some.com:1234", opts.address())
+	o := Options{Host: "some.com", Port: 1234}
+	assert.Equal(t, "some.com:1234", o.address())
 
-	opts = Options{Port: 1234}
-	assert.Equal(t, "localhost:1234", opts.address())
+	o = Options{Port: 1234}
+	assert.Equal(t, "localhost:1234", o.address())
 
-	opts = Options{Host: "some.com"}
-	assert.Equal(t, "some.com:5656", opts.address())
+	o = Options{Host: "some.com"}
+	assert.Equal(t, "some.com:5656", o.address())
 
-	opts = Options{}
-	assert.Equal(t, "localhost:5656", opts.address())
+	o = Options{}
+	assert.Equal(t, "localhost:5656", o.address())
 }
 
 func TestWrongScheme(t *testing.T) {
