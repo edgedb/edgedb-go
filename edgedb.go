@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"context"
+	"log"
 	"net"
 
 	"github.com/edgedb/edgedb-go/cache"
@@ -39,13 +40,27 @@ type baseConn struct {
 
 // ConnectOne establishes a connection to an EdgeDB server.
 func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
+	return ConnectOneDSN(ctx, "", opts)
+}
+
+// ConnectOneDSN establishes a connection to an EdgeDB server.
+func ConnectOneDSN(
+	ctx context.Context,
+	dsn string,
+	opts Options, // nolint:gocritic
+) (*Conn, error) {
 	conn := &baseConn{
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
 		outCodecCache: cache.New(1_000),
 	}
 
-	if err := connectOne(ctx, &opts, conn); err != nil {
+	config, err := parseConnectDSNAndArgs(dsn, &opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := connectOne(ctx, config, conn); err != nil {
 		return nil, err
 	}
 
@@ -53,20 +68,32 @@ func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:go
 }
 
 // connectOne expectes a singleConn that has a nil net.Conn.
-func connectOne(ctx context.Context, opts *Options, conn *baseConn) error {
-	var d net.Dialer
-	netConn, err := d.DialContext(ctx, opts.network(), opts.address())
-	if err != nil {
-		return err
+func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
+	var (
+		d   net.Dialer
+		err error
+	)
+
+	for _, addr := range cfg.addrs { // nolint:gocritic
+		// todo do error values need to be checked?
+		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
+		if err != nil {
+			log.Printf("while attempting connection %+v: %+v", addr, err)
+			continue
+		}
+
+		err = conn.connect(ctx, cfg)
+		if err != nil {
+			_ = conn.conn.Close()
+			log.Printf("while attempting connection %+v: %+v", addr, err)
+			continue
+		}
+
+		return nil
 	}
 
-	conn.conn = netConn
-	err = conn.connect(ctx, opts)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	conn.conn = nil
+	return err
 }
 
 // Close the db connection
@@ -190,7 +217,7 @@ func (c *baseConn) QueryOneJSON(
 	}
 
 	if len(*out) == 0 {
-		return ErrorZeroResults
+		return ErrZeroResults
 	}
 
 	return nil

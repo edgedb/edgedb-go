@@ -25,16 +25,16 @@ import (
 	"github.com/xdg/scram"
 )
 
-func (c *baseConn) connect(ctx context.Context, opts *Options) error {
+func (c *baseConn) connect(ctx context.Context, cfg *connConfig) error {
 	buf := buff.New(nil)
 	buf.BeginMessage(message.ClientHandshake)
 	buf.PushUint16(0) // major version
 	buf.PushUint16(8) // minor version
 	buf.PushUint16(2) // number of parameters
 	buf.PushString("database")
-	buf.PushString(opts.Database)
+	buf.PushString(cfg.database)
 	buf.PushString("user")
-	buf.PushString(opts.User)
+	buf.PushString(cfg.user)
 	buf.PushUint16(0) // no extensions
 	buf.EndMessage()
 
@@ -78,7 +78,7 @@ func (c *baseConn) connect(ctx context.Context, opts *Options) error {
 				buf.PopBytes()
 			}
 
-			if err := c.authenticate(ctx, opts); err != nil {
+			if err := c.authenticate(ctx, cfg); err != nil {
 				return err
 			}
 		case message.ErrorResponse:
@@ -90,8 +90,8 @@ func (c *baseConn) connect(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func (c *baseConn) authenticate(ctx context.Context, opts *Options) error {
-	client, err := scram.SHA256.NewClient(opts.User, opts.Password, "")
+func (c *baseConn) authenticate(ctx context.Context, cfg *connConfig) error {
+	client, err := scram.SHA256.NewClient(cfg.user, cfg.password, "")
 	if err != nil {
 		return err
 	}

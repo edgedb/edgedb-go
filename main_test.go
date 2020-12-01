@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -53,16 +52,17 @@ func getLocalServer() error {
 		return errors.New("credentials not found")
 	}
 
-	data, err := ioutil.ReadFile(credFileName)
+	creds, err := readCredentials(credFileName)
 	if err != nil {
 		log.Printf("failed to read credentials file: %q", credFileName)
 		return errors.New("credentials not found")
 	}
 
-	err = json.Unmarshal(data, &opts)
-	if err != nil {
-		log.Printf("failed to parse credentials file: %q", credFileName)
-		return errors.New("credentials not found")
+	opts = Options{
+		Ports:    []int{creds.port},
+		User:     creds.user,
+		Password: creds.password,
+		Database: creds.database,
 	}
 
 	log.Print("using existing server")
@@ -77,14 +77,20 @@ func startServer() (err error) {
 		cmdName = fmt.Sprintf("%v-%v", cmdName, slot)
 	}
 
-	cmd := exec.Command(
-		cmdName,
+	cmdArgs := []string{
 		"--temp-dir",
 		"--testmode",
 		"--echo-runtime-info",
 		"--port=auto",
 		"--auto-shutdown",
-	)
+		`--bootstrap-command=` +
+			`CREATE SUPERUSER ROLE test { SET password := "shhh"  }`,
+	}
+
+	log.Println(cmdName, strings.Join(cmdArgs, " "))
+
+	cmd := exec.Command(cmdName, cmdArgs...)
+	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -99,6 +105,7 @@ func startServer() (err error) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		text = scanner.Text()
+		fmt.Println(text)
 		if strings.HasPrefix(text, "EDGEDB_SERVER_DATA:") {
 			break
 		}
@@ -120,11 +127,11 @@ func startServer() (err error) {
 	}
 
 	opts = Options{
-		Host:     data.Host,
-		Port:     data.Port,
-		User:     "edgedb",
+		Hosts:    []string{data.Host},
+		Ports:    []int{data.Port},
+		User:     "test",
+		Password: "shhh",
 		Database: "edgedb",
-		admin:    true,
 	}
 
 	log.Print("server started")
@@ -135,6 +142,10 @@ func TestMain(m *testing.M) {
 	var err error = nil
 	code := 1
 	defer func() {
+		if p := recover(); p != nil {
+			log.Println(p)
+		}
+
 		if err != nil {
 			log.Println("error while cleaning up: ", err)
 		}
@@ -154,7 +165,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-
 	defer func() {
 		e := conn.Close()
 		if e != nil {
@@ -172,7 +182,8 @@ func TestMain(m *testing.M) {
 
 	var name string
 	err = conn.QueryOne(ctx, query, &name)
-	if errors.Is(err, ErrorZeroResults) {
+	if errors.Is(err, ErrZeroResults) {
+		log.Println("setting up test db")
 		executeOrPanic(`
 			START MIGRATION TO {
 				module default {
@@ -206,6 +217,7 @@ func TestMain(m *testing.M) {
 				user := {'user_with_password'}
 			}
 		`)
+		err = nil
 	}
 
 	rand.Seed(time.Now().Unix())

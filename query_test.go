@@ -105,7 +105,7 @@ func TestQueryOneJSONZeroResults(t *testing.T) {
 	var result []byte
 	err := conn.QueryOneJSON(ctx, "SELECT <int64>{}", &result)
 
-	require.Equal(t, err, ErrorZeroResults)
+	require.Equal(t, err, ErrZeroResults)
 	assert.Equal(t, []byte(nil), result)
 }
 
@@ -123,7 +123,7 @@ func TestQueryOneZeroResults(t *testing.T) {
 	var result int64
 	err := conn.QueryOne(ctx, "SELECT <int64>{}", &result)
 
-	assert.Equal(t, ErrorZeroResults, err)
+	assert.Equal(t, ErrZeroResults, err)
 }
 
 func TestError(t *testing.T) {

@@ -24,29 +24,32 @@ import (
 )
 
 var (
-	// Error is wrapped by all errors returned from the server.
-	Error = errors.New("")
-	// todo error API (hierarchy and wrap all returned errors)
+	// Error is wrapped by all edgedb errors.
+	Error error = errors.New("")
 
 	// ErrReleasedTwice is returned if a PoolConn is released more than once.
 	ErrReleasedTwice = fmt.Errorf(
 		"connection released more than once%w", Error,
 	)
 
-	// ErrorZeroResults is returned when a query has no results.
-	ErrorZeroResults = fmt.Errorf("zero results%w", Error)
+	// ErrZeroResults is returned when a query has no results.
+	ErrZeroResults = fmt.Errorf("zero results%w", Error)
 
-	// ErrorPoolClosed is returned by operations on closed pools.
-	ErrorPoolClosed error = fmt.Errorf("pool closed%w", Error)
+	// ErrPoolClosed is returned by operations on closed pools.
+	ErrPoolClosed error = fmt.Errorf("pool closed%w", Error)
 
-	// ErrorConnsInUse is returned when all connects are in use.
-	ErrorConnsInUse error = fmt.Errorf("all connections in use%w", Error)
+	// ErrContextExpired is returned when an expired context is used.
+	ErrContextExpired error = fmt.Errorf("context expired%w", Error)
 
-	// ErrorContextExpired is returned when an expired context is used.
-	ErrorContextExpired error = fmt.Errorf("context expired%w", Error)
+	// ErrBadConfig is wrapped
+	// when a function returning Options encounters an error.
+	ErrBadConfig error = fmt.Errorf("%w", Error)
 
-	// ErrorConfiguration is returned when invalid configuration is received.
-	ErrorConfiguration error = fmt.Errorf("%w", Error)
+	// ErrClientFault ...
+	ErrClientFault error = fmt.Errorf("%w", Error)
+
+	// ErrInterfaceViolation ...
+	ErrInterfaceViolation error = fmt.Errorf("%w", ErrClientFault)
 )
 
 func decodeError(buf *buff.Buff) error {
@@ -83,6 +86,10 @@ func wrapAll(errs ...error) error {
 
 	if len(err.wrapped) == 0 {
 		return nil
+	}
+
+	if len(err.wrapped) == 1 {
+		return err.wrapped[0]
 	}
 
 	err.msg = err.wrapped[0].Error()

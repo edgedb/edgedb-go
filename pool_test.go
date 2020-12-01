@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -61,7 +60,7 @@ func TestClosePoolConcurently(t *testing.T) {
 	go func() { errs <- pool.Close() }()
 
 	assert.Nil(t, <-errs)
-	assert.Equal(t, ErrorPoolClosed, <-errs)
+	assert.Equal(t, ErrPoolClosed, <-errs)
 }
 
 func TestConnectPoolMinConnGteZero(t *testing.T) {
@@ -71,7 +70,7 @@ func TestConnectPoolMinConnGteZero(t *testing.T) {
 	o := Options{MinConns: 0, MaxConns: 10}
 	_, err := Connect(ctx, o)
 	assert.EqualError(t, err, "MinConns may not be less than 1, got: 0")
-	assert.True(t, errors.Is(err, ErrorConfiguration))
+	assert.True(t, errors.Is(err, ErrBadConfig))
 }
 
 func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
@@ -81,7 +80,7 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 	o := Options{MinConns: 5, MaxConns: 1}
 	_, err := Connect(ctx, o)
 	assert.EqualError(t, err, "MaxConns may not be less than MinConns")
-	assert.True(t, errors.Is(err, ErrorConfiguration))
+	assert.True(t, errors.Is(err, ErrBadConfig))
 }
 
 func TestAcquireFromClosedPool(t *testing.T) {
@@ -92,7 +91,7 @@ func TestAcquireFromClosedPool(t *testing.T) {
 	}
 
 	conn, err := pool.Acquire(context.TODO())
-	require.Equal(t, err, ErrorPoolClosed)
+	require.Equal(t, err, ErrPoolClosed)
 	assert.Nil(t, conn)
 }
 
@@ -107,14 +106,14 @@ func TestAcquireFreeConnFromPool(t *testing.T) {
 }
 
 func BenchmarkPoolAcquireRelease(b *testing.B) {
-	opts := &Options{MinConns: 2, MaxConns: 2}
 	pool := &Pool{
-		opts:           opts,
-		freeConns:      make(chan *baseConn, opts.MaxConns),
-		potentialConns: make(chan struct{}, opts.MaxConns),
+		maxConns:       2,
+		minConns:       2,
+		freeConns:      make(chan *baseConn, 2),
+		potentialConns: make(chan struct{}, 2),
 	}
 
-	for i := 0; i < opts.MaxConns; i++ {
+	for i := 0; i < pool.maxConns; i++ {
 		pool.freeConns <- &baseConn{}
 	}
 
@@ -129,18 +128,26 @@ func BenchmarkPoolAcquireRelease(b *testing.B) {
 }
 
 func TestAcquirePotentialConnFromPool(t *testing.T) {
-	pool := &Pool{
-		potentialConns: make(chan struct{}, 1),
-		opts:           &opts,
-	}
-	pool.potentialConns <- struct{}{}
+	o := opts
+	o.MaxConns = 2
+	o.MinConns = 1
+	pool, err := Connect(context.TODO(), o)
+	require.Nil(t, err)
+	defer func() {
+		assert.Nil(t, pool.Close())
+	}()
 
-	deadline := time.Now().Add(10 * time.Millisecond)
-	ctx, cancel := context.WithDeadline(context.Background(), deadline)
-	conn, err := pool.Acquire(ctx)
-	assert.True(t, errors.Is(err, os.ErrDeadlineExceeded))
-	assert.Nil(t, conn)
-	cancel()
+	// free connection
+	a, err := pool.Acquire(context.TODO())
+	require.Nil(t, err)
+	require.NotNil(t, a)
+	defer func() { assert.Nil(t, a.Release()) }()
+
+	// potential connection
+	b, err := pool.Acquire(context.TODO())
+	require.Nil(t, err)
+	require.NotNil(t, b)
+	defer func() { assert.Nil(t, b.Release()) }()
 }
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
@@ -155,7 +162,7 @@ func TestPoolAcquireExpiredContext(t *testing.T) {
 	cancel()
 
 	conn, err := pool.Acquire(ctx)
-	assert.Equal(t, err, ErrorContextExpired)
+	assert.Equal(t, err, ErrContextExpired)
 	assert.Nil(t, conn)
 }
 
@@ -165,20 +172,22 @@ func TestPoolAcquireThenContextExpires(t *testing.T) {
 	deadline := time.Now().Add(10 * time.Millisecond)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	conn, err := pool.Acquire(ctx)
-	assert.Equal(t, err, ErrorContextExpired)
+	assert.Equal(t, err, ErrContextExpired)
 	assert.Nil(t, conn)
 	cancel()
 }
 
 func TestClosePool(t *testing.T) {
 	pool := &Pool{
+		maxConns:       0,
+		minConns:       0,
 		freeConns:      make(chan *baseConn),
 		potentialConns: make(chan struct{}),
-		opts:           &Options{MaxConns: 0, MinConns: 0},
 	}
+
 	err := pool.Close()
 	assert.Nil(t, err)
 
 	err = pool.Close()
-	assert.Equal(t, err, ErrorPoolClosed)
+	assert.Equal(t, err, ErrPoolClosed)
 }

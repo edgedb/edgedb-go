@@ -17,80 +17,74 @@
 package edgedb
 
 import (
-	"fmt"
-	"net/url"
-	"strconv"
-	"strings"
+	"time"
 )
 
 // Options for connecting to an EdgeDB server
 type Options struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Database string `json:"database"`
-	Password string `json:"password"`
-	admin    bool
+	// Hosts is a slice of database host addresses as one of the following
+	//
+	// - an IP address or domain name
+	//
+	// - an absolute path to the directory
+	//   containing the database server Unix-domain socket
+	//   (not supported on Windows)
+	//
+	// If the slice is empty, the following will be tried, in order:
+	//
+	// - host address(es) parsed from the dsn argument
+	//
+	// - the value of the EDGEDB_HOST environment variable
+	//
+	// - on Unix, common directories used for EdgeDB Unix-domain sockets:
+	//   "/run/edgedb" and "/var/run/edgedb"
+	//
+	// - "localhost"
+	Hosts []string
 
-	MaxConns int
+	// Ports is a slice of port numbers to connect to at the server host
+	// (or Unix-domain socket file extension).
+	//
+	// Ports may either be:
+	//
+	// - the same length ans Hosts
+	//
+	// - a single port to be used all specified hosts
+	//
+	// - empty indicating the value parsed from the dsn argument
+	//   should be used, or the value of the EDGEDB_PORT environment variable,
+	//   or 5656 if neither is specified.
+	Ports []int
+
+	// User is the name of the database role used for authentication.
+	// If not specified, the value parsed from the dsn argument is used,
+	// or the value of the EDGEDB_USER environment variable,
+	// or the operating system name of the user running the application.
+	User string
+
+	// Database is the name of the database to connect to.
+	// If not specified, the value parsed from the dsn argument is used,
+	// or the value of the EDGEDB_DATABASE environment variable,
+	// or the operating system name of the user running the application.
+	Database string
+
+	// Password to be used for authentication,
+	// if the server requires one. If not specified,
+	// the value parsed from the dsn argument is used,
+	// or the value of the EDGEDB_PASSWORD environment variable.
+	// Note that the use of the environment variable is discouraged
+	// as other users and applications may be able to read it
+	// without needing specific privileges.
+	Password string
+
+	// ConnectTimeout is used when establishing connections in the background.
+	ConnectTimeout time.Duration
+
+	// MinConns determines the minimum number of connections.
 	MinConns int
-}
 
-func (o *Options) network() string {
-	if o.admin {
-		return "unix"
-	}
-	return "tcp"
-}
+	// MaxConns determines the maximum number of connections.
+	MaxConns int
 
-func (o *Options) address() string {
-	if o.admin {
-		return fmt.Sprintf("%v/.s.EDGEDB.admin.%v", o.Host, o.Port)
-	}
-
-	host := o.Host
-	if host == "" {
-		host = "localhost"
-	}
-
-	port := o.Port
-	if port == 0 {
-		port = 5656
-	}
-
-	return fmt.Sprintf("%v:%v", host, port)
-}
-
-// DSN parses a URI string into an Options struct
-func DSN(dsn string) (opts Options, err error) {
-	parsed, err := url.Parse(dsn)
-	if err != nil {
-		return opts, err
-	}
-
-	if parsed.Scheme != "edgedb" {
-		return opts, fmt.Errorf("dsn %q is not an edgedb:// URI", dsn)
-	}
-
-	var port int
-	if parsed.Port() == "" {
-		port = 5656
-	} else {
-		port, err = strconv.Atoi(parsed.Port())
-		if err != nil {
-			return opts, err
-		}
-	}
-
-	host := strings.Split(parsed.Host, ":")[0]
-	db := strings.TrimLeft(parsed.Path, "/")
-	password, _ := parsed.User.Password()
-
-	return Options{
-		Host:     host,
-		Port:     port,
-		User:     parsed.User.Username(),
-		Database: db,
-		Password: password,
-	}, nil
+	ServerSettings map[string]string
 }

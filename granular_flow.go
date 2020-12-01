@@ -231,7 +231,7 @@ func (c *baseConn) execute(
 	}
 
 	tmp := out
-	err = ErrorZeroResults
+	err = ErrZeroResults
 	for buf.Next() {
 		switch buf.MsgType {
 		case message.Data:
@@ -296,7 +296,7 @@ func (c *baseConn) optimistic(
 	}
 
 	tmp := out
-	err = ErrorZeroResults
+	err = ErrZeroResults
 	for buf.Next() {
 		switch buf.MsgType {
 		case message.Data:
