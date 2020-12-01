@@ -53,12 +53,11 @@ func TestTutorial(t *testing.T) {
 	edb, err := ConnectOne(
 		ctx,
 		Options{
-			Host:     opts.Host,
-			Port:     opts.Port,
+			Hosts:    opts.Hosts,
+			Ports:    opts.Ports,
 			User:     opts.User,
 			Password: opts.Password,
 			Database: dbName,
-			admin:    opts.admin,
 		},
 	)
 	if err != nil {

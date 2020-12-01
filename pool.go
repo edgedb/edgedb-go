@@ -36,31 +36,49 @@ type Pool struct {
 	// A buffered channel of structs representing unconnected capacity.
 	potentialConns chan struct{}
 
-	opts          *Options
+	maxConns int
+	minConns int
+
+	cfg *connConfig
+
 	typeIDCache   *cache.Cache
 	inCodecCache  *cache.Cache
 	outCodecCache *cache.Cache
 }
 
+// todo check connect tests in other clients
+
+// todo add connectDSN funcs
+
 // Connect a pool of connections to a server.
 func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocritic,lll
+	return ConnectDSN(ctx, "", opts)
+}
+
+// ConnectDSN a pool of connections to a server.
+func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { // nolint:gocritic,lll
 	if opts.MinConns < 1 {
 		return nil, fmt.Errorf(
 			"MinConns may not be less than 1, got: %v%w",
-			opts.MinConns,
-			ErrorConfiguration,
+			opts.MinConns, ErrBadConfig,
 		)
 	}
 
 	if opts.MaxConns < opts.MinConns {
 		return nil, fmt.Errorf(
-			"MaxConns may not be less than MinConns%w",
-			ErrorConfiguration,
+			"MaxConns may not be less than MinConns%w", ErrBadConfig,
 		)
 	}
 
+	cfg, err := parseConnectDSNAndArgs(dsn, &opts)
+	if err != nil {
+		return nil, err
+	}
+
 	pool := &Pool{
-		opts: &opts,
+		maxConns: opts.MaxConns,
+		minConns: opts.MinConns,
+		cfg:      cfg,
 
 		freeConns:      make(chan *baseConn, opts.MinConns),
 		potentialConns: make(chan struct{}, opts.MaxConns),
@@ -104,7 +122,7 @@ func (p *Pool) newConn(ctx context.Context) (*baseConn, error) {
 		outCodecCache: p.outCodecCache,
 	}
 
-	if err := connectOne(ctx, p.opts, conn); err != nil {
+	if err := connectOne(ctx, p.cfg, conn); err != nil {
 		return nil, err
 	}
 
@@ -116,13 +134,13 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 	defer p.mu.RUnlock()
 
 	if p.isClosed {
-		return nil, ErrorPoolClosed
+		return nil, ErrPoolClosed
 	}
 
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
-		return nil, ErrorContextExpired
+		return nil, ErrContextExpired
 	default:
 	}
 
@@ -144,7 +162,7 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 		}
 		return conn, nil
 	case <-ctx.Done():
-		return nil, ErrorContextExpired
+		return nil, ErrContextExpired
 	}
 }
 
@@ -198,13 +216,13 @@ func (p *Pool) Close() error {
 	defer p.mu.Unlock()
 
 	if p.isClosed {
-		return ErrorPoolClosed
+		return ErrPoolClosed
 	}
 	p.isClosed = true
 
 	wg := sync.WaitGroup{}
-	errs := make([]error, p.opts.MaxConns)
-	for i := 0; i < p.opts.MaxConns; i++ {
+	errs := make([]error, p.maxConns)
+	for i := 0; i < p.maxConns; i++ {
 		select {
 		case conn := <-p.freeConns:
 			wg.Add(1)

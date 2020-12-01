@@ -14,33 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build !windows
+
 package edgedb
 
-import (
-	"context"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
-
-func TestAuth(t *testing.T) {
-	ctx := context.Background()
-	conn, err := ConnectOne(ctx, Options{
-		Hosts:    opts.Hosts,
-		Ports:    opts.Ports,
-		User:     "user_with_password",
-		Password: "secret",
-		Database: opts.Database,
-	})
-	assert.Nil(t, err)
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	var result string
-	err = conn.QueryOne(ctx, "SELECT 'It worked!';", &result)
-	cancel()
-
-	require.Nil(t, err)
-	assert.Equal(t, "It worked!", result)
-}
+var defaultHosts = []string{"/run/edgedb", "/var/run/edgedb"}
