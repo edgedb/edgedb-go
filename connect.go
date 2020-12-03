@@ -19,14 +19,13 @@ package edgedb
 import (
 	"context"
 	"fmt"
-	"net"
 
 	"github.com/edgedb/edgedb-go/protocol/buff"
 	"github.com/edgedb/edgedb-go/protocol/message"
 	"github.com/xdg/scram"
 )
 
-func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
+func (c *baseConn) connect(ctx context.Context, opts *Options) error {
 	buf := buff.New(nil)
 	buf.BeginMessage(message.ClientHandshake)
 	buf.PushUint16(0) // major version
@@ -39,8 +38,7 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 	buf.PushUint16(0) // no extensions
 	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, buf.Unwrap())
-	if err != nil {
+	if err := c.writeAndRead(ctx, buf.Unwrap()); err != nil {
 		return err
 	}
 
@@ -54,17 +52,15 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 			minor := buf.PopUint16()
 
 			if major != 0 || minor != 8 {
-				err = conn.Close()
-				if err != nil {
+				if err := c.conn.Close(); err != nil {
 					return err
 				}
 
-				err = fmt.Errorf(
+				return fmt.Errorf(
 					"unsupported protocol version: %v.%v",
 					major,
 					minor,
 				)
-				return err
 			}
 		case message.ServerKeyData:
 			buf.Discard(32) // key data
@@ -82,8 +78,7 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 				buf.PopBytes()
 			}
 
-			err := authenticate(ctx, conn, opts)
-			if err != nil {
+			if err := c.authenticate(ctx, opts); err != nil {
 				return err
 			}
 		case message.ErrorResponse:
@@ -95,20 +90,16 @@ func connect(ctx context.Context, conn net.Conn, opts *Options) (err error) {
 	return nil
 }
 
-func authenticate(
-	ctx context.Context,
-	conn net.Conn,
-	opts *Options,
-) (err error) {
+func (c *baseConn) authenticate(ctx context.Context, opts *Options) error {
 	client, err := scram.SHA256.NewClient(opts.User, opts.Password, "")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	conv := client.NewConversation()
 	scramMsg, err := conv.Step("")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	buf := buff.New(nil)
@@ -117,7 +108,7 @@ func authenticate(
 	buf.PushString(scramMsg)
 	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, buf.Unwrap())
+	err = c.writeAndRead(ctx, buf.Unwrap())
 	if err != nil {
 		return err
 	}
@@ -150,7 +141,7 @@ func authenticate(
 	buf.PushString(scramMsg)
 	buf.EndMessage()
 
-	err = writeAndRead(ctx, conn, buf.Unwrap())
+	err = c.writeAndRead(ctx, buf.Unwrap())
 	if err != nil {
 		return err
 	}
@@ -185,5 +176,10 @@ func authenticate(
 		}
 	}
 
+	return nil
+}
+
+func (c *baseConn) terminate() error {
+	// todo
 	return nil
 }

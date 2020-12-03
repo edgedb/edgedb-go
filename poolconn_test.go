@@ -17,27 +17,25 @@
 package edgedb
 
 import (
-	"fmt"
-	"log"
+	"errors"
+	"testing"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
-	"github.com/edgedb/edgedb-go/protocol/message"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func (c *baseConn) fallThrough(buf *buff.Buff) error {
-	switch buf.MsgType {
-	case message.ParameterStatus:
-		name := buf.PopString()
-		value := buf.PopString()
-		c.serverSettings[name] = value
-	case message.LogMessage:
-		severity := string([]byte{buf.PopUint8()})
-		code := buf.PopUint32()
-		message := buf.PopString()
-		log.Println("SERVER MESSAGE", severity, code, message)
-	default:
-		return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
-	}
+func TestReleasePoolConn(t *testing.T) {
+	pool := &Pool{freeConns: make(chan *baseConn, 1)}
+	conn := &baseConn{}
+	poolConn := &PoolConn{pool: pool, baseConn: conn}
 
-	return nil
+	err := poolConn.Release()
+	require.Nil(t, err)
+
+	result := <-pool.freeConns
+	assert.Equal(t, conn, result)
+
+	err = poolConn.Release()
+	assert.EqualError(t, err, "connection released more than once")
+	assert.True(t, errors.Is(err, ErrReleasedTwice))
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/edgedb/edgedb-go/protocol/message"
 )
 
-func (c *Client) scriptFlow(
+func (c *baseConn) scriptFlow(
 	ctx context.Context,
 	conn net.Conn,
 	query string,
@@ -35,7 +35,7 @@ func (c *Client) scriptFlow(
 	buf.PushString(query)
 	buf.EndMessage()
 
-	err := writeAndRead(ctx, conn, buf.Unwrap())
+	err := c.writeAndRead(ctx, buf.Unwrap())
 	if err != nil {
 		return err
 	}

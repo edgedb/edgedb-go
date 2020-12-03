@@ -16,28 +16,12 @@
 
 package edgedb
 
-import (
-	"fmt"
-	"log"
+// Conn is a conn created outside of a pool.
+type Conn struct {
+	baseConn
+}
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
-	"github.com/edgedb/edgedb-go/protocol/message"
-)
-
-func (c *baseConn) fallThrough(buf *buff.Buff) error {
-	switch buf.MsgType {
-	case message.ParameterStatus:
-		name := buf.PopString()
-		value := buf.PopString()
-		c.serverSettings[name] = value
-	case message.LogMessage:
-		severity := string([]byte{buf.PopUint8()})
-		code := buf.PopUint32()
-		message := buf.PopString()
-		log.Println("SERVER MESSAGE", severity, code, message)
-	default:
-		return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
-	}
-
-	return nil
+// Close closes the connection.
+func (c *Conn) Close() error {
+	return c.baseConn.close()
 }
