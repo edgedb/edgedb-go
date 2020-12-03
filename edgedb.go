@@ -38,7 +38,7 @@ type baseConn struct {
 }
 
 // ConnectOne establishes a connection to an EdgeDB server.
-func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint
+func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
 	conn := &baseConn{
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
@@ -71,13 +71,7 @@ func connectOne(ctx context.Context, opts *Options, conn *baseConn) error {
 
 // Close the db connection
 func (c *baseConn) close() error {
-	err := c.terminate()
-	if err == nil {
-		return c.conn.Close()
-	}
-
-	c.conn.Close() // nolint:errcheck
-	return err
+	return wrapAll(c.terminate(), c.conn.Close())
 }
 
 // Execute an EdgeQL command (or commands).

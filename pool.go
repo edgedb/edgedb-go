@@ -27,21 +27,14 @@ import (
 
 // Pool is a pool of connections.
 type Pool struct {
-	// mu locks the closeSignal channel in calls to Pool.Close()
-	mu sync.Mutex
-
-	// pool.Close() sends on this channel to signal closing the pool
-	closeSignal chan chan struct{}
+	isClosed bool
+	mu       sync.RWMutex // locks isClosed
 
 	// A buffered channel of connections ready for use.
 	freeConns chan *baseConn
 
 	// A buffered channel of structs representing unconnected capacity.
 	potentialConns chan struct{}
-
-	// Connections that did not produce a connection error
-	// are sent back to the pool on releasedConns.
-	releasedConns chan *baseConn
 
 	opts          *Options
 	typeIDCache   *cache.Cache
@@ -50,7 +43,7 @@ type Pool struct {
 }
 
 // Connect a pool of connections to a server.
-func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint
+func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocritic,lll
 	// todo should 0 be a valid value for MinConns?
 	if opts.MinConns < 1 {
 		return nil, fmt.Errorf(
@@ -70,10 +63,8 @@ func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint
 	pool := &Pool{
 		opts: &opts,
 
-		closeSignal:    make(chan chan struct{}, 1),
 		freeConns:      make(chan *baseConn, opts.MinConns),
 		potentialConns: make(chan struct{}, opts.MaxConns),
-		releasedConns:  make(chan *baseConn, opts.MaxConns),
 
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
@@ -84,81 +75,27 @@ func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint
 		pool.potentialConns <- struct{}{}
 	}
 
-	errCh := make(chan error, opts.MinConns)
-
+	wg := sync.WaitGroup{}
+	errs := make([]error, opts.MinConns)
 	for i := 0; i < opts.MinConns; i++ {
-		go func() {
-			conn, e := pool.newConn(ctx)
-			pool.releasedConns <- conn
-			errCh <- e
-		}()
+		wg.Add(1)
+		go func(i int) {
+			conn, err := pool.newConn(ctx)
+			if err == nil {
+				pool.freeConns <- conn
+				return
+			}
+			errs[i] = err
+			pool.potentialConns <- struct{}{}
+		}(i)
 	}
 
-	var err error
-	for i := 0; i < opts.MinConns; i++ {
-		e := <-errCh
-		if e != nil {
-			err = e
-		}
+	wg.Done()
+	if err := wrapAll(errs...); err != nil {
+		return nil, wrapAll(err, pool.Close())
 	}
 
-	if err != nil {
-		pool.closeSignal <- make(chan struct{}, 1)
-		pool.daemon()
-		return nil, err
-	}
-
-	go pool.daemon()
 	return pool, nil
-}
-
-func (p *Pool) daemon() {
-	closeIn := p.closeSignal
-	connCount := p.opts.MaxConns
-	var closeOut chan struct{}
-
-	for {
-		select {
-		case closeOut = <-closeIn:
-			close(p.freeConns)
-			close(p.potentialConns)
-
-			for range p.potentialConns {
-				connCount--
-			}
-
-			for conn := range p.freeConns {
-				go conn.close() // nolint:errcheck
-				connCount--
-			}
-
-			goto shutdown
-		case conn := <-p.releasedConns:
-			if conn == nil {
-				p.potentialConns <- struct{}{}
-				break
-			}
-
-			select {
-			case p.freeConns <- conn:
-			default:
-				// we have MinConns idle so no need to keep this connection.
-				go conn.close() // nolint:errcheck
-				p.potentialConns <- struct{}{}
-			}
-		}
-	}
-
-shutdown:
-	for connCount > 0 {
-		conn := <-p.releasedConns
-		if conn != nil {
-			go conn.close() // nolint:errcheck
-		}
-		connCount--
-	}
-
-	closeOut <- struct{}{}
 }
 
 func (p *Pool) newConn(ctx context.Context) (*baseConn, error) {
@@ -176,6 +113,13 @@ func (p *Pool) newConn(ctx context.Context) (*baseConn, error) {
 }
 
 func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.isClosed {
+		return nil, ErrorPoolClosed
+	}
+
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
@@ -185,28 +129,18 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 
 	// force using an existing connection over connecting a new socket.
 	select {
-	case conn, ok := <-p.freeConns:
-		if !ok {
-			return nil, ErrorPoolClosed
-		}
+	case conn := <-p.freeConns:
 		return conn, nil
 	default:
 	}
 
 	select {
-	case conn, ok := <-p.freeConns:
-		if !ok {
-			return nil, ErrorPoolClosed
-		}
+	case conn := <-p.freeConns:
 		return conn, nil
-	case _, ok := <-p.potentialConns:
-		if !ok {
-			return nil, ErrorPoolClosed
-		}
-
+	case <-p.potentialConns:
 		conn, err := p.newConn(ctx)
 		if err != nil {
-			p.releasedConns <- nil
+			p.potentialConns <- struct{}{}
 			return nil, err
 		}
 		return conn, nil
@@ -227,40 +161,64 @@ func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
 	return &PoolConn{pool: p, baseConn: conn}, nil
 }
 
-func (p *Pool) release(conn *baseConn, err error) {
+func unrecoverable(err error) bool {
 	if err == nil {
-		p.releasedConns <- conn
-		return
+		return false
 	}
 
 	e, ok := err.(*net.OpError)
 	if ok && e.Temporary() {
-		p.releasedConns <- conn
-		return
+		return false
 	}
 
-	go conn.close() // nolint:errcheck
-	p.releasedConns <- nil
+	return true
+}
+
+func (p *Pool) release(conn *baseConn, err error) error {
+	if unrecoverable(err) {
+		p.potentialConns <- struct{}{}
+		return conn.close()
+	}
+
+	select {
+	case p.freeConns <- conn:
+	default:
+		// we have MinConns idle so no need to keep this connection.
+		p.potentialConns <- struct{}{}
+		return conn.close()
+	}
+
+	return nil
 }
 
 // Close closes all connections in the pool.
-// Calling close blocks until all acquired connections have been released.
-// Returns an error if called more than once.
+// Calling close blocks until all acquired connections have been released,
+// and returns an error if called more than once.
 func (p *Pool) Close() error {
 	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	if p.closeSignal == nil {
-		p.mu.Unlock()
+	if p.isClosed {
 		return ErrorPoolClosed
 	}
+	p.isClosed = true
 
-	ch := make(chan struct{})
+	wg := sync.WaitGroup{}
+	errs := make([]error, p.opts.MaxConns)
+	for i := 0; i < p.opts.MaxConns; i++ {
+		select {
+		case conn := <-p.freeConns:
+			wg.Add(1)
+			go func(i int) {
+				errs[i] = conn.close()
+				wg.Done()
+			}(i)
+		case <-p.potentialConns:
+		}
+	}
 
-	p.closeSignal <- ch
-	<-ch
-	p.closeSignal = nil
-	p.mu.Unlock()
-	return nil
+	wg.Wait()
+	return wrapAll(errs...)
 }
 
 // Execute an EdgeQL command (or commands).
@@ -271,8 +229,7 @@ func (p *Pool) Execute(ctx context.Context, cmd string) (err error) {
 	}
 
 	err = conn.Execute(ctx, cmd)
-	p.release(conn, err)
-	return err
+	return wrapAll(err, p.release(conn, err))
 }
 
 // Query runs a query and returns the results.
@@ -288,8 +245,7 @@ func (p *Pool) Query(
 	}
 
 	err = conn.Query(ctx, cmd, out, args...)
-	p.release(conn, err)
-	return err
+	return wrapAll(err, p.release(conn, err))
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
@@ -307,8 +263,7 @@ func (p *Pool) QueryOne(
 	}
 
 	err = conn.QueryOne(ctx, cmd, out, args...)
-	p.release(conn, err)
-	return err
+	return wrapAll(err, p.release(conn, err))
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -324,8 +279,7 @@ func (p *Pool) QueryJSON(
 	}
 
 	err = conn.QueryJSON(ctx, cmd, out, args...)
-	p.release(conn, err)
-	return err
+	return wrapAll(err, p.release(conn, err))
 }
 
 // QueryOneJSON runs a singleton-returning query
@@ -344,6 +298,5 @@ func (p *Pool) QueryOneJSON(
 	}
 
 	err = conn.QueryOneJSON(ctx, cmd, out, args...)
-	p.release(conn, err)
-	return err
+	return wrapAll(err, p.release(conn, err))
 }

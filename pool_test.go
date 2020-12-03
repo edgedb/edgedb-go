@@ -28,7 +28,7 @@ import (
 )
 
 func TestConnectPool(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	o := opts
@@ -86,27 +86,17 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 
 func TestAcquireFromClosedPool(t *testing.T) {
 	pool := &Pool{
+		isClosed:       true,
 		freeConns:      make(chan *baseConn),
 		potentialConns: make(chan struct{}),
 	}
-	close(pool.freeConns)
 
 	conn, err := pool.Acquire(context.TODO())
-	assert.Equal(t, err, ErrorPoolClosed)
-	assert.Nil(t, conn)
-
-	pool = &Pool{
-		freeConns:      make(chan *baseConn),
-		potentialConns: make(chan struct{}),
-	}
-	close(pool.potentialConns)
-
-	conn, err = pool.Acquire(context.TODO())
-	assert.Equal(t, err, ErrorPoolClosed)
+	require.Equal(t, err, ErrorPoolClosed)
 	assert.Nil(t, conn)
 }
 
-func TestAcquireFreeConn(t *testing.T) {
+func TestAcquireFreeConnFromPool(t *testing.T) {
 	conn := &baseConn{}
 	pool := &Pool{freeConns: make(chan *baseConn, 1)}
 	pool.freeConns <- conn
@@ -116,10 +106,31 @@ func TestAcquireFreeConn(t *testing.T) {
 	assert.Equal(t, conn, result.baseConn)
 }
 
-func TestAcquirePotentialConn(t *testing.T) {
+func BenchmarkPoolAcquireRelease(b *testing.B) {
+	opts := &Options{MinConns: 2, MaxConns: 2}
+	pool := &Pool{
+		opts:           opts,
+		freeConns:      make(chan *baseConn, opts.MaxConns),
+		potentialConns: make(chan struct{}, opts.MaxConns),
+	}
+
+	for i := 0; i < opts.MaxConns; i++ {
+		pool.freeConns <- &baseConn{}
+	}
+
+	var conn *baseConn
+	ctx := context.TODO()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		conn, _ = pool.acquire(ctx)
+		_ = pool.release(conn, nil)
+	}
+}
+
+func TestAcquirePotentialConnFromPool(t *testing.T) {
 	pool := &Pool{
 		potentialConns: make(chan struct{}, 1),
-		releasedConns:  make(chan *baseConn, 1),
 		opts:           &opts,
 	}
 	pool.potentialConns <- struct{}{}
@@ -132,7 +143,7 @@ func TestAcquirePotentialConn(t *testing.T) {
 	cancel()
 }
 
-func TestAcquireExpiredContext(t *testing.T) {
+func TestPoolAcquireExpiredContext(t *testing.T) {
 	pool := &Pool{
 		freeConns:      make(chan *baseConn, 1),
 		potentialConns: make(chan struct{}, 1),
@@ -148,7 +159,7 @@ func TestAcquireExpiredContext(t *testing.T) {
 	assert.Nil(t, conn)
 }
 
-func TestAcquireThenContextExpires(t *testing.T) {
+func TestPoolAcquireThenContextExpires(t *testing.T) {
 	pool := &Pool{}
 
 	deadline := time.Now().Add(10 * time.Millisecond)
@@ -163,10 +174,8 @@ func TestClosePool(t *testing.T) {
 	pool := &Pool{
 		freeConns:      make(chan *baseConn),
 		potentialConns: make(chan struct{}),
-		closeSignal:    make(chan chan struct{}, 1),
 		opts:           &Options{MaxConns: 0, MinConns: 0},
 	}
-	go pool.daemon()
 	err := pool.Close()
 	assert.Nil(t, err)
 

@@ -28,6 +28,11 @@ var (
 	Error = errors.New("")
 	// todo error API (hierarchy and wrap all returned errors)
 
+	// ErrReleasedTwice is returned if a PoolConn is released more than once.
+	ErrReleasedTwice = fmt.Errorf(
+		"connection released more than once%w", Error,
+	)
+
 	// ErrorZeroResults is returned when a query has no results.
 	ErrorZeroResults = fmt.Errorf("zero results%w", Error)
 
@@ -47,4 +52,43 @@ var (
 func decodeError(buf *buff.Buff) error {
 	buf.Discard(5) // skip severity & code
 	return fmt.Errorf("%v%w", buf.PopString(), Error)
+}
+
+type wrappedManyError struct {
+	msg     string
+	wrapped []error
+}
+
+func (e *wrappedManyError) Error() string {
+	return e.msg
+}
+
+func (e *wrappedManyError) Is(target error) bool {
+	for _, err := range e.wrapped {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func wrapAll(errs ...error) error {
+	err := &wrappedManyError{}
+	for _, e := range errs {
+		if e != nil {
+			err.wrapped = append(err.wrapped, e)
+		}
+	}
+
+	if len(err.wrapped) == 0 {
+		return nil
+	}
+
+	err.msg = err.wrapped[0].Error()
+	for _, e := range err.wrapped[1:] {
+		err.msg += "; " + e.Error()
+	}
+
+	return err
 }

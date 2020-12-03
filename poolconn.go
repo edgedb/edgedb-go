@@ -30,15 +30,17 @@ type PoolConn struct {
 
 // Release the connection back to its pool. Panics if called more than once.
 // PoolConn is not useable after Release has been called.
-func (c *PoolConn) Release() {
+func (c *PoolConn) Release() error {
 	if c.pool == nil {
-		panic("connection was already released")
+		return ErrReleasedTwice
 	}
 
-	c.pool.release(c.baseConn, c.err)
+	err := c.pool.release(c.baseConn, c.err)
 	c.pool = nil
 	c.baseConn = nil
 	c.err = nil
+
+	return err
 }
 
 func (c *PoolConn) checkErr(err error) {

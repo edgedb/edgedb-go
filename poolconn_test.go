@@ -17,20 +17,25 @@
 package edgedb
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReleasePoolConn(t *testing.T) {
-	pool := &Pool{releasedConns: make(chan *baseConn, 1)}
+	pool := &Pool{freeConns: make(chan *baseConn, 1)}
 	conn := &baseConn{}
 	poolConn := &PoolConn{pool: pool, baseConn: conn}
 
-	poolConn.Release()
-	result := <-pool.releasedConns
+	err := poolConn.Release()
+	require.Nil(t, err)
+
+	result := <-pool.freeConns
 	assert.Equal(t, conn, result)
 
-	expected := "connection was already released"
-	assert.PanicsWithValue(t, expected, func() { poolConn.Release() })
+	err = poolConn.Release()
+	assert.EqualError(t, err, "connection released more than once")
+	assert.True(t, errors.Is(err, ErrReleasedTwice))
 }
