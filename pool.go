@@ -44,7 +44,6 @@ type Pool struct {
 
 // Connect a pool of connections to a server.
 func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocritic,lll
-	// todo should 0 be a valid value for MinConns?
 	if opts.MinConns < 1 {
 		return nil, fmt.Errorf(
 			"MinConns may not be less than 1, got: %v%w",
