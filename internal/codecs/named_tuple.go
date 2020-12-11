@@ -21,22 +21,22 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/marshal"
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popNamedTupleCodec(
-	buf *buff.Buff,
+	r *buff.Reader,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []*objectField{}
 
-	elmCount := int(buf.PopUint16())
+	elmCount := int(r.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		name := buf.PopString()
-		index := buf.PopUint16()
+		name := r.PopString()
+		index := r.PopUint16()
 
 		if name == "__tid__" {
 			continue
@@ -95,23 +95,23 @@ func (c *NamedTuple) Type() reflect.Type {
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(buf *buff.Buff, out unsafe.Pointer) {
-	buf.PopUint32() // data length
-	elmCount := int(int32(buf.PopUint32()))
+func (c *NamedTuple) Decode(r *buff.Reader, out unsafe.Pointer) {
+	r.Discard(4) // data length
+	elmCount := int(int32(r.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
-		buf.PopUint32() // reserved
+		r.Discard(4) // reserved
 		field := c.fields[i]
-		field.codec.Decode(buf, pAdd(out, field.offset))
+		field.codec.Decode(r, pAdd(out, field.offset))
 	}
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(buf *buff.Buff, val interface{}) {
+func (c *NamedTuple) Encode(w *buff.Writer, val interface{}) {
 	elmCount := len(c.fields)
 
-	buf.BeginBytes()
-	buf.PushUint32(uint32(elmCount))
+	w.BeginBytes()
+	w.PushUint32(uint32(elmCount))
 
 	args := val.([]interface{})
 	if len(args) != 1 {
@@ -124,10 +124,10 @@ func (c *NamedTuple) Encode(buf *buff.Buff, val interface{}) {
 	in := args[0].(map[string]interface{})
 
 	for i := 0; i < elmCount; i++ {
-		buf.PushUint32(0) // reserved
+		w.PushUint32(0) // reserved
 		field := c.fields[i]
-		field.codec.Encode(buf, in[field.name])
+		field.codec.Encode(w, in[field.name])
 	}
 
-	buf.EndBytes()
+	w.EndBytes()
 }

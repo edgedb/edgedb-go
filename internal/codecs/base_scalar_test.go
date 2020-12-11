@@ -21,24 +21,20 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecodeUUID(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 24,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 16, // data length
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	})
-	buf.Next()
-
-	codec := &UUID{}
 
 	var result types.UUID
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&UUID{}).Decode(r, unsafe.Pointer(&result))
 
 	expected := types.UUID{0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8}
 	assert.Equal(t, expected, result)
@@ -46,13 +42,10 @@ func TestDecodeUUID(t *testing.T) {
 
 func BenchmarkDecodeUUID(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 24,
 		0, 0, 0, 16, // data length
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result types.UUID
 	ptr := unsafe.Pointer(&result)
@@ -60,50 +53,48 @@ func BenchmarkDecodeUUID(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeUUID(t *testing.T) {
-	buf := buff.New(nil)
-	(&UUID{}).Encode(buf, types.UUID{
-		0, 1, 2, 3, 3, 2, 1, 0,
-		8, 7, 6, 5, 5, 6, 7, 8,
+	w := buff.NewWriter()
+	(&UUID{}).Encode(w, types.UUID{
+		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	})
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 16, // data length
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func BenchmarkEncodeUUID(b *testing.B) {
-	codec := &UUID{}
+	w := buff.NewWriter()
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
-	buf := buff.New(make([]byte, 2000))
+	codec := &UUID{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Reset()
-		codec.Encode(buf, id)
+		codec.Encode(w, id)
 	}
 }
 
 func TestDecodeString(t *testing.T) {
 	data := []byte{
-		0,
-		0, 0, 0, 13,
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result string
-	(&Str{}).Decode(buf, unsafe.Pointer(&result))
+	(&Str{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, "hello", result)
 
@@ -114,13 +105,10 @@ func TestDecodeString(t *testing.T) {
 
 func BenchmarkDecodeString(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 13,
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result string
 	ptr := unsafe.Pointer(&result)
@@ -128,40 +116,37 @@ func BenchmarkDecodeString(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeString(t *testing.T) {
-	buf := buff.New(nil)
-	(&Str{}).Encode(buf, "hello")
+	w := buff.NewWriter()
+	(&Str{}).Encode(w, "hello")
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeBytes(t *testing.T) {
 	data := []byte{
-		0,
-		0, 0, 0, 13,
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
-	buf := buff.New(data)
-	buf.Next()
-
-	codec := Bytes{}
+	r := buff.SimpleReader(data)
 
 	var result []byte
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&Bytes{}).Decode(r, unsafe.Pointer(&result))
 
 	expected := []byte{104, 101, 108, 108, 111}
-
 	assert.Equal(t, expected, result)
 
 	// assert that memory is not shared with the buffer
@@ -171,13 +156,10 @@ func TestDecodeBytes(t *testing.T) {
 
 func BenchmarkDecodeBytes(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 13,
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result []byte
 	ptr := unsafe.Pointer(&result)
@@ -185,48 +167,44 @@ func BenchmarkDecodeBytes(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeBytes(t *testing.T) {
-	buf := buff.New(nil)
-	(&Bytes{}).Encode(buf, []byte{104, 101, 108, 108, 111})
+	w := buff.NewWriter()
+	(&Bytes{}).Encode(w, []byte{104, 101, 108, 108, 111})
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 5, // data length
 		104, 101, 108, 108, 111,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeInt16(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 10,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 2, // data length
 		0, 7, // int16
 	})
-	buf.Next()
 
 	var result int16
-	codec := Int16{}
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&Int16{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, int16(7), result)
 }
 
 func BenchmarkDecodeInt16(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 10,
 		0, 0, 0, 2, // data length
 		1, 2, // int16
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result int16
 	ptr := unsafe.Pointer(&result)
@@ -234,47 +212,44 @@ func BenchmarkDecodeInt16(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeInt16(t *testing.T) {
-	buf := buff.New(nil)
-	(&Int16{}).Encode(buf, int16(7))
+	w := buff.NewWriter()
+	(&Int16{}).Encode(w, int16(7))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 2, // data length
 		0, 7, // int16
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeInt32(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 12,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 4, // data length
 		0, 0, 0, 7, // int32
 	})
-	buf.Next()
 
 	var result int32
-	(&Int32{}).Decode(buf, unsafe.Pointer(&result))
+	(&Int32{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, int32(7), result)
 }
 
 func BenchmarkDecodeInt32(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 12,
 		0, 0, 0, 4, // data length
 		1, 2, 3, 4, // int32
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result int32
 	ptr := unsafe.Pointer(&result)
@@ -282,47 +257,44 @@ func BenchmarkDecodeInt32(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeInt32(t *testing.T) {
-	buf := buff.New(nil)
-	(&Int32{}).Encode(buf, int32(7))
+	w := buff.NewWriter()
+	(&Int32{}).Encode(w, int32(7))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 4, // data length
 		0, 0, 0, 7, // int32
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeInt64(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 16,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 8, // data length
 		1, 2, 3, 4, 5, 6, 7, 8, // int64
 	})
-	buf.Next()
 
 	var result int64
-	(&Int64{}).Decode(buf, unsafe.Pointer(&result))
+	(&Int64{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, int64(72623859790382856), result)
 }
 
 func BenchmarkDecodeInt64(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 16,
 		0, 0, 0, 8, // data length
 		1, 2, 3, 4, 5, 6, 7, 8, // int64
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result int64
 	ptr := unsafe.Pointer(&result)
@@ -330,48 +302,44 @@ func BenchmarkDecodeInt64(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeInt64(t *testing.T) {
-	buf := buff.New(nil)
-	(&Int64{}).Encode(buf, int64(27))
+	w := buff.NewWriter()
+	(&Int64{}).Encode(w, int64(27))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 27, // int64
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeFloat32(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 12,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 4, // data length
 		0xc2, 0, 0, 0,
 	})
-	buf.Next()
 
 	var result float32
-	codec := &Float32{}
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&Float32{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, float32(-32), result)
 }
 
 func BenchmarkDecodeFloat32(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 12,
 		0, 0, 0, 4, // data length
 		0xc2, 0, 0, 0,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result float32
 	ptr := unsafe.Pointer(&result)
@@ -379,48 +347,44 @@ func BenchmarkDecodeFloat32(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeFloat32(t *testing.T) {
-	buf := buff.New(nil)
-	(&Float32{}).Encode(buf, float32(-32))
+	w := buff.NewWriter()
+	(&Float32{}).Encode(w, float32(-32))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 4, // data length
 		0xc2, 0, 0, 0,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeFloat64(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 16,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 8, // data length
 		0xc0, 0x50, 0, 0, 0, 0, 0, 0,
 	})
-	buf.Next()
 
 	var result float64
-	codec := &Float64{}
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&Float64{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, float64(-64), result)
 }
 
 func BenchmarkDecodeFloat64(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 16,
 		0, 0, 0, 8, // data length
 		0xc0, 0x50, 0, 0, 0, 0, 0, 0,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result float64
 	ptr := unsafe.Pointer(&result)
@@ -428,48 +392,44 @@ func BenchmarkDecodeFloat64(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeFloat64(t *testing.T) {
-	buf := buff.New(nil)
-	(&Float64{}).Encode(buf, float64(-64))
+	w := buff.NewWriter()
+	(&Float64{}).Encode(w, float64(-64))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 8, // data length
 		0xc0, 0x50, 0, 0, 0, 0, 0, 0,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeBool(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 9,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 1, // data length
 		1,
 	})
-	buf.Next()
 
 	var result bool
-	codec := &Bool{}
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&Bool{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, true, result)
 }
 
 func BenchmarkDecodeBool(b *testing.B) {
 	data := []byte{
-		0,
-		0, 0, 0, 9,
 		0, 0, 0, 1, // data length
 		1,
 	}
-	buf := buff.New(data)
-	buf.Next()
+	r := buff.SimpleReader(data)
 
 	var result bool
 	ptr := unsafe.Pointer(&result)
@@ -477,73 +437,74 @@ func BenchmarkDecodeBool(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Msg = data[5:]
-		codec.Decode(buf, ptr)
+		r.Buf = data
+		codec.Decode(r, ptr)
 	}
 }
 
 func TestEncodeBool(t *testing.T) {
-	buf := buff.New(nil)
-	(&Bool{}).Encode(buf, true)
+	w := buff.NewWriter()
+	(&Bool{}).Encode(w, true)
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 1, // data length
 		1,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeDateTime(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 16,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 8, // data length
 		0xff, 0xfc, 0xa2, 0xfe, 0xc4, 0xc8, 0x20, 0x0,
 	})
-	buf.Next()
 
 	var result time.Time
-	codec := &DateTime{}
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&DateTime{}).Decode(r, unsafe.Pointer(&result))
 
 	expected := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	assert.Equal(t, expected, result)
 }
 
 func TestEncodeDateTime(t *testing.T) {
-	buf := buff.New(nil)
-	(&DateTime{}).Encode(buf, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC))
+	w := buff.NewWriter()
+	(&DateTime{}).Encode(w, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 8, // data length
 		0xff, 0xfc, 0xa2, 0xfe, 0xc4, 0xc8, 0x20, 0x0,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeDuration(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 24,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 0x10, // data length
 		0, 0, 0, 0, 0, 0xf, 0x42, 0x40,
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0, // reserved
 	})
-	buf.Next()
 
 	var result time.Duration
-	codec := &Duration{}
-	codec.Decode(buf, unsafe.Pointer(&result))
+	(&Duration{}).Decode(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, time.Duration(1_000_000_000), result)
 }
 
 func TestEncodeDuration(t *testing.T) {
-	buf := buff.New(nil)
-	(&Duration{}).Encode(buf, time.Duration(1_000_000_000))
+	w := buff.NewWriter()
+	(&Duration{}).Encode(w, time.Duration(1_000_000_000))
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 0x10, // data length
@@ -552,14 +513,14 @@ func TestEncodeDuration(t *testing.T) {
 		0, 0, 0, 0, // reserved
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestDecodeJSON(t *testing.T) {
 	// todo
 	t.SkipNow()
 
-	buf := buff.New([]byte{
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 0x12, // data length
 		1, // json format
 		0x7b, 0x22, 0x68, 0x65,
@@ -570,15 +531,18 @@ func TestDecodeJSON(t *testing.T) {
 	})
 
 	var result interface{}
-	(&JSON{}).Decode(buf, unsafe.Pointer(&result))
+	(&JSON{}).Decode(r, unsafe.Pointer(&result))
 	expected := map[string]interface{}{"hello": "world"}
 
 	assert.Equal(t, expected, result)
 }
 
 func TestEncodeJSON(t *testing.T) {
-	buf := buff.New(nil)
-	(&JSON{}).Encode(buf, map[string]string{"hello": "world"})
+	w := buff.NewWriter()
+	(&JSON{}).Encode(w, map[string]string{"hello": "world"})
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
 		0, 0, 0, 0x12, // data length
@@ -590,5 +554,5 @@ func TestEncodeJSON(t *testing.T) {
 		0x7d,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }

@@ -19,8 +19,9 @@ package edgedb
 import (
 	"errors"
 	"fmt"
+	"log"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 )
 
 var (
@@ -52,9 +53,20 @@ var (
 	ErrInterfaceViolation error = fmt.Errorf("%w", ErrClientFault)
 )
 
-func decodeError(buf *buff.Buff) error {
-	buf.Discard(5) // skip severity & code
-	return fmt.Errorf("%v%w", buf.PopString(), Error)
+func decodeError(r *buff.Reader) error {
+	r.Discard(5) // skip severity & code
+	err := fmt.Errorf("%v%w", r.PopString(), Error)
+
+	n := int(r.PopUint16())
+	headers := make(map[uint16]string, n)
+
+	for i := 0; i < n; i++ {
+		headers[r.PopUint16()] = r.PopString()
+	}
+
+	// todo do something with headers
+	log.Println(headers)
+	return err
 }
 
 type wrappedManyError struct {

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,9 +40,7 @@ func TestTupleSetType(t *testing.T) {
 }
 
 func TestDecodeTuple(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 40,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 32, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -54,7 +52,6 @@ func TestDecodeTuple(t *testing.T) {
 		0, 0, 0, 4, // data length
 		0, 0, 0, 3,
 	})
-	buf.Next()
 
 	var result []interface{}
 
@@ -64,7 +61,7 @@ func TestDecodeTuple(t *testing.T) {
 	}}
 	err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(buf, unsafe.Pointer(&result))
+	codec.Decode(r, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -75,32 +72,38 @@ func TestDecodeTuple(t *testing.T) {
 }
 
 func TestEncodeNullTuple(t *testing.T) {
-	buf := buff.New(nil)
-	buf.BeginMessage(0xff)
-	(&Tuple{}).Encode(buf, []interface{}{})
-	buf.EndMessage()
+	w := buff.NewWriter()
+	w.BeginMessage(0xff)
+	(&Tuple{}).Encode(w, []interface{}{})
+	w.EndMessage()
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
-		0xff,         // message type
-		0, 0, 0, 0xc, // message length
+		0xff,
+		0, 0, 0, 12,
 		0, 0, 0, 4, // data length
 		0, 0, 0, 0, // number of elements
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func TestEncodeTuple(t *testing.T) {
-	buf := buff.New(nil)
-	buf.BeginMessage(0xff)
+	w := buff.NewWriter()
+	w.BeginMessage(0xff)
 
 	codec := &Tuple{fields: []Codec{&Int64{}, &Int64{}}}
-	codec.Encode(buf, []interface{}{int64(2), int64(3)})
-	buf.EndMessage()
+	codec.Encode(w, []interface{}{int64(2), int64(3)})
+	w.EndMessage()
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
 
 	expected := []byte{
-		0xff,          // message type
-		0, 0, 0, 0x2c, // message length
+		0xff,
+		0, 0, 0, 44,
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
@@ -113,19 +116,18 @@ func TestEncodeTuple(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 3,
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	assert.Equal(t, expected, conn.written)
 }
 
 func BenchmarkEncodeTuple(b *testing.B) {
 	codec := Tuple{fields: []Codec{&UUID{}}}
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
 	ids := []interface{}{id}
-	buf := buff.New(nil)
+	w := buff.NewWriter()
+	w.BeginMessage(0xff)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buf.Reset()
-		buf.BeginMessage(0)
-		codec.Encode(buf, ids)
+		codec.Encode(w, ids)
 	}
 }

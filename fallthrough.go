@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
-	"github.com/edgedb/edgedb-go/protocol/message"
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/message"
 )
 
 var logMsgSeverityLookup map[uint8]string = map[uint8]string{
@@ -31,20 +31,20 @@ var logMsgSeverityLookup map[uint8]string = map[uint8]string{
 	0x50: "WARNING",
 }
 
-func (c *baseConn) fallThrough(buf *buff.Buff) error {
-	switch buf.MsgType {
+func (c *baseConn) fallThrough(r *buff.Reader) error {
+	switch r.MsgType {
 	case message.ParameterStatus:
-		name := buf.PopString()
-		value := buf.PopString()
+		name := r.PopString()
+		value := r.PopString()
 		c.serverSettings[name] = value
 	case message.LogMessage:
-		severity := logMsgSeverityLookup[buf.PopUint8()]
-		code := buf.PopUint32()
-		message := buf.PopString()
-		buf.Discard(2) // number of headers, assume 0
+		severity := logMsgSeverityLookup[r.PopUint8()]
+		code := r.PopUint32()
+		message := r.PopString()
+		r.Discard(2) // number of headers, assume 0
 		log.Println("SERVER MESSAGE", severity, code, message)
 	default:
-		return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
+		return fmt.Errorf("unexpected message type: 0x%x", r.MsgType)
 	}
 
 	return nil

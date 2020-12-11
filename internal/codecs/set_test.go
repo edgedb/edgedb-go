@@ -22,24 +22,22 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestArraySetType(t *testing.T) {
-	codec := &Array{child: &Int64{typ: int64Type}}
+func TestSetSetType(t *testing.T) {
+	codec := Set{child: &Int64{typ: int64Type}}
 	err := codec.setType(reflect.TypeOf([]int64{}))
 	require.Nil(t, err)
 
 	assert.Equal(t, 8, codec.step)
 }
 
-func TestDecodeArray(t *testing.T) {
-	buf := buff.New([]byte{
-		0xa,
-		0, 0, 0, 64,
-		0, 0, 0, 56, // data length
+func TestDecodeSet(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0x14, // reserved
@@ -47,7 +45,7 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 1, // dimension.lower
 		// element 0
 		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 3, // ing64
+		0, 0, 0, 0, 0, 0, 0, 3, // int64
 		// element 1
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 5, // int64
@@ -55,14 +53,13 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	})
-	buf.Next()
 
 	var result []int64
 
-	codec := &Array{child: &Int64{typ: int64Type}}
+	codec := Set{child: &Int64{typ: int64Type}}
 	err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(buf, unsafe.Pointer(&result))
+	codec.Decode(r, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -70,35 +67,4 @@ func TestDecodeArray(t *testing.T) {
 
 	expected := []int64{3, 5, 8}
 	assert.Equal(t, expected, result)
-}
-
-func TestEncodeArray(t *testing.T) {
-	buf := buff.New(nil)
-	buf.BeginMessage(0xff)
-
-	codec := &Array{child: &Int64{}}
-	codec.Encode(buf, []interface{}{int64(3), int64(5), int64(8)})
-	buf.EndMessage()
-
-	expected := []byte{
-		0xff,          // message type
-		0, 0, 0, 0x40, // message length
-		0, 0, 0, 0x38, // data length
-		0, 0, 0, 1, // dimension count
-		0, 0, 0, 0, // reserved
-		0, 0, 0, 0, // reserved
-		0, 0, 0, 3, // dimension.upper
-		0, 0, 0, 1, // dimension.lower
-		// element 0
-		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 3, // ing64
-		// element 1
-		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 5, // int64
-		// element 2
-		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 8, // int64
-	}
-
-	assert.Equal(t, expected, *buf.Unwrap())
 }

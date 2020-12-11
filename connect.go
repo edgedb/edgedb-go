@@ -17,80 +17,96 @@
 package edgedb
 
 import (
-	"context"
 	"fmt"
+	"sync"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
-	"github.com/edgedb/edgedb-go/protocol/message"
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/message"
 	"github.com/xdg/scram"
 )
 
-func (c *baseConn) connect(ctx context.Context, cfg *connConfig) error {
-	buf := buff.New(nil)
-	buf.BeginMessage(message.ClientHandshake)
-	buf.PushUint16(0) // major version
-	buf.PushUint16(8) // minor version
-	buf.PushUint16(2) // number of parameters
-	buf.PushString("database")
-	buf.PushString(cfg.database)
-	buf.PushString("user")
-	buf.PushString(cfg.user)
-	buf.PushUint16(0) // no extensions
-	buf.EndMessage()
+func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
+	c.writer.BeginMessage(message.ClientHandshake)
+	c.writer.PushUint16(0) // major version
+	c.writer.PushUint16(8) // minor version
+	c.writer.PushUint16(2) // number of parameters
+	c.writer.PushString("database")
+	c.writer.PushString(cfg.database)
+	c.writer.PushString("user")
+	c.writer.PushString(cfg.user)
+	c.writer.PushUint16(0) // no extensions
+	c.writer.EndMessage()
 
-	if err := c.writeAndRead(ctx, buf.Unwrap()); err != nil {
+	if err := c.writer.Send(c.conn); err != nil {
 		return err
 	}
 
-	for buf.Next() {
-		switch buf.MsgType {
+	var (
+		err  error
+		once sync.Once
+	)
+
+	doneReadingSignal := make(chan struct{}, 1)
+	done := func() { doneReadingSignal <- struct{}{} }
+
+	for r.Next(doneReadingSignal) {
+		switch r.MsgType {
 		case message.ServerHandshake:
 			// The client _MUST_ close the connection
 			// if the protocol version can't be supported.
 			// https://edgedb.com/docs/internals/protocol/overview
-			major := buf.PopUint16()
-			minor := buf.PopUint16()
+			major := r.PopUint16()
+			minor := r.PopUint16()
 
 			if major != 0 || minor != 8 {
-				if err := c.conn.Close(); err != nil {
-					return err
-				}
-
-				return fmt.Errorf(
-					"unsupported protocol version: %v.%v",
-					major,
-					minor,
+				e := fmt.Errorf(
+					"unsupported protocol version: %v.%v", major, minor,
 				)
+				return wrapAll(err, e, c.conn.Close())
 			}
 		case message.ServerKeyData:
-			buf.Discard(32) // key data
+			r.Discard(32) // key data
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			// header count (assume 0)
+			// transaction state
+			r.Discard(3)
+
+			once.Do(done)
 		case message.Authentication:
-			if buf.PopUint32() == 0 { // auth status
+			if r.PopUint32() == 0 { // auth status
 				continue
 			}
 
 			// skip supported SASL methods
-			n := int(buf.PopUint32()) // method count
+			n := int(r.PopUint32()) // method count
 			for i := 0; i < n; i++ {
-				buf.PopBytes()
+				r.PopBytes()
 			}
 
-			if err := c.authenticate(ctx, cfg); err != nil {
-				return err
+			if e := c.authenticate(r, cfg); e != nil {
+				return wrapAll(err, e)
 			}
+
+			once.Do(done)
 		case message.ErrorResponse:
-			return decodeError(buf)
+			err = decodeError(r)
+			once.Do(done)
 		default:
-			return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
+			if e := c.fallThrough(r); e != nil {
+				// the connection will not be usable after this x_x
+				return wrapAll(err, e)
+			}
 		}
 	}
-	return nil
+
+	if r.Err != nil {
+		return r.Err
+	}
+
+	return err
 }
 
-func (c *baseConn) authenticate(ctx context.Context, cfg *connConfig) error {
+func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	client, err := scram.SHA256.NewClient(cfg.user, cfg.password, "")
 	if err != nil {
 		return err
@@ -102,84 +118,116 @@ func (c *baseConn) authenticate(ctx context.Context, cfg *connConfig) error {
 		return err
 	}
 
-	buf := buff.New(nil)
-	buf.BeginMessage(message.AuthenticationSASLInitialResponse)
-	buf.PushString("SCRAM-SHA-256")
-	buf.PushString(scramMsg)
-	buf.EndMessage()
+	c.writer.BeginMessage(message.AuthenticationSASLInitialResponse)
+	c.writer.PushString("SCRAM-SHA-256")
+	c.writer.PushString(scramMsg)
+	c.writer.EndMessage()
 
-	err = c.writeAndRead(ctx, buf.Unwrap())
-	if err != nil {
-		return err
+	if e := c.writer.Send(c.conn); e != nil {
+		return e
 	}
 
-	buf.Next()
-	switch buf.MsgType {
-	case message.Authentication:
-		authStatus := buf.PopUint32()
-		if authStatus != 0xb {
-			return fmt.Errorf(
-				"unexpected authentication status: 0x%x",
-				authStatus,
-			)
-		}
+	done := buff.NewSignal()
 
-		scramRcv := buf.PopString()
-		scramMsg, err = conv.Step(scramRcv)
-		if err != nil {
-			return err
-		}
-	case message.ErrorResponse:
-		return decodeError(buf)
-	default:
-		return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
-	}
-	buf.Finish()
-
-	buf.Reset()
-	buf.BeginMessage(message.AuthenticationSASLResponse)
-	buf.PushString(scramMsg)
-	buf.EndMessage()
-
-	err = c.writeAndRead(ctx, buf.Unwrap())
-	if err != nil {
-		return err
-	}
-
-	for buf.Next() {
-		switch buf.MsgType {
+	for r.Next(done.Chan) {
+		switch r.MsgType {
 		case message.Authentication:
-			authStatus := buf.PopUint32()
+			authStatus := r.PopUint32()
+			if authStatus != 0xb {
+				// the connection will not be usable after this x_x
+				return fmt.Errorf(
+					"unexpected authentication status: 0x%x", authStatus,
+				)
+			}
+
+			scramRcv := r.PopString()
+			scramMsg, err = conv.Step(scramRcv)
+			if err != nil {
+				// the connection will not be usable after this x_x
+				return err
+			}
+
+			done.Signal()
+		case message.ErrorResponse:
+			err = wrapAll(err, decodeError(r))
+			done.Signal()
+		default:
+			if e := c.fallThrough(r); e != nil {
+				// the connection will not be usable after this x_x
+				return e
+			}
+		}
+	}
+
+	if r.Err != nil {
+		return r.Err
+	}
+
+	if err != nil {
+		return err
+	}
+
+	c.writer.BeginMessage(message.AuthenticationSASLResponse)
+	c.writer.PushString(scramMsg)
+	c.writer.EndMessage()
+
+	if e := c.writer.Send(c.conn); e != nil {
+		return e
+	}
+
+	done = buff.NewSignal()
+
+	for r.Next(done.Chan) {
+		switch r.MsgType {
+		case message.Authentication:
+			authStatus := r.PopUint32()
 			switch authStatus {
 			case 0:
 			case 0xc:
-				scramRcv := buf.PopString()
+				scramRcv := r.PopString()
 				_, err = conv.Step(scramRcv)
 				if err != nil {
+					// the connection will not be usable after this x_x
 					return err
 				}
 			default:
+				// the connection will not be usable after this x_x
 				return fmt.Errorf(
-					"unexpected authentication status: 0x%x",
-					authStatus,
+					"unexpected authentication status: 0x%x", authStatus,
 				)
 			}
 		case message.ServerKeyData:
-			buf.Discard(32) // key data
+			r.Discard(32) // key data
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			// header count (assume 0)
+			// transaction state
+			r.Discard(3)
+			done.Signal()
 		case message.ErrorResponse:
-			return decodeError(buf)
+			err = decodeError(r)
+			done.Signal()
 		default:
-			return fmt.Errorf("unexpected message type: 0x%x", buf.MsgType)
+			if e := c.fallThrough(r); e != nil {
+				// the connection will not be usable after this x_x
+				return e
+			}
 		}
 	}
 
-	return nil
+	if r.Err != nil {
+		return r.Err
+	}
+
+	return err
 }
 
 func (c *baseConn) terminate() error {
-	// todo
+	c.writer.BeginMessage(message.Terminate)
+	c.writer.EndMessage()
+
+	if e := c.writer.Send(c.conn); e != nil {
+		return e
+	}
+
 	return nil
 }

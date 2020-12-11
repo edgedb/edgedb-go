@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -137,6 +136,6 @@ func TestQueryTimesOut(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
 	err := conn.Execute(ctx, "SELECT 1;")
 
-	assert.True(t, errors.Is(err, os.ErrDeadlineExceeded))
+	assert.True(t, errors.Is(err, context.DeadlineExceeded), err)
 	cancel()
 }

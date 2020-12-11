@@ -21,23 +21,23 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/marshal"
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popObjectCodec(
-	buf *buff.Buff,
+	r *buff.Reader,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []*objectField{}
 
-	elmCount := int(buf.PopUint16())
+	elmCount := int(r.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		flags := buf.PopUint8()
-		name := buf.PopString()
-		index := buf.PopUint16()
+		flags := r.PopUint8()
+		name := r.PopString()
+		index := r.PopUint16()
 
 		field := &objectField{
 			isImplicit:     flags&0b1 != 0,
@@ -105,30 +105,30 @@ func (c *Object) Type() reflect.Type {
 }
 
 // Decode an object
-func (c *Object) Decode(buf *buff.Buff, out unsafe.Pointer) {
-	buf.Discard(8) // data length & element count
+func (c *Object) Decode(r *buff.Reader, out unsafe.Pointer) {
+	r.Discard(8) // data length & element count
 
 	for _, field := range c.fields {
-		buf.Discard(4) // reserved
+		r.Discard(4) // reserved
 
-		switch int32(buf.PeekUint32()) {
+		switch int32(r.PeekUint32()) {
 		case -1:
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			buf.Discard(4)
+			r.Discard(4)
 		default:
 			if field.name == "__tid__" {
-				buf.Discard(20)
+				r.Discard(20)
 				break
 			}
 
 			p := pAdd(out, field.offset)
-			field.codec.Decode(buf, p)
+			field.codec.Decode(r, p)
 		}
 	}
 }
 
 // Encode an object
-func (c *Object) Encode(buf *buff.Buff, val interface{}) {
+func (c *Object) Encode(buf *buff.Writer, val interface{}) {
 	panic("objects can't be query parameters")
 }

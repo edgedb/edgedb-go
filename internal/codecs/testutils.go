@@ -14,28 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package codecs
 
-import (
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
-)
+func repeatingBenchmarkData(n int, d []byte) []byte {
+	buf := make([]byte, n*len(d))
 
-type query struct {
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	args    []interface{}
+	for i := 0; i < n*len(d); i += len(d) {
+		copy(buf[i:], d)
+	}
+
+	return buf
 }
 
-func (q *query) flat() bool {
-	if q.expCard != cardinality.Many {
-		return true
-	}
+type writeFixture struct {
+	written []byte
+}
 
-	if q.fmt == format.JSON {
-		return true
+func (w *writeFixture) Write(b []byte) (int, error) {
+	if len(w.written) > 0 {
+		panic("Write called more than once")
 	}
-
-	return false
+	w.written = make([]byte, len(b))
+	return copy(w.written, b), nil
 }

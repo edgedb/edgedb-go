@@ -18,23 +18,30 @@ package edgedb
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net"
 
-	"github.com/edgedb/edgedb-go/cache"
-	"github.com/edgedb/edgedb-go/marshal"
-	"github.com/edgedb/edgedb-go/protocol/cardinality"
-	"github.com/edgedb/edgedb-go/protocol/format"
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/cardinality"
+	"github.com/edgedb/edgedb-go/internal/format"
+	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
 // todo add examples
 
 type baseConn struct {
-	conn           net.Conn
-	buffer         [8192]byte
-	typeIDCache    *cache.Cache
-	inCodecCache   *cache.Cache
-	outCodecCache  *cache.Cache
+	conn   net.Conn
+	writer *buff.Writer
+
+	acquireReaderSignal chan struct{}
+	readerChan          chan *buff.Reader
+
+	typeIDCache   *cache.Cache
+	inCodecCache  *cache.Cache
+	outCodecCache *cache.Cache
+
 	serverSettings map[string]string
 }
 
@@ -74,21 +81,34 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 		err error
 	)
 
+	conn.writer = buff.NewWriter()
+
 	for _, addr := range cfg.addrs { // nolint:gocritic
-		// todo do error values need to be checked?
 		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
 		if err != nil {
-			log.Printf("while attempting connection %+v: %+v", addr, err)
+			err = wrapAll(err)
 			continue
 		}
 
-		err = conn.connect(ctx, cfg)
+		toBeDeserialized := make(chan *soc.Data, 2)
+		r := buff.NewReader(toBeDeserialized)
+		go soc.Read(conn.conn, soc.NewMemPool(4, 256*1024), toBeDeserialized)
+
+		err = conn.setDeadline(ctx)
 		if err != nil {
-			_ = conn.conn.Close()
-			log.Printf("while attempting connection %+v: %+v", addr, err)
+			err = wrapAll(err, conn.conn.Close())
 			continue
 		}
 
+		err = conn.connect(r, cfg)
+		if err != nil {
+			err = wrapAll(err, conn.conn.Close())
+			continue
+		}
+
+		conn.acquireReaderSignal = make(chan struct{}, 1)
+		conn.readerChan = make(chan *buff.Reader, 1)
+		conn.releaseReader(r)
 		return nil
 	}
 
@@ -96,14 +116,63 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 	return err
 }
 
+func (c *baseConn) setDeadline(ctx context.Context) error {
+	deadline, _ := ctx.Deadline()
+	if e := c.conn.SetDeadline(deadline); e != nil {
+		return fmt.Errorf("%v", e)
+	}
+
+	return nil
+}
+
+func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
+	c.acquireReaderSignal <- struct{}{}
+
+	select {
+	case r := <-c.readerChan:
+		if r.Err != nil {
+			return nil, r.Err
+		}
+
+		return r, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func (c *baseConn) releaseReader(r *buff.Reader) {
+	go func() {
+		for r.Next(c.acquireReaderSignal) {
+			if e := c.fallThrough(r); e != nil {
+				// todo what is the right thing to do here?
+				panic(e)
+			}
+		}
+
+		c.readerChan <- r
+	}()
+}
+
 // Close the db connection
 func (c *baseConn) close() error {
-	return wrapAll(c.terminate(), c.conn.Close())
+	_, err := c.acquireReader(context.Background())
+	return wrapAll(err, c.terminate(), c.conn.Close())
 }
 
 // Execute an EdgeQL command (or commands).
-func (c *baseConn) Execute(ctx context.Context, cmd string) (err error) {
-	return c.scriptFlow(ctx, c.conn, cmd)
+func (c *baseConn) Execute(ctx context.Context, cmd string) error {
+	r, err := c.acquireReader(ctx)
+	if err != nil {
+		return err
+	}
+
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
+	err = c.scriptFlow(r, cmd)
+	c.releaseReader(r)
+	return err
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
@@ -127,12 +196,19 @@ func (c *baseConn) QueryOne(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, val, q)
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
+	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
+	defer c.releaseReader(r)
 
-	return nil
+	err = c.granularFlow(r, val, q)
+
+	return err
 }
 
 // Query runs a query and returns the results.
@@ -154,9 +230,19 @@ func (c *baseConn) Query(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, val, q)
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
+	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
+	}
+
+	defer c.releaseReader(r)
+
+	if e := c.granularFlow(r, val, q); e != nil {
+		return e
 	}
 
 	return nil
@@ -181,9 +267,19 @@ func (c *baseConn) QueryJSON(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, val, q)
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
+	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
+	}
+
+	defer c.releaseReader(r)
+
+	if e := c.granularFlow(r, val, q); e != nil {
+		return e
 	}
 
 	return nil
@@ -211,9 +307,18 @@ func (c *baseConn) QueryOneJSON(
 		args:    args,
 	}
 
-	err = c.granularFlow(ctx, val, q)
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
+	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
+	}
+	defer c.releaseReader(r)
+
+	if e := c.granularFlow(r, val, q); e != nil {
+		return e
 	}
 
 	if len(*out) == 0 {
@@ -221,40 +326,4 @@ func (c *baseConn) QueryOneJSON(
 	}
 
 	return nil
-}
-
-func (c *baseConn) writeAndRead(
-	ctx context.Context,
-	buf *[]byte,
-) (err error) {
-	// todo move set deadline up to query method.
-	deadline, _ := ctx.Deadline()
-	err = c.conn.SetDeadline(deadline)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.conn.Write(*buf)
-	if err != nil {
-		return err
-	}
-
-	// expand slice length to full capacity
-	*buf = (*buf)[:cap(*buf)]
-
-	n, err := c.conn.Read(*buf)
-	*buf = (*buf)[:n]
-
-	if n < cap(*buf) {
-		return err
-	}
-
-	n = 1024 // todo evaluate temporary buffer size
-	tmp := make([]byte, n)
-	for n == 1024 {
-		n, err = c.conn.Read(tmp)
-		*buf = append(*buf, tmp[:n]...)
-	}
-
-	return err
 }

@@ -21,20 +21,20 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popArrayCodec(
-	buf *buff.Buff,
+	r *buff.Reader,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	i := buf.PopUint16() // element type descriptor index
+	i := r.PopUint16() // element type descriptor index
 
-	n := int(buf.PopUint16()) // number of array dimensions
+	n := int(r.PopUint16()) // number of array dimensions
 	for i := 0; i < n; i++ {
-		buf.PopUint32() // array dimension
+		r.Discard(4) // array dimension
 	}
 
 	return &Array{id: id, child: codecs[i]}
@@ -69,19 +69,19 @@ func (c *Array) Type() reflect.Type {
 }
 
 // Decode an array.
-func (c *Array) Decode(buf *buff.Buff, out unsafe.Pointer) {
-	buf.Discard(4) // data length
+func (c *Array) Decode(r *buff.Reader, out unsafe.Pointer) {
+	r.Discard(4) // data length
 
 	// number of dimensions is 1 or 0
-	if buf.PopUint32() == 0 {
-		buf.Discard(8) // reserved
+	if r.PopUint32() == 0 {
+		r.Discard(8) // reserved
 		return
 	}
 
-	buf.Discard(8) // reserved
+	r.Discard(8) // reserved
 
-	upper := int32(buf.PopUint32())
-	lower := int32(buf.PopUint32())
+	upper := int32(r.PopUint32())
+	lower := int32(r.PopUint32())
 	n := int(upper - lower + 1)
 
 	slice := (*sliceHeader)(out)
@@ -94,25 +94,25 @@ func (c *Array) Decode(buf *buff.Buff, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.Decode(buf, pAdd(slice.Data, uintptr(i*c.step)))
+		c.child.Decode(r, pAdd(slice.Data, uintptr(i*c.step)))
 	}
 }
 
 // Encode an array.
-func (c *Array) Encode(buf *buff.Buff, val interface{}) {
+func (c *Array) Encode(w *buff.Writer, val interface{}) {
 	in := val.([]interface{})
 	elmCount := len(in)
 
-	buf.BeginBytes()
-	buf.PushUint32(1)                // number of dimensions
-	buf.PushUint32(0)                // reserved
-	buf.PushUint32(0)                // reserved
-	buf.PushUint32(uint32(elmCount)) // dimension.upper
-	buf.PushUint32(1)                // dimension.lower
+	w.BeginBytes()
+	w.PushUint32(1)                // number of dimensions
+	w.PushUint32(0)                // reserved
+	w.PushUint32(0)                // reserved
+	w.PushUint32(uint32(elmCount)) // dimension.upper
+	w.PushUint32(1)                // dimension.lower
 
 	for i := 0; i < elmCount; i++ {
-		c.child.Encode(buf, in[i])
+		c.child.Encode(w, in[i])
 	}
 
-	buf.EndBytes()
+	w.EndBytes()
 }

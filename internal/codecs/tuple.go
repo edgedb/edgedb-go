@@ -24,20 +24,20 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popTupleCodec(
-	buf *buff.Buff,
+	r *buff.Reader,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
 	fields := []Codec{}
 
-	elmCount := int(buf.PopUint16())
+	elmCount := int(r.PopUint16())
 	for i := 0; i < elmCount; i++ {
-		index := buf.PopUint16()
+		index := r.PopUint16()
 		fields = append(fields, codecs[index])
 	}
 
@@ -84,17 +84,17 @@ func (c *Tuple) Type() reflect.Type {
 }
 
 // Decode a tuple.
-func (c *Tuple) Decode(buf *buff.Buff, out unsafe.Pointer) {
-	buf.Discard(4) // data length
+func (c *Tuple) Decode(r *buff.Reader, out unsafe.Pointer) {
+	r.Discard(4) // data length
 
-	n := int(int32(buf.PopUint32()))
+	n := int(int32(r.PopUint32()))
 	slice := reflect.MakeSlice(c.typ, 0, n)
 
 	for i := 0; i < n; i++ {
-		buf.Discard(4) // reserved
+		r.Discard(4) // reserved
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.Decode(buf, unsafe.Pointer(val.UnsafeAddr()))
+		field.Decode(r, unsafe.Pointer(val.UnsafeAddr()))
 		slice = reflect.Append(slice, val)
 	}
 
@@ -104,17 +104,17 @@ func (c *Tuple) Decode(buf *buff.Buff, out unsafe.Pointer) {
 }
 
 // Encode a tuple.
-func (c *Tuple) Encode(buf *buff.Buff, val interface{}) {
-	buf.BeginBytes()
+func (c *Tuple) Encode(w *buff.Writer, val interface{}) {
+	w.BeginBytes()
 
 	elmCount := len(c.fields)
-	buf.PushUint32(uint32(elmCount))
+	w.PushUint32(uint32(elmCount))
 
 	in := val.([]interface{})
 	for i := 0; i < elmCount; i++ {
-		buf.PushUint32(0) // reserved
-		c.fields[i].Encode(buf, in[i])
+		w.PushUint32(0) // reserved
+		c.fields[i].Encode(w, in[i])
 	}
 
-	buf.EndBytes()
+	w.EndBytes()
 }
