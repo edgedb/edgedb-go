@@ -72,9 +72,9 @@ func getLocalServer() error {
 func startServer() (err error) {
 	log.Print("starting new server")
 
-	cmdName := "edgedb-server"
-	if slot, ok := os.LookupEnv("EDGEDB_SLOT"); ok {
-		cmdName = fmt.Sprintf("%v-%v", cmdName, slot)
+	cmdName := os.Getenv("EDGEDB_SERVER_BIN")
+	if cmdName == "" {
+		log.Fatal("EDGEDB_SERVER_BIN not set")
 	}
 
 	cmdArgs := []string{
