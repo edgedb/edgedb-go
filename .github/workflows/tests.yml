@@ -16,7 +16,8 @@ jobs:
       max-parallel: 4
       matrix:
         go-version: ["1.11", "1.12", "1.13", "1.14", "1.15"]
-        os: [ubuntu-latest]
+        edgedb-version: [stable, nightly]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -36,25 +37,12 @@ jobs:
           go build .
 
       - name: Install EdgeDB
-        env:
-          OS_NAME: ${{ matrix.os  }}
-          SLOT: 1-alpha7-dev5249
-        run: |
-          curl https://packages.edgedb.com/keys/edgedb.asc \
-              | sudo apt-key add -
-
-          dist=$(awk -F"=" '/VERSION_CODENAME=/ {print $2}' /etc/os-release)
-          [ -n "${dist}" ] || \
-              dist=$(awk -F"[)(]+" '/VERSION=/ {print $2}' /etc/os-release)
-          echo deb https://packages.edgedb.com/apt ${dist}.nightly main \
-              | sudo tee /etc/apt/sources.list.d/edgedb.list
-
-          sudo apt-get update
-          sudo env _EDGEDB_INSTALL_SKIP_BOOTSTRAP=1 \
-              apt-get install edgedb-${SLOT}
+        uses: edgedb/setup-edgedb@v1
+        with:
+          server-version: ${{ matrix.edgedb-version }}
 
       - name: Test
         env:
-          EDGEDB_SLOT: 1-alpha7-dev5249
+          EDGEDB_SERVER_BIN: edgedb-server
         run: |
-          go test -race ./...
+          make test
