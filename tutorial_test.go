@@ -43,7 +43,7 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()
 
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))

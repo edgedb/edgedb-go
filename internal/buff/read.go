@@ -153,7 +153,7 @@ func (r *Reader) feed(n int) error {
 			return e
 		}
 
-		m := min(n, len(r.data.Buf))
+		m := min(n-len(r.Buf), len(r.data.Buf))
 		r.Buf = append(r.Buf, r.data.Buf[:m]...)
 		r.data.Buf = r.data.Buf[m:]
 		previous.Release()
