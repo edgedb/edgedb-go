@@ -25,7 +25,7 @@ import (
 
 // Writer is a write buffer.
 type Writer struct {
-	alocatedMemory [256 * 1024]byte
+	alocatedMemory [1024]byte
 	buf            []byte
 
 	msgPos  int
@@ -49,18 +49,17 @@ func (w *Writer) Send(conn io.Writer) (err error) {
 		panic("cannot send: no data")
 	}
 
-	var n int
-	n, err = conn.Write(w.buf)
-	if err != nil {
-		return err
-	}
+	for len(w.buf) > 0 {
+		n, err := conn.Write(w.buf)
+		if err != nil {
+			return err
+		}
 
-	if n != len(w.buf) {
-		panic("not all data was sent")
+		w.buf = w.buf[n:]
 	}
 
 	w.buf = w.alocatedMemory[:0]
-	return err
+	return nil
 }
 
 // PushUint8 writes a uint8 to the buffer.

@@ -167,6 +167,7 @@ func (r *Reader) Discard(n int) {
 	r.Buf = r.Buf[n:]
 }
 
+// DiscardMessage discards all remaining bytes in the current message.
 func (r *Reader) DiscardMessage() {
 	r.Buf = nil
 }
