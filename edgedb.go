@@ -161,17 +161,23 @@ func (c *baseConn) close() error {
 
 // Execute an EdgeQL command (or commands).
 func (c *baseConn) Execute(ctx context.Context, cmd string) error {
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
 
-	if e := c.setDeadline(ctx); e != nil {
-		return e
+	err = c.scriptFlow(r, cmd)
+	if err != nil && !soc.IsTemporaryErr(err) {
+		_ = c.conn.Close()
+		c.conn = nil
+	} else {
+		c.releaseReader(r)
 	}
 
-	err = c.scriptFlow(r, cmd)
-	c.releaseReader(r)
 	return err
 }
 
@@ -204,9 +210,14 @@ func (c *baseConn) QueryOne(
 	if err != nil {
 		return err
 	}
-	defer c.releaseReader(r)
 
 	err = c.granularFlow(r, val, q)
+	if err != nil && !soc.IsTemporaryErr(err) {
+		_ = c.conn.Close()
+		c.conn = nil
+	} else {
+		c.releaseReader(r)
+	}
 
 	return err
 }
@@ -239,10 +250,12 @@ func (c *baseConn) Query(
 		return err
 	}
 
-	defer c.releaseReader(r)
-
-	if e := c.granularFlow(r, val, q); e != nil {
-		return e
+	err = c.granularFlow(r, val, q)
+	if err != nil && !soc.IsTemporaryErr(err) {
+		_ = c.conn.Close()
+		c.conn = nil
+	} else {
+		c.releaseReader(r)
 	}
 
 	return nil
@@ -276,10 +289,12 @@ func (c *baseConn) QueryJSON(
 		return err
 	}
 
-	defer c.releaseReader(r)
-
-	if e := c.granularFlow(r, val, q); e != nil {
-		return e
+	err = c.granularFlow(r, val, q)
+	if err != nil && !soc.IsTemporaryErr(err) {
+		_ = c.conn.Close()
+		c.conn = nil
+	} else {
+		c.releaseReader(r)
 	}
 
 	return nil
@@ -315,10 +330,13 @@ func (c *baseConn) QueryOneJSON(
 	if err != nil {
 		return err
 	}
-	defer c.releaseReader(r)
 
-	if e := c.granularFlow(r, val, q); e != nil {
-		return e
+	err = c.granularFlow(r, val, q)
+	if err != nil && !soc.IsTemporaryErr(err) {
+		_ = c.conn.Close()
+		c.conn = nil
+	} else {
+		c.releaseReader(r)
 	}
 
 	if len(*out) == 0 {

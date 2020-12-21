@@ -18,6 +18,7 @@
 package soc
 
 import (
+	"errors"
 	"net"
 	"reflect"
 	"unsafe"
@@ -38,6 +39,20 @@ func (d *Data) Release() {
 	if d.release != nil {
 		d.release()
 	}
+}
+
+// IsTemporaryErr returns true if the error is a temporary net.Error.
+func IsTemporaryErr(err error) bool {
+	if err == nil {
+		panic("nil is not an error")
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return netErr.Temporary()
+	}
+
+	return false
 }
 
 // Read reads a socket sending the read data to toBeDeserialized.
@@ -70,9 +85,12 @@ func Read(conn net.Conn, freeMemory *MemPool, toBeDeserialized chan *Data) {
 
 			toBeDeserialized <- data
 
-			// shut down on error
 			if err != nil {
 				toBeDeserialized <- &Data{Err: err}
+			}
+
+			// shut down on permanent error
+			if err != nil && !IsTemporaryErr(err) {
 				return
 			}
 		}
