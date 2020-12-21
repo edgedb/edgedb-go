@@ -167,6 +167,10 @@ func (r *Reader) Discard(n int) {
 	r.Buf = r.Buf[n:]
 }
 
+func (r *Reader) DiscardMessage() {
+	r.Buf = nil
+}
+
 // PopUint8 returns the next byte and advances the buffer.
 func (r *Reader) PopUint8() uint8 {
 	val := r.Buf[0]

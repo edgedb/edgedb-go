@@ -65,7 +65,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 				return wrapAll(err, e, c.conn.Close())
 			}
 		case message.ServerKeyData:
-			r.Discard(32) // key data
+			r.DiscardMessage() // key data
 		case message.ReadyForCommand:
 			// header count (assume 0)
 			// transaction state
@@ -197,7 +197,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 				)
 			}
 		case message.ServerKeyData:
-			r.Discard(32) // key data
+			r.DiscardMessage() // key data
 		case message.ReadyForCommand:
 			// header count (assume 0)
 			// transaction state
