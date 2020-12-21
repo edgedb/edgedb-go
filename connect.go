@@ -25,6 +25,11 @@ import (
 	"github.com/xdg/scram"
 )
 
+const (
+	protocolVersionMajor uint16 = 0
+	protocolVersionMinor uint16 = 8
+)
+
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	c.writer.BeginMessage(message.ClientHandshake)
 	c.writer.PushUint16(0) // major version
@@ -58,7 +63,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			major := r.PopUint16()
 			minor := r.PopUint16()
 
-			if major != 0 || minor != 8 {
+			if major != protocolVersionMajor || minor != protocolVersionMinor {
 				e := fmt.Errorf(
 					"unsupported protocol version: %v.%v", major, minor,
 				)
