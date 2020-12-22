@@ -91,6 +91,7 @@ func (r *Reader) Next(doneReadingSignal chan struct{}) bool {
 		}
 	}
 
+	// put message type and length into r.Buf
 	r.Err = r.feed(5)
 	if r.Err != nil {
 		return false
