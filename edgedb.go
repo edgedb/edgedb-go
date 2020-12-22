@@ -18,7 +18,6 @@ package edgedb
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -106,6 +105,11 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 			continue
 		}
 
+		if e := conn.setDeadline(context.Background()); e != nil {
+			err = wrapAll(err, conn.conn.Close())
+			continue
+		}
+
 		conn.acquireReaderSignal = make(chan struct{}, 1)
 		conn.readerChan = make(chan *buff.Reader, 1)
 		conn.releaseReader(r)
@@ -118,11 +122,7 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 
 func (c *baseConn) setDeadline(ctx context.Context) error {
 	deadline, _ := ctx.Deadline()
-	if e := c.conn.SetDeadline(deadline); e != nil {
-		return fmt.Errorf("%v", e)
-	}
-
-	return nil
+	return c.conn.SetDeadline(deadline)
 }
 
 func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
@@ -161,20 +161,25 @@ func (c *baseConn) close() error {
 
 // Execute an EdgeQL command (or commands).
 func (c *baseConn) Execute(ctx context.Context, cmd string) error {
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
 
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
 	err = c.scriptFlow(r, cmd)
-	if err != nil && !soc.IsTemporaryErr(err) {
+	if soc.IsPermenentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
+		if e := c.setDeadline(context.Background()); e != nil {
+			_ = c.conn.Close()
+			c.conn = nil
+			return wrapAll(err, e)
+		}
 		c.releaseReader(r)
 	}
 
@@ -202,20 +207,25 @@ func (c *baseConn) QueryOne(
 		args:    args,
 	}
 
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
 
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
 	err = c.granularFlow(r, val, q)
-	if err != nil && !soc.IsTemporaryErr(err) {
+	if soc.IsPermenentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
+		if e := c.setDeadline(context.Background()); e != nil {
+			_ = c.conn.Close()
+			c.conn = nil
+			return wrapAll(err, e)
+		}
 		c.releaseReader(r)
 	}
 
@@ -241,20 +251,25 @@ func (c *baseConn) Query(
 		args:    args,
 	}
 
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
 
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
 	err = c.granularFlow(r, val, q)
-	if err != nil && !soc.IsTemporaryErr(err) {
+	if soc.IsPermenentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
+		if e := c.setDeadline(context.Background()); e != nil {
+			_ = c.conn.Close()
+			c.conn = nil
+			return wrapAll(err, e)
+		}
 		c.releaseReader(r)
 	}
 
@@ -280,20 +295,25 @@ func (c *baseConn) QueryJSON(
 		args:    args,
 	}
 
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
 
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
 	err = c.granularFlow(r, val, q)
-	if err != nil && !soc.IsTemporaryErr(err) {
+	if soc.IsPermenentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
+		if e := c.setDeadline(context.Background()); e != nil {
+			_ = c.conn.Close()
+			c.conn = nil
+			return wrapAll(err, e)
+		}
 		c.releaseReader(r)
 	}
 
@@ -322,23 +342,29 @@ func (c *baseConn) QueryOneJSON(
 		args:    args,
 	}
 
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
 	}
 
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
 	err = c.granularFlow(r, val, q)
-	if err != nil && !soc.IsTemporaryErr(err) {
+	if soc.IsPermenentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
+		if e := c.setDeadline(context.Background()); e != nil {
+			_ = c.conn.Close()
+			c.conn = nil
+			return wrapAll(err, e)
+		}
 		c.releaseReader(r)
 	}
 
+	// todo is this correct?
 	if len(*out) == 0 {
 		return ErrZeroResults
 	}

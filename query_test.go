@@ -135,13 +135,19 @@ func TestError(t *testing.T) {
 
 func TestQueryTimesOut(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
-	err := conn.Execute(ctx, "SELECT 1;")
+	defer cancel()
 
-	assert.True(
+	var r int64
+	err := conn.QueryOne(ctx, "SELECT 1;", &r)
+	require.True(
 		t,
 		errors.Is(err, context.DeadlineExceeded) ||
 			errors.Is(err, os.ErrDeadlineExceeded),
 		err,
 	)
-	cancel()
+	require.Equal(t, int64(0), r)
+
+	err = conn.QueryOne(context.Background(), "SELECT 2;", &r)
+	require.Nil(t, err)
+	assert.Equal(t, int64(2), r)
 }

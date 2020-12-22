@@ -60,12 +60,10 @@ func TestTutorial(t *testing.T) {
 			Database: dbName,
 		},
 	)
-	if err != nil {
-		panic(err)
-	}
+	require.Nil(t, err)
+
 	defer func() {
-		err = edb.Close()
-		require.Nil(t, err)
+		require.Nil(t, edb.Close())
 	}()
 
 	err = edb.Execute(ctx, `
