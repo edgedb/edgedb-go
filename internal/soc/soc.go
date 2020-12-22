@@ -41,8 +41,8 @@ func (d *Data) Release() {
 	}
 }
 
-// IsPermenentNetErr returns true if the error is not a temporary net.Error.
-func IsPermenentNetErr(err error) bool {
+// IsPermanentNetErr returns true if the error is not a temporary net.Error.
+func IsPermanentNetErr(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -90,7 +90,7 @@ func Read(conn net.Conn, freeMemory *MemPool, toBeDeserialized chan *Data) {
 			}
 
 			// shut down on permanent error
-			if IsPermenentNetErr(err) {
+			if IsPermanentNetErr(err) {
 				return
 			}
 		}

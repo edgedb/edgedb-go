@@ -171,7 +171,7 @@ func (c *baseConn) Execute(ctx context.Context, cmd string) error {
 	}
 
 	err = c.scriptFlow(r, cmd)
-	if soc.IsPermenentNetErr(err) {
+	if soc.IsPermanentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
@@ -217,7 +217,7 @@ func (c *baseConn) QueryOne(
 	}
 
 	err = c.granularFlow(r, val, q)
-	if soc.IsPermenentNetErr(err) {
+	if soc.IsPermanentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
@@ -261,7 +261,7 @@ func (c *baseConn) Query(
 	}
 
 	err = c.granularFlow(r, val, q)
-	if soc.IsPermenentNetErr(err) {
+	if soc.IsPermanentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
@@ -305,7 +305,7 @@ func (c *baseConn) QueryJSON(
 	}
 
 	err = c.granularFlow(r, val, q)
-	if soc.IsPermenentNetErr(err) {
+	if soc.IsPermanentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
@@ -352,7 +352,7 @@ func (c *baseConn) QueryOneJSON(
 	}
 
 	err = c.granularFlow(r, val, q)
-	if soc.IsPermenentNetErr(err) {
+	if soc.IsPermanentNetErr(err) {
 		_ = c.conn.Close()
 		c.conn = nil
 	} else {
