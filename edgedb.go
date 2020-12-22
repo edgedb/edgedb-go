@@ -112,7 +112,11 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 
 		conn.acquireReaderSignal = make(chan struct{}, 1)
 		conn.readerChan = make(chan *buff.Reader, 1)
-		conn.releaseReader(r)
+		if e := conn.releaseReader(r, nil); e != nil {
+			err = wrapAll(err, e)
+			continue
+		}
+
 		return nil
 	}
 
@@ -140,7 +144,19 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 	}
 }
 
-func (c *baseConn) releaseReader(r *buff.Reader) {
+func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
+	if soc.IsPermanentNetErr(err) {
+		_ = c.conn.Close()
+		c.conn = nil
+		return err
+	}
+
+	if e := c.setDeadline(context.Background()); e != nil {
+		_ = c.conn.Close()
+		c.conn = nil
+		return wrapAll(err, e)
+	}
+
 	go func() {
 		for r.Next(c.acquireReaderSignal) {
 			if e := c.fallThrough(r); e != nil {
@@ -151,6 +167,8 @@ func (c *baseConn) releaseReader(r *buff.Reader) {
 
 		c.readerChan <- r
 	}()
+
+	return err
 }
 
 // Close the db connection
@@ -170,20 +188,7 @@ func (c *baseConn) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	err = c.scriptFlow(r, cmd)
-	if soc.IsPermanentNetErr(err) {
-		_ = c.conn.Close()
-		c.conn = nil
-	} else {
-		if e := c.setDeadline(context.Background()); e != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-			return wrapAll(err, e)
-		}
-		c.releaseReader(r)
-	}
-
-	return err
+	return c.releaseReader(r, c.scriptFlow(r, cmd))
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
@@ -216,20 +221,7 @@ func (c *baseConn) QueryOne(
 		return e
 	}
 
-	err = c.granularFlow(r, val, q)
-	if soc.IsPermanentNetErr(err) {
-		_ = c.conn.Close()
-		c.conn = nil
-	} else {
-		if e := c.setDeadline(context.Background()); e != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-			return wrapAll(err, e)
-		}
-		c.releaseReader(r)
-	}
-
-	return err
+	return c.releaseReader(r, c.granularFlow(r, val, q))
 }
 
 // Query runs a query and returns the results.
@@ -260,20 +252,7 @@ func (c *baseConn) Query(
 		return e
 	}
 
-	err = c.granularFlow(r, val, q)
-	if soc.IsPermanentNetErr(err) {
-		_ = c.conn.Close()
-		c.conn = nil
-	} else {
-		if e := c.setDeadline(context.Background()); e != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-			return wrapAll(err, e)
-		}
-		c.releaseReader(r)
-	}
-
-	return nil
+	return c.releaseReader(r, c.granularFlow(r, val, q))
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -304,20 +283,7 @@ func (c *baseConn) QueryJSON(
 		return e
 	}
 
-	err = c.granularFlow(r, val, q)
-	if soc.IsPermanentNetErr(err) {
-		_ = c.conn.Close()
-		c.conn = nil
-	} else {
-		if e := c.setDeadline(context.Background()); e != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-			return wrapAll(err, e)
-		}
-		c.releaseReader(r)
-	}
-
-	return nil
+	return c.releaseReader(r, c.granularFlow(r, val, q))
 }
 
 // QueryOneJSON runs a singleton-returning query
@@ -351,17 +317,9 @@ func (c *baseConn) QueryOneJSON(
 		return e
 	}
 
-	err = c.granularFlow(r, val, q)
-	if soc.IsPermanentNetErr(err) {
-		_ = c.conn.Close()
-		c.conn = nil
-	} else {
-		if e := c.setDeadline(context.Background()); e != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-			return wrapAll(err, e)
-		}
-		c.releaseReader(r)
+	err = c.releaseReader(r, c.granularFlow(r, val, q))
+	if err != nil {
+		return err
 	}
 
 	// todo is this correct?
