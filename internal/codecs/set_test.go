@@ -22,7 +22,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,9 +36,7 @@ func TestSetSetType(t *testing.T) {
 }
 
 func TestDecodeSet(t *testing.T) {
-	buf := buff.New([]byte{
-		0,
-		0, 0, 0, 64,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
@@ -55,14 +53,15 @@ func TestDecodeSet(t *testing.T) {
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	})
-	buf.Next()
-
-	var result []int64
 
 	codec := Set{child: &Int64{typ: int64Type}}
+
+	var result []int64
 	err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(buf, unsafe.Pointer(&result))
+
+	codec.Decode(r, unsafe.Pointer(&result))
+	require.Equal(t, []byte{}, r.Buf)
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -70,4 +69,23 @@ func TestDecodeSet(t *testing.T) {
 
 	expected := []int64{3, 5, 8}
 	assert.Equal(t, expected, result)
+}
+
+func TestDecodeEmptySet(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 0xc, // data length
+		0, 0, 0, 0, // num dims
+		0, 0, 0, 0, // reserved
+		0, 0, 8, 0xc9, // reserved
+	})
+
+	codec := Set{child: &Int64{typ: int64Type}}
+
+	var result []int64
+	err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+
+	codec.Decode(r, unsafe.Pointer(&result))
+	assert.Nil(t, result)
+	assert.Equal(t, []byte{}, r.Buf)
 }

@@ -14,28 +14,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package buff
 
 import (
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
+	"encoding/binary"
 )
 
-type query struct {
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	args    []interface{}
+// makes a message with n 0xff bytes.
+func newBenchmarkMessage(n int) []byte {
+	buf := make([]byte, 5+n)
+	binary.BigEndian.PutUint32(buf[1:5], uint32(4+n))
+	for i := 5; i < n; i++ {
+		buf[i] = 0xff
+	}
+
+	return buf
 }
 
-func (q *query) flat() bool {
-	if q.expCard != cardinality.Many {
-		return true
-	}
+func newBenchmarkWriter(size int) *Writer {
+	w := NewWriter()
+	w.buf = make([]byte, size)[:0]
+	return w
+}
 
-	if q.fmt == format.JSON {
-		return true
-	}
+type writerFixture struct {
+	written []byte
+}
 
-	return false
+func (w *writerFixture) Write(b []byte) (int, error) {
+	w.written = make([]byte, len(b))
+	return copy(w.written, b), nil
 }

@@ -14,28 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package buff
 
-import (
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
-)
+import "sync"
 
-type query struct {
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	args    []interface{}
+// DoneReadingSignal is a convenient type to use with buff.Reader.Next()
+type DoneReadingSignal struct {
+	Chan chan struct{}
+	once sync.Once
 }
 
-func (q *query) flat() bool {
-	if q.expCard != cardinality.Many {
-		return true
-	}
+// NewSignal returns a new DoneReadingSignal.
+// Only use the returned object once per Reader.Next() for loop.
+func NewSignal() *DoneReadingSignal {
+	return &DoneReadingSignal{Chan: make(chan struct{}, 1)}
+}
 
-	if q.fmt == format.JSON {
-		return true
-	}
-
-	return false
+// Signal sends on Chan the first time Signal is called.
+// Subsequent calls are no-op.
+func (d *DoneReadingSignal) Signal() {
+	d.once.Do(func() { d.Chan <- struct{}{} })
 }

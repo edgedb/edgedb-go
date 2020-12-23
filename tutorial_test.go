@@ -43,7 +43,7 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()
 
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
@@ -60,12 +60,10 @@ func TestTutorial(t *testing.T) {
 			Database: dbName,
 		},
 	)
-	if err != nil {
-		panic(err)
-	}
+	require.Nil(t, err)
+
 	defer func() {
-		err = edb.Close()
-		require.Nil(t, err)
+		require.Nil(t, edb.Close())
 	}()
 
 	err = edb.Execute(ctx, `

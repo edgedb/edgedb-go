@@ -43,8 +43,8 @@ Optimistic execute flow:
 import (
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/cache"
-	"github.com/edgedb/edgedb-go/protocol/codecs"
+	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/types"
 )
 

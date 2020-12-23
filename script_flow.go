@@ -17,46 +17,43 @@
 package edgedb
 
 import (
-	"context"
-	"net"
-
-	"github.com/edgedb/edgedb-go/protocol/buff"
-	"github.com/edgedb/edgedb-go/protocol/message"
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/message"
 )
 
-func (c *baseConn) scriptFlow(
-	ctx context.Context,
-	conn net.Conn,
-	query string,
-) error {
-	buf := buff.New(nil)
-	buf.BeginMessage(message.ExecuteScript)
-	buf.PushUint16(0) // no headers
-	buf.PushString(query)
-	buf.EndMessage()
+func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
+	c.writer.BeginMessage(message.ExecuteScript)
+	c.writer.PushUint16(0) // no headers
+	c.writer.PushString(query)
+	c.writer.EndMessage()
 
-	err := c.writeAndRead(ctx, buf.Unwrap())
-	if err != nil {
-		return err
+	if e := c.writer.Send(c.conn); e != nil {
+		return e
 	}
 
-	for buf.Next() {
-		switch buf.MsgType {
+	var err error
+	done := buff.NewSignal()
+
+	for r.Next(done.Chan) {
+		switch r.MsgType {
 		case message.CommandComplete:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopBytes()  // command status
+			r.Discard(2) // header count (assume 0)
+			r.PopBytes() // command status
 		case message.ReadyForCommand:
-			buf.PopUint16() // header count (assume 0)
-			buf.PopUint8()  // transaction state
+			// header count (assume 0)
+			// transaction state
+			r.Discard(3)
+			done.Signal()
 		case message.ErrorResponse:
-			return decodeError(buf)
+			err = wrapAll(err, decodeError(r))
+			done.Signal()
 		default:
-			err = c.fallThrough(buf)
-			if err != nil {
-				return err
+			if e := c.fallThrough(r); e != nil {
+				// the connection will not be usable after this x_x
+				return e
 			}
 		}
 	}
 
-	return nil
+	return err
 }

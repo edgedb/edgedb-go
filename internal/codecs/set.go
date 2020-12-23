@@ -21,16 +21,16 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/types"
 )
 
 func popSetCodec(
-	buf *buff.Buff,
+	r *buff.Reader,
 	id types.UUID,
 	codecs []Codec,
 ) Codec {
-	n := buf.PopUint16()
+	n := r.PopUint16()
 	// todo type value
 	return &Set{id: id, child: codecs[n]}
 }
@@ -64,19 +64,19 @@ func (c *Set) Type() reflect.Type {
 }
 
 // Decode a set
-func (c *Set) Decode(buf *buff.Buff, out unsafe.Pointer) {
-	buf.Discard(4) // data length
+func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
+	r.Discard(4) // data length
 
 	// number of dimensions, either 0 or 1
-	if buf.PopUint32() == 0 {
-		buf.Discard(8) // skip 2 reserved fields
+	if r.PopUint32() == 0 {
+		r.Discard(8) // skip 2 reserved fields
 		return
 	}
 
-	buf.Discard(8) // reserved
+	r.Discard(8) // reserved
 
-	upper := int32(buf.PopUint32())
-	lower := int32(buf.PopUint32())
+	upper := int32(r.PopUint32())
+	lower := int32(r.PopUint32())
 	n := int(upper - lower + 1)
 
 	slice := (*sliceHeader)(out)
@@ -90,11 +90,11 @@ func (c *Set) Decode(buf *buff.Buff, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.Decode(buf, pAdd(slice.Data, uintptr(i*c.step)))
+		c.child.Decode(r, pAdd(slice.Data, uintptr(i*c.step)))
 	}
 }
 
 // Encode a set
-func (c *Set) Encode(buf *buff.Buff, val interface{}) {
+func (c *Set) Encode(buf *buff.Writer, val interface{}) {
 	panic("not implemented")
 }

@@ -26,6 +26,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -142,8 +143,9 @@ func TestMain(m *testing.M) {
 	var err error = nil
 	code := 1
 	defer func() {
-		if p := recover(); p != nil {
-			log.Println(p)
+		if e := recover(); e != nil {
+			log.Println(e)
+			fmt.Println(debug.Stack())
 		}
 
 		if err != nil {
@@ -161,10 +163,13 @@ func TestMain(m *testing.M) {
 	}
 
 	ctx := context.Background()
+	log.Println("connecting")
 	conn, err = ConnectOne(ctx, opts)
 	if err != nil {
 		panic(err)
 	}
+	log.Println("connected")
+
 	defer func() {
 		e := conn.Close()
 		if e != nil {
@@ -183,7 +188,7 @@ func TestMain(m *testing.M) {
 	var name string
 	err = conn.QueryOne(ctx, query, &name)
 	if errors.Is(err, ErrZeroResults) {
-		log.Println("setting up test db")
+		fmt.Println("running migration")
 		executeOrPanic(`
 			START MIGRATION TO {
 				module default {
@@ -218,6 +223,8 @@ func TestMain(m *testing.M) {
 			}
 		`)
 		err = nil
+	} else if err != nil {
+		return
 	}
 
 	rand.Seed(time.Now().Unix())

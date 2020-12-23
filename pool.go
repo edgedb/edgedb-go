@@ -22,7 +22,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/edgedb/edgedb-go/cache"
+	"github.com/edgedb/edgedb-go/internal/cache"
 )
 
 // Pool is a pool of connections.

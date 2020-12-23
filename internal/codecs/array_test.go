@@ -22,7 +22,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/protocol/buff"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,9 +36,7 @@ func TestArraySetType(t *testing.T) {
 }
 
 func TestDecodeArray(t *testing.T) {
-	buf := buff.New([]byte{
-		0xa,
-		0, 0, 0, 64,
+	r := buff.SimpleReader([]byte{
 		0, 0, 0, 56, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
@@ -55,14 +53,13 @@ func TestDecodeArray(t *testing.T) {
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	})
-	buf.Next()
 
 	var result []int64
 
 	codec := &Array{child: &Int64{typ: int64Type}}
 	err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(buf, unsafe.Pointer(&result))
+	codec.Decode(r, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -73,12 +70,12 @@ func TestDecodeArray(t *testing.T) {
 }
 
 func TestEncodeArray(t *testing.T) {
-	buf := buff.New(nil)
-	buf.BeginMessage(0xff)
+	w := buff.NewWriter()
+	w.BeginMessage(0xff)
 
 	codec := &Array{child: &Int64{}}
-	codec.Encode(buf, []interface{}{int64(3), int64(5), int64(8)})
-	buf.EndMessage()
+	codec.Encode(w, []interface{}{int64(3), int64(5), int64(8)})
+	w.EndMessage()
 
 	expected := []byte{
 		0xff,          // message type
@@ -100,5 +97,7 @@ func TestEncodeArray(t *testing.T) {
 		0, 0, 0, 0, 0, 0, 0, 8, // int64
 	}
 
-	assert.Equal(t, expected, *buf.Unwrap())
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
+	assert.Equal(t, expected, conn.written)
 }
