@@ -85,7 +85,6 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 	for _, addr := range cfg.addrs { // nolint:gocritic
 		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
 		if err != nil {
-			err = wrapAll(err)
 			continue
 		}
 
@@ -95,25 +94,26 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 
 		err = conn.setDeadline(ctx)
 		if err != nil {
-			err = wrapAll(err, conn.conn.Close())
+			_ = conn.conn.Close()
 			continue
 		}
 
 		err = conn.connect(r, cfg)
 		if err != nil {
-			err = wrapAll(err, conn.conn.Close())
+			_ = conn.conn.Close()
 			continue
 		}
 
-		if e := conn.setDeadline(context.Background()); e != nil {
-			err = wrapAll(err, conn.conn.Close())
+		err = conn.setDeadline(context.Background())
+		if err != nil {
+			_ = conn.conn.Close()
 			continue
 		}
 
 		conn.acquireReaderSignal = make(chan struct{}, 1)
 		conn.readerChan = make(chan *buff.Reader, 1)
-		if e := conn.releaseReader(r, nil); e != nil {
-			err = wrapAll(err, e)
+		err = conn.releaseReader(r, nil)
+		if err != nil {
 			continue
 		}
 
@@ -126,7 +126,7 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 
 func (c *baseConn) setDeadline(ctx context.Context) error {
 	deadline, _ := ctx.Deadline()
-	return c.conn.SetDeadline(deadline)
+	return wrapError(c.conn.SetDeadline(deadline))
 }
 
 func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
@@ -135,12 +135,12 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 	select {
 	case r := <-c.readerChan:
 		if r.Err != nil {
-			return nil, r.Err
+			return nil, wrapError(r.Err)
 		}
 
 		return r, nil
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, ErrContextExpired
 	}
 }
 
@@ -154,13 +154,12 @@ func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
 	if e := c.setDeadline(context.Background()); e != nil {
 		_ = c.conn.Close()
 		c.conn = nil
-		return wrapAll(err, e)
+		return e
 	}
 
 	go func() {
 		for r.Next(c.acquireReaderSignal) {
 			if e := c.fallThrough(r); e != nil {
-				// todo what is the right thing to do here?
 				panic(e)
 			}
 		}
@@ -174,7 +173,23 @@ func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
 // Close the db connection
 func (c *baseConn) close() error {
 	_, err := c.acquireReader(context.Background())
-	return wrapAll(err, c.terminate(), c.conn.Close())
+	if err != nil {
+		_ = c.conn.Close()
+		return err
+	}
+
+	err = c.terminate()
+	if err != nil {
+		_ = c.conn.Close()
+		return err
+	}
+
+	err = c.conn.Close()
+	if err != nil {
+		return wrapError(err)
+	}
+
+	return nil
 }
 
 // Execute an EdgeQL command (or commands).
@@ -202,7 +217,7 @@ func (c *baseConn) QueryOne(
 ) (err error) {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return err
+		return newError(err.Error())
 	}
 
 	q := query{
@@ -233,7 +248,7 @@ func (c *baseConn) Query(
 ) error {
 	val, err := marshal.ValueOfSlice(out)
 	if err != nil {
-		return err
+		return newError(err.Error())
 	}
 
 	q := query{
@@ -264,7 +279,7 @@ func (c *baseConn) QueryJSON(
 ) error {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return err
+		return newError(err.Error())
 	}
 
 	q := query{
@@ -298,7 +313,7 @@ func (c *baseConn) QueryOneJSON(
 ) error {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return err
+		return newError(err.Error())
 	}
 
 	q := query{
@@ -317,15 +332,5 @@ func (c *baseConn) QueryOneJSON(
 		return e
 	}
 
-	err = c.releaseReader(r, c.granularFlow(r, val, q))
-	if err != nil {
-		return err
-	}
-
-	// todo is this correct?
-	if len(*out) == 0 {
-		return ErrZeroResults
-	}
-
-	return nil
+	return c.releaseReader(r, c.granularFlow(r, val, q))
 }

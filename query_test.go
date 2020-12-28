@@ -129,8 +129,10 @@ func TestQueryOneZeroResults(t *testing.T) {
 func TestError(t *testing.T) {
 	ctx := context.Background()
 	err := conn.Execute(ctx, "malformed query;")
-	assert.EqualError(t, err, "Unexpected 'malformed'")
-	assert.True(t, errors.Is(err, Error))
+	assert.EqualError(t, err, "edgedb: Unexpected 'malformed'")
+
+	var expected *Error
+	assert.True(t, errors.As(err, &expected))
 }
 
 func TestQueryTimesOut(t *testing.T) {
@@ -141,7 +143,7 @@ func TestQueryTimesOut(t *testing.T) {
 	err := conn.QueryOne(ctx, "SELECT 1;", &r)
 	require.True(
 		t,
-		errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, ErrContextExpired) ||
 			errors.Is(err, os.ErrDeadlineExceeded),
 		err,
 	)

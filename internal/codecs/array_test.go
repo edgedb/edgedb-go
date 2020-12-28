@@ -74,7 +74,8 @@ func TestEncodeArray(t *testing.T) {
 	w.BeginMessage(0xff)
 
 	codec := &Array{child: &Int64{}}
-	codec.Encode(w, []interface{}{int64(3), int64(5), int64(8)})
+	err := codec.Encode(w, []interface{}{int64(3), int64(5), int64(8)})
+	require.Nil(t, err)
 	w.EndMessage()
 
 	expected := []byte{

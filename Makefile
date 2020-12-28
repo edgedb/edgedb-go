@@ -11,3 +11,8 @@ bench:
 
 format:
 	gofmt -s -w .
+
+errors:
+	edb gen-errors-json --client | \
+		go run internal/cmd/generr/main.go -file=codes > \
+		generatederrors.go

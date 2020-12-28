@@ -17,7 +17,6 @@
 package edgedb
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +40,6 @@ func TestCredentialsRead(t *testing.T) {
 func TestCredentialsEmpty(t *testing.T) {
 	creds, err := validateCredentials(map[string]interface{}{})
 	assert.EqualError(t, err, "`user` key is required")
-	assert.True(t, errors.Is(err, ErrBadConfig))
 	assert.Nil(t, creds)
 }
 
@@ -51,7 +49,6 @@ func TestCredentialsPort(t *testing.T) {
 		"port": "1234",
 	})
 	assert.EqualError(t, err, "invalid `port` value")
-	assert.True(t, errors.Is(err, ErrBadConfig))
 	assert.Nil(t, creds)
 
 	creds, err = validateCredentials(map[string]interface{}{
@@ -59,7 +56,6 @@ func TestCredentialsPort(t *testing.T) {
 		"port": 0,
 	})
 	assert.EqualError(t, err, "invalid `port` value")
-	assert.True(t, errors.Is(err, ErrBadConfig))
 	assert.Nil(t, creds)
 
 	creds, err = validateCredentials(map[string]interface{}{
@@ -67,7 +63,6 @@ func TestCredentialsPort(t *testing.T) {
 		"port": -1,
 	})
 	assert.EqualError(t, err, "invalid `port` value")
-	assert.True(t, errors.Is(err, ErrBadConfig))
 	assert.Nil(t, creds)
 
 	creds, err = validateCredentials(map[string]interface{}{
@@ -75,6 +70,5 @@ func TestCredentialsPort(t *testing.T) {
 		"port": 65536,
 	})
 	assert.EqualError(t, err, "invalid `port` value")
-	assert.True(t, errors.Is(err, ErrBadConfig))
 	assert.Nil(t, creds)
 }

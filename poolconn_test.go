@@ -36,6 +36,6 @@ func TestReleasePoolConn(t *testing.T) {
 	assert.Equal(t, conn, result)
 
 	err = poolConn.Release()
-	assert.EqualError(t, err, "connection released more than once")
+	assert.EqualError(t, err, "edgedb: connection released more than once")
 	assert.True(t, errors.Is(err, ErrReleasedTwice))
 }

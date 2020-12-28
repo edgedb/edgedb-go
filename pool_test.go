@@ -69,8 +69,14 @@ func TestConnectPoolMinConnGteZero(t *testing.T) {
 
 	o := Options{MinConns: 0, MaxConns: 10}
 	_, err := Connect(ctx, o)
-	assert.EqualError(t, err, "MinConns may not be less than 1, got: 0")
-	assert.True(t, errors.Is(err, ErrBadConfig))
+	assert.EqualError(
+		t,
+		err,
+		"edgedb: MinConns may not be less than 1, got: 0",
+	)
+
+	var expected *ConfigurationError
+	assert.True(t, errors.As(err, &expected))
 }
 
 func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
@@ -79,8 +85,14 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 
 	o := Options{MinConns: 5, MaxConns: 1}
 	_, err := Connect(ctx, o)
-	assert.EqualError(t, err, "MaxConns may not be less than MinConns")
-	assert.True(t, errors.Is(err, ErrBadConfig))
+	assert.EqualError(
+		t,
+		err,
+		"edgedb: MaxConns (1) may not be less than MinConns (5)",
+	)
+
+	var expected *ConfigurationError
+	assert.True(t, errors.As(err, &expected))
 }
 
 func TestAcquireFromClosedPool(t *testing.T) {

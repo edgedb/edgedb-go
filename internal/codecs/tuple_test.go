@@ -74,7 +74,8 @@ func TestDecodeTuple(t *testing.T) {
 func TestEncodeNullTuple(t *testing.T) {
 	w := buff.NewWriter()
 	w.BeginMessage(0xff)
-	(&Tuple{}).Encode(w, []interface{}{})
+	err := (&Tuple{}).Encode(w, []interface{}{})
+	require.Nil(t, err)
 	w.EndMessage()
 
 	conn := &writeFixture{}
@@ -95,7 +96,8 @@ func TestEncodeTuple(t *testing.T) {
 	w.BeginMessage(0xff)
 
 	codec := &Tuple{fields: []Codec{&Int64{}, &Int64{}}}
-	codec.Encode(w, []interface{}{int64(2), int64(3)})
+	err := codec.Encode(w, []interface{}{int64(2), int64(3)})
+	require.Nil(t, err)
 	w.EndMessage()
 
 	conn := &writeFixture{}
@@ -128,6 +130,6 @@ func BenchmarkEncodeTuple(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		codec.Encode(w, ids)
+		_ = codec.Encode(w, ids)
 	}
 }

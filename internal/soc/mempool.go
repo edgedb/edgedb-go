@@ -52,7 +52,8 @@ func (p *MemPool) Acquire() []byte {
 // Release returns ownership of a slab to the pool.
 func (p *MemPool) Release(buf []byte) {
 	if len(buf) != p.slabSize {
-		panic("something is not right :/")
+		panic("unexpected buffer len. " +
+			"The buffer probably doesn't belong in this pool")
 	}
 
 	select {

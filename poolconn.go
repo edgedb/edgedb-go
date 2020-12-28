@@ -18,7 +18,8 @@ package edgedb
 
 import (
 	"context"
-	"net"
+
+	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
 // PoolConn is a pooled connection.
@@ -44,9 +45,8 @@ func (c *PoolConn) Release() error {
 }
 
 func (c *PoolConn) checkErr(err error) {
-	e, ok := err.(*net.OpError)
-	if ok && !e.Temporary() {
-		c.err = e
+	if soc.IsPermanentNetErr(err) {
+		c.err = err
 	}
 }
 

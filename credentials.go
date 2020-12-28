@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -32,28 +33,31 @@ type credentials struct {
 }
 
 func readCredentials(path string) (*credentials, error) {
+	var (
+		values map[string]interface{}
+		creds  *credentials
+	)
+
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"cannot read credentials at %q: %v%w", path, err, ErrBadConfig,
-		)
+		goto Failed
 	}
 
-	var values map[string]interface{}
-	if e := json.Unmarshal(data, &values); e != nil {
-		return nil, fmt.Errorf(
-			"cannot read credentials at %q: %v%w", path, e, ErrBadConfig,
-		)
-	}
-
-	creds, err := validateCredentials(values)
+	err = json.Unmarshal(data, &values)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"cannot read credentials at %q: %v%w", path, err, ErrBadConfig,
-		)
+		goto Failed
+	}
+
+	creds, err = validateCredentials(values)
+	if err != nil {
+		goto Failed
 	}
 
 	return creds, nil
+
+Failed:
+	msg := fmt.Sprintf("cannot read credentials at %q: %v", path, err)
+	return nil, newErrorFromCode(configurationErrorCode, msg)
 }
 
 func validateCredentials(data map[string]interface{}) (*credentials, error) {
@@ -62,7 +66,7 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 	if val, ok := data["port"]; ok {
 		port, ok := val.(float64)
 		if !ok || port != math.Trunc(port) || port < 1 || port > 65535 {
-			return nil, fmt.Errorf("invalid `port` value%w", ErrBadConfig)
+			return nil, errors.New("invalid `port` value")
 		}
 		result.port = int(port)
 	} else {
@@ -71,35 +75,31 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 
 	user, ok := data["user"]
 	if !ok {
-		return nil, fmt.Errorf("`user` key is required%w", ErrBadConfig)
+		return nil, errors.New("`user` key is required")
 	}
 	result.user, ok = user.(string)
 	if !ok {
-		return nil, fmt.Errorf("`user` must be a string%w", ErrBadConfig)
+		return nil, errors.New("`user` must be a string")
 	}
 
 	if host, ok := data["host"]; ok {
 		result.host, ok = host.(string)
 		if !ok {
-			return nil, fmt.Errorf("`host` must be a string%w", ErrBadConfig)
+			return nil, errors.New("`host` must be a string")
 		}
 	}
 
 	if database, ok := data["database"]; ok {
 		result.database, ok = database.(string)
 		if !ok {
-			return nil, fmt.Errorf(
-				"`database` must be a string%w", ErrBadConfig,
-			)
+			return nil, errors.New("`database` must be a string")
 		}
 	}
 
 	if password, ok := data["password"]; ok {
 		result.password, ok = password.(string)
 		if !ok {
-			return nil, fmt.Errorf(
-				"`password` must be a string%w", ErrBadConfig,
-			)
+			return nil, errors.New("`password` must be a string")
 		}
 	}
 

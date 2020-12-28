@@ -58,16 +58,17 @@ func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocri
 // ConnectDSN a pool of connections to a server.
 func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { // nolint:gocritic,lll
 	if opts.MinConns < 1 {
-		return nil, fmt.Errorf(
-			"MinConns may not be less than 1, got: %v%w",
-			opts.MinConns, ErrBadConfig,
-		)
+		return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			"MinConns may not be less than 1, got: %v",
+			opts.MinConns,
+		))
 	}
 
 	if opts.MaxConns < opts.MinConns {
-		return nil, fmt.Errorf(
-			"MaxConns may not be less than MinConns%w", ErrBadConfig,
-		)
+		return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			"MaxConns (%v) may not be less than MinConns (%v)",
+			opts.MaxConns, opts.MinConns,
+		))
 	}
 
 	cfg, err := parseConnectDSNAndArgs(dsn, &opts)
@@ -109,7 +110,8 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 
 	wg.Done()
 	if err := wrapAll(errs...); err != nil {
-		return nil, wrapAll(err, pool.Close())
+		_ = pool.Close()
+		return nil, err
 	}
 
 	return pool, nil
@@ -239,14 +241,14 @@ func (p *Pool) Close() error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (p *Pool) Execute(ctx context.Context, cmd string) (err error) {
+func (p *Pool) Execute(ctx context.Context, cmd string) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
 	err = conn.Execute(ctx, cmd)
-	return wrapAll(err, p.release(conn, err))
+	return firstError(err, p.release(conn, err))
 }
 
 // Query runs a query and returns the results.
@@ -262,7 +264,7 @@ func (p *Pool) Query(
 	}
 
 	err = conn.Query(ctx, cmd, out, args...)
-	return wrapAll(err, p.release(conn, err))
+	return firstError(err, p.release(conn, err))
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
@@ -280,7 +282,7 @@ func (p *Pool) QueryOne(
 	}
 
 	err = conn.QueryOne(ctx, cmd, out, args...)
-	return wrapAll(err, p.release(conn, err))
+	return firstError(err, p.release(conn, err))
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -296,7 +298,7 @@ func (p *Pool) QueryJSON(
 	}
 
 	err = conn.QueryJSON(ctx, cmd, out, args...)
-	return wrapAll(err, p.release(conn, err))
+	return firstError(err, p.release(conn, err))
 }
 
 // QueryOneJSON runs a singleton-returning query
@@ -315,5 +317,5 @@ func (p *Pool) QueryOneJSON(
 	}
 
 	err = conn.QueryOneJSON(ctx, cmd, out, args...)
-	return wrapAll(err, p.release(conn, err))
+	return firstError(err, p.release(conn, err))
 }

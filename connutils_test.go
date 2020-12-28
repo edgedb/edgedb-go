@@ -358,8 +358,8 @@ func TestConUtils(t *testing.T) {
 			name: "DSN requires edgedb scheme",
 			dsn:  "pq:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
-				err: ErrBadConfig,
-				errMessage: "dsn " +
+				err: ConfigurationError{},
+				errMessage: "edgedb: dsn " +
 					`"pq:///dbname?host=/unix_sock/test&user=spam" ` +
 					"is neither a edgedb:// URI nor valid instance name",
 			},
@@ -371,8 +371,8 @@ func TestConUtils(t *testing.T) {
 				Ports: []int{111, 222},
 			},
 			expected: Result{
-				err:        ErrInterfaceViolation,
-				errMessage: "could not match 2 port numbers to 3 hosts",
+				err:        InterfaceError{},
+				errMessage: "edgedb: could not match 2 port numbers to 3 hosts", // nolint:lll
 			},
 		},
 		{
@@ -400,7 +400,7 @@ func TestConUtils(t *testing.T) {
 
 			if c.expected.err != nil {
 				require.EqualError(t, err, c.expected.errMessage)
-				require.True(t, errors.Is(err, c.expected.err))
+				require.True(t, errors.As(err, &c.expected.err))
 				assert.Nil(t, config)
 			} else {
 				require.Nil(t, err, "encountered err")

@@ -41,9 +41,8 @@ const (
 
 // Codec interface
 type Codec interface {
-	// todo update name
 	Decode(*buff.Reader, unsafe.Pointer)
-	Encode(*buff.Writer, interface{})
+	Encode(*buff.Writer, interface{}) error
 	ID() types.UUID
 	Type() reflect.Type
 	setType(reflect.Type) error
@@ -70,7 +69,6 @@ func BuildCodec(r *buff.Reader) (Codec, error) {
 				return nil, err
 			}
 		case scalarType:
-			// todo implement scalar type descriptor
 			return nil, errors.New("scalar type descriptor not implemented")
 		case tupleType:
 			codec = popTupleCodec(r, id, codecs)
@@ -79,7 +77,6 @@ func BuildCodec(r *buff.Reader) (Codec, error) {
 		case arrayType:
 			codec = popArrayCodec(r, id, codecs)
 		case enumType:
-			// todo implement enum type descriptor
 			return nil, errors.New("enum type descriptor not implemented")
 		default:
 			if 0x80 <= dType && dType <= 0xff {
@@ -106,20 +103,17 @@ func BuildTypedCodec(r *buff.Reader, t reflect.Type) (Codec, error) {
 
 	if err := codec.setType(t); err != nil {
 		return nil, fmt.Errorf(
-			"the \"out\" argument does not match query schema: %w",
-			err,
+			"the \"out\" argument does not match query schema: %v", err,
 		)
 	}
 
 	return codec, nil
 }
 
-// todo test
 func pAdd(p unsafe.Pointer, i uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(p) + i)
 }
 
-// todo test
 func calcStep(tp reflect.Type) int {
 	step := int(tp.Size())
 	a := tp.Align()
@@ -131,8 +125,7 @@ func calcStep(tp reflect.Type) int {
 	return step
 }
 
-// the following structs represent the memory layout of builtin types.
-
+// sliceHeader represent the memory layout for a slice.
 type sliceHeader struct {
 	Data unsafe.Pointer
 	Len  int

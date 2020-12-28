@@ -129,6 +129,6 @@ func (c *Object) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an object
-func (c *Object) Encode(buf *buff.Writer, val interface{}) {
+func (c *Object) Encode(buf *buff.Writer, val interface{}) error {
 	panic("objects can't be query parameters")
 }

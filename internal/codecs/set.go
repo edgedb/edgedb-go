@@ -31,7 +31,6 @@ func popSetCodec(
 	codecs []Codec,
 ) Codec {
 	n := r.PopUint16()
-	// todo type value
 	return &Set{id: id, child: codecs[n]}
 }
 
@@ -95,6 +94,6 @@ func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a set
-func (c *Set) Encode(buf *buff.Writer, val interface{}) {
+func (c *Set) Encode(buf *buff.Writer, val interface{}) error {
 	panic("not implemented")
 }

@@ -47,7 +47,7 @@ func (c *baseConn) granularFlow(
 		if desc, OK := descCache.Get(ids.in); OK {
 			in, err = codecs.BuildCodec(buff.SimpleReader(desc.([]byte)))
 			if err != nil {
-				return err
+				return newError(err.Error())
 			}
 		} else {
 			return c.pesimistic(r, out, q, tp)
@@ -60,7 +60,7 @@ func (c *baseConn) granularFlow(
 			d := buff.SimpleReader(desc.([]byte))
 			cOut, err = codecs.BuildTypedCodec(d, tp)
 			if err != nil {
-				return err
+				return newError(err.Error())
 			}
 		} else {
 			return c.pesimistic(r, out, q, tp)
@@ -93,7 +93,7 @@ func (c *baseConn) pesimistic(
 	var cdcs codecPair
 	cdcs.in, err = codecs.BuildCodec(buff.SimpleReader(descs.in))
 	if err != nil {
-		return err
+		return newError(err.Error())
 	}
 
 	if q.fmt == format.JSON {
@@ -102,7 +102,7 @@ func (c *baseConn) pesimistic(
 		d := buff.SimpleReader(descs.out)
 		cdcs.out, err = codecs.BuildTypedCodec(d, tp)
 		if err != nil {
-			return err
+			return newError(err.Error())
 		}
 	}
 
@@ -124,7 +124,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return idPair{}, e
+		return idPair{}, wrapError(e)
 	}
 
 	var (
@@ -161,7 +161,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	}
 
 	if r.Err != nil {
-		return idPair{}, r.Err
+		return idPair{}, wrapError(r.Err)
 	}
 
 	return ids, err
@@ -179,7 +179,7 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 
 	var descs descPair
 	if e := c.writer.Send(c.conn); e != nil {
-		return descPair{}, e
+		return descPair{}, wrapError(e)
 	}
 
 	var err error
@@ -217,7 +217,7 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 	}
 
 	if r.Err != nil {
-		return descPair{}, r.Err
+		return descPair{}, wrapError(r.Err)
 	}
 
 	return descs, err
@@ -233,14 +233,16 @@ func (c *baseConn) execute(
 	c.writer.BeginMessage(message.Execute)
 	c.writer.PushUint16(0)       // no headers
 	c.writer.PushBytes([]byte{}) // no statement name
-	cdcs.in.Encode(c.writer, q.args)
+	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
+		return newError(e.Error())
+	}
 	c.writer.EndMessage()
 
 	c.writer.BeginMessage(message.Sync)
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return e
+		return wrapError(e)
 	}
 
 	tmp := out
@@ -287,7 +289,7 @@ func (c *baseConn) execute(
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return wrapError(r.Err)
 	}
 
 	if !q.flat() {
@@ -311,14 +313,16 @@ func (c *baseConn) optimistic(
 	c.writer.PushString(q.cmd)
 	c.writer.PushUUID(cdcs.in.ID())
 	c.writer.PushUUID(cdcs.out.ID())
-	cdcs.in.Encode(c.writer, q.args)
+	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
+		return newError(e.Error())
+	}
 	c.writer.EndMessage()
 
 	c.writer.BeginMessage(message.Sync)
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return e
+		return wrapError(e)
 	}
 
 	tmp := out
@@ -365,7 +369,7 @@ func (c *baseConn) optimistic(
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return wrapError(r.Err)
 	}
 
 	if !q.flat() {

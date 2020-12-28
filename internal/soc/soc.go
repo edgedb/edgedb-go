@@ -49,7 +49,7 @@ func IsPermanentNetErr(err error) bool {
 
 	var netErr net.Error
 	if errors.As(err, &netErr) {
-		return netErr.Temporary()
+		return !netErr.Temporary()
 	}
 
 	return false
