@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
@@ -43,9 +42,7 @@ type Movie struct {
 }
 
 func TestTutorial(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
-	defer cancel()
-
+	ctx := context.Background()
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
 	err := conn.Execute(ctx, "CREATE DATABASE "+dbName)
 	require.Nil(t, err)

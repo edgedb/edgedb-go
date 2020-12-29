@@ -16,8 +16,6 @@
 
 package codecs
 
-// todo better error messages for nested data structures
-
 import (
 	"errors"
 	"fmt"

@@ -538,9 +538,6 @@ func (c *Duration) Encode(w *buff.Writer, val interface{}) {
 	w.PushUint32(0) // reserved
 }
 
-// todo what type should JSON be decoded to :thinking:
-// maybe don't encode/decode json? let the user wrangle bytes?
-
 // JSON is an EdgeDB json type codec.
 type JSON struct {
 	id  types.UUID
@@ -567,7 +564,6 @@ func (c *JSON) Type() reflect.Type {
 
 // Decode json.
 func (c *JSON) Decode(r *buff.Reader, out unsafe.Pointer) {
-	// todo implement
 	r.PopBytes()
 }
 

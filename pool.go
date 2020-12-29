@@ -46,10 +46,6 @@ type Pool struct {
 	outCodecCache *cache.Cache
 }
 
-// todo check connect tests in other clients
-
-// todo add connectDSN funcs
-
 // Connect a pool of connections to a server.
 func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocritic,lll
 	return ConnectDSN(ctx, "", opts)

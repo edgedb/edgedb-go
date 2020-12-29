@@ -50,7 +50,6 @@ func popObjectCodec(
 		fields = append(fields, field)
 	}
 
-	// todo needs type
 	return &Object{id: id, fields: fields}
 }
 

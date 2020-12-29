@@ -119,8 +119,7 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 	ptr := unsafe.Pointer(&result)
 	codec := &NamedTuple{fields: []*objectField{
 		{offset: 0, codec: &Int32{}},
-		// todo fix offsets
-		{offset: 0, codec: &Int32{}},
+		{offset: 4, codec: &Int32{}},
 	}}
 
 	b.ResetTimer()
