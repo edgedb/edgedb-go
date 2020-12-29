@@ -28,8 +28,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
-// todo add examples
-
 type baseConn struct {
 	conn   net.Conn
 	writer *buff.Writer

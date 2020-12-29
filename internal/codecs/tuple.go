@@ -16,8 +16,6 @@
 
 package codecs
 
-// todo improve tuple support  :thinking:
-
 import (
 	"errors"
 	"fmt"
@@ -41,7 +39,6 @@ func popTupleCodec(
 		fields = append(fields, codecs[index])
 	}
 
-	// todo needs type
 	return &Tuple{id: id, fields: fields}
 }
 

@@ -50,7 +50,6 @@ func popNamedTupleCodec(
 		fields = append(fields, field)
 	}
 
-	// todo missing type
 	return &NamedTuple{id: id, fields: fields}
 }
 

@@ -137,11 +137,8 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.PrepareComplete:
-			r.Discard(2) // number of headers, assume 0
-
-			// todo assert cardinality matches query
+			r.Discard(2)     // number of headers, assume 0
 			_ = r.PopUint8() // cardianlity
-
 			ids = idPair{in: r.PopUUID(), out: r.PopUUID()}
 		case message.ReadyForCommand:
 			// header count (assume 0)

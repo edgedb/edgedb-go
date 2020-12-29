@@ -517,7 +517,6 @@ func TestEncodeDuration(t *testing.T) {
 }
 
 func TestDecodeJSON(t *testing.T) {
-	// todo
 	t.SkipNow()
 
 	r := buff.SimpleReader([]byte{
