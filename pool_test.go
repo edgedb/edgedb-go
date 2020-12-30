@@ -174,7 +174,7 @@ func TestPoolAcquireExpiredContext(t *testing.T) {
 	cancel()
 
 	conn, err := pool.Acquire(ctx)
-	assert.Equal(t, err, ErrContextExpired)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 	assert.Nil(t, conn)
 }
 
@@ -184,7 +184,7 @@ func TestPoolAcquireThenContextExpires(t *testing.T) {
 	deadline := time.Now().Add(10 * time.Millisecond)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	conn, err := pool.Acquire(ctx)
-	assert.Equal(t, err, ErrContextExpired)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 	assert.Nil(t, conn)
 	cancel()
 }

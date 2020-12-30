@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -140,7 +141,7 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 
 		return r, nil
 	case <-ctx.Done():
-		return nil, ErrContextExpired
+		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
 	}
 }
 
@@ -217,7 +218,7 @@ func (c *baseConn) QueryOne(
 ) (err error) {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
 	}
 
 	q := query{
@@ -248,7 +249,7 @@ func (c *baseConn) Query(
 ) error {
 	val, err := marshal.ValueOfSlice(out)
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
 	}
 
 	q := query{
@@ -279,7 +280,7 @@ func (c *baseConn) QueryJSON(
 ) error {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
 	}
 
 	q := query{
@@ -313,7 +314,7 @@ func (c *baseConn) QueryOneJSON(
 ) error {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
 	}
 
 	q := query{

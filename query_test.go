@@ -143,7 +143,7 @@ func TestQueryTimesOut(t *testing.T) {
 	err := conn.QueryOne(ctx, "SELECT 1;", &r)
 	require.True(
 		t,
-		errors.Is(err, ErrContextExpired) ||
+		errors.Is(err, context.DeadlineExceeded) ||
 			errors.Is(err, os.ErrDeadlineExceeded),
 		err,
 	)

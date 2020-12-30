@@ -31,9 +31,6 @@ var (
 
 	// ErrPoolClosed is returned by operations on closed pools.
 	ErrPoolClosed = newError("pool closed")
-
-	// ErrContextExpired is returned when an expired context is used.
-	ErrContextExpired = newError("context expired")
 )
 
 func wrapError(err error) error {
