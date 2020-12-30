@@ -65,10 +65,10 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 
 			if major != protocolVersionMajor || minor != protocolVersionMinor {
 				_ = c.conn.Close()
-				return newError(fmt.Sprintf(
-					"unsupported protocol version: %v.%v",
-					major, minor,
-				))
+				msg := fmt.Sprintf(
+					"unsupported protocol version: %v.%v", major, minor)
+				return newErrorFromCode(
+					unsupportedProtocolVersionErrorCode, msg)
 			}
 		case message.ServerKeyData:
 			r.DiscardMessage() // key data
@@ -115,13 +115,13 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	client, err := scram.SHA256.NewClient(cfg.user, cfg.password, "")
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(authenticationErrorCode, err.Error())
 	}
 
 	conv := client.NewConversation()
 	scramMsg, err := conv.Step("")
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(authenticationErrorCode, err.Error())
 	}
 
 	c.writer.BeginMessage(message.AuthenticationSASLInitialResponse)
@@ -141,7 +141,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			authStatus := r.PopUint32()
 			if authStatus != 0xb {
 				// the connection will not be usable after this x_x
-				return newError(fmt.Sprintf(
+				return newErrorFromCode(authenticationErrorCode, fmt.Sprintf(
 					"unexpected authentication status: 0x%x", authStatus,
 				))
 			}
@@ -150,7 +150,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			scramMsg, err = conv.Step(scramRcv)
 			if err != nil {
 				// the connection will not be usable after this x_x
-				return newError(err.Error())
+				return newErrorFromCode(authenticationErrorCode, err.Error())
 			}
 
 			done.Signal()
@@ -194,11 +194,11 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 				_, e := conv.Step(scramRcv)
 				if e != nil {
 					// the connection will not be usable after this x_x
-					return newError(e.Error())
+					return newErrorFromCode(authenticationErrorCode, e.Error())
 				}
 			default:
 				// the connection will not be usable after this x_x
-				return newError(fmt.Sprintf(
+				return newErrorFromCode(authenticationErrorCode, fmt.Sprintf(
 					"unexpected authentication status: 0x%x", authStatus,
 				))
 			}

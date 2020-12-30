@@ -270,7 +270,7 @@ func parseConnectDSNAndArgs(
 
 		u, err := usr.Current()
 		if err != nil {
-			return nil, newError(err.Error())
+			return nil, newErrorFromCode(configurationErrorCode, err.Error())
 		}
 
 		file := path.Join(u.HomeDir, ".edgedb", "credentials", dsn+".json")

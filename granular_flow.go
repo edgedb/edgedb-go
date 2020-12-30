@@ -47,7 +47,8 @@ func (c *baseConn) granularFlow(
 		if desc, OK := descCache.Get(ids.in); OK {
 			in, err = codecs.BuildCodec(buff.SimpleReader(desc.([]byte)))
 			if err != nil {
-				return newError(err.Error())
+				return newErrorFromCode(
+					unsupportedFeatureErrorCode, err.Error())
 			}
 		} else {
 			return c.pesimistic(r, out, q, tp)
@@ -60,7 +61,8 @@ func (c *baseConn) granularFlow(
 			d := buff.SimpleReader(desc.([]byte))
 			cOut, err = codecs.BuildTypedCodec(d, tp)
 			if err != nil {
-				return newError(err.Error())
+				return newErrorFromCode(
+					unsupportedFeatureErrorCode, err.Error())
 			}
 		} else {
 			return c.pesimistic(r, out, q, tp)
@@ -93,7 +95,7 @@ func (c *baseConn) pesimistic(
 	var cdcs codecPair
 	cdcs.in, err = codecs.BuildCodec(buff.SimpleReader(descs.in))
 	if err != nil {
-		return newError(err.Error())
+		return newErrorFromCode(unsupportedFeatureErrorCode, err.Error())
 	}
 
 	if q.fmt == format.JSON {
@@ -102,7 +104,7 @@ func (c *baseConn) pesimistic(
 		d := buff.SimpleReader(descs.out)
 		cdcs.out, err = codecs.BuildTypedCodec(d, tp)
 		if err != nil {
-			return newError(err.Error())
+			return newErrorFromCode(unsupportedFeatureErrorCode, err.Error())
 		}
 	}
 
@@ -234,7 +236,7 @@ func (c *baseConn) execute(
 	c.writer.PushUint16(0)       // no headers
 	c.writer.PushBytes([]byte{}) // no statement name
 	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
-		return newError(e.Error())
+		return newErrorFromCode(invalidArgumentErrorCode, e.Error())
 	}
 	c.writer.EndMessage()
 
@@ -314,7 +316,7 @@ func (c *baseConn) optimistic(
 	c.writer.PushUUID(cdcs.in.ID())
 	c.writer.PushUUID(cdcs.out.ID())
 	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
-		return newError(e.Error())
+		return newErrorFromCode(invalidArgumentErrorCode, e.Error())
 	}
 	c.writer.EndMessage()
 
