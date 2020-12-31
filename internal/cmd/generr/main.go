@@ -66,8 +66,8 @@ func printCodes(types typeList) {
 }
 
 func printTree(types typeList) {
-	fmt.Println("// wrapErrorFromCode wraps an error in an edgedb error type.")
-	fmt.Println("func wrapErrorFromCode(code uint32, err error) error {")
+	fmt.Println("// wrapErrorWithType wraps an error in an edgedb error type.")
+	fmt.Println("func wrapErrorWithType(code uint32, err error) error {")
 	fmt.Println("\tif err == nil {")
 	fmt.Println("\t\treturn nil")
 	fmt.Println("\t}")
@@ -82,7 +82,7 @@ func printTree(types typeList) {
 		case string:
 			pCode := codeFromName(parent)
 			fmt.Printf("\tcase %v:\n", code)
-			fmt.Printf("\t\tnext := wrapErrorFromCode(%v, err)\n", pCode)
+			fmt.Printf("\t\tnext := wrapErrorWithType(%v, err)\n", pCode)
 			fmt.Printf("\t\treturn &%v{&baseError{err: next}}\n", name)
 		case nil:
 			fmt.Printf("\tcase %v:\n", code)

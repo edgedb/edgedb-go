@@ -126,7 +126,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return idPair{}, wrapErrorFromCode(clientConnectionErrorCode, e)
+		return idPair{}, wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	var (
@@ -163,7 +163,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	}
 
 	if r.Err != nil {
-		return idPair{}, wrapErrorFromCode(clientConnectionErrorCode, r.Err)
+		return idPair{}, wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	return ids, err
@@ -181,7 +181,7 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 
 	var descs descPair
 	if e := c.writer.Send(c.conn); e != nil {
-		return descPair{}, wrapErrorFromCode(clientConnectionErrorCode, e)
+		return descPair{}, wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	var err error
@@ -219,7 +219,7 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 	}
 
 	if r.Err != nil {
-		return descPair{}, wrapErrorFromCode(clientConnectionErrorCode, r.Err)
+		return descPair{}, wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	return descs, err
@@ -244,7 +244,7 @@ func (c *baseConn) execute(
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapErrorFromCode(clientConnectionErrorCode, e)
+		return wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	tmp := out
@@ -291,7 +291,7 @@ func (c *baseConn) execute(
 	}
 
 	if r.Err != nil {
-		return wrapErrorFromCode(clientConnectionErrorCode, r.Err)
+		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	if !q.flat() {
@@ -324,7 +324,7 @@ func (c *baseConn) optimistic(
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapErrorFromCode(clientConnectionErrorCode, e)
+		return wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	tmp := out
@@ -371,7 +371,7 @@ func (c *baseConn) optimistic(
 	}
 
 	if r.Err != nil {
-		return wrapErrorFromCode(clientConnectionErrorCode, r.Err)
+		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	if !q.flat() {

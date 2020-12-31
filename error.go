@@ -24,7 +24,7 @@ import (
 
 var (
 	// ErrZeroResults is returned when a query has no results.
-	ErrZeroResults = newError("zero results")
+	ErrZeroResults error = &Error{&baseError{msg: "edgedb: zero results"}}
 )
 
 func wrapError(err error) error {
@@ -35,18 +35,10 @@ func wrapError(err error) error {
 	return &Error{&baseError{msg: "edgedb: " + err.Error(), err: err}}
 }
 
-func newError(msg string) error {
-	if msg == "" {
-		panic("no error message specified")
-	}
-
-	return &Error{&baseError{msg: "edgedb: " + msg}}
-}
-
 // newErrorFromCode returns a new edgedb error.
 func newErrorFromCode(code uint32, msg string) error {
 	err := &Error{&baseError{msg: msg}}
-	return wrapErrorFromCode(code, err)
+	return wrapErrorWithType(code, err)
 }
 
 func firstError(errs ...error) error {

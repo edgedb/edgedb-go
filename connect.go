@@ -43,7 +43,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	c.writer.EndMessage()
 
 	if err := c.writer.Send(c.conn); err != nil {
-		return wrapError(err)
+		return wrapErrorWithType(clientConnectionErrorCode, err)
 	}
 
 	var (
@@ -106,7 +106,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return wrapError(r.Err)
+		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	return err
@@ -130,7 +130,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapError(e)
+		return wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	done := buff.NewSignal()
@@ -166,7 +166,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return wrapError(r.Err)
+		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	if err != nil {
@@ -178,7 +178,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapError(e)
+		return wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	done = buff.NewSignal()
@@ -221,7 +221,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return wrapError(r.Err)
+		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
 	}
 
 	return err
@@ -232,7 +232,7 @@ func (c *baseConn) terminate() error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapError(e)
+		return wrapErrorWithType(clientConnectionErrorCode, e)
 	}
 
 	return nil

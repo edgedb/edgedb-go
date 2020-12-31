@@ -95,8 +95,8 @@ const (
 	noDataErrorCode uint32 = 0xff_03_00_00
 )
 
-// wrapErrorFromCode wraps an error in an edgedb error type.
-func wrapErrorFromCode(code uint32, err error) error {
+// wrapErrorWithType wraps an error in an edgedb error type.
+func wrapErrorWithType(code uint32, err error) error {
 	if err == nil {
 		return nil
 	}
@@ -109,206 +109,206 @@ func wrapErrorFromCode(code uint32, err error) error {
 	case protocolErrorCode:
 		return &ProtocolError{&baseError{err: wrapError(err)}}
 	case binaryProtocolErrorCode:
-		next := wrapErrorFromCode(protocolErrorCode, err)
+		next := wrapErrorWithType(protocolErrorCode, err)
 		return &BinaryProtocolError{&baseError{err: next}}
 	case unsupportedProtocolVersionErrorCode:
-		next := wrapErrorFromCode(binaryProtocolErrorCode, err)
+		next := wrapErrorWithType(binaryProtocolErrorCode, err)
 		return &UnsupportedProtocolVersionError{&baseError{err: next}}
 	case typeSpecNotFoundErrorCode:
-		next := wrapErrorFromCode(binaryProtocolErrorCode, err)
+		next := wrapErrorWithType(binaryProtocolErrorCode, err)
 		return &TypeSpecNotFoundError{&baseError{err: next}}
 	case unexpectedMessageErrorCode:
-		next := wrapErrorFromCode(binaryProtocolErrorCode, err)
+		next := wrapErrorWithType(binaryProtocolErrorCode, err)
 		return &UnexpectedMessageError{&baseError{err: next}}
 	case inputDataErrorCode:
-		next := wrapErrorFromCode(protocolErrorCode, err)
+		next := wrapErrorWithType(protocolErrorCode, err)
 		return &InputDataError{&baseError{err: next}}
 	case resultCardinalityMismatchErrorCode:
-		next := wrapErrorFromCode(protocolErrorCode, err)
+		next := wrapErrorWithType(protocolErrorCode, err)
 		return &ResultCardinalityMismatchError{&baseError{err: next}}
 	case queryErrorCode:
 		return &QueryError{&baseError{err: wrapError(err)}}
 	case invalidSyntaxErrorCode:
-		next := wrapErrorFromCode(queryErrorCode, err)
+		next := wrapErrorWithType(queryErrorCode, err)
 		return &InvalidSyntaxError{&baseError{err: next}}
 	case edgeQLSyntaxErrorCode:
-		next := wrapErrorFromCode(invalidSyntaxErrorCode, err)
+		next := wrapErrorWithType(invalidSyntaxErrorCode, err)
 		return &EdgeQLSyntaxError{&baseError{err: next}}
 	case schemaSyntaxErrorCode:
-		next := wrapErrorFromCode(invalidSyntaxErrorCode, err)
+		next := wrapErrorWithType(invalidSyntaxErrorCode, err)
 		return &SchemaSyntaxError{&baseError{err: next}}
 	case graphQLSyntaxErrorCode:
-		next := wrapErrorFromCode(invalidSyntaxErrorCode, err)
+		next := wrapErrorWithType(invalidSyntaxErrorCode, err)
 		return &GraphQLSyntaxError{&baseError{err: next}}
 	case invalidTypeErrorCode:
-		next := wrapErrorFromCode(queryErrorCode, err)
+		next := wrapErrorWithType(queryErrorCode, err)
 		return &InvalidTypeError{&baseError{err: next}}
 	case invalidTargetErrorCode:
-		next := wrapErrorFromCode(invalidTypeErrorCode, err)
+		next := wrapErrorWithType(invalidTypeErrorCode, err)
 		return &InvalidTargetError{&baseError{err: next}}
 	case invalidLinkTargetErrorCode:
-		next := wrapErrorFromCode(invalidTargetErrorCode, err)
+		next := wrapErrorWithType(invalidTargetErrorCode, err)
 		return &InvalidLinkTargetError{&baseError{err: next}}
 	case invalidPropertyTargetErrorCode:
-		next := wrapErrorFromCode(invalidTargetErrorCode, err)
+		next := wrapErrorWithType(invalidTargetErrorCode, err)
 		return &InvalidPropertyTargetError{&baseError{err: next}}
 	case invalidReferenceErrorCode:
-		next := wrapErrorFromCode(queryErrorCode, err)
+		next := wrapErrorWithType(queryErrorCode, err)
 		return &InvalidReferenceError{&baseError{err: next}}
 	case unknownModuleErrorCode:
-		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		next := wrapErrorWithType(invalidReferenceErrorCode, err)
 		return &UnknownModuleError{&baseError{err: next}}
 	case unknownLinkErrorCode:
-		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		next := wrapErrorWithType(invalidReferenceErrorCode, err)
 		return &UnknownLinkError{&baseError{err: next}}
 	case unknownPropertyErrorCode:
-		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		next := wrapErrorWithType(invalidReferenceErrorCode, err)
 		return &UnknownPropertyError{&baseError{err: next}}
 	case unknownUserErrorCode:
-		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		next := wrapErrorWithType(invalidReferenceErrorCode, err)
 		return &UnknownUserError{&baseError{err: next}}
 	case unknownDatabaseErrorCode:
-		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		next := wrapErrorWithType(invalidReferenceErrorCode, err)
 		return &UnknownDatabaseError{&baseError{err: next}}
 	case unknownParameterErrorCode:
-		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		next := wrapErrorWithType(invalidReferenceErrorCode, err)
 		return &UnknownParameterError{&baseError{err: next}}
 	case schemaErrorCode:
-		next := wrapErrorFromCode(queryErrorCode, err)
+		next := wrapErrorWithType(queryErrorCode, err)
 		return &SchemaError{&baseError{err: next}}
 	case schemaDefinitionErrorCode:
-		next := wrapErrorFromCode(queryErrorCode, err)
+		next := wrapErrorWithType(queryErrorCode, err)
 		return &SchemaDefinitionError{&baseError{err: next}}
 	case invalidDefinitionErrorCode:
-		next := wrapErrorFromCode(schemaDefinitionErrorCode, err)
+		next := wrapErrorWithType(schemaDefinitionErrorCode, err)
 		return &InvalidDefinitionError{&baseError{err: next}}
 	case invalidModuleDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidModuleDefinitionError{&baseError{err: next}}
 	case invalidLinkDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidLinkDefinitionError{&baseError{err: next}}
 	case invalidPropertyDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidPropertyDefinitionError{&baseError{err: next}}
 	case invalidUserDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidUserDefinitionError{&baseError{err: next}}
 	case invalidDatabaseDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidDatabaseDefinitionError{&baseError{err: next}}
 	case invalidOperatorDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidOperatorDefinitionError{&baseError{err: next}}
 	case invalidAliasDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidAliasDefinitionError{&baseError{err: next}}
 	case invalidFunctionDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidFunctionDefinitionError{&baseError{err: next}}
 	case invalidConstraintDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidConstraintDefinitionError{&baseError{err: next}}
 	case invalidCastDefinitionErrorCode:
-		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		next := wrapErrorWithType(invalidDefinitionErrorCode, err)
 		return &InvalidCastDefinitionError{&baseError{err: next}}
 	case duplicateDefinitionErrorCode:
-		next := wrapErrorFromCode(schemaDefinitionErrorCode, err)
+		next := wrapErrorWithType(schemaDefinitionErrorCode, err)
 		return &DuplicateDefinitionError{&baseError{err: next}}
 	case duplicateModuleDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateModuleDefinitionError{&baseError{err: next}}
 	case duplicateLinkDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateLinkDefinitionError{&baseError{err: next}}
 	case duplicatePropertyDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicatePropertyDefinitionError{&baseError{err: next}}
 	case duplicateUserDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateUserDefinitionError{&baseError{err: next}}
 	case duplicateDatabaseDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateDatabaseDefinitionError{&baseError{err: next}}
 	case duplicateOperatorDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateOperatorDefinitionError{&baseError{err: next}}
 	case duplicateViewDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateViewDefinitionError{&baseError{err: next}}
 	case duplicateFunctionDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateFunctionDefinitionError{&baseError{err: next}}
 	case duplicateConstraintDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateConstraintDefinitionError{&baseError{err: next}}
 	case duplicateCastDefinitionErrorCode:
-		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		next := wrapErrorWithType(duplicateDefinitionErrorCode, err)
 		return &DuplicateCastDefinitionError{&baseError{err: next}}
 	case queryTimeoutErrorCode:
-		next := wrapErrorFromCode(queryErrorCode, err)
+		next := wrapErrorWithType(queryErrorCode, err)
 		return &QueryTimeoutError{&baseError{err: next}}
 	case executionErrorCode:
 		return &ExecutionError{&baseError{err: wrapError(err)}}
 	case invalidValueErrorCode:
-		next := wrapErrorFromCode(executionErrorCode, err)
+		next := wrapErrorWithType(executionErrorCode, err)
 		return &InvalidValueError{&baseError{err: next}}
 	case divisionByZeroErrorCode:
-		next := wrapErrorFromCode(invalidValueErrorCode, err)
+		next := wrapErrorWithType(invalidValueErrorCode, err)
 		return &DivisionByZeroError{&baseError{err: next}}
 	case numericOutOfRangeErrorCode:
-		next := wrapErrorFromCode(invalidValueErrorCode, err)
+		next := wrapErrorWithType(invalidValueErrorCode, err)
 		return &NumericOutOfRangeError{&baseError{err: next}}
 	case integrityErrorCode:
-		next := wrapErrorFromCode(executionErrorCode, err)
+		next := wrapErrorWithType(executionErrorCode, err)
 		return &IntegrityError{&baseError{err: next}}
 	case constraintViolationErrorCode:
-		next := wrapErrorFromCode(integrityErrorCode, err)
+		next := wrapErrorWithType(integrityErrorCode, err)
 		return &ConstraintViolationError{&baseError{err: next}}
 	case cardinalityViolationErrorCode:
-		next := wrapErrorFromCode(integrityErrorCode, err)
+		next := wrapErrorWithType(integrityErrorCode, err)
 		return &CardinalityViolationError{&baseError{err: next}}
 	case missingRequiredErrorCode:
-		next := wrapErrorFromCode(integrityErrorCode, err)
+		next := wrapErrorWithType(integrityErrorCode, err)
 		return &MissingRequiredError{&baseError{err: next}}
 	case transactionErrorCode:
-		next := wrapErrorFromCode(executionErrorCode, err)
+		next := wrapErrorWithType(executionErrorCode, err)
 		return &TransactionError{&baseError{err: next}}
 	case transactionSerializationErrorCode:
-		next := wrapErrorFromCode(transactionErrorCode, err)
+		next := wrapErrorWithType(transactionErrorCode, err)
 		return &TransactionSerializationError{&baseError{err: next}}
 	case transactionDeadlockErrorCode:
-		next := wrapErrorFromCode(transactionErrorCode, err)
+		next := wrapErrorWithType(transactionErrorCode, err)
 		return &TransactionDeadlockError{&baseError{err: next}}
 	case configurationErrorCode:
 		return &ConfigurationError{&baseError{err: wrapError(err)}}
 	case accessErrorCode:
 		return &AccessError{&baseError{err: wrapError(err)}}
 	case authenticationErrorCode:
-		next := wrapErrorFromCode(accessErrorCode, err)
+		next := wrapErrorWithType(accessErrorCode, err)
 		return &AuthenticationError{&baseError{err: next}}
 	case clientErrorCode:
 		return &ClientError{&baseError{err: wrapError(err)}}
 	case clientConnectionErrorCode:
-		next := wrapErrorFromCode(clientErrorCode, err)
+		next := wrapErrorWithType(clientErrorCode, err)
 		return &ClientConnectionError{&baseError{err: next}}
 	case interfaceErrorCode:
-		next := wrapErrorFromCode(clientErrorCode, err)
+		next := wrapErrorWithType(clientErrorCode, err)
 		return &InterfaceError{&baseError{err: next}}
 	case queryArgumentErrorCode:
-		next := wrapErrorFromCode(interfaceErrorCode, err)
+		next := wrapErrorWithType(interfaceErrorCode, err)
 		return &QueryArgumentError{&baseError{err: next}}
 	case missingArgumentErrorCode:
-		next := wrapErrorFromCode(queryArgumentErrorCode, err)
+		next := wrapErrorWithType(queryArgumentErrorCode, err)
 		return &MissingArgumentError{&baseError{err: next}}
 	case unknownArgumentErrorCode:
-		next := wrapErrorFromCode(queryArgumentErrorCode, err)
+		next := wrapErrorWithType(queryArgumentErrorCode, err)
 		return &UnknownArgumentError{&baseError{err: next}}
 	case invalidArgumentErrorCode:
-		next := wrapErrorFromCode(queryArgumentErrorCode, err)
+		next := wrapErrorWithType(queryArgumentErrorCode, err)
 		return &InvalidArgumentError{&baseError{err: next}}
 	case noDataErrorCode:
-		next := wrapErrorFromCode(clientErrorCode, err)
+		next := wrapErrorWithType(clientErrorCode, err)
 		return &NoDataError{&baseError{err: next}}
 	default:
 		panic(fmt.Sprintf("unknown error code: %v", code))

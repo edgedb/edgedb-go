@@ -86,7 +86,7 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 	for _, addr := range cfg.addrs { // nolint:gocritic
 		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
 		if err != nil {
-			err = wrapErrorFromCode(clientConnectionErrorCode, err)
+			err = wrapErrorWithType(clientConnectionErrorCode, err)
 			continue
 		}
 
@@ -129,7 +129,7 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 func (c *baseConn) setDeadline(ctx context.Context) error {
 	deadline, _ := ctx.Deadline()
 	err := c.conn.SetDeadline(deadline)
-	return wrapErrorFromCode(clientConnectionErrorCode, err)
+	return wrapErrorWithType(clientConnectionErrorCode, err)
 }
 
 func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
@@ -138,7 +138,7 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 	select {
 	case r := <-c.readerChan:
 		if r.Err != nil {
-			return nil, wrapErrorFromCode(clientConnectionErrorCode, r.Err)
+			return nil, wrapErrorWithType(clientConnectionErrorCode, r.Err)
 		}
 
 		return r, nil
@@ -189,7 +189,7 @@ func (c *baseConn) close() error {
 
 	err = c.conn.Close()
 	if err != nil {
-		return wrapErrorFromCode(clientConnectionErrorCode, err)
+		return wrapErrorWithType(clientConnectionErrorCode, err)
 	}
 
 	return nil
