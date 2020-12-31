@@ -66,8 +66,12 @@ func printCodes(types typeList) {
 }
 
 func printTree(types typeList) {
-	fmt.Println("// newErrorFromCode returns a new edgedb error.")
-	fmt.Println("func newErrorFromCode(code uint32, msg string) error {")
+	fmt.Println("// wrapErrorFromCode wraps an error in an edgedb error type.")
+	fmt.Println("func wrapErrorFromCode(code uint32, err error) error {")
+	fmt.Println("\tif err == nil {")
+	fmt.Println("\t\treturn nil")
+	fmt.Println("\t}")
+	fmt.Println()
 	fmt.Println("\tswitch code {")
 
 	for _, t := range types {
@@ -78,16 +82,12 @@ func printTree(types typeList) {
 		case string:
 			pCode := codeFromName(parent)
 			fmt.Printf("\tcase %v:\n", code)
-			fmt.Printf(
-				"\t\tbase := &baseError{err: newErrorFromCode(%v, msg)}\n",
-				pCode,
-			)
-			fmt.Printf("\t\treturn &%v{base}\n", name)
+			fmt.Printf("\t\tnext := wrapErrorFromCode(%v, err)\n", pCode)
+			fmt.Printf("\t\treturn &%v{&baseError{err: next}}\n", name)
 		case nil:
 			fmt.Printf("\tcase %v:\n", code)
-			fmt.Printf("\t\ttail := &baseError{msg: \"edgedb: \" + msg}\n")
-			fmt.Printf("\t\tbase := &baseError{err: &Error{tail}}\n")
-			fmt.Printf("\t\treturn &%v{base}\n", name)
+			fmt.Printf(
+				"\t\treturn &%v{&baseError{err: wrapError(err)}}\n", name)
 		default:
 			panic("unexpected type")
 		}

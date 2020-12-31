@@ -95,233 +95,221 @@ const (
 	noDataErrorCode uint32 = 0xff_03_00_00
 )
 
-// newErrorFromCode returns a new edgedb error.
-func newErrorFromCode(code uint32, msg string) error {
+// wrapErrorFromCode wraps an error in an edgedb error type.
+func wrapErrorFromCode(code uint32, err error) error {
+	if err == nil {
+		return nil
+	}
+
 	switch code {
 	case internalServerErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &InternalServerError{base}
+		return &InternalServerError{&baseError{err: wrapError(err)}}
 	case unsupportedFeatureErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &UnsupportedFeatureError{base}
+		return &UnsupportedFeatureError{&baseError{err: wrapError(err)}}
 	case protocolErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &ProtocolError{base}
+		return &ProtocolError{&baseError{err: wrapError(err)}}
 	case binaryProtocolErrorCode:
-		base := &baseError{err: newErrorFromCode(protocolErrorCode, msg)}
-		return &BinaryProtocolError{base}
+		next := wrapErrorFromCode(protocolErrorCode, err)
+		return &BinaryProtocolError{&baseError{err: next}}
 	case unsupportedProtocolVersionErrorCode:
-		base := &baseError{err: newErrorFromCode(binaryProtocolErrorCode, msg)}
-		return &UnsupportedProtocolVersionError{base}
+		next := wrapErrorFromCode(binaryProtocolErrorCode, err)
+		return &UnsupportedProtocolVersionError{&baseError{err: next}}
 	case typeSpecNotFoundErrorCode:
-		base := &baseError{err: newErrorFromCode(binaryProtocolErrorCode, msg)}
-		return &TypeSpecNotFoundError{base}
+		next := wrapErrorFromCode(binaryProtocolErrorCode, err)
+		return &TypeSpecNotFoundError{&baseError{err: next}}
 	case unexpectedMessageErrorCode:
-		base := &baseError{err: newErrorFromCode(binaryProtocolErrorCode, msg)}
-		return &UnexpectedMessageError{base}
+		next := wrapErrorFromCode(binaryProtocolErrorCode, err)
+		return &UnexpectedMessageError{&baseError{err: next}}
 	case inputDataErrorCode:
-		base := &baseError{err: newErrorFromCode(protocolErrorCode, msg)}
-		return &InputDataError{base}
+		next := wrapErrorFromCode(protocolErrorCode, err)
+		return &InputDataError{&baseError{err: next}}
 	case resultCardinalityMismatchErrorCode:
-		base := &baseError{err: newErrorFromCode(protocolErrorCode, msg)}
-		return &ResultCardinalityMismatchError{base}
+		next := wrapErrorFromCode(protocolErrorCode, err)
+		return &ResultCardinalityMismatchError{&baseError{err: next}}
 	case queryErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &QueryError{base}
+		return &QueryError{&baseError{err: wrapError(err)}}
 	case invalidSyntaxErrorCode:
-		base := &baseError{err: newErrorFromCode(queryErrorCode, msg)}
-		return &InvalidSyntaxError{base}
+		next := wrapErrorFromCode(queryErrorCode, err)
+		return &InvalidSyntaxError{&baseError{err: next}}
 	case edgeQLSyntaxErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidSyntaxErrorCode, msg)}
-		return &EdgeQLSyntaxError{base}
+		next := wrapErrorFromCode(invalidSyntaxErrorCode, err)
+		return &EdgeQLSyntaxError{&baseError{err: next}}
 	case schemaSyntaxErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidSyntaxErrorCode, msg)}
-		return &SchemaSyntaxError{base}
+		next := wrapErrorFromCode(invalidSyntaxErrorCode, err)
+		return &SchemaSyntaxError{&baseError{err: next}}
 	case graphQLSyntaxErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidSyntaxErrorCode, msg)}
-		return &GraphQLSyntaxError{base}
+		next := wrapErrorFromCode(invalidSyntaxErrorCode, err)
+		return &GraphQLSyntaxError{&baseError{err: next}}
 	case invalidTypeErrorCode:
-		base := &baseError{err: newErrorFromCode(queryErrorCode, msg)}
-		return &InvalidTypeError{base}
+		next := wrapErrorFromCode(queryErrorCode, err)
+		return &InvalidTypeError{&baseError{err: next}}
 	case invalidTargetErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidTypeErrorCode, msg)}
-		return &InvalidTargetError{base}
+		next := wrapErrorFromCode(invalidTypeErrorCode, err)
+		return &InvalidTargetError{&baseError{err: next}}
 	case invalidLinkTargetErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidTargetErrorCode, msg)}
-		return &InvalidLinkTargetError{base}
+		next := wrapErrorFromCode(invalidTargetErrorCode, err)
+		return &InvalidLinkTargetError{&baseError{err: next}}
 	case invalidPropertyTargetErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidTargetErrorCode, msg)}
-		return &InvalidPropertyTargetError{base}
+		next := wrapErrorFromCode(invalidTargetErrorCode, err)
+		return &InvalidPropertyTargetError{&baseError{err: next}}
 	case invalidReferenceErrorCode:
-		base := &baseError{err: newErrorFromCode(queryErrorCode, msg)}
-		return &InvalidReferenceError{base}
+		next := wrapErrorFromCode(queryErrorCode, err)
+		return &InvalidReferenceError{&baseError{err: next}}
 	case unknownModuleErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidReferenceErrorCode, msg)}
-		return &UnknownModuleError{base}
+		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		return &UnknownModuleError{&baseError{err: next}}
 	case unknownLinkErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidReferenceErrorCode, msg)}
-		return &UnknownLinkError{base}
+		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		return &UnknownLinkError{&baseError{err: next}}
 	case unknownPropertyErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidReferenceErrorCode, msg)}
-		return &UnknownPropertyError{base}
+		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		return &UnknownPropertyError{&baseError{err: next}}
 	case unknownUserErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidReferenceErrorCode, msg)}
-		return &UnknownUserError{base}
+		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		return &UnknownUserError{&baseError{err: next}}
 	case unknownDatabaseErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidReferenceErrorCode, msg)}
-		return &UnknownDatabaseError{base}
+		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		return &UnknownDatabaseError{&baseError{err: next}}
 	case unknownParameterErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidReferenceErrorCode, msg)}
-		return &UnknownParameterError{base}
+		next := wrapErrorFromCode(invalidReferenceErrorCode, err)
+		return &UnknownParameterError{&baseError{err: next}}
 	case schemaErrorCode:
-		base := &baseError{err: newErrorFromCode(queryErrorCode, msg)}
-		return &SchemaError{base}
+		next := wrapErrorFromCode(queryErrorCode, err)
+		return &SchemaError{&baseError{err: next}}
 	case schemaDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(queryErrorCode, msg)}
-		return &SchemaDefinitionError{base}
+		next := wrapErrorFromCode(queryErrorCode, err)
+		return &SchemaDefinitionError{&baseError{err: next}}
 	case invalidDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(schemaDefinitionErrorCode, msg)}
-		return &InvalidDefinitionError{base}
+		next := wrapErrorFromCode(schemaDefinitionErrorCode, err)
+		return &InvalidDefinitionError{&baseError{err: next}}
 	case invalidModuleDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidModuleDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidModuleDefinitionError{&baseError{err: next}}
 	case invalidLinkDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidLinkDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidLinkDefinitionError{&baseError{err: next}}
 	case invalidPropertyDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidPropertyDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidPropertyDefinitionError{&baseError{err: next}}
 	case invalidUserDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidUserDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidUserDefinitionError{&baseError{err: next}}
 	case invalidDatabaseDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidDatabaseDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidDatabaseDefinitionError{&baseError{err: next}}
 	case invalidOperatorDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidOperatorDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidOperatorDefinitionError{&baseError{err: next}}
 	case invalidAliasDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidAliasDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidAliasDefinitionError{&baseError{err: next}}
 	case invalidFunctionDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidFunctionDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidFunctionDefinitionError{&baseError{err: next}}
 	case invalidConstraintDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidConstraintDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidConstraintDefinitionError{&baseError{err: next}}
 	case invalidCastDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidDefinitionErrorCode, msg)}
-		return &InvalidCastDefinitionError{base}
+		next := wrapErrorFromCode(invalidDefinitionErrorCode, err)
+		return &InvalidCastDefinitionError{&baseError{err: next}}
 	case duplicateDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(schemaDefinitionErrorCode, msg)}
-		return &DuplicateDefinitionError{base}
+		next := wrapErrorFromCode(schemaDefinitionErrorCode, err)
+		return &DuplicateDefinitionError{&baseError{err: next}}
 	case duplicateModuleDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateModuleDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateModuleDefinitionError{&baseError{err: next}}
 	case duplicateLinkDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateLinkDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateLinkDefinitionError{&baseError{err: next}}
 	case duplicatePropertyDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicatePropertyDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicatePropertyDefinitionError{&baseError{err: next}}
 	case duplicateUserDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateUserDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateUserDefinitionError{&baseError{err: next}}
 	case duplicateDatabaseDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateDatabaseDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateDatabaseDefinitionError{&baseError{err: next}}
 	case duplicateOperatorDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateOperatorDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateOperatorDefinitionError{&baseError{err: next}}
 	case duplicateViewDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateViewDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateViewDefinitionError{&baseError{err: next}}
 	case duplicateFunctionDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateFunctionDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateFunctionDefinitionError{&baseError{err: next}}
 	case duplicateConstraintDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateConstraintDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateConstraintDefinitionError{&baseError{err: next}}
 	case duplicateCastDefinitionErrorCode:
-		base := &baseError{err: newErrorFromCode(duplicateDefinitionErrorCode, msg)}
-		return &DuplicateCastDefinitionError{base}
+		next := wrapErrorFromCode(duplicateDefinitionErrorCode, err)
+		return &DuplicateCastDefinitionError{&baseError{err: next}}
 	case queryTimeoutErrorCode:
-		base := &baseError{err: newErrorFromCode(queryErrorCode, msg)}
-		return &QueryTimeoutError{base}
+		next := wrapErrorFromCode(queryErrorCode, err)
+		return &QueryTimeoutError{&baseError{err: next}}
 	case executionErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &ExecutionError{base}
+		return &ExecutionError{&baseError{err: wrapError(err)}}
 	case invalidValueErrorCode:
-		base := &baseError{err: newErrorFromCode(executionErrorCode, msg)}
-		return &InvalidValueError{base}
+		next := wrapErrorFromCode(executionErrorCode, err)
+		return &InvalidValueError{&baseError{err: next}}
 	case divisionByZeroErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidValueErrorCode, msg)}
-		return &DivisionByZeroError{base}
+		next := wrapErrorFromCode(invalidValueErrorCode, err)
+		return &DivisionByZeroError{&baseError{err: next}}
 	case numericOutOfRangeErrorCode:
-		base := &baseError{err: newErrorFromCode(invalidValueErrorCode, msg)}
-		return &NumericOutOfRangeError{base}
+		next := wrapErrorFromCode(invalidValueErrorCode, err)
+		return &NumericOutOfRangeError{&baseError{err: next}}
 	case integrityErrorCode:
-		base := &baseError{err: newErrorFromCode(executionErrorCode, msg)}
-		return &IntegrityError{base}
+		next := wrapErrorFromCode(executionErrorCode, err)
+		return &IntegrityError{&baseError{err: next}}
 	case constraintViolationErrorCode:
-		base := &baseError{err: newErrorFromCode(integrityErrorCode, msg)}
-		return &ConstraintViolationError{base}
+		next := wrapErrorFromCode(integrityErrorCode, err)
+		return &ConstraintViolationError{&baseError{err: next}}
 	case cardinalityViolationErrorCode:
-		base := &baseError{err: newErrorFromCode(integrityErrorCode, msg)}
-		return &CardinalityViolationError{base}
+		next := wrapErrorFromCode(integrityErrorCode, err)
+		return &CardinalityViolationError{&baseError{err: next}}
 	case missingRequiredErrorCode:
-		base := &baseError{err: newErrorFromCode(integrityErrorCode, msg)}
-		return &MissingRequiredError{base}
+		next := wrapErrorFromCode(integrityErrorCode, err)
+		return &MissingRequiredError{&baseError{err: next}}
 	case transactionErrorCode:
-		base := &baseError{err: newErrorFromCode(executionErrorCode, msg)}
-		return &TransactionError{base}
+		next := wrapErrorFromCode(executionErrorCode, err)
+		return &TransactionError{&baseError{err: next}}
 	case transactionSerializationErrorCode:
-		base := &baseError{err: newErrorFromCode(transactionErrorCode, msg)}
-		return &TransactionSerializationError{base}
+		next := wrapErrorFromCode(transactionErrorCode, err)
+		return &TransactionSerializationError{&baseError{err: next}}
 	case transactionDeadlockErrorCode:
-		base := &baseError{err: newErrorFromCode(transactionErrorCode, msg)}
-		return &TransactionDeadlockError{base}
+		next := wrapErrorFromCode(transactionErrorCode, err)
+		return &TransactionDeadlockError{&baseError{err: next}}
 	case configurationErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &ConfigurationError{base}
+		return &ConfigurationError{&baseError{err: wrapError(err)}}
 	case accessErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &AccessError{base}
+		return &AccessError{&baseError{err: wrapError(err)}}
 	case authenticationErrorCode:
-		base := &baseError{err: newErrorFromCode(accessErrorCode, msg)}
-		return &AuthenticationError{base}
+		next := wrapErrorFromCode(accessErrorCode, err)
+		return &AuthenticationError{&baseError{err: next}}
 	case clientErrorCode:
-		tail := &baseError{msg: "edgedb: " + msg}
-		base := &baseError{err: &Error{tail}}
-		return &ClientError{base}
+		return &ClientError{&baseError{err: wrapError(err)}}
 	case clientConnectionErrorCode:
-		base := &baseError{err: newErrorFromCode(clientErrorCode, msg)}
-		return &ClientConnectionError{base}
+		next := wrapErrorFromCode(clientErrorCode, err)
+		return &ClientConnectionError{&baseError{err: next}}
 	case interfaceErrorCode:
-		base := &baseError{err: newErrorFromCode(clientErrorCode, msg)}
-		return &InterfaceError{base}
+		next := wrapErrorFromCode(clientErrorCode, err)
+		return &InterfaceError{&baseError{err: next}}
 	case queryArgumentErrorCode:
-		base := &baseError{err: newErrorFromCode(interfaceErrorCode, msg)}
-		return &QueryArgumentError{base}
+		next := wrapErrorFromCode(interfaceErrorCode, err)
+		return &QueryArgumentError{&baseError{err: next}}
 	case missingArgumentErrorCode:
-		base := &baseError{err: newErrorFromCode(queryArgumentErrorCode, msg)}
-		return &MissingArgumentError{base}
+		next := wrapErrorFromCode(queryArgumentErrorCode, err)
+		return &MissingArgumentError{&baseError{err: next}}
 	case unknownArgumentErrorCode:
-		base := &baseError{err: newErrorFromCode(queryArgumentErrorCode, msg)}
-		return &UnknownArgumentError{base}
+		next := wrapErrorFromCode(queryArgumentErrorCode, err)
+		return &UnknownArgumentError{&baseError{err: next}}
 	case invalidArgumentErrorCode:
-		base := &baseError{err: newErrorFromCode(queryArgumentErrorCode, msg)}
-		return &InvalidArgumentError{base}
+		next := wrapErrorFromCode(queryArgumentErrorCode, err)
+		return &InvalidArgumentError{&baseError{err: next}}
 	case noDataErrorCode:
-		base := &baseError{err: newErrorFromCode(clientErrorCode, msg)}
-		return &NoDataError{base}
+		next := wrapErrorFromCode(clientErrorCode, err)
+		return &NoDataError{&baseError{err: next}}
 	default:
 		panic(fmt.Sprintf("unknown error code: %v", code))
 	}

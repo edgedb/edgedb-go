@@ -49,6 +49,12 @@ func newError(msg string) error {
 	return &Error{&baseError{msg: "edgedb: " + msg}}
 }
 
+// newErrorFromCode returns a new edgedb error.
+func newErrorFromCode(code uint32, msg string) error {
+	err := &Error{&baseError{msg: msg}}
+	return wrapErrorFromCode(code, err)
+}
+
 func firstError(errs ...error) error {
 	for _, err := range errs {
 		if err != nil {
