@@ -60,7 +60,8 @@ func TestClosePoolConcurently(t *testing.T) {
 	go func() { errs <- pool.Close() }()
 
 	assert.Nil(t, <-errs)
-	assert.Equal(t, ErrPoolClosed, <-errs)
+	var closedErr *InterfaceError
+	assert.True(t, errors.As(<-errs, &closedErr))
 }
 
 func TestConnectPoolMinConnGteZero(t *testing.T) {
@@ -103,7 +104,8 @@ func TestAcquireFromClosedPool(t *testing.T) {
 	}
 
 	conn, err := pool.Acquire(context.TODO())
-	require.Equal(t, err, ErrPoolClosed)
+	var closedErr *InterfaceError
+	require.True(t, errors.As(err, &closedErr))
 	assert.Nil(t, conn)
 }
 
@@ -201,5 +203,6 @@ func TestClosePool(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = pool.Close()
-	assert.Equal(t, err, ErrPoolClosed)
+	var closedErr *InterfaceError
+	assert.True(t, errors.As(err, &closedErr))
 }

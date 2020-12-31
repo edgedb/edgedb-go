@@ -78,13 +78,12 @@ func TestWrapAllAs(t *testing.T) {
 }
 
 func TestWrapAllIs(t *testing.T) {
-	err := wrapAll(ErrReleasedTwice, ErrPoolClosed)
+	errA := errors.New("error A")
+	errB := errors.New("error B")
+	err := wrapAll(errA, errB)
+
 	require.NotNil(t, err)
-
-	msg := "edgedb: connection released more than once; " +
-		"edgedb: pool closed"
-	assert.Equal(t, msg, err.Error())
-
-	assert.True(t, errors.Is(err, ErrReleasedTwice))
-	assert.True(t, errors.Is(err, ErrPoolClosed))
+	assert.Equal(t, "error A; error B", err.Error())
+	assert.True(t, errors.Is(err, errA))
+	assert.True(t, errors.Is(err, errB))
 }

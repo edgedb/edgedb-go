@@ -23,14 +23,8 @@ import (
 )
 
 var (
-	// ErrReleasedTwice is returned if a PoolConn is released more than once.
-	ErrReleasedTwice = newError("connection released more than once")
-
 	// ErrZeroResults is returned when a query has no results.
 	ErrZeroResults = newError("zero results")
-
-	// ErrPoolClosed is returned by operations on closed pools.
-	ErrPoolClosed = newError("pool closed")
 )
 
 func wrapError(err error) error {

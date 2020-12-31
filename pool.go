@@ -136,7 +136,7 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 	defer p.mu.RUnlock()
 
 	if p.isClosed {
-		return nil, ErrPoolClosed
+		return nil, newErrorFromCode(interfaceErrorCode, "pool closed")
 	}
 
 	// force do nothing if context is expired
@@ -218,7 +218,7 @@ func (p *Pool) Close() error {
 	defer p.mu.Unlock()
 
 	if p.isClosed {
-		return ErrPoolClosed
+		return newErrorFromCode(interfaceErrorCode, "pool closed")
 	}
 	p.isClosed = true
 

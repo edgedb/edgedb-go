@@ -33,7 +33,8 @@ type PoolConn struct {
 // PoolConn is not useable after Release has been called.
 func (c *PoolConn) Release() error {
 	if c.pool == nil {
-		return ErrReleasedTwice
+		msg := "connection released more than once"
+		return newErrorFromCode(interfaceErrorCode, msg)
 	}
 
 	err := c.pool.release(c.baseConn, c.err)
