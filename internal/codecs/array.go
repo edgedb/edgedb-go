@@ -100,12 +100,12 @@ func (c *Array) Decode(r *buff.Reader, out unsafe.Pointer) {
 
 // Encode an array.
 func (c *Array) Encode(w *buff.Writer, val interface{}) error {
-	in, ok := val.([]interface{})
-	if !ok {
-		return fmt.Errorf("expected []interface{} got: %T", val)
+	in := reflect.ValueOf(val)
+	if in.Kind() != reflect.Slice {
+		return fmt.Errorf("expected []%v got: %T", c.child.Type(), val)
 	}
 
-	elmCount := len(in)
+	elmCount := in.Len()
 
 	w.BeginBytes()
 	w.PushUint32(1)                // number of dimensions
@@ -116,7 +116,7 @@ func (c *Array) Encode(w *buff.Writer, val interface{}) error {
 
 	var err error
 	for i := 0; i < elmCount; i++ {
-		err = c.child.Encode(w, in[i])
+		err = c.child.Encode(w, in.Index(i).Interface())
 		if err != nil {
 			return err
 		}
