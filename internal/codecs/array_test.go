@@ -70,35 +70,51 @@ func TestDecodeArray(t *testing.T) {
 }
 
 func TestEncodeArray(t *testing.T) {
+	arrays := []interface{}{
+		[]interface{}{int64(3), int64(5), int64(8)},
+		[]int64{3, 5, 8},
+	}
+
+	for _, a := range arrays {
+		w := buff.NewWriter()
+		w.BeginMessage(0xff)
+
+		codec := &Array{child: &Int64{}}
+		err := codec.Encode(w, a)
+		require.Nil(t, err)
+		w.EndMessage()
+
+		expected := []byte{
+			0xff,          // message type
+			0, 0, 0, 0x40, // message length
+			0, 0, 0, 0x38, // data length
+			0, 0, 0, 1, // dimension count
+			0, 0, 0, 0, // reserved
+			0, 0, 0, 0, // reserved
+			0, 0, 0, 3, // dimension.upper
+			0, 0, 0, 1, // dimension.lower
+			// element 0
+			0, 0, 0, 8, // data length
+			0, 0, 0, 0, 0, 0, 0, 3, // ing64
+			// element 1
+			0, 0, 0, 8, // data length
+			0, 0, 0, 0, 0, 0, 0, 5, // int64
+			// element 2
+			0, 0, 0, 8, // data length
+			0, 0, 0, 0, 0, 0, 0, 8, // int64
+		}
+
+		conn := &writeFixture{}
+		require.Nil(t, w.Send(conn))
+		assert.Equal(t, expected, conn.written)
+	}
+}
+
+func TestEncodeArrayWrongType(t *testing.T) {
 	w := buff.NewWriter()
 	w.BeginMessage(0xff)
 
-	codec := &Array{child: &Int64{}}
-	err := codec.Encode(w, []interface{}{int64(3), int64(5), int64(8)})
-	require.Nil(t, err)
-	w.EndMessage()
-
-	expected := []byte{
-		0xff,          // message type
-		0, 0, 0, 0x40, // message length
-		0, 0, 0, 0x38, // data length
-		0, 0, 0, 1, // dimension count
-		0, 0, 0, 0, // reserved
-		0, 0, 0, 0, // reserved
-		0, 0, 0, 3, // dimension.upper
-		0, 0, 0, 1, // dimension.lower
-		// element 0
-		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 3, // ing64
-		// element 1
-		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 5, // int64
-		// element 2
-		0, 0, 0, 8, // data length
-		0, 0, 0, 0, 0, 0, 0, 8, // int64
-	}
-
-	conn := &writeFixture{}
-	require.Nil(t, w.Send(conn))
-	assert.Equal(t, expected, conn.written)
+	codec := &Array{child: &Int64{typ: reflect.TypeOf(int64(1))}}
+	err := codec.Encode(w, "hello")
+	assert.EqualError(t, err, "expected []int64 got: string")
 }
