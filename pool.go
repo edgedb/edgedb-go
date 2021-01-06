@@ -58,17 +58,17 @@ func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocri
 // ConnectDSN a pool of connections to a server.
 func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { // nolint:gocritic,lll
 	if opts.MinConns < 1 {
-		return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+		return nil, &configurationError{msg: fmt.Sprintf(
 			"MinConns may not be less than 1, got: %v",
 			opts.MinConns,
-		))
+		)}
 	}
 
 	if opts.MaxConns < opts.MinConns {
-		return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+		return nil, &configurationError{msg: fmt.Sprintf(
 			"MaxConns (%v) may not be less than MinConns (%v)",
 			opts.MaxConns, opts.MinConns,
-		))
+		)}
 	}
 
 	cfg, err := parseConnectDSNAndArgs(dsn, &opts)
@@ -136,7 +136,7 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 	defer p.mu.RUnlock()
 
 	if p.isClosed {
-		return nil, newErrorFromCode(interfaceErrorCode, "pool closed")
+		return nil, &interfaceError{msg: "pool closed"}
 	}
 
 	// force do nothing if context is expired
@@ -220,7 +220,7 @@ func (p *Pool) Close() error {
 	defer p.mu.Unlock()
 
 	if p.isClosed {
-		return newErrorFromCode(interfaceErrorCode, "pool closed")
+		return &interfaceError{msg: "pool closed"}
 	}
 	p.isClosed = true
 

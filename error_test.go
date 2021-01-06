@@ -26,55 +26,60 @@ import (
 
 func TestNewErrorFromCodeAs(t *testing.T) {
 	msg := "example error message"
-	err := newErrorFromCode(duplicateCastDefinitionErrorCode, msg)
+	err := &duplicateCastDefinitionError{msg: msg}
 	require.NotNil(t, err)
 
-	msg = "edgedb: " + msg
+	msg = "edgedb.DuplicateCastDefinitionError: " + msg
 
-	var cast *DuplicateCastDefinitionError
+	var cast DuplicateCastDefinitionError
 	assert.True(t, errors.As(err, &cast))
 	assert.Equal(t, msg, cast.Error())
 
-	var def *DuplicateDefinitionError
+	var def DuplicateDefinitionError
 	assert.True(t, errors.As(err, &def))
 	assert.Equal(t, msg, def.Error())
 
-	var schem *SchemaDefinitionError
+	var schem SchemaDefinitionError
 	assert.True(t, errors.As(err, &schem))
 	assert.Equal(t, msg, schem.Error())
 
-	var query *QueryError
+	var query QueryError
 	assert.True(t, errors.As(err, &query))
 	assert.Equal(t, msg, query.Error())
 
-	var base *Error
+	var base Error
 	assert.True(t, errors.As(err, &base))
 	assert.Equal(t, msg, query.Error())
 }
 
 func TestWrapAllAs(t *testing.T) {
-	err1 := newErrorFromCode(binaryProtocolErrorCode, "bad bits!")
-	err2 := newErrorFromCode(invalidValueErrorCode, "guess again...")
+	err1 := &binaryProtocolError{msg: "bad bits!"}
+	err2 := &invalidValueError{msg: "guess again..."}
 	err := wrapAll(err1, err2)
 
 	require.NotNil(t, err)
-	assert.Equal(t, "edgedb: bad bits!; edgedb: guess again...", err.Error())
+	assert.Equal(
+		t,
+		"edgedb.BinaryProtocolError: bad bits!; "+
+			"edgedb.InvalidValueError: guess again...",
+		err.Error(),
+	)
 
-	var bin *BinaryProtocolError
+	var bin BinaryProtocolError
 	require.True(t, errors.As(err, &bin), "errors.As failed")
-	assert.Equal(t, "edgedb: bad bits!", bin.Error())
+	assert.Equal(t, "edgedb.BinaryProtocolError: bad bits!", bin.Error())
 
-	var proto *ProtocolError
+	var proto ProtocolError
 	require.True(t, errors.As(err, &proto))
-	assert.Equal(t, "edgedb: bad bits!", proto.Error())
+	assert.Equal(t, "edgedb.BinaryProtocolError: bad bits!", proto.Error())
 
-	var val *InvalidValueError
+	var val InvalidValueError
 	require.True(t, errors.As(err, &val))
-	assert.Equal(t, "edgedb: guess again...", val.Error())
+	assert.Equal(t, "edgedb.InvalidValueError: guess again...", val.Error())
 
-	var exe *ExecutionError
+	var exe ExecutionError
 	require.True(t, errors.As(err, &exe))
-	assert.Equal(t, "edgedb: guess again...", exe.Error())
+	assert.Equal(t, "edgedb.InvalidValueError: guess again...", exe.Error())
 }
 
 func TestWrapAllIs(t *testing.T) {

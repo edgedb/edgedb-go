@@ -60,7 +60,7 @@ func TestClosePoolConcurently(t *testing.T) {
 	go func() { errs <- pool.Close() }()
 
 	assert.Nil(t, <-errs)
-	var closedErr *InterfaceError
+	var closedErr InterfaceError
 	assert.True(t, errors.As(<-errs, &closedErr))
 }
 
@@ -73,10 +73,10 @@ func TestConnectPoolMinConnGteZero(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		"edgedb: MinConns may not be less than 1, got: 0",
+		"edgedb.ConfigurationError: MinConns may not be less than 1, got: 0",
 	)
 
-	var expected *ConfigurationError
+	var expected ConfigurationError
 	assert.True(t, errors.As(err, &expected))
 }
 
@@ -89,10 +89,11 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		"edgedb: MaxConns (1) may not be less than MinConns (5)",
+		"edgedb.ConfigurationError: "+
+			"MaxConns (1) may not be less than MinConns (5)",
 	)
 
-	var expected *ConfigurationError
+	var expected ConfigurationError
 	assert.True(t, errors.As(err, &expected))
 }
 
@@ -104,7 +105,7 @@ func TestAcquireFromClosedPool(t *testing.T) {
 	}
 
 	conn, err := pool.Acquire(context.TODO())
-	var closedErr *InterfaceError
+	var closedErr InterfaceError
 	require.True(t, errors.As(err, &closedErr))
 	assert.Nil(t, conn)
 }
@@ -203,6 +204,6 @@ func TestClosePool(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = pool.Close()
-	var closedErr *InterfaceError
+	var closedErr InterfaceError
 	assert.True(t, errors.As(err, &closedErr))
 }

@@ -45,7 +45,7 @@ func (c *baseConn) fallThrough(r *buff.Reader) error {
 		log.Println("SERVER MESSAGE", severity, code, message)
 	default:
 		msg := fmt.Sprintf("unexpected message type: 0x%x", r.MsgType)
-		return newErrorFromCode(unexpectedMessageErrorCode, msg)
+		return &unexpectedMessageError{msg: msg}
 	}
 
 	return nil

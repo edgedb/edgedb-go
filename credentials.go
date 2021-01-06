@@ -57,7 +57,7 @@ func readCredentials(path string) (*credentials, error) {
 
 Failed:
 	msg := fmt.Sprintf("cannot read credentials at %q: %v", path, err)
-	return nil, newErrorFromCode(configurationErrorCode, msg)
+	return nil, &configurationError{msg: msg}
 }
 
 func validateCredentials(data map[string]interface{}) (*credentials, error) {

@@ -34,7 +34,7 @@ type PoolConn struct {
 func (c *PoolConn) Release() error {
 	if c.pool == nil {
 		msg := "connection released more than once"
-		return newErrorFromCode(interfaceErrorCode, msg)
+		return &interfaceError{msg: msg}
 	}
 
 	err := c.pool.release(c.baseConn, c.err)

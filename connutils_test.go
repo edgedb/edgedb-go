@@ -358,8 +358,8 @@ func TestConUtils(t *testing.T) {
 			name: "DSN requires edgedb scheme",
 			dsn:  "pq:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
-				err: ConfigurationError{},
-				errMessage: "edgedb: dsn " +
+				err: &configurationError{},
+				errMessage: "edgedb.ConfigurationError: dsn " +
 					`"pq:///dbname?host=/unix_sock/test&user=spam" ` +
 					"is neither a edgedb:// URI nor valid instance name",
 			},
@@ -371,8 +371,8 @@ func TestConUtils(t *testing.T) {
 				Ports: []int{111, 222},
 			},
 			expected: Result{
-				err:        InterfaceError{},
-				errMessage: "edgedb: could not match 2 port numbers to 3 hosts", // nolint:lll
+				err:        &configurationError{},
+				errMessage: "edgedb.ConfigurationError: could not match 2 port numbers to 3 hosts", // nolint:lll
 			},
 		},
 		{

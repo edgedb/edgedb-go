@@ -24,103 +24,110 @@ import (
 	"strings"
 )
 
-type typeList [][]interface{}
+func private(name string) string {
+	return strings.ToLower(name[0:1]) + name[1:]
+}
 
-func printTypes(types typeList) {
-	for i, t := range types {
-		name := t[0].(string)
+func printError(name, parent string, ancestors []string) {
+	fmt.Printf(`
+// %[1]v is an error.
+type %[1]v interface {
+	%[3]v
+	is%[1]v()
+}
 
-		fmt.Printf("// %v is an error.\n", name)
-		fmt.Printf("type %[1]v struct {\n", name)
-		fmt.Printf("\t*baseError\n")
-		fmt.Printf("}\n")
+type %[2]v struct {
+	msg string
+	err error
+}
 
-		if i < len(types)-1 {
-			fmt.Println()
-		}
+func (e *%[2]v) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.%[1]v: " + msg
+}
+
+func (e *%[2]v) Unwrap() error { return e.err }
+
+func (e *%[2]v) is%[1]v() {}
+
+func (e *%[2]v) is%[3]v() {}
+`, name, private(name), parent)
+
+	for _, ancestor := range ancestors {
+		fmt.Printf(`
+func (e *%v) is%v() {}
+`, private(name), ancestor)
 	}
 }
 
-func codeFromName(name string) string {
-	name = strings.ToLower(name[0:1]) + name[1:]
-	return name + "Code"
+func printErrors(types [][]string) {
+	for _, lineage := range types {
+		name := lineage[0]
+		parent := lineage[1]
+		printError(name, parent, lineage[2:])
+	}
 }
 
-func printCodes(types typeList) {
-	fmt.Println("const (")
+func printCodeMap(data [][]interface{}) {
+	fmt.Print(`
+func errorFromCode(code uint32, msg string) error {
+	switch code {`)
 
-	for _, t := range types {
-		name := t[0].(string)
-		code := codeFromName(name)
-
-		fmt.Printf("\t%v uint32 = 0x%02x_%02x_%02x_%02x\n",
-			code,
+	for _, t := range data {
+		fmt.Printf(`
+	case 0x%02x_%02x_%02x_%02x:
+		return &%v{msg: msg}`,
 			int(t[2].(float64)),
 			int(t[3].(float64)),
 			int(t[4].(float64)),
 			int(t[5].(float64)),
+			private(t[0].(string)),
 		)
 	}
 
-	fmt.Println(")")
+	fmt.Print(`
+	default:
+		panic(fmt.Sprintf("invalid error code 0x%` + `x", code))
+	}
+}
+`)
 }
 
-func printTree(types typeList) {
-	fmt.Println("// wrapErrorWithType wraps an error in an edgedb error type.")
-	fmt.Println("func wrapErrorWithType(code uint32, err error) error {")
-	fmt.Println("\tif err == nil {")
-	fmt.Println("\t\treturn nil")
-	fmt.Println("\t}")
-	fmt.Println()
-	fmt.Println("\tswitch code {")
-
-	for _, t := range types {
-		name := t[0].(string)
-		code := codeFromName(name)
-
-		switch parent := t[1].(type) {
-		case string:
-			pCode := codeFromName(parent)
-			fmt.Printf("\tcase %v:\n", code)
-			fmt.Printf("\t\tnext := wrapErrorWithType(%v, err)\n", pCode)
-			fmt.Printf("\t\treturn &%v{&baseError{err: next}}\n", name)
-		case nil:
-			fmt.Printf("\tcase %v:\n", code)
-			fmt.Printf(
-				"\t\treturn &%v{&baseError{err: wrapError(err)}}\n", name)
-		default:
-			panic("unexpected type")
-		}
+func main() {
+	var data [][]interface{}
+	if e := json.NewDecoder(os.Stdin).Decode(&data); e != nil {
+		log.Fatal(e)
 	}
 
-	fmt.Print("\tdefault:\n")
-	fmt.Printf("\t\tpanic(fmt.Sprintf(\"unknown error code: %%v\", code))\n")
-	fmt.Print("\t}\n")
-	fmt.Print("}\n")
-}
-
-// log messages and warnings don't make sense as error types
-func filterNonError(types typeList) typeList {
-	newTypes := typeList{}
-
-	for _, t := range types {
+	lookup := make(map[string]string, len(data))
+	for _, t := range data {
 		name := t[0].(string)
 		if !strings.HasSuffix(name, "Error") {
 			continue
 		}
-		newTypes = append(newTypes, t)
+
+		parent, _ := t[1].(string)
+		lookup[name] = parent
 	}
 
-	return newTypes
-}
+	types := make([][]string, 0, len(lookup))
+	for _, t := range data {
+		name := t[0].(string)
+		parent := lookup[name]
+		parents := []string{name}
 
-func main() {
-	var types typeList
-	if e := json.NewDecoder(os.Stdin).Decode(&types); e != nil {
-		log.Fatal(e)
+		for parent != "" {
+			parents = append(parents, parent)
+			parent = lookup[parent]
+		}
+
+		parents = append(parents, "Error")
+		types = append(types, parents)
 	}
-
-	types = filterNonError(types)
 
 	fmt.Print(`// This source file is part of the EdgeDB open source project.
 //
@@ -145,10 +152,6 @@ func main() {
 	fmt.Println("package edgedb")
 	fmt.Println()
 	fmt.Println(`import "fmt"`)
-	fmt.Println()
-	printCodes(types)
-	fmt.Println()
-	printTree(types)
-	fmt.Println()
-	printTypes(types)
+	printErrors(types)
+	printCodeMap(data)
 }

@@ -47,8 +47,7 @@ func (c *baseConn) granularFlow(
 		if desc, OK := descCache.Get(ids.in); OK {
 			in, err = codecs.BuildCodec(buff.SimpleReader(desc.([]byte)))
 			if err != nil {
-				return newErrorFromCode(
-					unsupportedFeatureErrorCode, err.Error())
+				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
 			return c.pesimistic(r, out, q, tp)
@@ -61,8 +60,7 @@ func (c *baseConn) granularFlow(
 			d := buff.SimpleReader(desc.([]byte))
 			cOut, err = codecs.BuildTypedCodec(d, tp)
 			if err != nil {
-				return newErrorFromCode(
-					unsupportedFeatureErrorCode, err.Error())
+				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
 			return c.pesimistic(r, out, q, tp)
@@ -95,7 +93,7 @@ func (c *baseConn) pesimistic(
 	var cdcs codecPair
 	cdcs.in, err = codecs.BuildCodec(buff.SimpleReader(descs.in))
 	if err != nil {
-		return newErrorFromCode(unsupportedFeatureErrorCode, err.Error())
+		return &unsupportedFeatureError{msg: err.Error()}
 	}
 
 	if q.fmt == format.JSON {
@@ -104,7 +102,7 @@ func (c *baseConn) pesimistic(
 		d := buff.SimpleReader(descs.out)
 		cdcs.out, err = codecs.BuildTypedCodec(d, tp)
 		if err != nil {
-			return newErrorFromCode(unsupportedFeatureErrorCode, err.Error())
+			return &unsupportedFeatureError{msg: err.Error()}
 		}
 	}
 
@@ -126,7 +124,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return idPair{}, wrapErrorWithType(clientConnectionErrorCode, e)
+		return idPair{}, &clientConnectionError{err: e}
 	}
 
 	var (
@@ -163,7 +161,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	}
 
 	if r.Err != nil {
-		return idPair{}, wrapErrorWithType(clientConnectionErrorCode, r.Err)
+		return idPair{}, &clientConnectionError{err: r.Err}
 	}
 
 	return ids, err
@@ -181,7 +179,7 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 
 	var descs descPair
 	if e := c.writer.Send(c.conn); e != nil {
-		return descPair{}, wrapErrorWithType(clientConnectionErrorCode, e)
+		return descPair{}, &clientConnectionError{err: e}
 	}
 
 	var err error
@@ -219,7 +217,7 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 	}
 
 	if r.Err != nil {
-		return descPair{}, wrapErrorWithType(clientConnectionErrorCode, r.Err)
+		return descPair{}, &clientConnectionError{err: r.Err}
 	}
 
 	return descs, err
@@ -236,7 +234,7 @@ func (c *baseConn) execute(
 	c.writer.PushUint16(0)       // no headers
 	c.writer.PushBytes([]byte{}) // no statement name
 	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
-		return newErrorFromCode(invalidArgumentErrorCode, e.Error())
+		return &invalidArgumentError{msg: e.Error()}
 	}
 	c.writer.EndMessage()
 
@@ -244,7 +242,7 @@ func (c *baseConn) execute(
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapErrorWithType(clientConnectionErrorCode, e)
+		return &clientConnectionError{err: e}
 	}
 
 	tmp := out
@@ -291,7 +289,7 @@ func (c *baseConn) execute(
 	}
 
 	if r.Err != nil {
-		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
+		return &clientConnectionError{err: r.Err}
 	}
 
 	if !q.flat() {
@@ -316,7 +314,7 @@ func (c *baseConn) optimistic(
 	c.writer.PushUUID(cdcs.in.ID())
 	c.writer.PushUUID(cdcs.out.ID())
 	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
-		return newErrorFromCode(invalidArgumentErrorCode, e.Error())
+		return &invalidArgumentError{msg: e.Error()}
 	}
 	c.writer.EndMessage()
 
@@ -324,7 +322,7 @@ func (c *baseConn) optimistic(
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return wrapErrorWithType(clientConnectionErrorCode, e)
+		return &clientConnectionError{err: e}
 	}
 
 	tmp := out
@@ -371,7 +369,7 @@ func (c *baseConn) optimistic(
 	}
 
 	if r.Err != nil {
-		return wrapErrorWithType(clientConnectionErrorCode, r.Err)
+		return &clientConnectionError{err: r.Err}
 	}
 
 	if !q.flat() {

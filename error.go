@@ -24,21 +24,32 @@ import (
 
 var (
 	// ErrZeroResults is returned when a query has no results.
-	ErrZeroResults error = &Error{&baseError{msg: "edgedb: zero results"}}
+	ErrZeroResults error = &noDataError{msg: "zero results"}
 )
 
-func wrapError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	return &Error{&baseError{msg: "edgedb: " + err.Error(), err: err}}
+// Error is wrapped by all errors.
+type Error interface {
+	Error() string
+	isError()
 }
 
-// newErrorFromCode returns a new edgedb error.
-func newErrorFromCode(code uint32, msg string) error {
-	err := &Error{&baseError{msg: msg}}
-	return wrapErrorWithType(code, err)
+type baseError struct {
+	msg string
+	err error
+}
+
+func (e *baseError) isError() {}
+
+func (e *baseError) Error() string {
+	if e.err != nil {
+		return e.err.Error()
+	}
+
+	return e.msg
+}
+
+func (e *baseError) Unwrap() error {
+	return e.err
 }
 
 func firstError(errs ...error) error {
@@ -51,31 +62,9 @@ func firstError(errs ...error) error {
 	return nil
 }
 
-// Error is wrapped by all errors.
-type Error struct {
-	*baseError
-}
-
-type baseError struct {
-	msg string
-	err error
-}
-
-func (e *baseError) Error() string {
-	if e.msg != "" {
-		return e.msg
-	}
-
-	return e.err.Error()
-}
-
-func (e *baseError) Unwrap() error {
-	return e.err
-}
-
 func decodeError(r *buff.Reader) error {
 	r.Discard(1) // severity
-	err := newErrorFromCode(r.PopUint32(), r.PopString())
+	err := errorFromCode(r.PopUint32(), r.PopString())
 	n := int(r.PopUint16())
 
 	for i := 0; i < n; i++ {

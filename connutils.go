@@ -48,10 +48,10 @@ func validatePortSpec(hosts []string, ports []int) ([]int, error) {
 	var result []int
 	if len(ports) > 1 {
 		if len(ports) != len(hosts) {
-			return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			return nil, &configurationError{msg: fmt.Sprintf(
 				"could not match %v port numbers to %v hosts",
 				len(ports), len(hosts),
-			))
+			)}
 		}
 
 		result = ports
@@ -71,10 +71,10 @@ func parsePortSpec(spec string) ([]int, error) {
 	for _, p := range strings.Split(spec, ",") {
 		port, err := strconv.Atoi(p)
 		if err != nil {
-			return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			return nil, &configurationError{msg: fmt.Sprintf(
 				"invalid port %q found in %q: %v",
 				p, spec, err,
-			))
+			)}
 		}
 
 		ports = append(ports, port)
@@ -126,7 +126,7 @@ func parseHostList(hostList string, ports []int) ([]string, []int, error) {
 						"invalid port %q found in %q: %v",
 						hostSpecPort, hostSpec, err,
 					)
-					err = newErrorFromCode(configurationErrorCode, msg)
+					err = &configurationError{msg: msg}
 					return nil, nil, err
 				}
 				hostListPorts = append(hostListPorts, port)
@@ -182,14 +182,14 @@ func parseConnectDSNAndArgs(
 	if dsn != "" && strings.HasPrefix(dsn, "edgedb://") {
 		parsed, err := url.Parse(dsn)
 		if err != nil {
-			return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
-				"could not parse %q: %v", dsn, err))
+			return nil, &configurationError{msg: fmt.Sprintf(
+				"could not parse %q: %v", dsn, err)}
 		}
 
 		if parsed.Scheme != "edgedb" {
-			return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			return nil, &configurationError{msg: fmt.Sprintf(
 				`invalid DSN: scheme is expected to be "edgedb", got %q`, dsn,
-			))
+			)}
 		}
 
 		if len(hosts) == 0 && parsed.Host != "" {
@@ -215,7 +215,7 @@ func parseConnectDSNAndArgs(
 			q, err := url.ParseQuery(parsed.RawQuery)
 			if err != nil {
 				msg := fmt.Sprintf("invalid DSN %q: %v", dsn, err)
-				return nil, newErrorFromCode(configurationErrorCode, msg)
+				return nil, &configurationError{msg: msg}
 			}
 
 			query := make(map[string]string, len(q))
@@ -260,25 +260,25 @@ func parseConnectDSNAndArgs(
 	} else if dsn != "" {
 		isIdentifier := regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9]*$`)
 		if !isIdentifier.Match([]byte(dsn)) {
-			return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			return nil, &configurationError{msg: fmt.Sprintf(
 				"dsn %q is neither a edgedb:// URI nor valid instance name",
 				dsn,
-			))
+			)}
 		}
 
 		usingCredentials = true
 
 		u, err := usr.Current()
 		if err != nil {
-			return nil, newErrorFromCode(configurationErrorCode, err.Error())
+			return nil, &configurationError{msg: err.Error()}
 		}
 
 		file := path.Join(u.HomeDir, ".edgedb", "credentials", dsn+".json")
 		creds, err := readCredentials(file)
 		if err != nil {
-			return nil, newErrorFromCode(configurationErrorCode, fmt.Sprintf(
+			return nil, &configurationError{msg: fmt.Sprintf(
 				"cannot read credentials of instance %q: %v", dsn, err,
-			))
+			)}
 		}
 
 		if len(ports) == 0 {
@@ -373,9 +373,9 @@ func parseConnectDSNAndArgs(
 	}
 
 	if len(addrs) == 0 {
-		return nil, newErrorFromCode(configurationErrorCode,
-			"could not determine the database address to connect to",
-		)
+		return nil, &configurationError{
+			msg: "could not determine the database address to connect to",
+		}
 	}
 
 	cfg := &connConfig{

@@ -129,9 +129,13 @@ func TestQueryOneZeroResults(t *testing.T) {
 func TestError(t *testing.T) {
 	ctx := context.Background()
 	err := conn.Execute(ctx, "malformed query;")
-	assert.EqualError(t, err, "edgedb: Unexpected 'malformed'")
+	assert.EqualError(
+		t,
+		err,
+		"edgedb.EdgeQLSyntaxError: Unexpected 'malformed'",
+	)
 
-	var expected *Error
+	var expected Error
 	assert.True(t, errors.As(err, &expected))
 }
 

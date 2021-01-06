@@ -85,7 +85,7 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 	for _, addr := range cfg.addrs { // nolint:gocritic
 		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
 		if err != nil {
-			err = wrapErrorWithType(clientConnectionErrorCode, err)
+			err = &clientConnectionError{err: err}
 			continue
 		}
 
@@ -128,7 +128,11 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 func (c *baseConn) setDeadline(ctx context.Context) error {
 	deadline, _ := ctx.Deadline()
 	err := c.conn.SetDeadline(deadline)
-	return wrapErrorWithType(clientConnectionErrorCode, err)
+	if err != nil {
+		return &clientConnectionError{err: err}
+	}
+
+	return nil
 }
 
 func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
@@ -137,7 +141,7 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 	select {
 	case r := <-c.readerChan:
 		if r.Err != nil {
-			return nil, wrapErrorWithType(clientConnectionErrorCode, r.Err)
+			return nil, &clientConnectionError{err: r.Err}
 		}
 
 		return r, nil
@@ -189,7 +193,7 @@ func (c *baseConn) close() error {
 
 	err = c.conn.Close()
 	if err != nil {
-		return wrapErrorWithType(clientConnectionErrorCode, err)
+		return &clientConnectionError{err: err}
 	}
 
 	return nil
@@ -220,7 +224,7 @@ func (c *baseConn) QueryOne(
 ) (err error) {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
+		return &invalidArgumentError{msg: err.Error()}
 	}
 
 	q := query{
@@ -251,7 +255,7 @@ func (c *baseConn) Query(
 ) error {
 	val, err := marshal.ValueOfSlice(out)
 	if err != nil {
-		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
+		return &invalidArgumentError{msg: err.Error()}
 	}
 
 	q := query{
@@ -282,7 +286,7 @@ func (c *baseConn) QueryJSON(
 ) error {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
+		return &invalidArgumentError{msg: err.Error()}
 	}
 
 	q := query{
@@ -316,7 +320,7 @@ func (c *baseConn) QueryOneJSON(
 ) error {
 	val, err := marshal.ValueOf(out)
 	if err != nil {
-		return newErrorFromCode(invalidArgumentErrorCode, err.Error())
+		return &invalidArgumentError{msg: err.Error()}
 	}
 
 	q := query{
