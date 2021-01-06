@@ -49,14 +49,12 @@ func (e *baseError) Unwrap() error {
 	return e.err
 }
 
-func firstError(errs ...error) error {
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
+func firstError(a, b error) error {
+	if a != nil {
+		return a
 	}
 
-	return nil
+	return b
 }
 
 func decodeError(r *buff.Reader) error {
