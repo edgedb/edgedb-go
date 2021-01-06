@@ -246,7 +246,7 @@ func (c *baseConn) execute(
 	}
 
 	tmp := out
-	err := ErrZeroResults
+	err := errZeroResults
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
@@ -262,7 +262,7 @@ func (c *baseConn) execute(
 				cdcs.out.Decode(r, unsafe.Pointer(out.UnsafeAddr()))
 			}
 
-			if err == ErrZeroResults {
+			if err == errZeroResults {
 				err = nil
 			}
 		case message.CommandComplete:
@@ -274,7 +274,7 @@ func (c *baseConn) execute(
 			r.Discard(3)
 			done.Signal()
 		case message.ErrorResponse:
-			if err == ErrZeroResults {
+			if err == errZeroResults {
 				err = nil
 			}
 
@@ -326,7 +326,7 @@ func (c *baseConn) optimistic(
 	}
 
 	tmp := out
-	err := ErrZeroResults
+	err := errZeroResults
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
@@ -342,7 +342,7 @@ func (c *baseConn) optimistic(
 				cdcs.out.Decode(r, unsafe.Pointer(out.UnsafeAddr()))
 			}
 
-			if err == ErrZeroResults {
+			if err == errZeroResults {
 				err = nil
 			}
 		case message.CommandComplete:
@@ -354,7 +354,7 @@ func (c *baseConn) optimistic(
 			r.Discard(3)
 			done.Signal()
 		case message.ErrorResponse:
-			if err == ErrZeroResults {
+			if err == errZeroResults {
 				err = nil
 			}
 

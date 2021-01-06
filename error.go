@@ -22,10 +22,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 )
 
-var (
-	// ErrZeroResults is returned when a query has no results.
-	ErrZeroResults error = &noDataError{msg: "zero results"}
-)
+var errZeroResults error = &noDataError{msg: "zero results"}
 
 // Error is wrapped by all errors.
 type Error interface {

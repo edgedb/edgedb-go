@@ -187,7 +187,7 @@ func TestMain(m *testing.M) {
 
 	var name string
 	err = conn.QueryOne(ctx, query, &name)
-	if errors.Is(err, ErrZeroResults) {
+	if errors.Is(err, errZeroResults) {
 		fmt.Println("running migration")
 		executeOrPanic(`
 			START MIGRATION TO {
