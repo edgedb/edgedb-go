@@ -146,6 +146,7 @@ func main() {
 // limitations under the License.
 
 // This file is auto generated. Do not edit!
+// run 'make errors' to regenerate
 `)
 
 	fmt.Println()
