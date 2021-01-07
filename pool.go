@@ -142,8 +142,7 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
-		err := ctx.Err()
-		return nil, &baseError{msg: "edgedb: " + err.Error(), err: err}
+		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
 	default:
 	}
 
@@ -165,8 +164,7 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 		}
 		return conn, nil
 	case <-ctx.Done():
-		err := ctx.Err()
-		return nil, &baseError{msg: "edgedb: " + err.Error(), err: err}
+		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
 	}
 }
 

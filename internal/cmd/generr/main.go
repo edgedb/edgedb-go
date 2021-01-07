@@ -33,7 +33,7 @@ func printError(name, parent string, ancestors []string) {
 // %[1]v is an error.
 type %[1]v interface {
 	%[3]v
-	is%[1]v()
+	isEdgeDB%[1]v()
 }
 
 type %[2]v struct {
@@ -52,14 +52,14 @@ func (e *%[2]v) Error() string {
 
 func (e *%[2]v) Unwrap() error { return e.err }
 
-func (e *%[2]v) is%[1]v() {}
+func (e *%[2]v) isEdgeDB%[1]v() {}
 
-func (e *%[2]v) is%[3]v() {}
+func (e *%[2]v) isEdgeDB%[3]v() {}
 `, name, private(name), parent)
 
 	for _, ancestor := range ancestors {
 		fmt.Printf(`
-func (e *%v) is%v() {}
+func (e *%v) isEdgeDB%v() {}
 `, private(name), ancestor)
 	}
 }

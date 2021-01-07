@@ -27,26 +27,7 @@ var errZeroResults error = &noDataError{msg: "zero results"}
 // Error is wrapped by all errors.
 type Error interface {
 	Error() string
-	isError()
-}
-
-type baseError struct {
-	msg string
-	err error
-}
-
-func (e *baseError) isError() {}
-
-func (e *baseError) Error() string {
-	if e.err != nil {
-		return e.err.Error()
-	}
-
-	return e.msg
-}
-
-func (e *baseError) Unwrap() error {
-	return e.err
+	isEdgeDBError()
 }
 
 func firstError(a, b error) error {

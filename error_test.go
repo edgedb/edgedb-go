@@ -32,23 +32,23 @@ func TestNewErrorFromCodeAs(t *testing.T) {
 	msg = "edgedb.DuplicateCastDefinitionError: " + msg
 
 	var cast DuplicateCastDefinitionError
-	assert.True(t, errors.As(err, &cast))
+	require.True(t, errors.As(err, &cast))
 	assert.Equal(t, msg, cast.Error())
 
 	var def DuplicateDefinitionError
-	assert.True(t, errors.As(err, &def))
+	require.True(t, errors.As(err, &def))
 	assert.Equal(t, msg, def.Error())
 
 	var schem SchemaDefinitionError
-	assert.True(t, errors.As(err, &schem))
+	require.True(t, errors.As(err, &schem))
 	assert.Equal(t, msg, schem.Error())
 
 	var query QueryError
-	assert.True(t, errors.As(err, &query))
+	require.True(t, errors.As(err, &query))
 	assert.Equal(t, msg, query.Error())
 
 	var base Error
-	assert.True(t, errors.As(err, &base))
+	require.True(t, errors.As(err, &base))
 	assert.Equal(t, msg, query.Error())
 }
 

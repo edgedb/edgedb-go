@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -146,8 +147,7 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 
 		return r, nil
 	case <-ctx.Done():
-		err := ctx.Err()
-		return nil, &baseError{msg: "edgedb: " + err.Error(), err: err}
+		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
 	}
 }
 

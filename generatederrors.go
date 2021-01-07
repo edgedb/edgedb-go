@@ -24,7 +24,7 @@ import "fmt"
 // InternalServerError is an error.
 type InternalServerError interface {
 	Error
-	isInternalServerError()
+	isEdgeDBInternalServerError()
 }
 
 type internalServerError struct {
@@ -43,14 +43,14 @@ func (e *internalServerError) Error() string {
 
 func (e *internalServerError) Unwrap() error { return e.err }
 
-func (e *internalServerError) isInternalServerError() {}
+func (e *internalServerError) isEdgeDBInternalServerError() {}
 
-func (e *internalServerError) isError() {}
+func (e *internalServerError) isEdgeDBError() {}
 
 // UnsupportedFeatureError is an error.
 type UnsupportedFeatureError interface {
 	Error
-	isUnsupportedFeatureError()
+	isEdgeDBUnsupportedFeatureError()
 }
 
 type unsupportedFeatureError struct {
@@ -69,14 +69,14 @@ func (e *unsupportedFeatureError) Error() string {
 
 func (e *unsupportedFeatureError) Unwrap() error { return e.err }
 
-func (e *unsupportedFeatureError) isUnsupportedFeatureError() {}
+func (e *unsupportedFeatureError) isEdgeDBUnsupportedFeatureError() {}
 
-func (e *unsupportedFeatureError) isError() {}
+func (e *unsupportedFeatureError) isEdgeDBError() {}
 
 // ProtocolError is an error.
 type ProtocolError interface {
 	Error
-	isProtocolError()
+	isEdgeDBProtocolError()
 }
 
 type protocolError struct {
@@ -95,14 +95,14 @@ func (e *protocolError) Error() string {
 
 func (e *protocolError) Unwrap() error { return e.err }
 
-func (e *protocolError) isProtocolError() {}
+func (e *protocolError) isEdgeDBProtocolError() {}
 
-func (e *protocolError) isError() {}
+func (e *protocolError) isEdgeDBError() {}
 
 // BinaryProtocolError is an error.
 type BinaryProtocolError interface {
 	ProtocolError
-	isBinaryProtocolError()
+	isEdgeDBBinaryProtocolError()
 }
 
 type binaryProtocolError struct {
@@ -121,16 +121,16 @@ func (e *binaryProtocolError) Error() string {
 
 func (e *binaryProtocolError) Unwrap() error { return e.err }
 
-func (e *binaryProtocolError) isBinaryProtocolError() {}
+func (e *binaryProtocolError) isEdgeDBBinaryProtocolError() {}
 
-func (e *binaryProtocolError) isProtocolError() {}
+func (e *binaryProtocolError) isEdgeDBProtocolError() {}
 
-func (e *binaryProtocolError) isError() {}
+func (e *binaryProtocolError) isEdgeDBError() {}
 
 // UnsupportedProtocolVersionError is an error.
 type UnsupportedProtocolVersionError interface {
 	BinaryProtocolError
-	isUnsupportedProtocolVersionError()
+	isEdgeDBUnsupportedProtocolVersionError()
 }
 
 type unsupportedProtocolVersionError struct {
@@ -149,18 +149,18 @@ func (e *unsupportedProtocolVersionError) Error() string {
 
 func (e *unsupportedProtocolVersionError) Unwrap() error { return e.err }
 
-func (e *unsupportedProtocolVersionError) isUnsupportedProtocolVersionError() {}
+func (e *unsupportedProtocolVersionError) isEdgeDBUnsupportedProtocolVersionError() {}
 
-func (e *unsupportedProtocolVersionError) isBinaryProtocolError() {}
+func (e *unsupportedProtocolVersionError) isEdgeDBBinaryProtocolError() {}
 
-func (e *unsupportedProtocolVersionError) isProtocolError() {}
+func (e *unsupportedProtocolVersionError) isEdgeDBProtocolError() {}
 
-func (e *unsupportedProtocolVersionError) isError() {}
+func (e *unsupportedProtocolVersionError) isEdgeDBError() {}
 
 // TypeSpecNotFoundError is an error.
 type TypeSpecNotFoundError interface {
 	BinaryProtocolError
-	isTypeSpecNotFoundError()
+	isEdgeDBTypeSpecNotFoundError()
 }
 
 type typeSpecNotFoundError struct {
@@ -179,18 +179,18 @@ func (e *typeSpecNotFoundError) Error() string {
 
 func (e *typeSpecNotFoundError) Unwrap() error { return e.err }
 
-func (e *typeSpecNotFoundError) isTypeSpecNotFoundError() {}
+func (e *typeSpecNotFoundError) isEdgeDBTypeSpecNotFoundError() {}
 
-func (e *typeSpecNotFoundError) isBinaryProtocolError() {}
+func (e *typeSpecNotFoundError) isEdgeDBBinaryProtocolError() {}
 
-func (e *typeSpecNotFoundError) isProtocolError() {}
+func (e *typeSpecNotFoundError) isEdgeDBProtocolError() {}
 
-func (e *typeSpecNotFoundError) isError() {}
+func (e *typeSpecNotFoundError) isEdgeDBError() {}
 
 // UnexpectedMessageError is an error.
 type UnexpectedMessageError interface {
 	BinaryProtocolError
-	isUnexpectedMessageError()
+	isEdgeDBUnexpectedMessageError()
 }
 
 type unexpectedMessageError struct {
@@ -209,18 +209,18 @@ func (e *unexpectedMessageError) Error() string {
 
 func (e *unexpectedMessageError) Unwrap() error { return e.err }
 
-func (e *unexpectedMessageError) isUnexpectedMessageError() {}
+func (e *unexpectedMessageError) isEdgeDBUnexpectedMessageError() {}
 
-func (e *unexpectedMessageError) isBinaryProtocolError() {}
+func (e *unexpectedMessageError) isEdgeDBBinaryProtocolError() {}
 
-func (e *unexpectedMessageError) isProtocolError() {}
+func (e *unexpectedMessageError) isEdgeDBProtocolError() {}
 
-func (e *unexpectedMessageError) isError() {}
+func (e *unexpectedMessageError) isEdgeDBError() {}
 
 // InputDataError is an error.
 type InputDataError interface {
 	ProtocolError
-	isInputDataError()
+	isEdgeDBInputDataError()
 }
 
 type inputDataError struct {
@@ -239,16 +239,16 @@ func (e *inputDataError) Error() string {
 
 func (e *inputDataError) Unwrap() error { return e.err }
 
-func (e *inputDataError) isInputDataError() {}
+func (e *inputDataError) isEdgeDBInputDataError() {}
 
-func (e *inputDataError) isProtocolError() {}
+func (e *inputDataError) isEdgeDBProtocolError() {}
 
-func (e *inputDataError) isError() {}
+func (e *inputDataError) isEdgeDBError() {}
 
 // ResultCardinalityMismatchError is an error.
 type ResultCardinalityMismatchError interface {
 	ProtocolError
-	isResultCardinalityMismatchError()
+	isEdgeDBResultCardinalityMismatchError()
 }
 
 type resultCardinalityMismatchError struct {
@@ -267,16 +267,16 @@ func (e *resultCardinalityMismatchError) Error() string {
 
 func (e *resultCardinalityMismatchError) Unwrap() error { return e.err }
 
-func (e *resultCardinalityMismatchError) isResultCardinalityMismatchError() {}
+func (e *resultCardinalityMismatchError) isEdgeDBResultCardinalityMismatchError() {}
 
-func (e *resultCardinalityMismatchError) isProtocolError() {}
+func (e *resultCardinalityMismatchError) isEdgeDBProtocolError() {}
 
-func (e *resultCardinalityMismatchError) isError() {}
+func (e *resultCardinalityMismatchError) isEdgeDBError() {}
 
 // QueryError is an error.
 type QueryError interface {
 	Error
-	isQueryError()
+	isEdgeDBQueryError()
 }
 
 type queryError struct {
@@ -295,14 +295,14 @@ func (e *queryError) Error() string {
 
 func (e *queryError) Unwrap() error { return e.err }
 
-func (e *queryError) isQueryError() {}
+func (e *queryError) isEdgeDBQueryError() {}
 
-func (e *queryError) isError() {}
+func (e *queryError) isEdgeDBError() {}
 
 // InvalidSyntaxError is an error.
 type InvalidSyntaxError interface {
 	QueryError
-	isInvalidSyntaxError()
+	isEdgeDBInvalidSyntaxError()
 }
 
 type invalidSyntaxError struct {
@@ -321,16 +321,16 @@ func (e *invalidSyntaxError) Error() string {
 
 func (e *invalidSyntaxError) Unwrap() error { return e.err }
 
-func (e *invalidSyntaxError) isInvalidSyntaxError() {}
+func (e *invalidSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
-func (e *invalidSyntaxError) isQueryError() {}
+func (e *invalidSyntaxError) isEdgeDBQueryError() {}
 
-func (e *invalidSyntaxError) isError() {}
+func (e *invalidSyntaxError) isEdgeDBError() {}
 
 // EdgeQLSyntaxError is an error.
 type EdgeQLSyntaxError interface {
 	InvalidSyntaxError
-	isEdgeQLSyntaxError()
+	isEdgeDBEdgeQLSyntaxError()
 }
 
 type edgeQLSyntaxError struct {
@@ -349,18 +349,18 @@ func (e *edgeQLSyntaxError) Error() string {
 
 func (e *edgeQLSyntaxError) Unwrap() error { return e.err }
 
-func (e *edgeQLSyntaxError) isEdgeQLSyntaxError() {}
+func (e *edgeQLSyntaxError) isEdgeDBEdgeQLSyntaxError() {}
 
-func (e *edgeQLSyntaxError) isInvalidSyntaxError() {}
+func (e *edgeQLSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
-func (e *edgeQLSyntaxError) isQueryError() {}
+func (e *edgeQLSyntaxError) isEdgeDBQueryError() {}
 
-func (e *edgeQLSyntaxError) isError() {}
+func (e *edgeQLSyntaxError) isEdgeDBError() {}
 
 // SchemaSyntaxError is an error.
 type SchemaSyntaxError interface {
 	InvalidSyntaxError
-	isSchemaSyntaxError()
+	isEdgeDBSchemaSyntaxError()
 }
 
 type schemaSyntaxError struct {
@@ -379,18 +379,18 @@ func (e *schemaSyntaxError) Error() string {
 
 func (e *schemaSyntaxError) Unwrap() error { return e.err }
 
-func (e *schemaSyntaxError) isSchemaSyntaxError() {}
+func (e *schemaSyntaxError) isEdgeDBSchemaSyntaxError() {}
 
-func (e *schemaSyntaxError) isInvalidSyntaxError() {}
+func (e *schemaSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
-func (e *schemaSyntaxError) isQueryError() {}
+func (e *schemaSyntaxError) isEdgeDBQueryError() {}
 
-func (e *schemaSyntaxError) isError() {}
+func (e *schemaSyntaxError) isEdgeDBError() {}
 
 // GraphQLSyntaxError is an error.
 type GraphQLSyntaxError interface {
 	InvalidSyntaxError
-	isGraphQLSyntaxError()
+	isEdgeDBGraphQLSyntaxError()
 }
 
 type graphQLSyntaxError struct {
@@ -409,18 +409,18 @@ func (e *graphQLSyntaxError) Error() string {
 
 func (e *graphQLSyntaxError) Unwrap() error { return e.err }
 
-func (e *graphQLSyntaxError) isGraphQLSyntaxError() {}
+func (e *graphQLSyntaxError) isEdgeDBGraphQLSyntaxError() {}
 
-func (e *graphQLSyntaxError) isInvalidSyntaxError() {}
+func (e *graphQLSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
-func (e *graphQLSyntaxError) isQueryError() {}
+func (e *graphQLSyntaxError) isEdgeDBQueryError() {}
 
-func (e *graphQLSyntaxError) isError() {}
+func (e *graphQLSyntaxError) isEdgeDBError() {}
 
 // InvalidTypeError is an error.
 type InvalidTypeError interface {
 	QueryError
-	isInvalidTypeError()
+	isEdgeDBInvalidTypeError()
 }
 
 type invalidTypeError struct {
@@ -439,16 +439,16 @@ func (e *invalidTypeError) Error() string {
 
 func (e *invalidTypeError) Unwrap() error { return e.err }
 
-func (e *invalidTypeError) isInvalidTypeError() {}
+func (e *invalidTypeError) isEdgeDBInvalidTypeError() {}
 
-func (e *invalidTypeError) isQueryError() {}
+func (e *invalidTypeError) isEdgeDBQueryError() {}
 
-func (e *invalidTypeError) isError() {}
+func (e *invalidTypeError) isEdgeDBError() {}
 
 // InvalidTargetError is an error.
 type InvalidTargetError interface {
 	InvalidTypeError
-	isInvalidTargetError()
+	isEdgeDBInvalidTargetError()
 }
 
 type invalidTargetError struct {
@@ -467,18 +467,18 @@ func (e *invalidTargetError) Error() string {
 
 func (e *invalidTargetError) Unwrap() error { return e.err }
 
-func (e *invalidTargetError) isInvalidTargetError() {}
+func (e *invalidTargetError) isEdgeDBInvalidTargetError() {}
 
-func (e *invalidTargetError) isInvalidTypeError() {}
+func (e *invalidTargetError) isEdgeDBInvalidTypeError() {}
 
-func (e *invalidTargetError) isQueryError() {}
+func (e *invalidTargetError) isEdgeDBQueryError() {}
 
-func (e *invalidTargetError) isError() {}
+func (e *invalidTargetError) isEdgeDBError() {}
 
 // InvalidLinkTargetError is an error.
 type InvalidLinkTargetError interface {
 	InvalidTargetError
-	isInvalidLinkTargetError()
+	isEdgeDBInvalidLinkTargetError()
 }
 
 type invalidLinkTargetError struct {
@@ -497,20 +497,20 @@ func (e *invalidLinkTargetError) Error() string {
 
 func (e *invalidLinkTargetError) Unwrap() error { return e.err }
 
-func (e *invalidLinkTargetError) isInvalidLinkTargetError() {}
+func (e *invalidLinkTargetError) isEdgeDBInvalidLinkTargetError() {}
 
-func (e *invalidLinkTargetError) isInvalidTargetError() {}
+func (e *invalidLinkTargetError) isEdgeDBInvalidTargetError() {}
 
-func (e *invalidLinkTargetError) isInvalidTypeError() {}
+func (e *invalidLinkTargetError) isEdgeDBInvalidTypeError() {}
 
-func (e *invalidLinkTargetError) isQueryError() {}
+func (e *invalidLinkTargetError) isEdgeDBQueryError() {}
 
-func (e *invalidLinkTargetError) isError() {}
+func (e *invalidLinkTargetError) isEdgeDBError() {}
 
 // InvalidPropertyTargetError is an error.
 type InvalidPropertyTargetError interface {
 	InvalidTargetError
-	isInvalidPropertyTargetError()
+	isEdgeDBInvalidPropertyTargetError()
 }
 
 type invalidPropertyTargetError struct {
@@ -529,20 +529,20 @@ func (e *invalidPropertyTargetError) Error() string {
 
 func (e *invalidPropertyTargetError) Unwrap() error { return e.err }
 
-func (e *invalidPropertyTargetError) isInvalidPropertyTargetError() {}
+func (e *invalidPropertyTargetError) isEdgeDBInvalidPropertyTargetError() {}
 
-func (e *invalidPropertyTargetError) isInvalidTargetError() {}
+func (e *invalidPropertyTargetError) isEdgeDBInvalidTargetError() {}
 
-func (e *invalidPropertyTargetError) isInvalidTypeError() {}
+func (e *invalidPropertyTargetError) isEdgeDBInvalidTypeError() {}
 
-func (e *invalidPropertyTargetError) isQueryError() {}
+func (e *invalidPropertyTargetError) isEdgeDBQueryError() {}
 
-func (e *invalidPropertyTargetError) isError() {}
+func (e *invalidPropertyTargetError) isEdgeDBError() {}
 
 // InvalidReferenceError is an error.
 type InvalidReferenceError interface {
 	QueryError
-	isInvalidReferenceError()
+	isEdgeDBInvalidReferenceError()
 }
 
 type invalidReferenceError struct {
@@ -561,16 +561,16 @@ func (e *invalidReferenceError) Error() string {
 
 func (e *invalidReferenceError) Unwrap() error { return e.err }
 
-func (e *invalidReferenceError) isInvalidReferenceError() {}
+func (e *invalidReferenceError) isEdgeDBInvalidReferenceError() {}
 
-func (e *invalidReferenceError) isQueryError() {}
+func (e *invalidReferenceError) isEdgeDBQueryError() {}
 
-func (e *invalidReferenceError) isError() {}
+func (e *invalidReferenceError) isEdgeDBError() {}
 
 // UnknownModuleError is an error.
 type UnknownModuleError interface {
 	InvalidReferenceError
-	isUnknownModuleError()
+	isEdgeDBUnknownModuleError()
 }
 
 type unknownModuleError struct {
@@ -589,18 +589,18 @@ func (e *unknownModuleError) Error() string {
 
 func (e *unknownModuleError) Unwrap() error { return e.err }
 
-func (e *unknownModuleError) isUnknownModuleError() {}
+func (e *unknownModuleError) isEdgeDBUnknownModuleError() {}
 
-func (e *unknownModuleError) isInvalidReferenceError() {}
+func (e *unknownModuleError) isEdgeDBInvalidReferenceError() {}
 
-func (e *unknownModuleError) isQueryError() {}
+func (e *unknownModuleError) isEdgeDBQueryError() {}
 
-func (e *unknownModuleError) isError() {}
+func (e *unknownModuleError) isEdgeDBError() {}
 
 // UnknownLinkError is an error.
 type UnknownLinkError interface {
 	InvalidReferenceError
-	isUnknownLinkError()
+	isEdgeDBUnknownLinkError()
 }
 
 type unknownLinkError struct {
@@ -619,18 +619,18 @@ func (e *unknownLinkError) Error() string {
 
 func (e *unknownLinkError) Unwrap() error { return e.err }
 
-func (e *unknownLinkError) isUnknownLinkError() {}
+func (e *unknownLinkError) isEdgeDBUnknownLinkError() {}
 
-func (e *unknownLinkError) isInvalidReferenceError() {}
+func (e *unknownLinkError) isEdgeDBInvalidReferenceError() {}
 
-func (e *unknownLinkError) isQueryError() {}
+func (e *unknownLinkError) isEdgeDBQueryError() {}
 
-func (e *unknownLinkError) isError() {}
+func (e *unknownLinkError) isEdgeDBError() {}
 
 // UnknownPropertyError is an error.
 type UnknownPropertyError interface {
 	InvalidReferenceError
-	isUnknownPropertyError()
+	isEdgeDBUnknownPropertyError()
 }
 
 type unknownPropertyError struct {
@@ -649,18 +649,18 @@ func (e *unknownPropertyError) Error() string {
 
 func (e *unknownPropertyError) Unwrap() error { return e.err }
 
-func (e *unknownPropertyError) isUnknownPropertyError() {}
+func (e *unknownPropertyError) isEdgeDBUnknownPropertyError() {}
 
-func (e *unknownPropertyError) isInvalidReferenceError() {}
+func (e *unknownPropertyError) isEdgeDBInvalidReferenceError() {}
 
-func (e *unknownPropertyError) isQueryError() {}
+func (e *unknownPropertyError) isEdgeDBQueryError() {}
 
-func (e *unknownPropertyError) isError() {}
+func (e *unknownPropertyError) isEdgeDBError() {}
 
 // UnknownUserError is an error.
 type UnknownUserError interface {
 	InvalidReferenceError
-	isUnknownUserError()
+	isEdgeDBUnknownUserError()
 }
 
 type unknownUserError struct {
@@ -679,18 +679,18 @@ func (e *unknownUserError) Error() string {
 
 func (e *unknownUserError) Unwrap() error { return e.err }
 
-func (e *unknownUserError) isUnknownUserError() {}
+func (e *unknownUserError) isEdgeDBUnknownUserError() {}
 
-func (e *unknownUserError) isInvalidReferenceError() {}
+func (e *unknownUserError) isEdgeDBInvalidReferenceError() {}
 
-func (e *unknownUserError) isQueryError() {}
+func (e *unknownUserError) isEdgeDBQueryError() {}
 
-func (e *unknownUserError) isError() {}
+func (e *unknownUserError) isEdgeDBError() {}
 
 // UnknownDatabaseError is an error.
 type UnknownDatabaseError interface {
 	InvalidReferenceError
-	isUnknownDatabaseError()
+	isEdgeDBUnknownDatabaseError()
 }
 
 type unknownDatabaseError struct {
@@ -709,18 +709,18 @@ func (e *unknownDatabaseError) Error() string {
 
 func (e *unknownDatabaseError) Unwrap() error { return e.err }
 
-func (e *unknownDatabaseError) isUnknownDatabaseError() {}
+func (e *unknownDatabaseError) isEdgeDBUnknownDatabaseError() {}
 
-func (e *unknownDatabaseError) isInvalidReferenceError() {}
+func (e *unknownDatabaseError) isEdgeDBInvalidReferenceError() {}
 
-func (e *unknownDatabaseError) isQueryError() {}
+func (e *unknownDatabaseError) isEdgeDBQueryError() {}
 
-func (e *unknownDatabaseError) isError() {}
+func (e *unknownDatabaseError) isEdgeDBError() {}
 
 // UnknownParameterError is an error.
 type UnknownParameterError interface {
 	InvalidReferenceError
-	isUnknownParameterError()
+	isEdgeDBUnknownParameterError()
 }
 
 type unknownParameterError struct {
@@ -739,18 +739,18 @@ func (e *unknownParameterError) Error() string {
 
 func (e *unknownParameterError) Unwrap() error { return e.err }
 
-func (e *unknownParameterError) isUnknownParameterError() {}
+func (e *unknownParameterError) isEdgeDBUnknownParameterError() {}
 
-func (e *unknownParameterError) isInvalidReferenceError() {}
+func (e *unknownParameterError) isEdgeDBInvalidReferenceError() {}
 
-func (e *unknownParameterError) isQueryError() {}
+func (e *unknownParameterError) isEdgeDBQueryError() {}
 
-func (e *unknownParameterError) isError() {}
+func (e *unknownParameterError) isEdgeDBError() {}
 
 // SchemaError is an error.
 type SchemaError interface {
 	QueryError
-	isSchemaError()
+	isEdgeDBSchemaError()
 }
 
 type schemaError struct {
@@ -769,16 +769,16 @@ func (e *schemaError) Error() string {
 
 func (e *schemaError) Unwrap() error { return e.err }
 
-func (e *schemaError) isSchemaError() {}
+func (e *schemaError) isEdgeDBSchemaError() {}
 
-func (e *schemaError) isQueryError() {}
+func (e *schemaError) isEdgeDBQueryError() {}
 
-func (e *schemaError) isError() {}
+func (e *schemaError) isEdgeDBError() {}
 
 // SchemaDefinitionError is an error.
 type SchemaDefinitionError interface {
 	QueryError
-	isSchemaDefinitionError()
+	isEdgeDBSchemaDefinitionError()
 }
 
 type schemaDefinitionError struct {
@@ -797,16 +797,16 @@ func (e *schemaDefinitionError) Error() string {
 
 func (e *schemaDefinitionError) Unwrap() error { return e.err }
 
-func (e *schemaDefinitionError) isSchemaDefinitionError() {}
+func (e *schemaDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *schemaDefinitionError) isQueryError() {}
+func (e *schemaDefinitionError) isEdgeDBQueryError() {}
 
-func (e *schemaDefinitionError) isError() {}
+func (e *schemaDefinitionError) isEdgeDBError() {}
 
 // InvalidDefinitionError is an error.
 type InvalidDefinitionError interface {
 	SchemaDefinitionError
-	isInvalidDefinitionError()
+	isEdgeDBInvalidDefinitionError()
 }
 
 type invalidDefinitionError struct {
@@ -825,18 +825,18 @@ func (e *invalidDefinitionError) Error() string {
 
 func (e *invalidDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidDefinitionError) isQueryError() {}
+func (e *invalidDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidDefinitionError) isError() {}
+func (e *invalidDefinitionError) isEdgeDBError() {}
 
 // InvalidModuleDefinitionError is an error.
 type InvalidModuleDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidModuleDefinitionError()
+	isEdgeDBInvalidModuleDefinitionError()
 }
 
 type invalidModuleDefinitionError struct {
@@ -855,20 +855,20 @@ func (e *invalidModuleDefinitionError) Error() string {
 
 func (e *invalidModuleDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidModuleDefinitionError) isInvalidModuleDefinitionError() {}
+func (e *invalidModuleDefinitionError) isEdgeDBInvalidModuleDefinitionError() {}
 
-func (e *invalidModuleDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidModuleDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidModuleDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidModuleDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidModuleDefinitionError) isQueryError() {}
+func (e *invalidModuleDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidModuleDefinitionError) isError() {}
+func (e *invalidModuleDefinitionError) isEdgeDBError() {}
 
 // InvalidLinkDefinitionError is an error.
 type InvalidLinkDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidLinkDefinitionError()
+	isEdgeDBInvalidLinkDefinitionError()
 }
 
 type invalidLinkDefinitionError struct {
@@ -887,20 +887,20 @@ func (e *invalidLinkDefinitionError) Error() string {
 
 func (e *invalidLinkDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidLinkDefinitionError) isInvalidLinkDefinitionError() {}
+func (e *invalidLinkDefinitionError) isEdgeDBInvalidLinkDefinitionError() {}
 
-func (e *invalidLinkDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidLinkDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidLinkDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidLinkDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidLinkDefinitionError) isQueryError() {}
+func (e *invalidLinkDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidLinkDefinitionError) isError() {}
+func (e *invalidLinkDefinitionError) isEdgeDBError() {}
 
 // InvalidPropertyDefinitionError is an error.
 type InvalidPropertyDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidPropertyDefinitionError()
+	isEdgeDBInvalidPropertyDefinitionError()
 }
 
 type invalidPropertyDefinitionError struct {
@@ -919,20 +919,20 @@ func (e *invalidPropertyDefinitionError) Error() string {
 
 func (e *invalidPropertyDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidPropertyDefinitionError) isInvalidPropertyDefinitionError() {}
+func (e *invalidPropertyDefinitionError) isEdgeDBInvalidPropertyDefinitionError() {}
 
-func (e *invalidPropertyDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidPropertyDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidPropertyDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidPropertyDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidPropertyDefinitionError) isQueryError() {}
+func (e *invalidPropertyDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidPropertyDefinitionError) isError() {}
+func (e *invalidPropertyDefinitionError) isEdgeDBError() {}
 
 // InvalidUserDefinitionError is an error.
 type InvalidUserDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidUserDefinitionError()
+	isEdgeDBInvalidUserDefinitionError()
 }
 
 type invalidUserDefinitionError struct {
@@ -951,20 +951,20 @@ func (e *invalidUserDefinitionError) Error() string {
 
 func (e *invalidUserDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidUserDefinitionError) isInvalidUserDefinitionError() {}
+func (e *invalidUserDefinitionError) isEdgeDBInvalidUserDefinitionError() {}
 
-func (e *invalidUserDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidUserDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidUserDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidUserDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidUserDefinitionError) isQueryError() {}
+func (e *invalidUserDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidUserDefinitionError) isError() {}
+func (e *invalidUserDefinitionError) isEdgeDBError() {}
 
 // InvalidDatabaseDefinitionError is an error.
 type InvalidDatabaseDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidDatabaseDefinitionError()
+	isEdgeDBInvalidDatabaseDefinitionError()
 }
 
 type invalidDatabaseDefinitionError struct {
@@ -983,20 +983,20 @@ func (e *invalidDatabaseDefinitionError) Error() string {
 
 func (e *invalidDatabaseDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidDatabaseDefinitionError) isInvalidDatabaseDefinitionError() {}
+func (e *invalidDatabaseDefinitionError) isEdgeDBInvalidDatabaseDefinitionError() {}
 
-func (e *invalidDatabaseDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidDatabaseDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidDatabaseDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidDatabaseDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidDatabaseDefinitionError) isQueryError() {}
+func (e *invalidDatabaseDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidDatabaseDefinitionError) isError() {}
+func (e *invalidDatabaseDefinitionError) isEdgeDBError() {}
 
 // InvalidOperatorDefinitionError is an error.
 type InvalidOperatorDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidOperatorDefinitionError()
+	isEdgeDBInvalidOperatorDefinitionError()
 }
 
 type invalidOperatorDefinitionError struct {
@@ -1015,20 +1015,20 @@ func (e *invalidOperatorDefinitionError) Error() string {
 
 func (e *invalidOperatorDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidOperatorDefinitionError) isInvalidOperatorDefinitionError() {}
+func (e *invalidOperatorDefinitionError) isEdgeDBInvalidOperatorDefinitionError() {}
 
-func (e *invalidOperatorDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidOperatorDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidOperatorDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidOperatorDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidOperatorDefinitionError) isQueryError() {}
+func (e *invalidOperatorDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidOperatorDefinitionError) isError() {}
+func (e *invalidOperatorDefinitionError) isEdgeDBError() {}
 
 // InvalidAliasDefinitionError is an error.
 type InvalidAliasDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidAliasDefinitionError()
+	isEdgeDBInvalidAliasDefinitionError()
 }
 
 type invalidAliasDefinitionError struct {
@@ -1047,20 +1047,20 @@ func (e *invalidAliasDefinitionError) Error() string {
 
 func (e *invalidAliasDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidAliasDefinitionError) isInvalidAliasDefinitionError() {}
+func (e *invalidAliasDefinitionError) isEdgeDBInvalidAliasDefinitionError() {}
 
-func (e *invalidAliasDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidAliasDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidAliasDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidAliasDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidAliasDefinitionError) isQueryError() {}
+func (e *invalidAliasDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidAliasDefinitionError) isError() {}
+func (e *invalidAliasDefinitionError) isEdgeDBError() {}
 
 // InvalidFunctionDefinitionError is an error.
 type InvalidFunctionDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidFunctionDefinitionError()
+	isEdgeDBInvalidFunctionDefinitionError()
 }
 
 type invalidFunctionDefinitionError struct {
@@ -1079,20 +1079,20 @@ func (e *invalidFunctionDefinitionError) Error() string {
 
 func (e *invalidFunctionDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidFunctionDefinitionError) isInvalidFunctionDefinitionError() {}
+func (e *invalidFunctionDefinitionError) isEdgeDBInvalidFunctionDefinitionError() {}
 
-func (e *invalidFunctionDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidFunctionDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidFunctionDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidFunctionDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidFunctionDefinitionError) isQueryError() {}
+func (e *invalidFunctionDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidFunctionDefinitionError) isError() {}
+func (e *invalidFunctionDefinitionError) isEdgeDBError() {}
 
 // InvalidConstraintDefinitionError is an error.
 type InvalidConstraintDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidConstraintDefinitionError()
+	isEdgeDBInvalidConstraintDefinitionError()
 }
 
 type invalidConstraintDefinitionError struct {
@@ -1111,20 +1111,20 @@ func (e *invalidConstraintDefinitionError) Error() string {
 
 func (e *invalidConstraintDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidConstraintDefinitionError) isInvalidConstraintDefinitionError() {}
+func (e *invalidConstraintDefinitionError) isEdgeDBInvalidConstraintDefinitionError() {}
 
-func (e *invalidConstraintDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidConstraintDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidConstraintDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidConstraintDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidConstraintDefinitionError) isQueryError() {}
+func (e *invalidConstraintDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidConstraintDefinitionError) isError() {}
+func (e *invalidConstraintDefinitionError) isEdgeDBError() {}
 
 // InvalidCastDefinitionError is an error.
 type InvalidCastDefinitionError interface {
 	InvalidDefinitionError
-	isInvalidCastDefinitionError()
+	isEdgeDBInvalidCastDefinitionError()
 }
 
 type invalidCastDefinitionError struct {
@@ -1143,20 +1143,20 @@ func (e *invalidCastDefinitionError) Error() string {
 
 func (e *invalidCastDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidCastDefinitionError) isInvalidCastDefinitionError() {}
+func (e *invalidCastDefinitionError) isEdgeDBInvalidCastDefinitionError() {}
 
-func (e *invalidCastDefinitionError) isInvalidDefinitionError() {}
+func (e *invalidCastDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
-func (e *invalidCastDefinitionError) isSchemaDefinitionError() {}
+func (e *invalidCastDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *invalidCastDefinitionError) isQueryError() {}
+func (e *invalidCastDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidCastDefinitionError) isError() {}
+func (e *invalidCastDefinitionError) isEdgeDBError() {}
 
 // DuplicateDefinitionError is an error.
 type DuplicateDefinitionError interface {
 	SchemaDefinitionError
-	isDuplicateDefinitionError()
+	isEdgeDBDuplicateDefinitionError()
 }
 
 type duplicateDefinitionError struct {
@@ -1175,18 +1175,18 @@ func (e *duplicateDefinitionError) Error() string {
 
 func (e *duplicateDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateDefinitionError) isQueryError() {}
+func (e *duplicateDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateDefinitionError) isError() {}
+func (e *duplicateDefinitionError) isEdgeDBError() {}
 
 // DuplicateModuleDefinitionError is an error.
 type DuplicateModuleDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateModuleDefinitionError()
+	isEdgeDBDuplicateModuleDefinitionError()
 }
 
 type duplicateModuleDefinitionError struct {
@@ -1205,20 +1205,20 @@ func (e *duplicateModuleDefinitionError) Error() string {
 
 func (e *duplicateModuleDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateModuleDefinitionError) isDuplicateModuleDefinitionError() {}
+func (e *duplicateModuleDefinitionError) isEdgeDBDuplicateModuleDefinitionError() {}
 
-func (e *duplicateModuleDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateModuleDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateModuleDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateModuleDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateModuleDefinitionError) isQueryError() {}
+func (e *duplicateModuleDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateModuleDefinitionError) isError() {}
+func (e *duplicateModuleDefinitionError) isEdgeDBError() {}
 
 // DuplicateLinkDefinitionError is an error.
 type DuplicateLinkDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateLinkDefinitionError()
+	isEdgeDBDuplicateLinkDefinitionError()
 }
 
 type duplicateLinkDefinitionError struct {
@@ -1237,20 +1237,20 @@ func (e *duplicateLinkDefinitionError) Error() string {
 
 func (e *duplicateLinkDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateLinkDefinitionError) isDuplicateLinkDefinitionError() {}
+func (e *duplicateLinkDefinitionError) isEdgeDBDuplicateLinkDefinitionError() {}
 
-func (e *duplicateLinkDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateLinkDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateLinkDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateLinkDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateLinkDefinitionError) isQueryError() {}
+func (e *duplicateLinkDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateLinkDefinitionError) isError() {}
+func (e *duplicateLinkDefinitionError) isEdgeDBError() {}
 
 // DuplicatePropertyDefinitionError is an error.
 type DuplicatePropertyDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicatePropertyDefinitionError()
+	isEdgeDBDuplicatePropertyDefinitionError()
 }
 
 type duplicatePropertyDefinitionError struct {
@@ -1269,20 +1269,20 @@ func (e *duplicatePropertyDefinitionError) Error() string {
 
 func (e *duplicatePropertyDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicatePropertyDefinitionError) isDuplicatePropertyDefinitionError() {}
+func (e *duplicatePropertyDefinitionError) isEdgeDBDuplicatePropertyDefinitionError() {}
 
-func (e *duplicatePropertyDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicatePropertyDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicatePropertyDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicatePropertyDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicatePropertyDefinitionError) isQueryError() {}
+func (e *duplicatePropertyDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicatePropertyDefinitionError) isError() {}
+func (e *duplicatePropertyDefinitionError) isEdgeDBError() {}
 
 // DuplicateUserDefinitionError is an error.
 type DuplicateUserDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateUserDefinitionError()
+	isEdgeDBDuplicateUserDefinitionError()
 }
 
 type duplicateUserDefinitionError struct {
@@ -1301,20 +1301,20 @@ func (e *duplicateUserDefinitionError) Error() string {
 
 func (e *duplicateUserDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateUserDefinitionError) isDuplicateUserDefinitionError() {}
+func (e *duplicateUserDefinitionError) isEdgeDBDuplicateUserDefinitionError() {}
 
-func (e *duplicateUserDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateUserDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateUserDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateUserDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateUserDefinitionError) isQueryError() {}
+func (e *duplicateUserDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateUserDefinitionError) isError() {}
+func (e *duplicateUserDefinitionError) isEdgeDBError() {}
 
 // DuplicateDatabaseDefinitionError is an error.
 type DuplicateDatabaseDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateDatabaseDefinitionError()
+	isEdgeDBDuplicateDatabaseDefinitionError()
 }
 
 type duplicateDatabaseDefinitionError struct {
@@ -1333,20 +1333,20 @@ func (e *duplicateDatabaseDefinitionError) Error() string {
 
 func (e *duplicateDatabaseDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateDatabaseDefinitionError) isDuplicateDatabaseDefinitionError() {}
+func (e *duplicateDatabaseDefinitionError) isEdgeDBDuplicateDatabaseDefinitionError() {}
 
-func (e *duplicateDatabaseDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateDatabaseDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateDatabaseDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateDatabaseDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateDatabaseDefinitionError) isQueryError() {}
+func (e *duplicateDatabaseDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateDatabaseDefinitionError) isError() {}
+func (e *duplicateDatabaseDefinitionError) isEdgeDBError() {}
 
 // DuplicateOperatorDefinitionError is an error.
 type DuplicateOperatorDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateOperatorDefinitionError()
+	isEdgeDBDuplicateOperatorDefinitionError()
 }
 
 type duplicateOperatorDefinitionError struct {
@@ -1365,20 +1365,20 @@ func (e *duplicateOperatorDefinitionError) Error() string {
 
 func (e *duplicateOperatorDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateOperatorDefinitionError) isDuplicateOperatorDefinitionError() {}
+func (e *duplicateOperatorDefinitionError) isEdgeDBDuplicateOperatorDefinitionError() {}
 
-func (e *duplicateOperatorDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateOperatorDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateOperatorDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateOperatorDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateOperatorDefinitionError) isQueryError() {}
+func (e *duplicateOperatorDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateOperatorDefinitionError) isError() {}
+func (e *duplicateOperatorDefinitionError) isEdgeDBError() {}
 
 // DuplicateViewDefinitionError is an error.
 type DuplicateViewDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateViewDefinitionError()
+	isEdgeDBDuplicateViewDefinitionError()
 }
 
 type duplicateViewDefinitionError struct {
@@ -1397,20 +1397,20 @@ func (e *duplicateViewDefinitionError) Error() string {
 
 func (e *duplicateViewDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateViewDefinitionError) isDuplicateViewDefinitionError() {}
+func (e *duplicateViewDefinitionError) isEdgeDBDuplicateViewDefinitionError() {}
 
-func (e *duplicateViewDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateViewDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateViewDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateViewDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateViewDefinitionError) isQueryError() {}
+func (e *duplicateViewDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateViewDefinitionError) isError() {}
+func (e *duplicateViewDefinitionError) isEdgeDBError() {}
 
 // DuplicateFunctionDefinitionError is an error.
 type DuplicateFunctionDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateFunctionDefinitionError()
+	isEdgeDBDuplicateFunctionDefinitionError()
 }
 
 type duplicateFunctionDefinitionError struct {
@@ -1429,20 +1429,20 @@ func (e *duplicateFunctionDefinitionError) Error() string {
 
 func (e *duplicateFunctionDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateFunctionDefinitionError) isDuplicateFunctionDefinitionError() {}
+func (e *duplicateFunctionDefinitionError) isEdgeDBDuplicateFunctionDefinitionError() {}
 
-func (e *duplicateFunctionDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateFunctionDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateFunctionDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateFunctionDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateFunctionDefinitionError) isQueryError() {}
+func (e *duplicateFunctionDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateFunctionDefinitionError) isError() {}
+func (e *duplicateFunctionDefinitionError) isEdgeDBError() {}
 
 // DuplicateConstraintDefinitionError is an error.
 type DuplicateConstraintDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateConstraintDefinitionError()
+	isEdgeDBDuplicateConstraintDefinitionError()
 }
 
 type duplicateConstraintDefinitionError struct {
@@ -1461,20 +1461,20 @@ func (e *duplicateConstraintDefinitionError) Error() string {
 
 func (e *duplicateConstraintDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateConstraintDefinitionError) isDuplicateConstraintDefinitionError() {}
+func (e *duplicateConstraintDefinitionError) isEdgeDBDuplicateConstraintDefinitionError() {}
 
-func (e *duplicateConstraintDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateConstraintDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateConstraintDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateConstraintDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateConstraintDefinitionError) isQueryError() {}
+func (e *duplicateConstraintDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateConstraintDefinitionError) isError() {}
+func (e *duplicateConstraintDefinitionError) isEdgeDBError() {}
 
 // DuplicateCastDefinitionError is an error.
 type DuplicateCastDefinitionError interface {
 	DuplicateDefinitionError
-	isDuplicateCastDefinitionError()
+	isEdgeDBDuplicateCastDefinitionError()
 }
 
 type duplicateCastDefinitionError struct {
@@ -1493,20 +1493,20 @@ func (e *duplicateCastDefinitionError) Error() string {
 
 func (e *duplicateCastDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateCastDefinitionError) isDuplicateCastDefinitionError() {}
+func (e *duplicateCastDefinitionError) isEdgeDBDuplicateCastDefinitionError() {}
 
-func (e *duplicateCastDefinitionError) isDuplicateDefinitionError() {}
+func (e *duplicateCastDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
-func (e *duplicateCastDefinitionError) isSchemaDefinitionError() {}
+func (e *duplicateCastDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
-func (e *duplicateCastDefinitionError) isQueryError() {}
+func (e *duplicateCastDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateCastDefinitionError) isError() {}
+func (e *duplicateCastDefinitionError) isEdgeDBError() {}
 
 // QueryTimeoutError is an error.
 type QueryTimeoutError interface {
 	QueryError
-	isQueryTimeoutError()
+	isEdgeDBQueryTimeoutError()
 }
 
 type queryTimeoutError struct {
@@ -1525,16 +1525,16 @@ func (e *queryTimeoutError) Error() string {
 
 func (e *queryTimeoutError) Unwrap() error { return e.err }
 
-func (e *queryTimeoutError) isQueryTimeoutError() {}
+func (e *queryTimeoutError) isEdgeDBQueryTimeoutError() {}
 
-func (e *queryTimeoutError) isQueryError() {}
+func (e *queryTimeoutError) isEdgeDBQueryError() {}
 
-func (e *queryTimeoutError) isError() {}
+func (e *queryTimeoutError) isEdgeDBError() {}
 
 // ExecutionError is an error.
 type ExecutionError interface {
 	Error
-	isExecutionError()
+	isEdgeDBExecutionError()
 }
 
 type executionError struct {
@@ -1553,14 +1553,14 @@ func (e *executionError) Error() string {
 
 func (e *executionError) Unwrap() error { return e.err }
 
-func (e *executionError) isExecutionError() {}
+func (e *executionError) isEdgeDBExecutionError() {}
 
-func (e *executionError) isError() {}
+func (e *executionError) isEdgeDBError() {}
 
 // InvalidValueError is an error.
 type InvalidValueError interface {
 	ExecutionError
-	isInvalidValueError()
+	isEdgeDBInvalidValueError()
 }
 
 type invalidValueError struct {
@@ -1579,16 +1579,16 @@ func (e *invalidValueError) Error() string {
 
 func (e *invalidValueError) Unwrap() error { return e.err }
 
-func (e *invalidValueError) isInvalidValueError() {}
+func (e *invalidValueError) isEdgeDBInvalidValueError() {}
 
-func (e *invalidValueError) isExecutionError() {}
+func (e *invalidValueError) isEdgeDBExecutionError() {}
 
-func (e *invalidValueError) isError() {}
+func (e *invalidValueError) isEdgeDBError() {}
 
 // DivisionByZeroError is an error.
 type DivisionByZeroError interface {
 	InvalidValueError
-	isDivisionByZeroError()
+	isEdgeDBDivisionByZeroError()
 }
 
 type divisionByZeroError struct {
@@ -1607,18 +1607,18 @@ func (e *divisionByZeroError) Error() string {
 
 func (e *divisionByZeroError) Unwrap() error { return e.err }
 
-func (e *divisionByZeroError) isDivisionByZeroError() {}
+func (e *divisionByZeroError) isEdgeDBDivisionByZeroError() {}
 
-func (e *divisionByZeroError) isInvalidValueError() {}
+func (e *divisionByZeroError) isEdgeDBInvalidValueError() {}
 
-func (e *divisionByZeroError) isExecutionError() {}
+func (e *divisionByZeroError) isEdgeDBExecutionError() {}
 
-func (e *divisionByZeroError) isError() {}
+func (e *divisionByZeroError) isEdgeDBError() {}
 
 // NumericOutOfRangeError is an error.
 type NumericOutOfRangeError interface {
 	InvalidValueError
-	isNumericOutOfRangeError()
+	isEdgeDBNumericOutOfRangeError()
 }
 
 type numericOutOfRangeError struct {
@@ -1637,18 +1637,18 @@ func (e *numericOutOfRangeError) Error() string {
 
 func (e *numericOutOfRangeError) Unwrap() error { return e.err }
 
-func (e *numericOutOfRangeError) isNumericOutOfRangeError() {}
+func (e *numericOutOfRangeError) isEdgeDBNumericOutOfRangeError() {}
 
-func (e *numericOutOfRangeError) isInvalidValueError() {}
+func (e *numericOutOfRangeError) isEdgeDBInvalidValueError() {}
 
-func (e *numericOutOfRangeError) isExecutionError() {}
+func (e *numericOutOfRangeError) isEdgeDBExecutionError() {}
 
-func (e *numericOutOfRangeError) isError() {}
+func (e *numericOutOfRangeError) isEdgeDBError() {}
 
 // IntegrityError is an error.
 type IntegrityError interface {
 	ExecutionError
-	isIntegrityError()
+	isEdgeDBIntegrityError()
 }
 
 type integrityError struct {
@@ -1667,16 +1667,16 @@ func (e *integrityError) Error() string {
 
 func (e *integrityError) Unwrap() error { return e.err }
 
-func (e *integrityError) isIntegrityError() {}
+func (e *integrityError) isEdgeDBIntegrityError() {}
 
-func (e *integrityError) isExecutionError() {}
+func (e *integrityError) isEdgeDBExecutionError() {}
 
-func (e *integrityError) isError() {}
+func (e *integrityError) isEdgeDBError() {}
 
 // ConstraintViolationError is an error.
 type ConstraintViolationError interface {
 	IntegrityError
-	isConstraintViolationError()
+	isEdgeDBConstraintViolationError()
 }
 
 type constraintViolationError struct {
@@ -1695,18 +1695,18 @@ func (e *constraintViolationError) Error() string {
 
 func (e *constraintViolationError) Unwrap() error { return e.err }
 
-func (e *constraintViolationError) isConstraintViolationError() {}
+func (e *constraintViolationError) isEdgeDBConstraintViolationError() {}
 
-func (e *constraintViolationError) isIntegrityError() {}
+func (e *constraintViolationError) isEdgeDBIntegrityError() {}
 
-func (e *constraintViolationError) isExecutionError() {}
+func (e *constraintViolationError) isEdgeDBExecutionError() {}
 
-func (e *constraintViolationError) isError() {}
+func (e *constraintViolationError) isEdgeDBError() {}
 
 // CardinalityViolationError is an error.
 type CardinalityViolationError interface {
 	IntegrityError
-	isCardinalityViolationError()
+	isEdgeDBCardinalityViolationError()
 }
 
 type cardinalityViolationError struct {
@@ -1725,18 +1725,18 @@ func (e *cardinalityViolationError) Error() string {
 
 func (e *cardinalityViolationError) Unwrap() error { return e.err }
 
-func (e *cardinalityViolationError) isCardinalityViolationError() {}
+func (e *cardinalityViolationError) isEdgeDBCardinalityViolationError() {}
 
-func (e *cardinalityViolationError) isIntegrityError() {}
+func (e *cardinalityViolationError) isEdgeDBIntegrityError() {}
 
-func (e *cardinalityViolationError) isExecutionError() {}
+func (e *cardinalityViolationError) isEdgeDBExecutionError() {}
 
-func (e *cardinalityViolationError) isError() {}
+func (e *cardinalityViolationError) isEdgeDBError() {}
 
 // MissingRequiredError is an error.
 type MissingRequiredError interface {
 	IntegrityError
-	isMissingRequiredError()
+	isEdgeDBMissingRequiredError()
 }
 
 type missingRequiredError struct {
@@ -1755,18 +1755,18 @@ func (e *missingRequiredError) Error() string {
 
 func (e *missingRequiredError) Unwrap() error { return e.err }
 
-func (e *missingRequiredError) isMissingRequiredError() {}
+func (e *missingRequiredError) isEdgeDBMissingRequiredError() {}
 
-func (e *missingRequiredError) isIntegrityError() {}
+func (e *missingRequiredError) isEdgeDBIntegrityError() {}
 
-func (e *missingRequiredError) isExecutionError() {}
+func (e *missingRequiredError) isEdgeDBExecutionError() {}
 
-func (e *missingRequiredError) isError() {}
+func (e *missingRequiredError) isEdgeDBError() {}
 
 // TransactionError is an error.
 type TransactionError interface {
 	ExecutionError
-	isTransactionError()
+	isEdgeDBTransactionError()
 }
 
 type transactionError struct {
@@ -1785,16 +1785,16 @@ func (e *transactionError) Error() string {
 
 func (e *transactionError) Unwrap() error { return e.err }
 
-func (e *transactionError) isTransactionError() {}
+func (e *transactionError) isEdgeDBTransactionError() {}
 
-func (e *transactionError) isExecutionError() {}
+func (e *transactionError) isEdgeDBExecutionError() {}
 
-func (e *transactionError) isError() {}
+func (e *transactionError) isEdgeDBError() {}
 
 // TransactionSerializationError is an error.
 type TransactionSerializationError interface {
 	TransactionError
-	isTransactionSerializationError()
+	isEdgeDBTransactionSerializationError()
 }
 
 type transactionSerializationError struct {
@@ -1813,18 +1813,18 @@ func (e *transactionSerializationError) Error() string {
 
 func (e *transactionSerializationError) Unwrap() error { return e.err }
 
-func (e *transactionSerializationError) isTransactionSerializationError() {}
+func (e *transactionSerializationError) isEdgeDBTransactionSerializationError() {}
 
-func (e *transactionSerializationError) isTransactionError() {}
+func (e *transactionSerializationError) isEdgeDBTransactionError() {}
 
-func (e *transactionSerializationError) isExecutionError() {}
+func (e *transactionSerializationError) isEdgeDBExecutionError() {}
 
-func (e *transactionSerializationError) isError() {}
+func (e *transactionSerializationError) isEdgeDBError() {}
 
 // TransactionDeadlockError is an error.
 type TransactionDeadlockError interface {
 	TransactionError
-	isTransactionDeadlockError()
+	isEdgeDBTransactionDeadlockError()
 }
 
 type transactionDeadlockError struct {
@@ -1843,18 +1843,18 @@ func (e *transactionDeadlockError) Error() string {
 
 func (e *transactionDeadlockError) Unwrap() error { return e.err }
 
-func (e *transactionDeadlockError) isTransactionDeadlockError() {}
+func (e *transactionDeadlockError) isEdgeDBTransactionDeadlockError() {}
 
-func (e *transactionDeadlockError) isTransactionError() {}
+func (e *transactionDeadlockError) isEdgeDBTransactionError() {}
 
-func (e *transactionDeadlockError) isExecutionError() {}
+func (e *transactionDeadlockError) isEdgeDBExecutionError() {}
 
-func (e *transactionDeadlockError) isError() {}
+func (e *transactionDeadlockError) isEdgeDBError() {}
 
 // ConfigurationError is an error.
 type ConfigurationError interface {
 	Error
-	isConfigurationError()
+	isEdgeDBConfigurationError()
 }
 
 type configurationError struct {
@@ -1873,14 +1873,14 @@ func (e *configurationError) Error() string {
 
 func (e *configurationError) Unwrap() error { return e.err }
 
-func (e *configurationError) isConfigurationError() {}
+func (e *configurationError) isEdgeDBConfigurationError() {}
 
-func (e *configurationError) isError() {}
+func (e *configurationError) isEdgeDBError() {}
 
 // AccessError is an error.
 type AccessError interface {
 	Error
-	isAccessError()
+	isEdgeDBAccessError()
 }
 
 type accessError struct {
@@ -1899,14 +1899,14 @@ func (e *accessError) Error() string {
 
 func (e *accessError) Unwrap() error { return e.err }
 
-func (e *accessError) isAccessError() {}
+func (e *accessError) isEdgeDBAccessError() {}
 
-func (e *accessError) isError() {}
+func (e *accessError) isEdgeDBError() {}
 
 // AuthenticationError is an error.
 type AuthenticationError interface {
 	AccessError
-	isAuthenticationError()
+	isEdgeDBAuthenticationError()
 }
 
 type authenticationError struct {
@@ -1925,16 +1925,16 @@ func (e *authenticationError) Error() string {
 
 func (e *authenticationError) Unwrap() error { return e.err }
 
-func (e *authenticationError) isAuthenticationError() {}
+func (e *authenticationError) isEdgeDBAuthenticationError() {}
 
-func (e *authenticationError) isAccessError() {}
+func (e *authenticationError) isEdgeDBAccessError() {}
 
-func (e *authenticationError) isError() {}
+func (e *authenticationError) isEdgeDBError() {}
 
 // LogMessage is an error.
 type LogMessage interface {
 	Error
-	isLogMessage()
+	isEdgeDBLogMessage()
 }
 
 type logMessage struct {
@@ -1953,14 +1953,14 @@ func (e *logMessage) Error() string {
 
 func (e *logMessage) Unwrap() error { return e.err }
 
-func (e *logMessage) isLogMessage() {}
+func (e *logMessage) isEdgeDBLogMessage() {}
 
-func (e *logMessage) isError() {}
+func (e *logMessage) isEdgeDBError() {}
 
 // WarningMessage is an error.
 type WarningMessage interface {
 	Error
-	isWarningMessage()
+	isEdgeDBWarningMessage()
 }
 
 type warningMessage struct {
@@ -1979,14 +1979,14 @@ func (e *warningMessage) Error() string {
 
 func (e *warningMessage) Unwrap() error { return e.err }
 
-func (e *warningMessage) isWarningMessage() {}
+func (e *warningMessage) isEdgeDBWarningMessage() {}
 
-func (e *warningMessage) isError() {}
+func (e *warningMessage) isEdgeDBError() {}
 
 // ClientError is an error.
 type ClientError interface {
 	Error
-	isClientError()
+	isEdgeDBClientError()
 }
 
 type clientError struct {
@@ -2005,14 +2005,14 @@ func (e *clientError) Error() string {
 
 func (e *clientError) Unwrap() error { return e.err }
 
-func (e *clientError) isClientError() {}
+func (e *clientError) isEdgeDBClientError() {}
 
-func (e *clientError) isError() {}
+func (e *clientError) isEdgeDBError() {}
 
 // ClientConnectionError is an error.
 type ClientConnectionError interface {
 	ClientError
-	isClientConnectionError()
+	isEdgeDBClientConnectionError()
 }
 
 type clientConnectionError struct {
@@ -2031,16 +2031,16 @@ func (e *clientConnectionError) Error() string {
 
 func (e *clientConnectionError) Unwrap() error { return e.err }
 
-func (e *clientConnectionError) isClientConnectionError() {}
+func (e *clientConnectionError) isEdgeDBClientConnectionError() {}
 
-func (e *clientConnectionError) isClientError() {}
+func (e *clientConnectionError) isEdgeDBClientError() {}
 
-func (e *clientConnectionError) isError() {}
+func (e *clientConnectionError) isEdgeDBError() {}
 
 // InterfaceError is an error.
 type InterfaceError interface {
 	ClientError
-	isInterfaceError()
+	isEdgeDBInterfaceError()
 }
 
 type interfaceError struct {
@@ -2059,16 +2059,16 @@ func (e *interfaceError) Error() string {
 
 func (e *interfaceError) Unwrap() error { return e.err }
 
-func (e *interfaceError) isInterfaceError() {}
+func (e *interfaceError) isEdgeDBInterfaceError() {}
 
-func (e *interfaceError) isClientError() {}
+func (e *interfaceError) isEdgeDBClientError() {}
 
-func (e *interfaceError) isError() {}
+func (e *interfaceError) isEdgeDBError() {}
 
 // QueryArgumentError is an error.
 type QueryArgumentError interface {
 	InterfaceError
-	isQueryArgumentError()
+	isEdgeDBQueryArgumentError()
 }
 
 type queryArgumentError struct {
@@ -2087,18 +2087,18 @@ func (e *queryArgumentError) Error() string {
 
 func (e *queryArgumentError) Unwrap() error { return e.err }
 
-func (e *queryArgumentError) isQueryArgumentError() {}
+func (e *queryArgumentError) isEdgeDBQueryArgumentError() {}
 
-func (e *queryArgumentError) isInterfaceError() {}
+func (e *queryArgumentError) isEdgeDBInterfaceError() {}
 
-func (e *queryArgumentError) isClientError() {}
+func (e *queryArgumentError) isEdgeDBClientError() {}
 
-func (e *queryArgumentError) isError() {}
+func (e *queryArgumentError) isEdgeDBError() {}
 
 // MissingArgumentError is an error.
 type MissingArgumentError interface {
 	QueryArgumentError
-	isMissingArgumentError()
+	isEdgeDBMissingArgumentError()
 }
 
 type missingArgumentError struct {
@@ -2117,20 +2117,20 @@ func (e *missingArgumentError) Error() string {
 
 func (e *missingArgumentError) Unwrap() error { return e.err }
 
-func (e *missingArgumentError) isMissingArgumentError() {}
+func (e *missingArgumentError) isEdgeDBMissingArgumentError() {}
 
-func (e *missingArgumentError) isQueryArgumentError() {}
+func (e *missingArgumentError) isEdgeDBQueryArgumentError() {}
 
-func (e *missingArgumentError) isInterfaceError() {}
+func (e *missingArgumentError) isEdgeDBInterfaceError() {}
 
-func (e *missingArgumentError) isClientError() {}
+func (e *missingArgumentError) isEdgeDBClientError() {}
 
-func (e *missingArgumentError) isError() {}
+func (e *missingArgumentError) isEdgeDBError() {}
 
 // UnknownArgumentError is an error.
 type UnknownArgumentError interface {
 	QueryArgumentError
-	isUnknownArgumentError()
+	isEdgeDBUnknownArgumentError()
 }
 
 type unknownArgumentError struct {
@@ -2149,20 +2149,20 @@ func (e *unknownArgumentError) Error() string {
 
 func (e *unknownArgumentError) Unwrap() error { return e.err }
 
-func (e *unknownArgumentError) isUnknownArgumentError() {}
+func (e *unknownArgumentError) isEdgeDBUnknownArgumentError() {}
 
-func (e *unknownArgumentError) isQueryArgumentError() {}
+func (e *unknownArgumentError) isEdgeDBQueryArgumentError() {}
 
-func (e *unknownArgumentError) isInterfaceError() {}
+func (e *unknownArgumentError) isEdgeDBInterfaceError() {}
 
-func (e *unknownArgumentError) isClientError() {}
+func (e *unknownArgumentError) isEdgeDBClientError() {}
 
-func (e *unknownArgumentError) isError() {}
+func (e *unknownArgumentError) isEdgeDBError() {}
 
 // InvalidArgumentError is an error.
 type InvalidArgumentError interface {
 	QueryArgumentError
-	isInvalidArgumentError()
+	isEdgeDBInvalidArgumentError()
 }
 
 type invalidArgumentError struct {
@@ -2181,20 +2181,20 @@ func (e *invalidArgumentError) Error() string {
 
 func (e *invalidArgumentError) Unwrap() error { return e.err }
 
-func (e *invalidArgumentError) isInvalidArgumentError() {}
+func (e *invalidArgumentError) isEdgeDBInvalidArgumentError() {}
 
-func (e *invalidArgumentError) isQueryArgumentError() {}
+func (e *invalidArgumentError) isEdgeDBQueryArgumentError() {}
 
-func (e *invalidArgumentError) isInterfaceError() {}
+func (e *invalidArgumentError) isEdgeDBInterfaceError() {}
 
-func (e *invalidArgumentError) isClientError() {}
+func (e *invalidArgumentError) isEdgeDBClientError() {}
 
-func (e *invalidArgumentError) isError() {}
+func (e *invalidArgumentError) isEdgeDBError() {}
 
 // NoDataError is an error.
 type NoDataError interface {
 	ClientError
-	isNoDataError()
+	isEdgeDBNoDataError()
 }
 
 type noDataError struct {
@@ -2213,11 +2213,11 @@ func (e *noDataError) Error() string {
 
 func (e *noDataError) Unwrap() error { return e.err }
 
-func (e *noDataError) isNoDataError() {}
+func (e *noDataError) isEdgeDBNoDataError() {}
 
-func (e *noDataError) isClientError() {}
+func (e *noDataError) isEdgeDBClientError() {}
 
-func (e *noDataError) isError() {}
+func (e *noDataError) isEdgeDBError() {}
 
 func errorFromCode(code uint32, msg string) error {
 	switch code {
