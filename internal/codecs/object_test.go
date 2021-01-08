@@ -47,8 +47,9 @@ func TestSetObjectType(t *testing.T) {
 		{name: "id", codec: &UUID{typ: uuidType}},
 	}}
 
-	err := codec.setType(reflect.TypeOf(Thing{}))
+	useReflect, err := codec.setType(reflect.TypeOf(Thing{}))
 	require.Nil(t, err)
+	require.False(t, useReflect)
 
 	assert.Equal(t, uintptr(0), codec.fields[0].offset)
 	assert.Equal(t, uintptr(2), codec.fields[1].offset)
@@ -58,7 +59,7 @@ func TestSetObjectType(t *testing.T) {
 	assert.Equal(t, uintptr(32), codec.fields[5].offset)
 }
 
-func TestDecodeObject(t *testing.T) {
+func TestObjectDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
@@ -88,9 +89,10 @@ func TestDecodeObject(t *testing.T) {
 		{name: "B", codec: &Int32{typ: int32Type}},
 		{name: "C", codec: &Int64{typ: int64Type}},
 	}}
-	err := codec.setType(reflect.TypeOf(result))
+	useReflect, err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(r, unsafe.Pointer(&result))
+	require.False(t, useReflect)
+	codec.DecodePtr(r, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -100,7 +102,7 @@ func TestDecodeObject(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func BenchmarkDecodeObject(b *testing.B) {
+func BenchmarkObjectDecodePtr(b *testing.B) {
 	data := []byte{
 		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
@@ -132,11 +134,89 @@ func BenchmarkDecodeObject(b *testing.B) {
 		{name: "B", codec: &Int32{typ: int32Type}},
 		{name: "C", codec: &Int64{typ: int64Type}},
 	}}
-	err := codec.setType(reflect.TypeOf(result))
+	_, err := codec.setType(reflect.TypeOf(result))
 	require.Nil(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
+}
+
+func TestObjectDecodeReflectStruct(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 36, // data length
+		0, 0, 0, 2, // element count
+		// field 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		102, 111, 117, 114, // utf-8 data
+		// field 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		0, 0, 0, 4, // int32
+		// field 2
+		0, 0, 0, 0, // reserved
+		0xff, 0xff, 0xff, 0xff, // data length (-1)
+	})
+
+	type SomeThing struct {
+		A string
+		B int32
+		C int64
+	}
+
+	var result SomeThing
+
+	codec := &Object{fields: []*objectField{
+		{name: "A", codec: &Str{typ: strType}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+		{name: "C", codec: &Int64{typ: int64Type}},
+	}}
+	useReflect, err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	require.False(t, useReflect)
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
+
+	expected := SomeThing{A: "four", B: 4, C: 0}
+	assert.Equal(t, expected, result)
+}
+
+func TestObjectDecodeReflectMap(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 36, // data length
+		0, 0, 0, 2, // element count
+		// field 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		102, 111, 117, 114, // utf-8 data
+		// field 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		0, 0, 0, 4, // int32
+		// field 2
+		0, 0, 0, 0, // reserved
+		0xff, 0xff, 0xff, 0xff, // data length (-1)
+	})
+
+	codec := &Object{fields: []*objectField{
+		{name: "A", codec: &Str{typ: strType}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+		{name: "C", codec: &Int64{typ: int64Type}},
+	}}
+	codec.setDefaultType()
+
+	var result map[string]interface{}
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
+
+	expected := map[string]interface{}{"A": "four", "B": int32(4)}
+	assert.Equal(t, expected, result)
 }

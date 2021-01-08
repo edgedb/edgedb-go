@@ -32,22 +32,22 @@ type SomeStruct struct {
 }
 
 func TestStructFieldTagPrefered(t *testing.T) {
-	tp := reflect.TypeOf(SomeStruct{})
-	field, ok := StructField(tp, "First")
+	typ := reflect.TypeOf(SomeStruct{})
+	field, ok := StructField(typ, "First")
 	require.True(t, ok)
 	assert.Equal(t, "Third", field.Name)
 }
 
 func TestStructFieldByName(t *testing.T) {
-	tp := reflect.TypeOf(SomeStruct{})
-	field, ok := StructField(tp, "Second")
+	typ := reflect.TypeOf(SomeStruct{})
+	field, ok := StructField(typ, "Second")
 	require.True(t, ok)
 	assert.Equal(t, "Second", field.Name)
 }
 
 func TestStructFieldMissingField(t *testing.T) {
-	tp := reflect.TypeOf(SomeStruct{})
-	_, ok := StructField(tp, "Fourth")
+	typ := reflect.TypeOf(SomeStruct{})
+	_, ok := StructField(typ, "Fourth")
 	require.False(t, ok)
 }
 

@@ -29,13 +29,14 @@ import (
 
 func TestSetSetType(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
-	err := codec.setType(reflect.TypeOf([]int64{}))
+	useReflect, err := codec.setType(reflect.TypeOf([]int64{}))
 	require.Nil(t, err)
+	require.False(t, useReflect)
 
 	assert.Equal(t, 8, codec.step)
 }
 
-func TestDecodeSet(t *testing.T) {
+func TestSetDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
 		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
@@ -57,10 +58,48 @@ func TestDecodeSet(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
 
 	var result []int64
-	err := codec.setType(reflect.TypeOf(result))
+	useReflect, err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
+	require.False(t, useReflect)
 
-	codec.Decode(r, unsafe.Pointer(&result))
+	codec.DecodePtr(r, unsafe.Pointer(&result))
+	require.Equal(t, []byte{}, r.Buf)
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
+
+	expected := []int64{3, 5, 8}
+	assert.Equal(t, expected, result)
+}
+
+func TestSetDecodeReflect(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 0x38, // data length
+		0, 0, 0, 1, // dimension count
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 0x14, // reserved
+		0, 0, 0, 3, // dimension.upper
+		0, 0, 0, 1, // dimension.lower
+		// element 0
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 3, // int64
+		// element 1
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 5, // int64
+		// element 2
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 8, // int64
+	})
+
+	codec := Set{child: &Int64{typ: int64Type}}
+
+	var result []int64
+	useReflect, err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	require.False(t, useReflect)
+
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
 	require.Equal(t, []byte{}, r.Buf)
 
 	// force garbage collection to be sure that
@@ -82,10 +121,11 @@ func TestDecodeEmptySet(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
 
 	var result []int64
-	err := codec.setType(reflect.TypeOf(result))
+	useReflect, err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
+	require.False(t, useReflect)
 
-	codec.Decode(r, unsafe.Pointer(&result))
+	codec.DecodePtr(r, unsafe.Pointer(&result))
 	assert.Nil(t, result)
 	assert.Equal(t, []byte{}, r.Buf)
 }

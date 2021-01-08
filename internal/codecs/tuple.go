@@ -17,7 +17,6 @@
 package codecs
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"unsafe"
@@ -44,10 +43,11 @@ func popTupleCodec(
 
 // Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
-	id     types.UUID
-	fields []Codec
-	typ    reflect.Type
-	step   int
+	id         types.UUID
+	fields     []Codec
+	typ        reflect.Type
+	step       int
+	useReflect bool
 }
 
 // ID returns the descriptor id.
@@ -55,24 +55,41 @@ func (c *Tuple) ID() types.UUID {
 	return c.id
 }
 
-func (c *Tuple) setType(typ reflect.Type) error {
+func (c *Tuple) setDefaultType() {
+	for _, field := range c.fields {
+		field.setDefaultType()
+	}
+
+	c.typ = reflect.TypeOf([]interface{}{})
+	c.step = 16
+	c.useReflect = true
+}
+
+func (c *Tuple) setType(typ reflect.Type) (bool, error) {
 	if typ.Kind() != reflect.Slice {
-		return fmt.Errorf("expected Slice got %v", typ.Kind())
+		return false, fmt.Errorf("expected Slice got %v", typ.Kind())
 	}
 
 	if typ.Elem().Kind() != reflect.Interface {
-		return fmt.Errorf("expected Interface got %v", typ.Elem().Kind())
+		return false, fmt.Errorf(
+			"expected Interface got %v",
+			typ.Elem().Kind(),
+		)
 	}
+
+	c.typ = reflect.TypeOf([]interface{}{})
+	c.step = 16
 
 	for _, field := range c.fields {
+		// scalar codecs have a preset type
 		if field.Type() == nil {
-			return errors.New("tuples may only contain base scalar types")
+			c.useReflect = true
 		}
+
+		field.setDefaultType()
 	}
 
-	c.typ = typ
-	c.step = 16
-	return nil
+	return c.useReflect, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -81,7 +98,37 @@ func (c *Tuple) Type() reflect.Type {
 }
 
 // Decode a tuple.
-func (c *Tuple) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Tuple) Decode(r *buff.Reader, out reflect.Value) {
+	if c.useReflect {
+		c.DecodeReflect(r, out)
+		return
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodeReflect decodes a tuple into a reflect.Value.
+func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	r.Discard(4) // data length
+
+	n := int(int32(r.PopUint32()))
+	fmt.Println("typ:", c.typ)
+	fmt.Println("out:", out)
+	slice := reflect.MakeSlice(c.typ, 0, n)
+
+	for i := 0; i < n; i++ {
+		r.Discard(4) // reserved
+		field := c.fields[i]
+		val := reflect.New(field.Type()).Elem()
+		field.DecodeReflect(r, val)
+		slice = reflect.Append(slice, val)
+	}
+
+	out.Set(slice)
+}
+
+// DecodePtr decodes a tuple into an unsafe.Pointer.
+func (c *Tuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(4) // data length
 
 	n := int(int32(r.PopUint32()))
@@ -91,7 +138,7 @@ func (c *Tuple) Decode(r *buff.Reader, out unsafe.Pointer) {
 		r.Discard(4) // reserved
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.Decode(r, unsafe.Pointer(val.UnsafeAddr()))
+		field.DecodePtr(r, unsafe.Pointer(val.UnsafeAddr()))
 		slice = reflect.Append(slice, val)
 	}
 

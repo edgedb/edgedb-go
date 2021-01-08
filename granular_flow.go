@@ -18,7 +18,6 @@ package edgedb
 
 import (
 	"reflect"
-	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/aspect"
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -32,14 +31,14 @@ func (c *baseConn) granularFlow(
 	out reflect.Value,
 	q query,
 ) (err error) {
-	tp := out.Type()
+	typ := out.Type()
 	if !q.flat() {
-		tp = tp.Elem()
+		typ = typ.Elem()
 	}
 
 	ids, ok := c.getTypeIDs(q)
 	if !ok {
-		return c.pesimistic(r, out, q, tp)
+		return c.pesimistic(r, out, q, typ)
 	}
 
 	in, ok := c.inCodecCache.Get(ids.in)
@@ -50,32 +49,32 @@ func (c *baseConn) granularFlow(
 				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
-			return c.pesimistic(r, out, q, tp)
+			return c.pesimistic(r, out, q, typ)
 		}
 	}
 
-	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: tp})
+	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: typ})
 	if !ok {
 		if desc, ok := descCache.Get(ids.out); ok {
 			d := buff.SimpleReader(desc.([]byte))
-			cOut, err = codecs.BuildTypedCodec(d, tp)
+			cOut, err = codecs.BuildTypedCodec(d, typ)
 			if err != nil {
 				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
-			return c.pesimistic(r, out, q, tp)
+			return c.pesimistic(r, out, q, typ)
 		}
 	}
 
 	cdsc := codecPair{in: in.(codecs.Codec), out: cOut.(codecs.Codec)}
-	return c.optimistic(r, out, q, tp, cdsc)
+	return c.optimistic(r, out, q, typ, cdsc)
 }
 
 func (c *baseConn) pesimistic(
 	r *buff.Reader,
 	out reflect.Value,
 	q query,
-	tp reflect.Type,
+	typ reflect.Type,
 ) error {
 	ids, err := c.prepare(r, q)
 	if err != nil {
@@ -100,15 +99,15 @@ func (c *baseConn) pesimistic(
 		cdcs.out = codecs.JSONBytes
 	} else {
 		d := buff.SimpleReader(descs.out)
-		cdcs.out, err = codecs.BuildTypedCodec(d, tp)
+		cdcs.out, err = codecs.BuildTypedCodec(d, typ)
 		if err != nil {
 			return &unsupportedFeatureError{msg: err.Error()}
 		}
 	}
 
 	c.inCodecCache.Put(ids.in, cdcs.in)
-	c.outCodecCache.Put(codecKey{ID: ids.out, Type: tp}, cdcs.out)
-	return c.execute(r, out, q, tp, cdcs)
+	c.outCodecCache.Put(codecKey{ID: ids.out, Type: typ}, cdcs.out)
+	return c.execute(r, out, q, typ, cdcs)
 }
 
 func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
@@ -226,7 +225,7 @@ func (c *baseConn) execute(
 	r *buff.Reader,
 	out reflect.Value,
 	q query,
-	tp reflect.Type,
+	typ reflect.Type,
 	cdcs codecPair,
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
@@ -255,11 +254,11 @@ func (c *baseConn) execute(
 			r.Discard(2) // number of data elements (always 1)
 
 			if !q.flat() {
-				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(r, unsafe.Pointer(val.UnsafeAddr()))
+				val := reflect.New(typ).Elem()
+				cdcs.out.Decode(r, val)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r, unsafe.Pointer(out.UnsafeAddr()))
+				cdcs.out.Decode(r, out)
 			}
 
 			if err == errZeroResults {
@@ -303,7 +302,7 @@ func (c *baseConn) optimistic(
 	r *buff.Reader,
 	out reflect.Value,
 	q query,
-	tp reflect.Type,
+	typ reflect.Type,
 	cdcs codecPair,
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
@@ -336,11 +335,11 @@ func (c *baseConn) optimistic(
 			r.Discard(2) // number of data elements (always 1)
 
 			if !q.flat() {
-				val := reflect.New(tp).Elem()
-				cdcs.out.Decode(r, unsafe.Pointer(val.UnsafeAddr()))
+				val := reflect.New(typ).Elem()
+				cdcs.out.Decode(r, val)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r, unsafe.Pointer(out.UnsafeAddr()))
+				cdcs.out.Decode(r, out)
 			}
 
 			if err == errZeroResults {

@@ -47,8 +47,9 @@ func TestNamedTupleSetType(t *testing.T) {
 		{name: "name", codec: &Str{typ: strType}},
 		{name: "id", codec: &UUID{typ: uuidType}},
 	}}
-	err := codec.setType(reflect.TypeOf(Thing{}))
+	useReflect, err := codec.setType(reflect.TypeOf(Thing{}))
 	require.Nil(t, err)
+	require.False(t, useReflect)
 
 	assert.Equal(t, uintptr(0), codec.fields[0].offset)
 	assert.Equal(t, uintptr(2), codec.fields[1].offset)
@@ -58,7 +59,7 @@ func TestNamedTupleSetType(t *testing.T) {
 	assert.Equal(t, uintptr(32), codec.fields[5].offset)
 }
 
-func TestDecodeNamedTuple(t *testing.T) {
+func TestNamedTupleDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
 		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
@@ -83,9 +84,10 @@ func TestDecodeNamedTuple(t *testing.T) {
 		{name: "A", codec: &Int32{typ: int32Type}},
 		{name: "B", codec: &Int32{typ: int32Type}},
 	}}
-	err := codec.setType(reflect.TypeOf(result))
+	useReflect, err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(r, unsafe.Pointer(&result))
+	require.False(t, useReflect)
+	codec.DecodePtr(r, unsafe.Pointer(&result))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -95,7 +97,7 @@ func TestDecodeNamedTuple(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func BenchmarkDecodeNamedTuple(b *testing.B) {
+func BenchmarkNamedTupleDecodePtr(b *testing.B) {
 	data := []byte{
 		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
@@ -124,8 +126,78 @@ func BenchmarkDecodeNamedTuple(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
+}
+
+func TestNamedTupleDecodeReflect(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 28, // data length
+		0, 0, 0, 2, // number of elements
+		// element 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4,
+		0, 0, 0, 5,
+		// element 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4,
+		0, 0, 0, 6,
+	})
+
+	type SomeThing struct {
+		A int32
+		B int32
+	}
+
+	var result SomeThing
+
+	codec := &NamedTuple{fields: []*objectField{
+		{name: "A", codec: &Int32{typ: int32Type}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+	}}
+	useReflect, err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	require.False(t, useReflect)
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
+
+	expected := SomeThing{A: 5, B: 6}
+	assert.Equal(t, expected, result)
+}
+
+func TestNamedTupleDecodeReflectMap(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 28, // data length
+		0, 0, 0, 2, // number of elements
+		// element 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4,
+		0, 0, 0, 5,
+		// element 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4,
+		0, 0, 0, 6,
+	})
+
+	codec := &NamedTuple{fields: []*objectField{
+		{name: "A", codec: &Int32{typ: int32Type}},
+		{name: "B", codec: &Int32{typ: int32Type}},
+	}}
+	codec.setDefaultType()
+
+	var result map[string]interface{}
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
+
+	expected := map[string]interface{}{"A": int32(5), "B": int32(6)}
+	assert.Equal(t, int32(5), result["A"])
+	assert.Equal(t, expected, result)
 }
 
 func TestEncodeNamedTuple(t *testing.T) {

@@ -124,12 +124,14 @@ func (c *UUID) ID() types.UUID {
 	return c.id
 }
 
-func (c *UUID) setType(typ reflect.Type) error {
+func (c *UUID) setDefaultType() {}
+
+func (c *UUID) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -138,7 +140,21 @@ func (c *UUID) Type() reflect.Type {
 }
 
 // Decode a UUID.
-func (c *UUID) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *UUID) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a UUID.using reflection
+func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a UUID into an unsafe.Pointer.
+func (c *UUID) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	p := (*types.UUID)(out)
 	copy((*p)[:], r.Buf[4:20])
 	r.Discard(20)
@@ -165,13 +181,14 @@ type Str struct {
 func (c *Str) ID() types.UUID {
 	return c.id
 }
+func (c *Str) setDefaultType() {}
 
-func (c *Str) setType(typ reflect.Type) error {
+func (c *Str) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -180,7 +197,21 @@ func (c *Str) Type() reflect.Type {
 }
 
 // Decode a string.
-func (c *Str) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Str) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a str into a reflect.Value.
+func (c *Str) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a str into an unsafe.Pointer.
+func (c *Str) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	*(*string)(out) = r.PopString()
 }
 
@@ -205,13 +236,14 @@ type Bytes struct {
 func (c *Bytes) ID() types.UUID {
 	return c.id
 }
+func (c *Bytes) setDefaultType() {}
 
-func (c *Bytes) setType(typ reflect.Type) error {
+func (c *Bytes) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -220,7 +252,21 @@ func (c *Bytes) Type() reflect.Type {
 }
 
 // Decode []byte.
-func (c *Bytes) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Bytes) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes bytes into a reflect.Value.
+func (c *Bytes) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes bytes into an unsafe.Pointer.
+func (c *Bytes) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	n := int(r.PopUint32())
 
 	p := (*[]byte)(out)
@@ -255,13 +301,14 @@ type Int16 struct {
 func (c *Int16) ID() types.UUID {
 	return c.id
 }
+func (c *Int16) setDefaultType() {}
 
-func (c *Int16) setType(typ reflect.Type) error {
+func (c *Int16) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -270,7 +317,21 @@ func (c *Int16) Type() reflect.Type {
 }
 
 // Decode an int16.
-func (c *Int16) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Int16) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes an int16 into a reflect.Value.
+func (c *Int16) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes an int16 into an unsafe.Pointer.
+func (c *Int16) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(4) // data length
 	*(*uint16)(out) = r.PopUint16()
 }
@@ -297,13 +358,14 @@ type Int32 struct {
 func (c *Int32) ID() types.UUID {
 	return c.id
 }
+func (c *Int32) setDefaultType() {}
 
-func (c *Int32) setType(typ reflect.Type) error {
+func (c *Int32) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -312,7 +374,21 @@ func (c *Int32) Type() reflect.Type {
 }
 
 // Decode an int32.
-func (c *Int32) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Int32) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes an int32 into a reflect.Value.
+func (c *Int32) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes an int32 into an unsafe.Pointer.
+func (c *Int32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = binary.BigEndian.Uint32(r.Buf[4:8])
 	r.Buf = r.Buf[8:]
 }
@@ -339,13 +415,14 @@ type Int64 struct {
 func (c *Int64) ID() types.UUID {
 	return c.id
 }
+func (c *Int64) setDefaultType() {}
 
-func (c *Int64) setType(typ reflect.Type) error {
+func (c *Int64) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -354,7 +431,21 @@ func (c *Int64) Type() reflect.Type {
 }
 
 // Decode an int64.
-func (c *Int64) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Int64) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes an int64 into a reflect.Value.
+func (c *Int64) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes an int64 into an unsafe.Pointer.
+func (c *Int64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = binary.BigEndian.Uint64(r.Buf[4:12])
 	r.Buf = r.Buf[12:]
 }
@@ -381,13 +472,14 @@ type Float32 struct {
 func (c *Float32) ID() types.UUID {
 	return c.id
 }
+func (c *Float32) setDefaultType() {}
 
-func (c *Float32) setType(typ reflect.Type) error {
+func (c *Float32) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -396,7 +488,21 @@ func (c *Float32) Type() reflect.Type {
 }
 
 // Decode a float32.
-func (c *Float32) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Float32) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a float32 into a reflect.Value.
+func (c *Float32) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a float32 into an unsafe.Pointer.
+func (c *Float32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = binary.BigEndian.Uint32(r.Buf[4:8])
 	r.Buf = r.Buf[8:]
 }
@@ -423,13 +529,14 @@ type Float64 struct {
 func (c *Float64) ID() types.UUID {
 	return c.id
 }
+func (c *Float64) setDefaultType() {}
 
-func (c *Float64) setType(typ reflect.Type) error {
+func (c *Float64) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -438,7 +545,21 @@ func (c *Float64) Type() reflect.Type {
 }
 
 // Decode a float64.
-func (c *Float64) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Float64) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a float64 into a reflect.Value.
+func (c *Float64) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a float64 into an unsafe.Pointer.
+func (c *Float64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = binary.BigEndian.Uint64(r.Buf[4:12])
 	r.Buf = r.Buf[12:]
 }
@@ -465,13 +586,14 @@ type Bool struct {
 func (c *Bool) ID() types.UUID {
 	return c.id
 }
+func (c *Bool) setDefaultType() {}
 
-func (c *Bool) setType(typ reflect.Type) error {
+func (c *Bool) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -480,7 +602,21 @@ func (c *Bool) Type() reflect.Type {
 }
 
 // Decode a bool.
-func (c *Bool) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Bool) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a bool into a reflect.Value.
+func (c *Bool) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a bool into an unsafe.Pointer.
+func (c *Bool) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(4) // data length
 	*(*uint8)(out) = r.PopUint8()
 }
@@ -514,13 +650,14 @@ type DateTime struct {
 func (c *DateTime) ID() types.UUID {
 	return c.id
 }
+func (c *DateTime) setDefaultType() {}
 
-func (c *DateTime) setType(typ reflect.Type) error {
+func (c *DateTime) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -529,7 +666,21 @@ func (c *DateTime) Type() reflect.Type {
 }
 
 // Decode a datetime.
-func (c *DateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *DateTime) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a datetime into a reflect.Value.
+func (c *DateTime) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a datetime into an unsafe.Pointer.
+func (c *DateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(4) // data length
 	val := int64(r.PopUint64())
 	seconds := val / 1_000_000
@@ -566,12 +717,13 @@ func (c *Duration) ID() types.UUID {
 	return c.id
 }
 
-func (c *Duration) setType(typ reflect.Type) error {
+func (c *Duration) setDefaultType() {}
+func (c *Duration) setType(typ reflect.Type) (bool, error) {
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -580,7 +732,21 @@ func (c *Duration) Type() reflect.Type {
 }
 
 // Decode a duration.
-func (c *Duration) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Duration) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes a duration into a reflect.Value.
+func (c *Duration) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a duration into an unsafe.Pointer.
+func (c *Duration) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(4) // data length
 	microseconds := int64(r.PopUint64())
 	r.Discard(8) // reserved
@@ -612,12 +778,14 @@ func (c *JSON) ID() types.UUID {
 	return c.id
 }
 
-func (c *JSON) setType(typ reflect.Type) error { // nolint:unused
+func (c *JSON) setDefaultType() {} // nolint:unused
+
+func (c *JSON) setType(typ reflect.Type) (bool, error) { // nolint:unused
 	if typ != c.typ {
-		return fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -626,7 +794,21 @@ func (c *JSON) Type() reflect.Type {
 }
 
 // Decode json.
-func (c *JSON) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *JSON) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out)
+}
+
+// DecodeReflect decodes JSON into a reflect.Value.
+func (c *JSON) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes JSON into an unsafe.Pointer.
+func (c *JSON) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.PopBytes()
 }
 

@@ -55,9 +55,10 @@ func popNamedTupleCodec(
 
 // NamedTuple is an EdgeDB namedtuple type codec.
 type NamedTuple struct {
-	id     types.UUID
-	fields []*objectField
-	typ    reflect.Type
+	id         types.UUID
+	fields     []*objectField
+	typ        reflect.Type
+	useReflect bool
 }
 
 // ID returns the descriptor id.
@@ -65,27 +66,42 @@ func (c *NamedTuple) ID() types.UUID {
 	return c.id
 }
 
-func (c *NamedTuple) setType(typ reflect.Type) error {
+func (c *NamedTuple) setDefaultType() {
+	for _, field := range c.fields {
+		field.codec.setDefaultType()
+	}
+
+	c.typ = reflect.TypeOf(map[string]interface{}{})
+	c.useReflect = true
+}
+
+func (c *NamedTuple) setType(typ reflect.Type) (bool, error) {
 	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf("expected Struct got %v", typ.Kind())
+		return false, fmt.Errorf("expected Struct got %v", typ.Kind())
 	}
 
 	for i := 0; i < len(c.fields); i++ {
 		field := c.fields[i]
 
-		if f, ok := marshal.StructField(typ, field.name); ok {
-			field.offset = f.Offset
-			if err := field.codec.setType(f.Type); err != nil {
-				return err
-			}
-			continue
+		f, ok := marshal.StructField(typ, field.name)
+		if !ok {
+			return false, fmt.Errorf(
+				"%v struct is missing field %q",
+				typ, field.name,
+			)
 		}
 
-		return fmt.Errorf("%v struct is missing field %q", typ, field.name)
+		useReflect, err := field.codec.setType(f.Type)
+		if err != nil {
+			return false, err
+		}
+
+		c.useReflect = c.useReflect || useReflect
+		field.offset = f.Offset
 	}
 
 	c.typ = typ
-	return nil
+	return c.useReflect, nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -94,14 +110,71 @@ func (c *NamedTuple) Type() reflect.Type {
 }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *NamedTuple) Decode(r *buff.Reader, out reflect.Value) {
+	if c.useReflect {
+		c.DecodeReflect(r, out)
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodeReflect decodes a named tuple into a reflect.Value.
+func (c *NamedTuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	if out.Type() != c.typ {
+		panic(fmt.Sprintf(
+			"named tuple codec unexpected type: expected %v, but got %v",
+			c.typ,
+			out.Type(),
+		))
+	}
+
+	switch out.Kind() {
+	case reflect.Struct:
+		c.decodeReflectStruct(r, out)
+	case reflect.Map:
+		c.decodeReflectMap(r, out)
+	default:
+		panic(fmt.Sprintf(
+			"named tuple codec can not decode into %v",
+			out.Kind(),
+		))
+	}
+}
+
+func (c *NamedTuple) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
 	r.Discard(4) // data length
 	elmCount := int(int32(r.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
 		r.Discard(4) // reserved
 		field := c.fields[i]
-		field.codec.Decode(r, pAdd(out, field.offset))
+		field.codec.DecodeReflect(r, out.FieldByName(field.name))
+	}
+}
+
+func (c *NamedTuple) decodeReflectMap(r *buff.Reader, out reflect.Value) {
+	r.Discard(4) // data length
+	elmCount := int(int32(r.PopUint32()))
+	out.Set(reflect.MakeMapWithSize(c.typ, elmCount))
+
+	for i := 0; i < elmCount; i++ {
+		r.Discard(4) // reserved
+		field := c.fields[i]
+		val := reflect.New(field.codec.Type()).Elem()
+		field.codec.DecodeReflect(r, val)
+		out.SetMapIndex(reflect.ValueOf(field.name), val)
+	}
+}
+
+// DecodePtr decodes a named tuple into an unsafe.Pointer.
+func (c *NamedTuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+	r.Discard(4) // data length
+	elmCount := int(int32(r.PopUint32()))
+
+	for i := 0; i < elmCount; i++ {
+		r.Discard(4) // reserved
+		field := c.fields[i]
+		field.codec.DecodePtr(r, pAdd(out, field.offset))
 	}
 }
 

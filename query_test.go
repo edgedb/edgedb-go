@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -38,6 +39,27 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 		"edgedb.InvalidArgumentError: expected int16 got int",
 		err.Error(),
 	)
+}
+
+func TestDeeplyNestedTuple(t *testing.T) {
+	var result []interface{}
+	ctx := context.Background()
+	query := "SELECT ([(1, 2), (3, 4)], (5, (6, 7)))"
+	err := conn.QueryOne(ctx, query, &result)
+	require.Nil(t, err, fmt.Sprintf("%v", err))
+
+	expected := []interface{}{
+		[][]interface{}{
+			{int64(1), int64(2)},
+			{int64(3), int64(4)},
+		},
+		[]interface{}{
+			int64(5),
+			[]interface{}{int64(6), int64(7)},
+		},
+	}
+
+	assert.Equal(t, expected, result)
 }
 
 func TestNamedQueryArguments(t *testing.T) {
