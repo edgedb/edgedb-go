@@ -30,8 +30,10 @@ import (
 )
 
 type baseConn struct {
-	conn   net.Conn
-	writer *buff.Writer
+	conn net.Conn
+
+	// writeMemory is preallocated memory for payloads to be sent to the server
+	writeMemory [1024]byte
 
 	acquireReaderSignal chan struct{}
 	readerChan          chan *buff.Reader
@@ -78,8 +80,6 @@ func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
 		d   net.Dialer
 		err error
 	)
-
-	conn.writer = buff.NewWriter()
 
 	for _, addr := range cfg.addrs { // nolint:gocritic
 		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)

@@ -76,7 +76,7 @@ func TestEncodeArray(t *testing.T) {
 	}
 
 	for _, a := range arrays {
-		w := buff.NewWriter()
+		w := buff.NewWriter([]byte{})
 		w.BeginMessage(0xff)
 
 		codec := &Array{child: &Int64{}}
@@ -111,7 +111,7 @@ func TestEncodeArray(t *testing.T) {
 }
 
 func TestEncodeArrayWrongType(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	w.BeginMessage(0xff)
 
 	codec := &Array{child: &Int64{typ: reflect.TypeOf(int64(1))}}

@@ -112,18 +112,19 @@ func (c *baseConn) pesimistic(
 }
 
 func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
-	c.writer.BeginMessage(message.Prepare)
-	c.writer.PushUint16(0) // no headers
-	c.writer.PushUint8(q.fmt)
-	c.writer.PushUint8(q.expCard)
-	c.writer.PushBytes([]byte{}) // no statement name
-	c.writer.PushString(q.cmd)
-	c.writer.EndMessage()
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.Prepare)
+	w.PushUint16(0) // no headers
+	w.PushUint8(q.fmt)
+	w.PushUint8(q.expCard)
+	w.PushBytes([]byte{}) // no statement name
+	w.PushString(q.cmd)
+	w.EndMessage()
 
-	c.writer.BeginMessage(message.Sync)
-	c.writer.EndMessage()
+	w.BeginMessage(message.Sync)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return idPair{}, &clientConnectionError{err: e}
 	}
 
@@ -165,17 +166,18 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 }
 
 func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
-	c.writer.BeginMessage(message.DescribeStatement)
-	c.writer.PushUint16(0) // no headers
-	c.writer.PushUint8(aspect.DataDescription)
-	c.writer.PushUint32(0) // no statement name
-	c.writer.EndMessage()
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.DescribeStatement)
+	w.PushUint16(0) // no headers
+	w.PushUint8(aspect.DataDescription)
+	w.PushUint32(0) // no statement name
+	w.EndMessage()
 
-	c.writer.BeginMessage(message.Sync)
-	c.writer.EndMessage()
+	w.BeginMessage(message.Sync)
+	w.EndMessage()
 
 	var descs descPair
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return descPair{}, &clientConnectionError{err: e}
 	}
 
@@ -227,18 +229,19 @@ func (c *baseConn) execute(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	c.writer.BeginMessage(message.Execute)
-	c.writer.PushUint16(0)       // no headers
-	c.writer.PushBytes([]byte{}) // no statement name
-	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.Execute)
+	w.PushUint16(0)       // no headers
+	w.PushBytes([]byte{}) // no statement name
+	if e := cdcs.in.Encode(w, q.args); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
 	}
-	c.writer.EndMessage()
+	w.EndMessage()
 
-	c.writer.BeginMessage(message.Sync)
-	c.writer.EndMessage()
+	w.BeginMessage(message.Sync)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -303,22 +306,23 @@ func (c *baseConn) optimistic(
 	tp reflect.Type,
 	cdcs codecPair,
 ) error {
-	c.writer.BeginMessage(message.OptimisticExecute)
-	c.writer.PushUint16(0) // no headers
-	c.writer.PushUint8(q.fmt)
-	c.writer.PushUint8(q.expCard)
-	c.writer.PushString(q.cmd)
-	c.writer.PushUUID(cdcs.in.ID())
-	c.writer.PushUUID(cdcs.out.ID())
-	if e := cdcs.in.Encode(c.writer, q.args); e != nil {
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.OptimisticExecute)
+	w.PushUint16(0) // no headers
+	w.PushUint8(q.fmt)
+	w.PushUint8(q.expCard)
+	w.PushString(q.cmd)
+	w.PushUUID(cdcs.in.ID())
+	w.PushUUID(cdcs.out.ID())
+	if e := cdcs.in.Encode(w, q.args); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
 	}
-	c.writer.EndMessage()
+	w.EndMessage()
 
-	c.writer.BeginMessage(message.Sync)
-	c.writer.EndMessage()
+	w.BeginMessage(message.Sync)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 

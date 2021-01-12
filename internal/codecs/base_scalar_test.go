@@ -59,7 +59,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 }
 
 func TestEncodeUUID(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&UUID{}).Encode(w, types.UUID{
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	})
@@ -77,7 +77,7 @@ func TestEncodeUUID(t *testing.T) {
 }
 
 func BenchmarkEncodeUUID(b *testing.B) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
 	codec := &UUID{}
 
@@ -123,7 +123,7 @@ func BenchmarkDecodeString(b *testing.B) {
 }
 
 func TestEncodeString(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Str{}).Encode(w, "hello")
 	require.Nil(t, err)
 
@@ -175,7 +175,7 @@ func BenchmarkDecodeBytes(b *testing.B) {
 }
 
 func TestEncodeBytes(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Bytes{}).Encode(w, []byte{104, 101, 108, 108, 111})
 	require.Nil(t, err)
 
@@ -221,7 +221,7 @@ func BenchmarkDecodeInt16(b *testing.B) {
 }
 
 func TestEncodeInt16(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Int16{}).Encode(w, int16(7))
 	require.Nil(t, err)
 
@@ -267,7 +267,7 @@ func BenchmarkDecodeInt32(b *testing.B) {
 }
 
 func TestEncodeInt32(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Int32{}).Encode(w, int32(7))
 	require.Nil(t, err)
 
@@ -313,7 +313,7 @@ func BenchmarkDecodeInt64(b *testing.B) {
 }
 
 func TestEncodeInt64(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Int64{}).Encode(w, int64(27))
 	require.Nil(t, err)
 
@@ -359,7 +359,7 @@ func BenchmarkDecodeFloat32(b *testing.B) {
 }
 
 func TestEncodeFloat32(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Float32{}).Encode(w, float32(-32))
 	require.Nil(t, err)
 
@@ -405,7 +405,7 @@ func BenchmarkDecodeFloat64(b *testing.B) {
 }
 
 func TestEncodeFloat64(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Float64{}).Encode(w, float64(-64))
 	require.Nil(t, err)
 
@@ -451,7 +451,7 @@ func BenchmarkDecodeBool(b *testing.B) {
 }
 
 func TestEncodeBool(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Bool{}).Encode(w, true)
 	require.Nil(t, err)
 
@@ -480,7 +480,7 @@ func TestDecodeDateTime(t *testing.T) {
 }
 
 func TestEncodeDateTime(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&DateTime{}).Encode(w, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC))
 	require.Nil(t, err)
 
@@ -510,7 +510,7 @@ func TestDecodeDuration(t *testing.T) {
 }
 
 func TestEncodeDuration(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	err := (&Duration{}).Encode(w, time.Duration(1_000_000_000))
 	require.Nil(t, err)
 
@@ -548,7 +548,7 @@ func TestDecodeJSON(t *testing.T) {
 }
 
 func TestEncodeJSON(t *testing.T) {
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	(&JSON{}).Encode(w, map[string]string{"hello": "world"})
 
 	conn := &writeFixture{}

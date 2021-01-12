@@ -25,7 +25,7 @@ import (
 )
 
 func TestPushUint8(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushUint8(0xff)
 	assert.Equal(t, []byte{0xff}, w.buf)
 }
@@ -40,7 +40,7 @@ func BenchmarkPushUint8(b *testing.B) {
 }
 
 func TestPushUint16(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushUint16(0xffff)
 	assert.Equal(t, []byte{0xff, 0xff}, w.buf)
 }
@@ -55,7 +55,7 @@ func BenchmarkPushUint16(b *testing.B) {
 }
 
 func TestPushUint32(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushUint32(0xffffffff)
 	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff}, w.buf)
 }
@@ -70,7 +70,7 @@ func BenchmarkPushUint32(b *testing.B) {
 }
 
 func TestPushUint64(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushUint64(0xffffffffffffffff)
 
 	expected := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
@@ -87,7 +87,7 @@ func BenchmarkPushUint64(b *testing.B) {
 }
 
 func TestPushUUID(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushUUID(types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})
 
 	expected := []byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
@@ -95,7 +95,7 @@ func TestPushUUID(t *testing.T) {
 }
 
 func BenchmarkPushUUID(b *testing.B) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
 	b.ResetTimer()
 
@@ -106,14 +106,14 @@ func BenchmarkPushUUID(b *testing.B) {
 }
 
 func TestPushBytes(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushBytes([]byte{7, 5})
 
 	assert.Equal(t, []byte{0, 0, 0, 2, 7, 5}, w.buf)
 }
 
 func BenchmarkPushBytes(b *testing.B) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	bytes := []byte{1, 2, 3, 4}
 	b.ResetTimer()
 
@@ -124,7 +124,7 @@ func BenchmarkPushBytes(b *testing.B) {
 }
 
 func TestPushString(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushString("hello")
 
 	expected := []byte{0, 0, 0, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f}
@@ -141,7 +141,7 @@ func BenchmarkPushString(b *testing.B) {
 }
 
 func TestBeginBytes(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 
 	msg := "cannot begin bytes: no current message"
 	assert.PanicsWithValue(t, msg, func() { w.BeginBytes() })
@@ -164,7 +164,7 @@ func BenchmarkBeginBytes(b *testing.B) {
 }
 
 func TestEndBytes(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	noBytesMsg := "cannot end bytes: no bytes in progress"
 	assert.PanicsWithValue(t, noBytesMsg, func() { w.EndBytes() })
 
@@ -192,7 +192,7 @@ func BenchmarkBeginAndEndBytes(b *testing.B) {
 }
 
 func TestBeginMessage(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.BeginMessage(message.Sync)
 
 	msg := "cannot begin message: the previous message is not finished"
@@ -211,7 +211,7 @@ func BenchmarkBeginAndEndMessage(b *testing.B) {
 }
 
 func TestEndMessage(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	noMsgMsg := "cannot end message: no current message"
 	assert.PanicsWithValue(t, noMsgMsg, func() { w.EndMessage() })
 
@@ -230,7 +230,7 @@ func TestEndMessage(t *testing.T) {
 }
 
 func TestOnlySendsWhatWasPushed(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushString("hello")
 
 	f := &writerFixture{}
@@ -241,7 +241,7 @@ func TestOnlySendsWhatWasPushed(t *testing.T) {
 }
 
 func TestSendsAllChuncks(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.PushUint32(1)
 	w.PushUint32(2)
 	w.PushUint32(3)
@@ -259,7 +259,7 @@ func TestSendsAllChuncks(t *testing.T) {
 }
 
 func TestSendWithoutEndingMessage(t *testing.T) {
-	w := NewWriter()
+	w := NewWriter([]byte{})
 	w.BeginMessage(message.Sync)
 	assert.Panics(t, func() { _ = w.Send(&writerFixture{}) })
 }

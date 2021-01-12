@@ -32,9 +32,7 @@ func newBenchmarkMessage(n int) []byte {
 }
 
 func newBenchmarkWriter(size int) *Writer {
-	w := NewWriter()
-	w.buf = make([]byte, size)[:0]
-	return w
+	return NewWriter(make([]byte, size))
 }
 
 type writerFixture struct {

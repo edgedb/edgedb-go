@@ -31,18 +31,19 @@ const (
 )
 
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
-	c.writer.BeginMessage(message.ClientHandshake)
-	c.writer.PushUint16(0) // major version
-	c.writer.PushUint16(8) // minor version
-	c.writer.PushUint16(2) // number of parameters
-	c.writer.PushString("database")
-	c.writer.PushString(cfg.database)
-	c.writer.PushString("user")
-	c.writer.PushString(cfg.user)
-	c.writer.PushUint16(0) // no extensions
-	c.writer.EndMessage()
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.ClientHandshake)
+	w.PushUint16(0) // major version
+	w.PushUint16(8) // minor version
+	w.PushUint16(2) // number of parameters
+	w.PushString("database")
+	w.PushString(cfg.database)
+	w.PushString("user")
+	w.PushString(cfg.user)
+	w.PushUint16(0) // no extensions
+	w.EndMessage()
 
-	if err := c.writer.Send(c.conn); err != nil {
+	if err := w.Send(c.conn); err != nil {
 		return &clientConnectionError{err: err}
 	}
 
@@ -123,12 +124,13 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 		return &authenticationError{msg: err.Error()}
 	}
 
-	c.writer.BeginMessage(message.AuthenticationSASLInitialResponse)
-	c.writer.PushString("SCRAM-SHA-256")
-	c.writer.PushString(scramMsg)
-	c.writer.EndMessage()
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.AuthenticationSASLInitialResponse)
+	w.PushString("SCRAM-SHA-256")
+	w.PushString(scramMsg)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -172,11 +174,12 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 		return err
 	}
 
-	c.writer.BeginMessage(message.AuthenticationSASLResponse)
-	c.writer.PushString(scramMsg)
-	c.writer.EndMessage()
+	w = buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.AuthenticationSASLResponse)
+	w.PushString(scramMsg)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -227,10 +230,11 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 }
 
 func (c *baseConn) terminate() error {
-	c.writer.BeginMessage(message.Terminate)
-	c.writer.EndMessage()
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.Terminate)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
