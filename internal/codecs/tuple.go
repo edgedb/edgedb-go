@@ -43,10 +43,12 @@ func popTupleCodec(
 
 // Tuple is an EdgeDB tuple type codec.
 type Tuple struct {
-	id         types.UUID
-	fields     []Codec
-	typ        reflect.Type
-	step       int
+	id     types.UUID
+	fields []Codec
+	typ    reflect.Type
+
+	// useReflect indicates weather reflection or a known memory layout
+	// should be used to deserialize data.
 	useReflect bool
 }
 
@@ -61,7 +63,6 @@ func (c *Tuple) setDefaultType() {
 	}
 
 	c.typ = reflect.TypeOf([]interface{}{})
-	c.step = 16
 	c.useReflect = true
 }
 
@@ -78,7 +79,6 @@ func (c *Tuple) setType(typ reflect.Type) (bool, error) {
 	}
 
 	c.typ = reflect.TypeOf([]interface{}{})
-	c.step = 16
 
 	for _, field := range c.fields {
 		// scalar codecs have a preset type

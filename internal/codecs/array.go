@@ -42,10 +42,15 @@ func popArrayCodec(
 
 // Array is an EdgeDB array type codec.
 type Array struct {
-	id         types.UUID
-	child      Codec
-	typ        reflect.Type
-	step       int
+	id    types.UUID
+	child Codec
+	typ   reflect.Type
+
+	// step is the element width in bytes for a go array of type `Array.typ`.
+	step int
+
+	// useReflect indicates weather reflection or a known memory layout
+	// should be used to deserialize data.
 	useReflect bool
 }
 

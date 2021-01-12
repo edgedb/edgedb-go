@@ -118,6 +118,7 @@ func pAdd(p unsafe.Pointer, i uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(p) + i)
 }
 
+// calcStep returns the element width in bytes for a go array of `typ`.
 func calcStep(typ reflect.Type) int {
 	step := int(typ.Size())
 	a := typ.Align()

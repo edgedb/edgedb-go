@@ -55,9 +55,12 @@ func popNamedTupleCodec(
 
 // NamedTuple is an EdgeDB namedtuple type codec.
 type NamedTuple struct {
-	id         types.UUID
-	fields     []*objectField
-	typ        reflect.Type
+	id     types.UUID
+	fields []*objectField
+	typ    reflect.Type
+
+	// useReflect indicates weather reflection or a known memory layout
+	// should be used to deserialize data.
 	useReflect bool
 }
 

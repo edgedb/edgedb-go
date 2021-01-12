@@ -36,8 +36,6 @@ func TestTupleSetType(t *testing.T) {
 	useReflect, err := codec.setType(reflect.TypeOf([]interface{}{}))
 	require.Nil(t, err)
 	require.False(t, useReflect)
-
-	assert.Equal(t, 16, codec.step)
 }
 
 func TestTupleDecodePtr(t *testing.T) {

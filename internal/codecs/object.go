@@ -64,9 +64,12 @@ type objectField struct {
 
 // Object is an EdgeDB object type codec.
 type Object struct {
-	id         types.UUID
-	fields     []*objectField
-	typ        reflect.Type
+	id     types.UUID
+	fields []*objectField
+	typ    reflect.Type
+
+	// useReflect indicates weather reflection or a known memory layout
+	// should be used to deserialize data.
 	useReflect bool
 }
 
