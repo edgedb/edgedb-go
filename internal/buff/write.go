@@ -25,18 +25,14 @@ import (
 
 // Writer is a write buffer.
 type Writer struct {
-	alocatedMemory [1024]byte
-	buf            []byte
-
+	buf     []byte
 	msgPos  int
 	bytePos []int
 }
 
 // NewWriter returns a new Writer.
-func NewWriter() *Writer {
-	w := &Writer{}
-	w.buf = w.alocatedMemory[:0]
-	return w
+func NewWriter(alocatedMemory []byte) *Writer {
+	return &Writer{buf: alocatedMemory[:0]}
 }
 
 // Send writes buffered data to conn.
@@ -58,7 +54,6 @@ func (w *Writer) Send(conn io.Writer) (err error) {
 		w.buf = w.buf[n:]
 	}
 
-	w.buf = w.alocatedMemory[:0]
 	return nil
 }
 

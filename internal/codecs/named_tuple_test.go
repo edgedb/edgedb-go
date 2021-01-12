@@ -134,7 +134,7 @@ func TestEncodeNamedTuple(t *testing.T) {
 		{name: "b", codec: &Int32{}},
 	}}
 
-	w := buff.NewWriter()
+	w := buff.NewWriter([]byte{})
 	w.BeginMessage(message.Sync)
 	err := codec.Encode(w, []interface{}{map[string]interface{}{
 		"a": int32(5),

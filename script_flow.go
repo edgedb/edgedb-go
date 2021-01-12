@@ -22,12 +22,13 @@ import (
 )
 
 func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
-	c.writer.BeginMessage(message.ExecuteScript)
-	c.writer.PushUint16(0) // no headers
-	c.writer.PushString(query)
-	c.writer.EndMessage()
+	w := buff.NewWriter(c.writeMemory[:0])
+	w.BeginMessage(message.ExecuteScript)
+	w.PushUint16(0) // no headers
+	w.PushString(query)
+	w.EndMessage()
 
-	if e := c.writer.Send(c.conn); e != nil {
+	if e := w.Send(c.conn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 

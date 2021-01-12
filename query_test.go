@@ -27,6 +27,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestArgumentTypeMissmatch(t *testing.T) {
+	var res []interface{}
+	ctx := context.Background()
+	err := conn.QueryOne(ctx, "SELECT (<int16>$0 + <int16>$1,)", &res, 1, 1111)
+
+	require.NotNil(t, err)
+	assert.Equal(
+		t,
+		"edgedb.InvalidArgumentError: expected int16 got int",
+		err.Error(),
+	)
+}
+
 func TestNamedQueryArguments(t *testing.T) {
 	ctx := context.Background()
 	var result [][]int64
