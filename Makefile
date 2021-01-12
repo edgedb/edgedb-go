@@ -14,7 +14,7 @@ format:
 
 errors:
 	type edb || (\
-		echo "the edb command must be in your path " \
+		echo "the edb command must be in your path " && \
 		echo "see https://www.edgedb.com/docs/internals/dev/#building-locally" && \
 		exit 1 \
 		)
