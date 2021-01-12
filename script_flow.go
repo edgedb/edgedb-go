@@ -28,7 +28,7 @@ func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return e
+		return &clientConnectionError{err: e}
 	}
 
 	var err error
@@ -53,6 +53,10 @@ func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
 				return e
 			}
 		}
+	}
+
+	if r.Err != nil {
+		return &clientConnectionError{err: r.Err}
 	}
 
 	return err

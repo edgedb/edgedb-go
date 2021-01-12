@@ -18,60 +18,42 @@ package edgedb
 
 import (
 	"errors"
-	"fmt"
-	"log"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 )
 
-var (
-	// Error is wrapped by all edgedb errors.
-	Error error = errors.New("")
+var errZeroResults error = &noDataError{msg: "zero results"}
 
-	// ErrReleasedTwice is returned if a PoolConn is released more than once.
-	ErrReleasedTwice = fmt.Errorf(
-		"connection released more than once%w", Error,
-	)
+// Error is wrapped by all errors.
+type Error interface {
+	Error() string
+	isEdgeDBError()
+}
 
-	// ErrZeroResults is returned when a query has no results.
-	ErrZeroResults = fmt.Errorf("zero results%w", Error)
-
-	// ErrPoolClosed is returned by operations on closed pools.
-	ErrPoolClosed error = fmt.Errorf("pool closed%w", Error)
-
-	// ErrContextExpired is returned when an expired context is used.
-	ErrContextExpired error = fmt.Errorf("context expired%w", Error)
-
-	// ErrBadConfig is wrapped
-	// when a function returning Options encounters an error.
-	ErrBadConfig error = fmt.Errorf("%w", Error)
-
-	// ErrClientFault ...
-	ErrClientFault error = fmt.Errorf("%w", Error)
-
-	// ErrInterfaceViolation ...
-	ErrInterfaceViolation error = fmt.Errorf("%w", ErrClientFault)
-)
-
-func decodeError(r *buff.Reader) error {
-	r.Discard(5) // skip severity & code
-	err := fmt.Errorf("%v%w", r.PopString(), Error)
-
-	n := int(r.PopUint16())
-	headers := make(map[uint16]string, n)
-
-	for i := 0; i < n; i++ {
-		headers[r.PopUint16()] = r.PopString()
+func firstError(a, b error) error {
+	if a != nil {
+		return a
 	}
 
-	// todo do something with headers
-	log.Println(headers)
+	return b
+}
+
+func decodeError(r *buff.Reader) error {
+	r.Discard(1) // severity
+	err := errorFromCode(r.PopUint32(), r.PopString())
+	n := int(r.PopUint16())
+
+	for i := 0; i < n; i++ {
+		r.PopUint16() // key
+		r.PopString() // value
+	}
+
 	return err
 }
 
 type wrappedManyError struct {
-	msg     string
-	wrapped []error
+	msg  string
+	errs []error
 }
 
 func (e *wrappedManyError) Error() string {
@@ -79,8 +61,18 @@ func (e *wrappedManyError) Error() string {
 }
 
 func (e *wrappedManyError) Is(target error) bool {
-	for _, err := range e.wrapped {
+	for _, err := range e.errs {
 		if errors.Is(err, target) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *wrappedManyError) As(target interface{}) bool {
+	for _, err := range e.errs {
+		if errors.As(err, target) {
 			return true
 		}
 	}
@@ -92,20 +84,20 @@ func wrapAll(errs ...error) error {
 	err := &wrappedManyError{}
 	for _, e := range errs {
 		if e != nil {
-			err.wrapped = append(err.wrapped, e)
+			err.errs = append(err.errs, e)
 		}
 	}
 
-	if len(err.wrapped) == 0 {
+	if len(err.errs) == 0 {
 		return nil
 	}
 
-	if len(err.wrapped) == 1 {
-		return err.wrapped[0]
+	if len(err.errs) == 1 {
+		return err.errs[0]
 	}
 
-	err.msg = err.wrapped[0].Error()
-	for _, e := range err.wrapped[1:] {
+	err.msg = err.errs[0].Error()
+	for _, e := range err.errs[1:] {
 		err.msg += "; " + e.Error()
 	}
 

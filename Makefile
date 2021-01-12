@@ -11,3 +11,13 @@ bench:
 
 format:
 	gofmt -s -w .
+
+errors:
+	type edb || (\
+		echo "the edb command must be in your path " \
+		echo "see https://www.edgedb.com/docs/internals/dev/#building-locally" && \
+		exit 1 \
+		)
+	edb gen-errors-json --client | \
+		go run internal/cmd/generr/main.go -file=codes > \
+		generatederrors.go

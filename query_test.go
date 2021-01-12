@@ -105,7 +105,7 @@ func TestQueryOneJSONZeroResults(t *testing.T) {
 	var result []byte
 	err := conn.QueryOneJSON(ctx, "SELECT <int64>{}", &result)
 
-	require.Equal(t, err, ErrZeroResults)
+	require.Equal(t, err, errZeroResults)
 	assert.Equal(t, []byte(nil), result)
 }
 
@@ -123,14 +123,20 @@ func TestQueryOneZeroResults(t *testing.T) {
 	var result int64
 	err := conn.QueryOne(ctx, "SELECT <int64>{}", &result)
 
-	assert.Equal(t, ErrZeroResults, err)
+	assert.Equal(t, errZeroResults, err)
 }
 
 func TestError(t *testing.T) {
 	ctx := context.Background()
 	err := conn.Execute(ctx, "malformed query;")
-	assert.EqualError(t, err, "Unexpected 'malformed'")
-	assert.True(t, errors.Is(err, Error))
+	assert.EqualError(
+		t,
+		err,
+		"edgedb.EdgeQLSyntaxError: Unexpected 'malformed'",
+	)
+
+	var expected Error
+	assert.True(t, errors.As(err, &expected))
 }
 
 func TestQueryTimesOut(t *testing.T) {

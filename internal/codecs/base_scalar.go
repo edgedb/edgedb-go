@@ -145,9 +145,14 @@ func (c *UUID) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a UUID.
-func (c *UUID) Encode(w *buff.Writer, val interface{}) {
-	tmp := val.(types.UUID)
+func (c *UUID) Encode(w *buff.Writer, val interface{}) error {
+	tmp, ok := val.(types.UUID)
+	if !ok {
+		return fmt.Errorf("expected types.UUID got %T", val)
+	}
+
 	w.PushBytes(tmp[:])
+	return nil
 }
 
 // Str is an EdgeDB string type codec.
@@ -180,8 +185,14 @@ func (c *Str) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a string.
-func (c *Str) Encode(w *buff.Writer, val interface{}) {
-	w.PushString(val.(string))
+func (c *Str) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("expected types.UUID got %T", val)
+	}
+
+	w.PushString(in)
+	return nil
 }
 
 // Bytes is an EdgeDB bytes type codec.
@@ -224,8 +235,14 @@ func (c *Bytes) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode []byte.
-func (c *Bytes) Encode(w *buff.Writer, val interface{}) {
-	w.PushBytes(val.([]byte))
+func (c *Bytes) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.([]byte)
+	if !ok {
+		return fmt.Errorf("expected []byte got %T", val)
+	}
+
+	w.PushBytes(in)
+	return nil
 }
 
 // Int16 is an EdgeDB int64 type codec.
@@ -259,9 +276,15 @@ func (c *Int16) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an int16.
-func (c *Int16) Encode(w *buff.Writer, val interface{}) {
+func (c *Int16) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(int16)
+	if !ok {
+		return fmt.Errorf("expected int16 got %T", val)
+	}
+
 	w.PushUint32(2) // data length
-	w.PushUint16(uint16(val.(int16)))
+	w.PushUint16(uint16(in))
+	return nil
 }
 
 // Int32 is an EdgeDB int32 type codec.
@@ -295,9 +318,15 @@ func (c *Int32) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an int32.
-func (c *Int32) Encode(w *buff.Writer, val interface{}) {
+func (c *Int32) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(int32)
+	if !ok {
+		return fmt.Errorf("expected int32 got %T", val)
+	}
+
 	w.PushUint32(4) // data length
-	w.PushUint32(uint32(val.(int32)))
+	w.PushUint32(uint32(in))
+	return nil
 }
 
 // Int64 is an EdgeDB int64 typep codec.
@@ -331,9 +360,15 @@ func (c *Int64) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an int64.
-func (c *Int64) Encode(w *buff.Writer, val interface{}) {
+func (c *Int64) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(int64)
+	if !ok {
+		return fmt.Errorf("expected int64 got %T", val)
+	}
+
 	w.PushUint32(8) // data length
-	w.PushUint64(uint64(val.(int64)))
+	w.PushUint64(uint64(in))
+	return nil
 }
 
 // Float32 is an EdgeDB float32 type codec.
@@ -367,9 +402,15 @@ func (c *Float32) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a float32.
-func (c *Float32) Encode(w *buff.Writer, val interface{}) {
+func (c *Float32) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(float32)
+	if !ok {
+		return fmt.Errorf("expected float32 got %T", val)
+	}
+
 	w.PushUint32(4)
-	w.PushUint32(math.Float32bits(val.(float32)))
+	w.PushUint32(math.Float32bits(in))
+	return nil
 }
 
 // Float64 is an EdgeDB float64 type codec.
@@ -403,9 +444,15 @@ func (c *Float64) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a float64.
-func (c *Float64) Encode(w *buff.Writer, val interface{}) {
+func (c *Float64) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(float64)
+	if !ok {
+		return fmt.Errorf("expected float64 got %T", val)
+	}
+
 	w.PushUint32(8)
-	w.PushUint64(math.Float64bits(val.(float64)))
+	w.PushUint64(math.Float64bits(in))
+	return nil
 }
 
 // Bool is an EdgeDB bool type codec.
@@ -439,16 +486,22 @@ func (c *Bool) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a bool.
-func (c *Bool) Encode(w *buff.Writer, val interface{}) {
+func (c *Bool) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.(bool)
+	if !ok {
+		return fmt.Errorf("expected bool got %T", val)
+	}
+
 	w.PushUint32(1) // data length
 
 	// convert bool to uint8
 	var out uint8 = 0
-	if val.(bool) {
+	if in {
 		out = 1
 	}
 
 	w.PushUint8(out)
+	return nil
 }
 
 // DateTime is an EdgeDB datetime type codec.
@@ -488,13 +541,18 @@ func (c *DateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a datetime.
-func (c *DateTime) Encode(w *buff.Writer, val interface{}) {
-	date := val.(time.Time)
+func (c *DateTime) Encode(w *buff.Writer, val interface{}) error {
+	date, ok := val.(time.Time)
+	if !ok {
+		return fmt.Errorf("expected time.Time got %T", val)
+	}
+
 	seconds := date.Unix() - 946_684_800
 	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
 	microseconds := seconds*1_000_000 + nanoseconds/1_000
 	w.PushUint32(8) // data length
 	w.PushUint64(uint64(microseconds))
+	return nil
 }
 
 // Duration is an EdgeDB duration codec.
@@ -530,12 +588,17 @@ func (c *Duration) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a duration.
-func (c *Duration) Encode(w *buff.Writer, val interface{}) {
-	duration := val.(time.Duration)
+func (c *Duration) Encode(w *buff.Writer, val interface{}) error {
+	duration, ok := val.(time.Duration)
+	if !ok {
+		return fmt.Errorf("expected time.Duration got %T", val)
+	}
+
 	w.PushUint32(16) // data length
 	w.PushUint64(uint64(duration / 1_000))
 	w.PushUint32(0) // reserved
 	w.PushUint32(0) // reserved
+	return nil
 }
 
 // JSON is an EdgeDB json type codec.
@@ -549,7 +612,7 @@ func (c *JSON) ID() types.UUID {
 	return c.id
 }
 
-func (c *JSON) setType(typ reflect.Type) error {
+func (c *JSON) setType(typ reflect.Type) error { // nolint:unused
 	if typ != c.typ {
 		return fmt.Errorf("expected %v got %v", c.typ, typ)
 	}
@@ -571,6 +634,7 @@ func (c *JSON) Decode(r *buff.Reader, out unsafe.Pointer) {
 func (c *JSON) Encode(w *buff.Writer, val interface{}) {
 	bts, err := json.Marshal(val)
 	if err != nil {
+		// todo err: Encode should return error?
 		panic(err)
 	}
 

@@ -136,10 +136,11 @@ func TestEncodeNamedTuple(t *testing.T) {
 
 	w := buff.NewWriter()
 	w.BeginMessage(message.Sync)
-	codec.Encode(w, []interface{}{map[string]interface{}{
+	err := codec.Encode(w, []interface{}{map[string]interface{}{
 		"a": int32(5),
 		"b": int32(6),
 	}})
+	require.Nil(t, err)
 	w.EndMessage()
 
 	conn := &writeFixture{}

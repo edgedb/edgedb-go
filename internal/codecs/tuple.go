@@ -101,17 +101,26 @@ func (c *Tuple) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a tuple.
-func (c *Tuple) Encode(w *buff.Writer, val interface{}) {
+func (c *Tuple) Encode(w *buff.Writer, val interface{}) error {
+	in, ok := val.([]interface{})
+	if !ok {
+		return fmt.Errorf("expected []interface{} got %T", val)
+	}
+
 	w.BeginBytes()
 
 	elmCount := len(c.fields)
 	w.PushUint32(uint32(elmCount))
 
-	in := val.([]interface{})
+	var err error
 	for i := 0; i < elmCount; i++ {
 		w.PushUint32(0) // reserved
-		c.fields[i].Encode(w, in[i])
+		err = c.fields[i].Encode(w, in[i])
+		if err != nil {
+			return err
+		}
 	}
 
 	w.EndBytes()
+	return nil
 }

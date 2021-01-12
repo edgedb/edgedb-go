@@ -60,7 +60,8 @@ func TestClosePoolConcurently(t *testing.T) {
 	go func() { errs <- pool.Close() }()
 
 	assert.Nil(t, <-errs)
-	assert.Equal(t, ErrPoolClosed, <-errs)
+	var closedErr InterfaceError
+	assert.True(t, errors.As(<-errs, &closedErr))
 }
 
 func TestConnectPoolMinConnGteZero(t *testing.T) {
@@ -69,8 +70,14 @@ func TestConnectPoolMinConnGteZero(t *testing.T) {
 
 	o := Options{MinConns: 0, MaxConns: 10}
 	_, err := Connect(ctx, o)
-	assert.EqualError(t, err, "MinConns may not be less than 1, got: 0")
-	assert.True(t, errors.Is(err, ErrBadConfig))
+	assert.EqualError(
+		t,
+		err,
+		"edgedb.ConfigurationError: MinConns may not be less than 1, got: 0",
+	)
+
+	var expected ConfigurationError
+	assert.True(t, errors.As(err, &expected))
 }
 
 func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
@@ -79,8 +86,15 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 
 	o := Options{MinConns: 5, MaxConns: 1}
 	_, err := Connect(ctx, o)
-	assert.EqualError(t, err, "MaxConns may not be less than MinConns")
-	assert.True(t, errors.Is(err, ErrBadConfig))
+	assert.EqualError(
+		t,
+		err,
+		"edgedb.ConfigurationError: "+
+			"MaxConns (1) may not be less than MinConns (5)",
+	)
+
+	var expected ConfigurationError
+	assert.True(t, errors.As(err, &expected))
 }
 
 func TestAcquireFromClosedPool(t *testing.T) {
@@ -91,7 +105,8 @@ func TestAcquireFromClosedPool(t *testing.T) {
 	}
 
 	conn, err := pool.Acquire(context.TODO())
-	require.Equal(t, err, ErrPoolClosed)
+	var closedErr InterfaceError
+	require.True(t, errors.As(err, &closedErr))
 	assert.Nil(t, conn)
 }
 
@@ -162,7 +177,7 @@ func TestPoolAcquireExpiredContext(t *testing.T) {
 	cancel()
 
 	conn, err := pool.Acquire(ctx)
-	assert.Equal(t, err, ErrContextExpired)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 	assert.Nil(t, conn)
 }
 
@@ -172,7 +187,7 @@ func TestPoolAcquireThenContextExpires(t *testing.T) {
 	deadline := time.Now().Add(10 * time.Millisecond)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	conn, err := pool.Acquire(ctx)
-	assert.Equal(t, err, ErrContextExpired)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 	assert.Nil(t, conn)
 	cancel()
 }
@@ -189,5 +204,6 @@ func TestClosePool(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = pool.Close()
-	assert.Equal(t, err, ErrPoolClosed)
+	var closedErr InterfaceError
+	assert.True(t, errors.As(err, &closedErr))
 }

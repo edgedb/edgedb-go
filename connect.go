@@ -43,7 +43,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	c.writer.EndMessage()
 
 	if err := c.writer.Send(c.conn); err != nil {
-		return err
+		return &clientConnectionError{err: err}
 	}
 
 	var (
@@ -64,10 +64,10 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			minor := r.PopUint16()
 
 			if major != protocolVersionMajor || minor != protocolVersionMinor {
-				e := fmt.Errorf(
-					"unsupported protocol version: %v.%v", major, minor,
-				)
-				return wrapAll(err, e, c.conn.Close())
+				_ = c.conn.Close()
+				msg := fmt.Sprintf(
+					"unsupported protocol version: %v.%v", major, minor)
+				return &unsupportedProtocolVersionError{msg: msg}
 			}
 		case message.ServerKeyData:
 			r.DiscardMessage() // key data
@@ -89,23 +89,23 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			}
 
 			if e := c.authenticate(r, cfg); e != nil {
-				return wrapAll(err, e)
+				return e
 			}
 
 			once.Do(done)
 		case message.ErrorResponse:
-			err = decodeError(r)
+			err = wrapAll(err, decodeError(r))
 			once.Do(done)
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
-				return wrapAll(err, e)
+				return e
 			}
 		}
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return &clientConnectionError{err: r.Err}
 	}
 
 	return err
@@ -114,13 +114,13 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	client, err := scram.SHA256.NewClient(cfg.user, cfg.password, "")
 	if err != nil {
-		return err
+		return &authenticationError{msg: err.Error()}
 	}
 
 	conv := client.NewConversation()
 	scramMsg, err := conv.Step("")
 	if err != nil {
-		return err
+		return &authenticationError{msg: err.Error()}
 	}
 
 	c.writer.BeginMessage(message.AuthenticationSASLInitialResponse)
@@ -129,7 +129,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return e
+		return &clientConnectionError{err: e}
 	}
 
 	done := buff.NewSignal()
@@ -140,21 +140,21 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			authStatus := r.PopUint32()
 			if authStatus != 0xb {
 				// the connection will not be usable after this x_x
-				return fmt.Errorf(
+				return &authenticationError{msg: fmt.Sprintf(
 					"unexpected authentication status: 0x%x", authStatus,
-				)
+				)}
 			}
 
 			scramRcv := r.PopString()
 			scramMsg, err = conv.Step(scramRcv)
 			if err != nil {
 				// the connection will not be usable after this x_x
-				return err
+				return &authenticationError{msg: err.Error()}
 			}
 
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r))
+			err = decodeError(r)
 			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
@@ -165,7 +165,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return &clientConnectionError{err: r.Err}
 	}
 
 	if err != nil {
@@ -177,7 +177,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return e
+		return &clientConnectionError{err: e}
 	}
 
 	done = buff.NewSignal()
@@ -190,16 +190,16 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			case 0:
 			case 0xc:
 				scramRcv := r.PopString()
-				_, err = conv.Step(scramRcv)
-				if err != nil {
+				_, e := conv.Step(scramRcv)
+				if e != nil {
 					// the connection will not be usable after this x_x
-					return err
+					return &authenticationError{msg: e.Error()}
 				}
 			default:
 				// the connection will not be usable after this x_x
-				return fmt.Errorf(
+				return &authenticationError{msg: fmt.Sprintf(
 					"unexpected authentication status: 0x%x", authStatus,
-				)
+				)}
 			}
 		case message.ServerKeyData:
 			r.DiscardMessage() // key data
@@ -209,7 +209,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			r.Discard(3)
 			done.Signal()
 		case message.ErrorResponse:
-			err = decodeError(r)
+			err = wrapAll(decodeError(r))
 			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
@@ -220,7 +220,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return &clientConnectionError{err: r.Err}
 	}
 
 	return err
@@ -231,7 +231,7 @@ func (c *baseConn) terminate() error {
 	c.writer.EndMessage()
 
 	if e := c.writer.Send(c.conn); e != nil {
-		return e
+		return &clientConnectionError{err: e}
 	}
 
 	return nil

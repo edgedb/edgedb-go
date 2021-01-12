@@ -106,27 +106,36 @@ func (c *NamedTuple) Decode(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(w *buff.Writer, val interface{}) {
+func (c *NamedTuple) Encode(w *buff.Writer, val interface{}) error {
+	args, ok := val.([]interface{})
+	if !ok {
+		return fmt.Errorf("expected []interface{} got %T", val)
+	}
+
 	elmCount := len(c.fields)
 
 	w.BeginBytes()
 	w.PushUint32(uint32(elmCount))
 
-	args := val.([]interface{})
 	if len(args) != 1 {
 		panic(fmt.Sprintf(
 			"wrong number of arguments, expected 1 got: %v",
-			args,
+			len(args),
 		))
 	}
 
 	in := args[0].(map[string]interface{})
 
+	var err error
 	for i := 0; i < elmCount; i++ {
 		w.PushUint32(0) // reserved
 		field := c.fields[i]
-		field.codec.Encode(w, in[field.name])
+		err = field.codec.Encode(w, in[field.name])
+		if err != nil {
+			return err
+		}
 	}
 
 	w.EndBytes()
+	return nil
 }
