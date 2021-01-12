@@ -39,7 +39,13 @@ type Set struct {
 	id    types.UUID
 	child Codec
 	typ   reflect.Type
-	step  int
+
+	// step is the element width in bytes for a go array of type `Array.typ`.
+	step int
+
+	// useReflect indicates weather reflection or a known memory layout
+	// should be used to deserialize data.
+	useReflect bool
 }
 
 // ID returns the descriptor id.
@@ -47,14 +53,23 @@ func (c *Set) ID() types.UUID {
 	return c.id
 }
 
-func (c *Set) setType(typ reflect.Type) error {
+func (c *Set) setDefaultType() {
+	c.child.setDefaultType()
+	c.typ = reflect.SliceOf(c.child.Type())
+	c.step = calcStep(c.typ.Elem())
+	c.useReflect = true
+}
+func (c *Set) setType(typ reflect.Type) (bool, error) {
 	if typ.Kind() != reflect.Slice {
-		return fmt.Errorf("expected Slice got %v", typ.Kind())
+		return false, fmt.Errorf("expected Slice got %v", typ.Kind())
 	}
 
 	c.typ = typ
 	c.step = calcStep(typ.Elem())
-	return c.child.setType(typ.Elem())
+
+	var err error
+	c.useReflect, err = c.child.setType(typ.Elem())
+	return c.useReflect, err
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -63,7 +78,43 @@ func (c *Set) Type() reflect.Type {
 }
 
 // Decode a set
-func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *Set) Decode(r *buff.Reader, out reflect.Value) {
+	if c.useReflect {
+		c.DecodeReflect(r, out)
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodeReflect decodes a set into a reflect.Value.
+func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value) {
+	r.Discard(4) // data length
+
+	// number of dimensions, either 0 or 1
+	if r.PopUint32() == 0 {
+		r.Discard(8) // skip 2 reserved fields
+		return
+	}
+
+	r.Discard(8) // reserved
+
+	upper := int32(r.PopUint32())
+	lower := int32(r.PopUint32())
+	n := int(upper - lower + 1)
+
+	if out.Cap() < n {
+		out.Set(reflect.MakeSlice(c.typ, n, n))
+	} else {
+		out.SetLen(n)
+	}
+
+	for i := 0; i < n; i++ {
+		c.child.DecodeReflect(r, out.Index(i))
+	}
+}
+
+// DecodePtr decodes a set into an unsafe.Pointer.
+func (c *Set) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(4) // data length
 
 	// number of dimensions, either 0 or 1
@@ -89,7 +140,7 @@ func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.Decode(r, pAdd(slice.Data, uintptr(i*c.step)))
+		c.child.DecodePtr(r, pAdd(slice.Data, uintptr(i*c.step)))
 	}
 }
 

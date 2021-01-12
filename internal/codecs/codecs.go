@@ -39,11 +39,17 @@ const (
 
 // Codec interface
 type Codec interface {
-	Decode(*buff.Reader, unsafe.Pointer)
+	Decode(*buff.Reader, reflect.Value)
+	DecodeReflect(*buff.Reader, reflect.Value)
+	DecodePtr(*buff.Reader, unsafe.Pointer)
 	Encode(*buff.Writer, interface{}) error
 	ID() types.UUID
 	Type() reflect.Type
-	setType(reflect.Type) error
+	setDefaultType()
+
+	// setType returns true if the memory layout for reflect.Type
+	// is not fully known.
+	setType(reflect.Type) (bool, error)
 }
 
 // BuildCodec a decoder
@@ -99,7 +105,7 @@ func BuildTypedCodec(r *buff.Reader, t reflect.Type) (Codec, error) {
 		return nil, err
 	}
 
-	if err := codec.setType(t); err != nil {
+	if _, err = codec.setType(t); err != nil {
 		return nil, fmt.Errorf(
 			"the \"out\" argument does not match query schema: %v", err,
 		)
@@ -112,9 +118,10 @@ func pAdd(p unsafe.Pointer, i uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(p) + i)
 }
 
-func calcStep(tp reflect.Type) int {
-	step := int(tp.Size())
-	a := tp.Align()
+// calcStep returns the element width in bytes for a go array of `typ`.
+func calcStep(typ reflect.Type) int {
+	step := int(typ.Size())
+	a := typ.Align()
 
 	if step%a > 0 {
 		step = step/a + a

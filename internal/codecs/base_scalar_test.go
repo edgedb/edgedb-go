@@ -34,7 +34,7 @@ func TestDecodeUUID(t *testing.T) {
 	})
 
 	var result types.UUID
-	(&UUID{}).Decode(r, unsafe.Pointer(&result))
+	(&UUID{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	expected := types.UUID{0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8}
 	assert.Equal(t, expected, result)
@@ -54,7 +54,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -95,7 +95,7 @@ func TestDecodeString(t *testing.T) {
 	r := buff.SimpleReader(data)
 
 	var result string
-	(&Str{}).Decode(r, unsafe.Pointer(&result))
+	(&Str{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, "hello", result)
 
@@ -118,7 +118,7 @@ func BenchmarkDecodeString(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestDecodeBytes(t *testing.T) {
 	r := buff.SimpleReader(data)
 
 	var result []byte
-	(&Bytes{}).Decode(r, unsafe.Pointer(&result))
+	(&Bytes{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	expected := []byte{104, 101, 108, 108, 111}
 	assert.Equal(t, expected, result)
@@ -170,7 +170,7 @@ func BenchmarkDecodeBytes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -197,7 +197,7 @@ func TestDecodeInt16(t *testing.T) {
 	})
 
 	var result int16
-	(&Int16{}).Decode(r, unsafe.Pointer(&result))
+	(&Int16{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, int16(7), result)
 }
@@ -216,7 +216,7 @@ func BenchmarkDecodeInt16(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -243,7 +243,7 @@ func TestDecodeInt32(t *testing.T) {
 	})
 
 	var result int32
-	(&Int32{}).Decode(r, unsafe.Pointer(&result))
+	(&Int32{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, int32(7), result)
 }
@@ -262,7 +262,7 @@ func BenchmarkDecodeInt32(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -289,7 +289,7 @@ func TestDecodeInt64(t *testing.T) {
 	})
 
 	var result int64
-	(&Int64{}).Decode(r, unsafe.Pointer(&result))
+	(&Int64{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, int64(72623859790382856), result)
 }
@@ -308,7 +308,7 @@ func BenchmarkDecodeInt64(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -335,7 +335,7 @@ func TestDecodeFloat32(t *testing.T) {
 	})
 
 	var result float32
-	(&Float32{}).Decode(r, unsafe.Pointer(&result))
+	(&Float32{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, float32(-32), result)
 }
@@ -354,7 +354,7 @@ func BenchmarkDecodeFloat32(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -381,7 +381,7 @@ func TestDecodeFloat64(t *testing.T) {
 	})
 
 	var result float64
-	(&Float64{}).Decode(r, unsafe.Pointer(&result))
+	(&Float64{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, float64(-64), result)
 }
@@ -400,7 +400,7 @@ func BenchmarkDecodeFloat64(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -427,7 +427,7 @@ func TestDecodeBool(t *testing.T) {
 	})
 
 	var result bool
-	(&Bool{}).Decode(r, unsafe.Pointer(&result))
+	(&Bool{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, true, result)
 }
@@ -446,7 +446,7 @@ func BenchmarkDecodeBool(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.Decode(r, ptr)
+		codec.DecodePtr(r, ptr)
 	}
 }
 
@@ -473,7 +473,7 @@ func TestDecodeDateTime(t *testing.T) {
 	})
 
 	var result time.Time
-	(&DateTime{}).Decode(r, unsafe.Pointer(&result))
+	(&DateTime{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	expected := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	assert.Equal(t, expected, result)
@@ -504,7 +504,7 @@ func TestDecodeDuration(t *testing.T) {
 	})
 
 	var result time.Duration
-	(&Duration{}).Decode(r, unsafe.Pointer(&result))
+	(&Duration{}).DecodePtr(r, unsafe.Pointer(&result))
 
 	assert.Equal(t, time.Duration(1_000_000_000), result)
 }
@@ -541,7 +541,7 @@ func TestDecodeJSON(t *testing.T) {
 	})
 
 	var result interface{}
-	(&JSON{}).Decode(r, unsafe.Pointer(&result))
+	(&JSON{}).DecodePtr(r, unsafe.Pointer(&result))
 	expected := map[string]interface{}{"hello": "world"}
 
 	assert.Equal(t, expected, result)

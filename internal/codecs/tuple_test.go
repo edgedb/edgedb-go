@@ -33,13 +33,12 @@ func TestTupleSetType(t *testing.T) {
 		&Int64{typ: int64Type},
 		&Int32{typ: int32Type},
 	}}
-	err := codec.setType(reflect.TypeOf([]interface{}{}))
+	useReflect, err := codec.setType(reflect.TypeOf([]interface{}{}))
 	require.Nil(t, err)
-
-	assert.Equal(t, 16, codec.step)
+	require.False(t, useReflect)
 }
 
-func TestDecodeTuple(t *testing.T) {
+func TestTupleDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
 		0, 0, 0, 32, // data length
 		0, 0, 0, 2, // number of elements
@@ -59,9 +58,43 @@ func TestDecodeTuple(t *testing.T) {
 		&Int64{typ: int64Type},
 		&Int32{typ: int32Type},
 	}}
-	err := codec.setType(reflect.TypeOf(result))
+	useReflect, err := codec.setType(reflect.TypeOf(result))
 	require.Nil(t, err)
-	codec.Decode(r, unsafe.Pointer(&result))
+	require.False(t, useReflect)
+	codec.DecodePtr(r, unsafe.Pointer(&result))
+
+	// force garbage collection to be sure that
+	// references are durable.
+	debug.FreeOSMemory()
+
+	expected := []interface{}{int64(2), int32(3)}
+	assert.Equal(t, expected, result)
+}
+
+func TestTupleDecodeReflect(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 0, 0, 32, // data length
+		0, 0, 0, 2, // number of elements
+		// element 0
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 8, // data length
+		0, 0, 0, 0, 0, 0, 0, 2,
+		// element 1
+		0, 0, 0, 0, // reserved
+		0, 0, 0, 4, // data length
+		0, 0, 0, 3,
+	})
+
+	var result []interface{}
+
+	codec := &Tuple{fields: []Codec{
+		&Int64{typ: int64Type},
+		&Int32{typ: int32Type},
+	}}
+	useReflect, err := codec.setType(reflect.TypeOf(result))
+	require.Nil(t, err)
+	require.False(t, useReflect)
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
 
 	// force garbage collection to be sure that
 	// references are durable.
