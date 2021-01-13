@@ -17,10 +17,14 @@
 package edgedb
 
 import (
+	"context"
 	"errors"
+	"net"
 	"os"
 	"path"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,10 +90,11 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:          []dialArgs{{"tcp", "localhost:5656"}},
-					user:           "user",
-					database:       "edgedb",
-					serverSettings: map[string]string{},
+					addrs:              []*dialArgs{{"tcp", "localhost:5656"}},
+					user:               "user",
+					database:           "edgedb",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -104,11 +109,12 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:          []dialArgs{{"tcp", "host:123"}},
-					user:           "user",
-					password:       "passw",
-					database:       "testdb",
-					serverSettings: map[string]string{},
+					addrs:              []*dialArgs{{"tcp", "host:123"}},
+					user:               "user",
+					password:           "passw",
+					database:           "testdb",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -130,11 +136,12 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:          []dialArgs{{"tcp", "host2:456"}},
-					user:           "user2",
-					password:       "passw2",
-					database:       "db2",
-					serverSettings: map[string]string{},
+					addrs:              []*dialArgs{{"tcp", "host2:456"}},
+					user:               "user2",
+					password:           "passw2",
+					database:           "db2",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -159,11 +166,12 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:          []dialArgs{{"tcp", "host2:456"}},
-					user:           "user2",
-					password:       "passw2",
-					database:       "db2",
-					serverSettings: map[string]string{"ssl": "False"},
+					addrs:              []*dialArgs{{"tcp", "host2:456"}},
+					user:               "user2",
+					password:           "passw2",
+					database:           "db2",
+					serverSettings:     map[string]string{"ssl": "False"},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -179,11 +187,12 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb://user3:123123@localhost:5555/abcdef",
 			expected: Result{
 				cfg: connConfig{
-					addrs:          []dialArgs{{"tcp", "localhost:5555"}},
-					user:           "user3",
-					password:       "123123",
-					database:       "abcdef",
-					serverSettings: map[string]string{},
+					addrs:              []*dialArgs{{"tcp", "localhost:5555"}},
+					user:               "user3",
+					password:           "123123",
+					database:           "abcdef",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -192,11 +201,12 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user3:123123@localhost:5555/abcdef",
 			expected: Result{
 				cfg: connConfig{
-					addrs:          []dialArgs{{"tcp", "localhost:5555"}},
-					user:           "user3",
-					password:       "123123",
-					database:       "abcdef",
-					serverSettings: map[string]string{},
+					addrs:              []*dialArgs{{"tcp", "localhost:5555"}},
+					user:               "user3",
+					password:           "123123",
+					database:           "abcdef",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -205,13 +215,14 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@host1,host2/db",
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "host1:5656"},
 						{"tcp", "host2:5656"},
 					},
-					user:           "user",
-					database:       "db",
-					serverSettings: map[string]string{},
+					user:               "user",
+					database:           "db",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -220,13 +231,14 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@host1:1111,host2:2222/db",
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "host1:1111"},
 						{"tcp", "host2:2222"},
 					},
-					database:       "db",
-					user:           "user",
-					serverSettings: map[string]string{},
+					database:           "db",
+					user:               "user",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -239,13 +251,14 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb:///db",
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "host1:1111"},
 						{"tcp", "host2:2222"},
 					},
-					database:       "db",
-					user:           "foo",
-					serverSettings: map[string]string{},
+					database:           "db",
+					user:               "foo",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -257,13 +270,14 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb:///db?host=host1:1111,host2:2222",
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "host1:1111"},
 						{"tcp", "host2:2222"},
 					},
-					database:       "db",
-					user:           "foo",
-					serverSettings: map[string]string{},
+					database:           "db",
+					user:               "foo",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -278,13 +292,14 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "host1:5656"},
 						{"tcp", "host2:5656"},
 					},
-					user:           "foo",
-					database:       "db",
-					serverSettings: map[string]string{},
+					user:               "foo",
+					database:           "db",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -302,13 +317,14 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "127.0.0.1:888"},
 					},
-					serverSettings: map[string]string{"param": "123"},
-					user:           "me",
-					password:       "ask",
-					database:       "db",
+					serverSettings:     map[string]string{"param": "123"},
+					user:               "me",
+					password:           "ask",
+					database:           "db",
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -327,16 +343,17 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"tcp", "127.0.0.1:888"},
 					},
 					serverSettings: map[string]string{
 						"aa":    "bb",
 						"param": "123",
 					},
-					user:     "me",
-					password: "ask",
-					database: "db",
+					user:               "me",
+					password:           "ask",
+					database:           "db",
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -345,12 +362,13 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{{
+					addrs: []*dialArgs{{
 						"unix", path.Join("/unix_sock/test", ".s.EDGEDB.5656"),
 					}},
-					user:           "spam",
-					database:       "dbname",
-					serverSettings: map[string]string{},
+					user:               "spam",
+					database:           "dbname",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -380,12 +398,13 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@?port=56226&host=%2Ftmp",
 			expected: Result{
 				cfg: connConfig{
-					addrs: []dialArgs{
+					addrs: []*dialArgs{
 						{"unix", path.Join("/tmp", ".s.EDGEDB.56226")},
 					},
-					user:           "user",
-					database:       "edgedb",
-					serverSettings: map[string]string{},
+					user:               "user",
+					database:           "edgedb",
+					serverSettings:     map[string]string{},
+					waitUntilAvailable: 30 * time.Second,
 				},
 			},
 		},
@@ -408,4 +427,91 @@ func TestConUtils(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConnectTimeout(t *testing.T) {
+	ctx := context.Background()
+	conn, err := ConnectOne(ctx, Options{
+		Hosts:              opts.Hosts,
+		Ports:              opts.Ports,
+		User:               opts.User,
+		Password:           opts.Password,
+		Database:           opts.Database,
+		ConnectTimeout:     1 * time.Millisecond,
+		WaitUntilAvailable: 1 * time.Nanosecond,
+	})
+
+	if conn != nil {
+		_ = conn.Close()
+	}
+
+	require.NotNil(t, err, "connection didn't timeout")
+
+	var errTimeout ClientConnectionTimeoutError
+	assert.True(t, errors.As(err, &errTimeout), "wrong error: "+err.Error())
+}
+
+func TestConnectRefused(t *testing.T) {
+	ctx := context.Background()
+	conn, err := ConnectOne(ctx, Options{
+		Hosts:              []string{"localhost"},
+		Ports:              []int{23456},
+		WaitUntilAvailable: 1 * time.Nanosecond,
+	})
+
+	if conn != nil {
+		_ = conn.Close()
+	}
+
+	require.NotNil(t, err, "connection wasn't refused")
+
+	msg := "wrong error: " + err.Error()
+	var errTemporary ClientConnectionFailedTemporarilyError
+	assert.True(t, errors.As(err, &errTemporary), msg)
+	assert.True(t, errors.Is(err, syscall.ECONNREFUSED), msg)
+}
+
+func TestConnectInvalidName(t *testing.T) {
+	ctx := context.Background()
+	conn, err := ConnectOne(ctx, Options{
+		Hosts:              []string{"invalid.example.org"},
+		Ports:              []int{23456},
+		WaitUntilAvailable: 1 * time.Nanosecond,
+	})
+
+	if conn != nil {
+		_ = conn.Close()
+	}
+
+	require.NotNil(t, err, "name was resolved")
+
+	var errTemporary ClientConnectionFailedTemporarilyError
+	assert.True(t, errors.As(err, &errTemporary), "wrong error: "+err.Error())
+	assert.EqualError(
+		t,
+		err,
+		"edgedb.ClientConnectionFailedTemporarilyError: "+
+			"dial tcp: lookup invalid.example.org: no such host",
+	)
+
+	var errNotFound *net.DNSError
+	assert.True(t, errors.As(err, &errNotFound))
+}
+
+func TestConnectRefusedUnixSocket(t *testing.T) {
+	ctx := context.Background()
+	conn, err := ConnectOne(ctx, Options{
+		Hosts:              []string{"/tmp/non-existent"},
+		WaitUntilAvailable: 1 * time.Nanosecond,
+	})
+
+	if conn != nil {
+		_ = conn.Close()
+	}
+
+	require.NotNil(t, err, "connection wasn't refused")
+
+	var errTemporary ClientConnectionFailedTemporarilyError
+	assert.True(t, errors.As(err, &errTemporary), "wrong error: "+err.Error())
+	assert.True(t, errors.Is(err, syscall.ENOENT), "wrong error: "+err.Error())
 }

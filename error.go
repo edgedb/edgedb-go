@@ -24,9 +24,13 @@ import (
 
 var errZeroResults error = &noDataError{msg: "zero results"}
 
+// ErrorTag is the argument type to Error.HasTag().
+type ErrorTag string
+
 // Error is wrapped by all errors.
 type Error interface {
 	Error() string
+	HasTag(ErrorTag) bool
 	isEdgeDBError()
 }
 

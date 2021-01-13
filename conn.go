@@ -16,9 +16,45 @@
 
 package edgedb
 
+import (
+	"context"
+
+	"github.com/edgedb/edgedb-go/internal/cache"
+)
+
 // Conn is a conn created outside of a pool.
 type Conn struct {
 	baseConn
+}
+
+// ConnectOne establishes a connection to an EdgeDB server.
+func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
+	return ConnectOneDSN(ctx, "", opts)
+}
+
+// ConnectOneDSN establishes a connection to an EdgeDB server.
+func ConnectOneDSN(
+	ctx context.Context,
+	dsn string,
+	opts Options, // nolint:gocritic
+) (*Conn, error) {
+	config, err := parseConnectDSNAndArgs(dsn, &opts)
+	if err != nil {
+		return nil, err
+	}
+
+	conn := &baseConn{
+		typeIDCache:   cache.New(1_000),
+		inCodecCache:  cache.New(1_000),
+		outCodecCache: cache.New(1_000),
+		cfg:           config,
+	}
+
+	if err := conn.reconnect(ctx); err != nil {
+		return nil, err
+	}
+
+	return &Conn{*conn}, nil
 }
 
 // Close closes the connection.

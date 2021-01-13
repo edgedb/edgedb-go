@@ -21,6 +21,11 @@ package edgedb
 
 import "fmt"
 
+const (
+	// ShouldReconnect is an error tag.
+	ShouldReconnect ErrorTag = "SHOULD_RECONNECT"
+)
+
 // InternalServerError is an error.
 type InternalServerError interface {
 	Error
@@ -47,6 +52,12 @@ func (e *internalServerError) isEdgeDBInternalServerError() {}
 
 func (e *internalServerError) isEdgeDBError() {}
 
+func (e *internalServerError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnsupportedFeatureError is an error.
 type UnsupportedFeatureError interface {
 	Error
@@ -73,6 +84,12 @@ func (e *unsupportedFeatureError) isEdgeDBUnsupportedFeatureError() {}
 
 func (e *unsupportedFeatureError) isEdgeDBError() {}
 
+func (e *unsupportedFeatureError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ProtocolError is an error.
 type ProtocolError interface {
 	Error
@@ -99,6 +116,12 @@ func (e *protocolError) isEdgeDBProtocolError() {}
 
 func (e *protocolError) isEdgeDBError() {}
 
+func (e *protocolError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // BinaryProtocolError is an error.
 type BinaryProtocolError interface {
 	ProtocolError
@@ -127,6 +150,12 @@ func (e *binaryProtocolError) isEdgeDBProtocolError() {}
 
 func (e *binaryProtocolError) isEdgeDBError() {}
 
+func (e *binaryProtocolError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnsupportedProtocolVersionError is an error.
 type UnsupportedProtocolVersionError interface {
 	BinaryProtocolError
@@ -157,6 +186,12 @@ func (e *unsupportedProtocolVersionError) isEdgeDBProtocolError() {}
 
 func (e *unsupportedProtocolVersionError) isEdgeDBError() {}
 
+func (e *unsupportedProtocolVersionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // TypeSpecNotFoundError is an error.
 type TypeSpecNotFoundError interface {
 	BinaryProtocolError
@@ -187,6 +222,12 @@ func (e *typeSpecNotFoundError) isEdgeDBProtocolError() {}
 
 func (e *typeSpecNotFoundError) isEdgeDBError() {}
 
+func (e *typeSpecNotFoundError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnexpectedMessageError is an error.
 type UnexpectedMessageError interface {
 	BinaryProtocolError
@@ -217,6 +258,12 @@ func (e *unexpectedMessageError) isEdgeDBProtocolError() {}
 
 func (e *unexpectedMessageError) isEdgeDBError() {}
 
+func (e *unexpectedMessageError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InputDataError is an error.
 type InputDataError interface {
 	ProtocolError
@@ -245,6 +292,12 @@ func (e *inputDataError) isEdgeDBProtocolError() {}
 
 func (e *inputDataError) isEdgeDBError() {}
 
+func (e *inputDataError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ResultCardinalityMismatchError is an error.
 type ResultCardinalityMismatchError interface {
 	ProtocolError
@@ -273,6 +326,118 @@ func (e *resultCardinalityMismatchError) isEdgeDBProtocolError() {}
 
 func (e *resultCardinalityMismatchError) isEdgeDBError() {}
 
+func (e *resultCardinalityMismatchError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+// CapabilityError is an error.
+type CapabilityError interface {
+	ProtocolError
+	isEdgeDBCapabilityError()
+}
+
+type capabilityError struct {
+	msg string
+	err error
+}
+
+func (e *capabilityError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.CapabilityError: " + msg
+}
+
+func (e *capabilityError) Unwrap() error { return e.err }
+
+func (e *capabilityError) isEdgeDBCapabilityError() {}
+
+func (e *capabilityError) isEdgeDBProtocolError() {}
+
+func (e *capabilityError) isEdgeDBError() {}
+
+func (e *capabilityError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+// UnsupportedCapabilityError is an error.
+type UnsupportedCapabilityError interface {
+	CapabilityError
+	isEdgeDBUnsupportedCapabilityError()
+}
+
+type unsupportedCapabilityError struct {
+	msg string
+	err error
+}
+
+func (e *unsupportedCapabilityError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.UnsupportedCapabilityError: " + msg
+}
+
+func (e *unsupportedCapabilityError) Unwrap() error { return e.err }
+
+func (e *unsupportedCapabilityError) isEdgeDBUnsupportedCapabilityError() {}
+
+func (e *unsupportedCapabilityError) isEdgeDBCapabilityError() {}
+
+func (e *unsupportedCapabilityError) isEdgeDBProtocolError() {}
+
+func (e *unsupportedCapabilityError) isEdgeDBError() {}
+
+func (e *unsupportedCapabilityError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+// DisabledCapabilityError is an error.
+type DisabledCapabilityError interface {
+	CapabilityError
+	isEdgeDBDisabledCapabilityError()
+}
+
+type disabledCapabilityError struct {
+	msg string
+	err error
+}
+
+func (e *disabledCapabilityError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.DisabledCapabilityError: " + msg
+}
+
+func (e *disabledCapabilityError) Unwrap() error { return e.err }
+
+func (e *disabledCapabilityError) isEdgeDBDisabledCapabilityError() {}
+
+func (e *disabledCapabilityError) isEdgeDBCapabilityError() {}
+
+func (e *disabledCapabilityError) isEdgeDBProtocolError() {}
+
+func (e *disabledCapabilityError) isEdgeDBError() {}
+
+func (e *disabledCapabilityError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // QueryError is an error.
 type QueryError interface {
 	Error
@@ -299,6 +464,12 @@ func (e *queryError) isEdgeDBQueryError() {}
 
 func (e *queryError) isEdgeDBError() {}
 
+func (e *queryError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidSyntaxError is an error.
 type InvalidSyntaxError interface {
 	QueryError
@@ -327,6 +498,12 @@ func (e *invalidSyntaxError) isEdgeDBQueryError() {}
 
 func (e *invalidSyntaxError) isEdgeDBError() {}
 
+func (e *invalidSyntaxError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // EdgeQLSyntaxError is an error.
 type EdgeQLSyntaxError interface {
 	InvalidSyntaxError
@@ -357,6 +534,12 @@ func (e *edgeQLSyntaxError) isEdgeDBQueryError() {}
 
 func (e *edgeQLSyntaxError) isEdgeDBError() {}
 
+func (e *edgeQLSyntaxError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // SchemaSyntaxError is an error.
 type SchemaSyntaxError interface {
 	InvalidSyntaxError
@@ -387,6 +570,12 @@ func (e *schemaSyntaxError) isEdgeDBQueryError() {}
 
 func (e *schemaSyntaxError) isEdgeDBError() {}
 
+func (e *schemaSyntaxError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // GraphQLSyntaxError is an error.
 type GraphQLSyntaxError interface {
 	InvalidSyntaxError
@@ -417,6 +606,12 @@ func (e *graphQLSyntaxError) isEdgeDBQueryError() {}
 
 func (e *graphQLSyntaxError) isEdgeDBError() {}
 
+func (e *graphQLSyntaxError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidTypeError is an error.
 type InvalidTypeError interface {
 	QueryError
@@ -445,6 +640,12 @@ func (e *invalidTypeError) isEdgeDBQueryError() {}
 
 func (e *invalidTypeError) isEdgeDBError() {}
 
+func (e *invalidTypeError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidTargetError is an error.
 type InvalidTargetError interface {
 	InvalidTypeError
@@ -475,6 +676,12 @@ func (e *invalidTargetError) isEdgeDBQueryError() {}
 
 func (e *invalidTargetError) isEdgeDBError() {}
 
+func (e *invalidTargetError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidLinkTargetError is an error.
 type InvalidLinkTargetError interface {
 	InvalidTargetError
@@ -507,6 +714,12 @@ func (e *invalidLinkTargetError) isEdgeDBQueryError() {}
 
 func (e *invalidLinkTargetError) isEdgeDBError() {}
 
+func (e *invalidLinkTargetError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidPropertyTargetError is an error.
 type InvalidPropertyTargetError interface {
 	InvalidTargetError
@@ -539,6 +752,12 @@ func (e *invalidPropertyTargetError) isEdgeDBQueryError() {}
 
 func (e *invalidPropertyTargetError) isEdgeDBError() {}
 
+func (e *invalidPropertyTargetError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidReferenceError is an error.
 type InvalidReferenceError interface {
 	QueryError
@@ -567,6 +786,12 @@ func (e *invalidReferenceError) isEdgeDBQueryError() {}
 
 func (e *invalidReferenceError) isEdgeDBError() {}
 
+func (e *invalidReferenceError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownModuleError is an error.
 type UnknownModuleError interface {
 	InvalidReferenceError
@@ -597,6 +822,12 @@ func (e *unknownModuleError) isEdgeDBQueryError() {}
 
 func (e *unknownModuleError) isEdgeDBError() {}
 
+func (e *unknownModuleError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownLinkError is an error.
 type UnknownLinkError interface {
 	InvalidReferenceError
@@ -627,6 +858,12 @@ func (e *unknownLinkError) isEdgeDBQueryError() {}
 
 func (e *unknownLinkError) isEdgeDBError() {}
 
+func (e *unknownLinkError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownPropertyError is an error.
 type UnknownPropertyError interface {
 	InvalidReferenceError
@@ -657,6 +894,12 @@ func (e *unknownPropertyError) isEdgeDBQueryError() {}
 
 func (e *unknownPropertyError) isEdgeDBError() {}
 
+func (e *unknownPropertyError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownUserError is an error.
 type UnknownUserError interface {
 	InvalidReferenceError
@@ -687,6 +930,12 @@ func (e *unknownUserError) isEdgeDBQueryError() {}
 
 func (e *unknownUserError) isEdgeDBError() {}
 
+func (e *unknownUserError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownDatabaseError is an error.
 type UnknownDatabaseError interface {
 	InvalidReferenceError
@@ -717,6 +966,12 @@ func (e *unknownDatabaseError) isEdgeDBQueryError() {}
 
 func (e *unknownDatabaseError) isEdgeDBError() {}
 
+func (e *unknownDatabaseError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownParameterError is an error.
 type UnknownParameterError interface {
 	InvalidReferenceError
@@ -747,6 +1002,12 @@ func (e *unknownParameterError) isEdgeDBQueryError() {}
 
 func (e *unknownParameterError) isEdgeDBError() {}
 
+func (e *unknownParameterError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // SchemaError is an error.
 type SchemaError interface {
 	QueryError
@@ -775,6 +1036,12 @@ func (e *schemaError) isEdgeDBQueryError() {}
 
 func (e *schemaError) isEdgeDBError() {}
 
+func (e *schemaError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // SchemaDefinitionError is an error.
 type SchemaDefinitionError interface {
 	QueryError
@@ -803,6 +1070,12 @@ func (e *schemaDefinitionError) isEdgeDBQueryError() {}
 
 func (e *schemaDefinitionError) isEdgeDBError() {}
 
+func (e *schemaDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidDefinitionError is an error.
 type InvalidDefinitionError interface {
 	SchemaDefinitionError
@@ -833,6 +1106,12 @@ func (e *invalidDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidDefinitionError) isEdgeDBError() {}
 
+func (e *invalidDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidModuleDefinitionError is an error.
 type InvalidModuleDefinitionError interface {
 	InvalidDefinitionError
@@ -865,6 +1144,12 @@ func (e *invalidModuleDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidModuleDefinitionError) isEdgeDBError() {}
 
+func (e *invalidModuleDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidLinkDefinitionError is an error.
 type InvalidLinkDefinitionError interface {
 	InvalidDefinitionError
@@ -897,6 +1182,12 @@ func (e *invalidLinkDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidLinkDefinitionError) isEdgeDBError() {}
 
+func (e *invalidLinkDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidPropertyDefinitionError is an error.
 type InvalidPropertyDefinitionError interface {
 	InvalidDefinitionError
@@ -929,6 +1220,12 @@ func (e *invalidPropertyDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidPropertyDefinitionError) isEdgeDBError() {}
 
+func (e *invalidPropertyDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidUserDefinitionError is an error.
 type InvalidUserDefinitionError interface {
 	InvalidDefinitionError
@@ -961,6 +1258,12 @@ func (e *invalidUserDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidUserDefinitionError) isEdgeDBError() {}
 
+func (e *invalidUserDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidDatabaseDefinitionError is an error.
 type InvalidDatabaseDefinitionError interface {
 	InvalidDefinitionError
@@ -993,6 +1296,12 @@ func (e *invalidDatabaseDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidDatabaseDefinitionError) isEdgeDBError() {}
 
+func (e *invalidDatabaseDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidOperatorDefinitionError is an error.
 type InvalidOperatorDefinitionError interface {
 	InvalidDefinitionError
@@ -1025,6 +1334,12 @@ func (e *invalidOperatorDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidOperatorDefinitionError) isEdgeDBError() {}
 
+func (e *invalidOperatorDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidAliasDefinitionError is an error.
 type InvalidAliasDefinitionError interface {
 	InvalidDefinitionError
@@ -1057,6 +1372,12 @@ func (e *invalidAliasDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidAliasDefinitionError) isEdgeDBError() {}
 
+func (e *invalidAliasDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidFunctionDefinitionError is an error.
 type InvalidFunctionDefinitionError interface {
 	InvalidDefinitionError
@@ -1089,6 +1410,12 @@ func (e *invalidFunctionDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidFunctionDefinitionError) isEdgeDBError() {}
 
+func (e *invalidFunctionDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidConstraintDefinitionError is an error.
 type InvalidConstraintDefinitionError interface {
 	InvalidDefinitionError
@@ -1121,6 +1448,12 @@ func (e *invalidConstraintDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidConstraintDefinitionError) isEdgeDBError() {}
 
+func (e *invalidConstraintDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidCastDefinitionError is an error.
 type InvalidCastDefinitionError interface {
 	InvalidDefinitionError
@@ -1153,6 +1486,12 @@ func (e *invalidCastDefinitionError) isEdgeDBQueryError() {}
 
 func (e *invalidCastDefinitionError) isEdgeDBError() {}
 
+func (e *invalidCastDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateDefinitionError is an error.
 type DuplicateDefinitionError interface {
 	SchemaDefinitionError
@@ -1183,6 +1522,12 @@ func (e *duplicateDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateModuleDefinitionError is an error.
 type DuplicateModuleDefinitionError interface {
 	DuplicateDefinitionError
@@ -1215,6 +1560,12 @@ func (e *duplicateModuleDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateModuleDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateModuleDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateLinkDefinitionError is an error.
 type DuplicateLinkDefinitionError interface {
 	DuplicateDefinitionError
@@ -1247,6 +1598,12 @@ func (e *duplicateLinkDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateLinkDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateLinkDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicatePropertyDefinitionError is an error.
 type DuplicatePropertyDefinitionError interface {
 	DuplicateDefinitionError
@@ -1279,6 +1636,12 @@ func (e *duplicatePropertyDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicatePropertyDefinitionError) isEdgeDBError() {}
 
+func (e *duplicatePropertyDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateUserDefinitionError is an error.
 type DuplicateUserDefinitionError interface {
 	DuplicateDefinitionError
@@ -1311,6 +1674,12 @@ func (e *duplicateUserDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateUserDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateUserDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateDatabaseDefinitionError is an error.
 type DuplicateDatabaseDefinitionError interface {
 	DuplicateDefinitionError
@@ -1343,6 +1712,12 @@ func (e *duplicateDatabaseDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateDatabaseDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateDatabaseDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateOperatorDefinitionError is an error.
 type DuplicateOperatorDefinitionError interface {
 	DuplicateDefinitionError
@@ -1375,6 +1750,12 @@ func (e *duplicateOperatorDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateOperatorDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateOperatorDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateViewDefinitionError is an error.
 type DuplicateViewDefinitionError interface {
 	DuplicateDefinitionError
@@ -1407,6 +1788,12 @@ func (e *duplicateViewDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateViewDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateViewDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateFunctionDefinitionError is an error.
 type DuplicateFunctionDefinitionError interface {
 	DuplicateDefinitionError
@@ -1439,6 +1826,12 @@ func (e *duplicateFunctionDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateFunctionDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateFunctionDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateConstraintDefinitionError is an error.
 type DuplicateConstraintDefinitionError interface {
 	DuplicateDefinitionError
@@ -1471,6 +1864,12 @@ func (e *duplicateConstraintDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateConstraintDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateConstraintDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DuplicateCastDefinitionError is an error.
 type DuplicateCastDefinitionError interface {
 	DuplicateDefinitionError
@@ -1503,6 +1902,12 @@ func (e *duplicateCastDefinitionError) isEdgeDBQueryError() {}
 
 func (e *duplicateCastDefinitionError) isEdgeDBError() {}
 
+func (e *duplicateCastDefinitionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // QueryTimeoutError is an error.
 type QueryTimeoutError interface {
 	QueryError
@@ -1531,6 +1936,12 @@ func (e *queryTimeoutError) isEdgeDBQueryError() {}
 
 func (e *queryTimeoutError) isEdgeDBError() {}
 
+func (e *queryTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ExecutionError is an error.
 type ExecutionError interface {
 	Error
@@ -1557,6 +1968,12 @@ func (e *executionError) isEdgeDBExecutionError() {}
 
 func (e *executionError) isEdgeDBError() {}
 
+func (e *executionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidValueError is an error.
 type InvalidValueError interface {
 	ExecutionError
@@ -1585,6 +2002,12 @@ func (e *invalidValueError) isEdgeDBExecutionError() {}
 
 func (e *invalidValueError) isEdgeDBError() {}
 
+func (e *invalidValueError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // DivisionByZeroError is an error.
 type DivisionByZeroError interface {
 	InvalidValueError
@@ -1615,6 +2038,12 @@ func (e *divisionByZeroError) isEdgeDBExecutionError() {}
 
 func (e *divisionByZeroError) isEdgeDBError() {}
 
+func (e *divisionByZeroError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // NumericOutOfRangeError is an error.
 type NumericOutOfRangeError interface {
 	InvalidValueError
@@ -1645,6 +2074,12 @@ func (e *numericOutOfRangeError) isEdgeDBExecutionError() {}
 
 func (e *numericOutOfRangeError) isEdgeDBError() {}
 
+func (e *numericOutOfRangeError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // IntegrityError is an error.
 type IntegrityError interface {
 	ExecutionError
@@ -1673,6 +2108,12 @@ func (e *integrityError) isEdgeDBExecutionError() {}
 
 func (e *integrityError) isEdgeDBError() {}
 
+func (e *integrityError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ConstraintViolationError is an error.
 type ConstraintViolationError interface {
 	IntegrityError
@@ -1703,6 +2144,12 @@ func (e *constraintViolationError) isEdgeDBExecutionError() {}
 
 func (e *constraintViolationError) isEdgeDBError() {}
 
+func (e *constraintViolationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // CardinalityViolationError is an error.
 type CardinalityViolationError interface {
 	IntegrityError
@@ -1733,6 +2180,12 @@ func (e *cardinalityViolationError) isEdgeDBExecutionError() {}
 
 func (e *cardinalityViolationError) isEdgeDBError() {}
 
+func (e *cardinalityViolationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // MissingRequiredError is an error.
 type MissingRequiredError interface {
 	IntegrityError
@@ -1763,6 +2216,12 @@ func (e *missingRequiredError) isEdgeDBExecutionError() {}
 
 func (e *missingRequiredError) isEdgeDBError() {}
 
+func (e *missingRequiredError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // TransactionError is an error.
 type TransactionError interface {
 	ExecutionError
@@ -1791,6 +2250,12 @@ func (e *transactionError) isEdgeDBExecutionError() {}
 
 func (e *transactionError) isEdgeDBError() {}
 
+func (e *transactionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // TransactionSerializationError is an error.
 type TransactionSerializationError interface {
 	TransactionError
@@ -1821,6 +2286,12 @@ func (e *transactionSerializationError) isEdgeDBExecutionError() {}
 
 func (e *transactionSerializationError) isEdgeDBError() {}
 
+func (e *transactionSerializationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // TransactionDeadlockError is an error.
 type TransactionDeadlockError interface {
 	TransactionError
@@ -1851,6 +2322,12 @@ func (e *transactionDeadlockError) isEdgeDBExecutionError() {}
 
 func (e *transactionDeadlockError) isEdgeDBError() {}
 
+func (e *transactionDeadlockError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ConfigurationError is an error.
 type ConfigurationError interface {
 	Error
@@ -1877,6 +2354,12 @@ func (e *configurationError) isEdgeDBConfigurationError() {}
 
 func (e *configurationError) isEdgeDBError() {}
 
+func (e *configurationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // AccessError is an error.
 type AccessError interface {
 	Error
@@ -1903,6 +2386,12 @@ func (e *accessError) isEdgeDBAccessError() {}
 
 func (e *accessError) isEdgeDBError() {}
 
+func (e *accessError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // AuthenticationError is an error.
 type AuthenticationError interface {
 	AccessError
@@ -1931,6 +2420,12 @@ func (e *authenticationError) isEdgeDBAccessError() {}
 
 func (e *authenticationError) isEdgeDBError() {}
 
+func (e *authenticationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // LogMessage is an error.
 type LogMessage interface {
 	Error
@@ -1957,6 +2452,12 @@ func (e *logMessage) isEdgeDBLogMessage() {}
 
 func (e *logMessage) isEdgeDBError() {}
 
+func (e *logMessage) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // WarningMessage is an error.
 type WarningMessage interface {
 	Error
@@ -1983,6 +2484,12 @@ func (e *warningMessage) isEdgeDBWarningMessage() {}
 
 func (e *warningMessage) isEdgeDBError() {}
 
+func (e *warningMessage) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ClientError is an error.
 type ClientError interface {
 	Error
@@ -2009,6 +2516,12 @@ func (e *clientError) isEdgeDBClientError() {}
 
 func (e *clientError) isEdgeDBError() {}
 
+func (e *clientError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // ClientConnectionError is an error.
 type ClientConnectionError interface {
 	ClientError
@@ -2037,6 +2550,126 @@ func (e *clientConnectionError) isEdgeDBClientError() {}
 
 func (e *clientConnectionError) isEdgeDBError() {}
 
+func (e *clientConnectionError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+// ClientConnectionFailedError is an error.
+type ClientConnectionFailedError interface {
+	ClientConnectionError
+	isEdgeDBClientConnectionFailedError()
+}
+
+type clientConnectionFailedError struct {
+	msg string
+	err error
+}
+
+func (e *clientConnectionFailedError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.ClientConnectionFailedError: " + msg
+}
+
+func (e *clientConnectionFailedError) Unwrap() error { return e.err }
+
+func (e *clientConnectionFailedError) isEdgeDBClientConnectionFailedError() {}
+
+func (e *clientConnectionFailedError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionFailedError) isEdgeDBClientError() {}
+
+func (e *clientConnectionFailedError) isEdgeDBError() {}
+
+func (e *clientConnectionFailedError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+// ClientConnectionFailedTemporarilyError is an error.
+type ClientConnectionFailedTemporarilyError interface {
+	ClientConnectionFailedError
+	isEdgeDBClientConnectionFailedTemporarilyError()
+}
+
+type clientConnectionFailedTemporarilyError struct {
+	msg string
+	err error
+}
+
+func (e *clientConnectionFailedTemporarilyError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.ClientConnectionFailedTemporarilyError: " + msg
+}
+
+func (e *clientConnectionFailedTemporarilyError) Unwrap() error { return e.err }
+
+func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientConnectionFailedTemporarilyError() {}
+
+func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientConnectionFailedError() {}
+
+func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientError() {}
+
+func (e *clientConnectionFailedTemporarilyError) isEdgeDBError() {}
+
+func (e *clientConnectionFailedTemporarilyError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldReconnect:
+		return true
+	default:
+		return false
+	}
+}
+// ClientConnectionTimeoutError is an error.
+type ClientConnectionTimeoutError interface {
+	ClientConnectionError
+	isEdgeDBClientConnectionTimeoutError()
+}
+
+type clientConnectionTimeoutError struct {
+	msg string
+	err error
+}
+
+func (e *clientConnectionTimeoutError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.ClientConnectionTimeoutError: " + msg
+}
+
+func (e *clientConnectionTimeoutError) Unwrap() error { return e.err }
+
+func (e *clientConnectionTimeoutError) isEdgeDBClientConnectionTimeoutError() {}
+
+func (e *clientConnectionTimeoutError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionTimeoutError) isEdgeDBClientError() {}
+
+func (e *clientConnectionTimeoutError) isEdgeDBError() {}
+
+func (e *clientConnectionTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldReconnect:
+		return true
+	default:
+		return false
+	}
+}
 // InterfaceError is an error.
 type InterfaceError interface {
 	ClientError
@@ -2065,6 +2698,12 @@ func (e *interfaceError) isEdgeDBClientError() {}
 
 func (e *interfaceError) isEdgeDBError() {}
 
+func (e *interfaceError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // QueryArgumentError is an error.
 type QueryArgumentError interface {
 	InterfaceError
@@ -2095,6 +2734,12 @@ func (e *queryArgumentError) isEdgeDBClientError() {}
 
 func (e *queryArgumentError) isEdgeDBError() {}
 
+func (e *queryArgumentError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // MissingArgumentError is an error.
 type MissingArgumentError interface {
 	QueryArgumentError
@@ -2127,6 +2772,12 @@ func (e *missingArgumentError) isEdgeDBClientError() {}
 
 func (e *missingArgumentError) isEdgeDBError() {}
 
+func (e *missingArgumentError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // UnknownArgumentError is an error.
 type UnknownArgumentError interface {
 	QueryArgumentError
@@ -2159,6 +2810,12 @@ func (e *unknownArgumentError) isEdgeDBClientError() {}
 
 func (e *unknownArgumentError) isEdgeDBError() {}
 
+func (e *unknownArgumentError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // InvalidArgumentError is an error.
 type InvalidArgumentError interface {
 	QueryArgumentError
@@ -2191,6 +2848,12 @@ func (e *invalidArgumentError) isEdgeDBClientError() {}
 
 func (e *invalidArgumentError) isEdgeDBError() {}
 
+func (e *invalidArgumentError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 // NoDataError is an error.
 type NoDataError interface {
 	ClientError
@@ -2219,6 +2882,12 @@ func (e *noDataError) isEdgeDBClientError() {}
 
 func (e *noDataError) isEdgeDBError() {}
 
+func (e *noDataError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
 func errorFromCode(code uint32, msg string) error {
 	switch code {
 	case 0x01_00_00_00:
@@ -2239,6 +2908,12 @@ func errorFromCode(code uint32, msg string) error {
 		return &inputDataError{msg: msg}
 	case 0x03_03_00_00:
 		return &resultCardinalityMismatchError{msg: msg}
+	case 0x03_04_00_00:
+		return &capabilityError{msg: msg}
+	case 0x03_04_01_00:
+		return &unsupportedCapabilityError{msg: msg}
+	case 0x03_04_02_00:
+		return &disabledCapabilityError{msg: msg}
 	case 0x04_00_00_00:
 		return &queryError{msg: msg}
 	case 0x04_01_00_00:
@@ -2357,6 +3032,12 @@ func errorFromCode(code uint32, msg string) error {
 		return &clientError{msg: msg}
 	case 0xff_01_00_00:
 		return &clientConnectionError{msg: msg}
+	case 0xff_01_01_00:
+		return &clientConnectionFailedError{msg: msg}
+	case 0xff_01_01_01:
+		return &clientConnectionFailedTemporarilyError{msg: msg}
+	case 0xff_01_02_00:
+		return &clientConnectionTimeoutError{msg: msg}
 	case 0xff_02_00_00:
 		return &interfaceError{msg: msg}
 	case 0xff_02_01_00:

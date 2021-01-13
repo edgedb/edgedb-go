@@ -80,6 +80,10 @@ type Options struct {
 	// ConnectTimeout is used when establishing connections in the background.
 	ConnectTimeout time.Duration
 
+	// WaitUntilAvailable determines how long to wait
+	// to reestablish a connection.
+	WaitUntilAvailable time.Duration
+
 	// MinConns determines the minimum number of connections.
 	MinConns int
 
