@@ -112,8 +112,6 @@ func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
 	r.Discard(4) // data length
 
 	n := int(int32(r.PopUint32()))
-	fmt.Println("typ:", c.typ)
-	fmt.Println("out:", out)
 	slice := reflect.MakeSlice(c.typ, 0, n)
 
 	for i := 0; i < n; i++ {

@@ -115,12 +115,13 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 
 func (p *Pool) newConn(ctx context.Context) (*baseConn, error) {
 	conn := &baseConn{
+		cfg:           p.cfg,
 		typeIDCache:   p.typeIDCache,
 		inCodecCache:  p.inCodecCache,
 		outCodecCache: p.outCodecCache,
 	}
 
-	if err := connectOne(ctx, p.cfg, conn); err != nil {
+	if err := conn.reconnect(ctx); err != nil {
 		return nil, err
 	}
 

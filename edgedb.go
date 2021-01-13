@@ -18,8 +18,12 @@ package edgedb
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/rand"
 	"net"
+	"syscall"
+	"time"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
@@ -28,6 +32,8 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
+
+var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type baseConn struct {
 	conn net.Conn
@@ -43,84 +49,128 @@ type baseConn struct {
 	outCodecCache *cache.Cache
 
 	serverSettings map[string]string
+
+	// isClosed is true when the connection has been closed by a user.
+	isClosed bool
+
+	cfg *connConfig
 }
 
-// ConnectOne establishes a connection to an EdgeDB server.
-func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
-	return ConnectOneDSN(ctx, "", opts)
-}
-
-// ConnectOneDSN establishes a connection to an EdgeDB server.
-func ConnectOneDSN(
+// connectWithTimeout makes a single attempt to connect to `addr`.
+func connectWithTimeout(
 	ctx context.Context,
-	dsn string,
-	opts Options, // nolint:gocritic
-) (*Conn, error) {
-	conn := &baseConn{
-		typeIDCache:   cache.New(1_000),
-		inCodecCache:  cache.New(1_000),
-		outCodecCache: cache.New(1_000),
-	}
-
-	config, err := parseConnectDSNAndArgs(dsn, &opts)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := connectOne(ctx, config, conn); err != nil {
-		return nil, err
-	}
-
-	return &Conn{*conn}, nil
-}
-
-// connectOne expectes a singleConn that has a nil net.Conn.
-func connectOne(ctx context.Context, cfg *connConfig, conn *baseConn) error {
+	conn *baseConn,
+	addr *dialArgs,
+) error {
 	var (
-		d   net.Dialer
-		err error
+		cancel context.CancelFunc
+		d      net.Dialer
+		err    error
 	)
 
-	for _, addr := range cfg.addrs { // nolint:gocritic
-		conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
-		if err != nil {
-			err = &clientConnectionError{err: err}
-			continue
-		}
-
-		toBeDeserialized := make(chan *soc.Data, 2)
-		r := buff.NewReader(toBeDeserialized)
-		go soc.Read(conn.conn, soc.NewMemPool(4, 256*1024), toBeDeserialized)
-
-		err = conn.setDeadline(ctx)
-		if err != nil {
-			_ = conn.conn.Close()
-			continue
-		}
-
-		err = conn.connect(r, cfg)
-		if err != nil {
-			_ = conn.conn.Close()
-			continue
-		}
-
-		err = conn.setDeadline(context.Background())
-		if err != nil {
-			_ = conn.conn.Close()
-			continue
-		}
-
-		conn.acquireReaderSignal = make(chan struct{}, 1)
-		conn.readerChan = make(chan *buff.Reader, 1)
-		err = conn.releaseReader(r, nil)
-		if err != nil {
-			continue
-		}
-
-		return nil
+	if conn.cfg.connectTimeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, conn.cfg.connectTimeout)
+		defer cancel()
 	}
 
+	toBeDeserialized := make(chan *soc.Data, 2)
+	r := buff.NewReader(toBeDeserialized)
+
+	conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
+	if err != nil {
+		goto handleError
+	}
+
+	conn.acquireReaderSignal = make(chan struct{}, 1)
+	conn.readerChan = make(chan *buff.Reader, 1)
+	go soc.Read(conn.conn, soc.NewMemPool(4, 256*1024), toBeDeserialized)
+
+	err = conn.setDeadline(ctx)
+	if err != nil {
+		_ = conn.conn.Close()
+		goto handleError
+	}
+
+	err = conn.connect(r, conn.cfg)
+	if err != nil {
+		_ = conn.conn.Close()
+		goto handleError
+	}
+
+	err = conn.setDeadline(context.Background())
+	if err != nil {
+		_ = conn.conn.Close()
+		goto handleError
+	}
+
+	if conn.releaseReader(r, nil) != nil {
+		goto handleError
+	}
+
+	return nil
+
+handleError:
 	conn.conn = nil
+
+	var errEDB Error
+	var errNetOp *net.OpError
+	var errDSN *net.DNSError
+
+	switch {
+	case errors.As(err, &errNetOp) && errNetOp.Timeout():
+		return &clientConnectionTimeoutError{err: errNetOp}
+
+	case errors.As(err, &errEDB):
+		return err
+
+	case errors.Is(err, syscall.ECONNREFUSED):
+		fallthrough
+	case errors.Is(err, syscall.ECONNABORTED):
+		fallthrough
+	case errors.Is(err, syscall.ECONNRESET):
+		fallthrough
+	case errors.As(err, &errDSN):
+		fallthrough
+	case errors.Is(err, syscall.ENOENT):
+		return &clientConnectionFailedTemporarilyError{err: err}
+
+	default:
+		return &clientConnectionFailedError{err: err}
+	}
+}
+
+// recconnect establishes a new connection with the server
+// retrying the connection on failure.
+// An error is returned if the `baseConn` was closed.
+func (c *baseConn) reconnect(ctx context.Context) (err error) {
+	if c.isClosed {
+		return &interfaceError{msg: "Connection is closed"}
+	}
+
+	maxTime := time.Now().Add(c.cfg.waitUntilAvailable)
+	if deadline, ok := ctx.Deadline(); ok && deadline.Before(maxTime) {
+		maxTime = deadline
+	}
+
+	var connErr ClientConnectionError
+
+	for i := 1; true; i++ {
+		for _, addr := range c.cfg.addrs {
+			err = connectWithTimeout(ctx, c, addr)
+			if err == nil ||
+				errors.Is(err, context.Canceled) ||
+				errors.Is(err, context.DeadlineExceeded) ||
+				!errors.As(err, &connErr) ||
+				!connErr.HasTag("SHOULD_RECONNECT") ||
+				(i > 1 && time.Now().After(maxTime)) {
+				return err
+			}
+		}
+
+		time.Sleep(time.Duration(10+rnd.Intn(200)) * time.Millisecond)
+	}
+
+	// this is unreachable, but the compiler can't tell...
 	return err
 }
 
@@ -180,25 +230,42 @@ func (c *baseConn) close() error {
 	_, err := c.acquireReader(context.Background())
 	if err != nil {
 		_ = c.conn.Close()
+		c.conn = nil
 		return err
 	}
 
 	err = c.terminate()
 	if err != nil {
 		_ = c.conn.Close()
+		c.conn = nil
 		return err
 	}
 
 	err = c.conn.Close()
+	c.conn = nil
 	if err != nil {
 		return &clientConnectionError{err: err}
 	}
 
+	c.isClosed = true
 	return nil
+}
+
+// ensureConnection reconnects to the server if not connected.
+func (c *baseConn) ensureConnection(ctx context.Context) error {
+	if c.conn != nil && !c.isClosed {
+		return nil
+	}
+
+	return c.reconnect(ctx)
 }
 
 // Execute an EdgeQL command (or commands).
 func (c *baseConn) Execute(ctx context.Context, cmd string) error {
+	if e := c.ensureConnection(ctx); e != nil {
+		return e
+	}
+
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -220,6 +287,10 @@ func (c *baseConn) QueryOne(
 	out interface{},
 	args ...interface{},
 ) (err error) {
+	if e := c.ensureConnection(ctx); e != nil {
+		return e
+	}
+
 	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -251,6 +322,10 @@ func (c *baseConn) Query(
 	out interface{},
 	args ...interface{},
 ) error {
+	if e := c.ensureConnection(ctx); e != nil {
+		return e
+	}
+
 	val, err := marshal.ValueOfSlice(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -282,6 +357,10 @@ func (c *baseConn) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
+	if e := c.ensureConnection(ctx); e != nil {
+		return e
+	}
+
 	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -316,6 +395,10 @@ func (c *baseConn) QueryOneJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
+	if e := c.ensureConnection(ctx); e != nil {
+		return e
+	}
+
 	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}

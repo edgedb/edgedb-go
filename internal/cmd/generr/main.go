@@ -21,14 +21,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 )
 
-func private(name string) string {
-	return strings.ToLower(name[0:1]) + name[1:]
-}
-
-func printError(name, parent string, ancestors []string) {
+func printError(errType *errorType) {
 	fmt.Printf(`
 // %[1]v is an error.
 type %[1]v interface {
@@ -53,39 +48,48 @@ func (e *%[2]v) Error() string {
 func (e *%[2]v) Unwrap() error { return e.err }
 
 func (e *%[2]v) isEdgeDB%[1]v() {}
+`, errType.name, errType.privateName(), errType.ancestors[0])
 
-func (e *%[2]v) isEdgeDB%[3]v() {}
-`, name, private(name), parent)
-
-	for _, ancestor := range ancestors {
+	for _, ancestor := range errType.ancestors {
 		fmt.Printf(`
 func (e *%v) isEdgeDB%v() {}
-`, private(name), ancestor)
+`, errType.privateName(), ancestor)
+	}
+
+	fmt.Printf(`
+func (e *%v) HasTag(tag ErrorTag) bool {
+	switch tag {`, errType.privateName())
+
+	for _, tag := range errType.tags {
+		fmt.Printf(`
+	case %v:
+		return true`, tag.identifyer())
+	}
+
+	fmt.Printf(`
+	default:
+		return false
+	}
+}`)
+}
+
+func printErrors(types []*errorType) {
+	for _, typ := range types {
+		printError(typ)
 	}
 }
 
-func printErrors(types [][]string) {
-	for _, lineage := range types {
-		name := lineage[0]
-		parent := lineage[1]
-		printError(name, parent, lineage[2:])
-	}
-}
-
-func printCodeMap(data [][]interface{}) {
+func printCodeMap(types []*errorType) {
 	fmt.Print(`
 func errorFromCode(code uint32, msg string) error {
 	switch code {`)
 
-	for _, t := range data {
+	for _, typ := range types {
 		fmt.Printf(`
 	case 0x%02x_%02x_%02x_%02x:
 		return &%v{msg: msg}`,
-			int(t[2].(float64)),
-			int(t[3].(float64)),
-			int(t[4].(float64)),
-			int(t[5].(float64)),
-			private(t[0].(string)),
+			typ.code[0], typ.code[1], typ.code[2], typ.code[3],
+			typ.privateName(),
 		)
 	}
 
@@ -93,8 +97,21 @@ func errorFromCode(code uint32, msg string) error {
 	default:
 		panic(fmt.Sprintf("invalid error code 0x%` + `x", code))
 	}
+}`)
 }
-`)
+
+func printTags(tags []errorTag) {
+	fmt.Print(`
+const (`)
+
+	for _, tag := range tags {
+		fmt.Printf(`
+	// %[1]v is an error tag.
+	%[1]v ErrorTag = %[2]q`, tag.identifyer(), tag)
+	}
+
+	fmt.Print(`
+)`)
 }
 
 func main() {
@@ -103,31 +120,8 @@ func main() {
 		log.Fatal(e)
 	}
 
-	lookup := make(map[string]string, len(data))
-	for _, t := range data {
-		name := t[0].(string)
-		if !strings.HasSuffix(name, "Error") {
-			continue
-		}
-
-		parent, _ := t[1].(string)
-		lookup[name] = parent
-	}
-
-	types := make([][]string, 0, len(lookup))
-	for _, t := range data {
-		name := t[0].(string)
-		parent := lookup[name]
-		parents := []string{name}
-
-		for parent != "" {
-			parents = append(parents, parent)
-			parent = lookup[parent]
-		}
-
-		parents = append(parents, "Error")
-		types = append(types, parents)
-	}
+	types := parseTypes(data)
+	tags := parseTags(data)
 
 	fmt.Print(`// This source file is part of the EdgeDB open source project.
 //
@@ -153,6 +147,8 @@ func main() {
 	fmt.Println("package edgedb")
 	fmt.Println()
 	fmt.Println(`import "fmt"`)
+	printTags(tags)
+	fmt.Println()
 	printErrors(types)
-	printCodeMap(data)
+	printCodeMap(types)
 }

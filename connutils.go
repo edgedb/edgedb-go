@@ -31,12 +31,13 @@ import (
 const edgedbPort = 5656
 
 type connConfig struct {
-	addrs          []dialArgs
-	user           string
-	password       string
-	database       string
-	connectTimeout time.Duration
-	serverSettings map[string]string
+	addrs              []*dialArgs
+	user               string
+	password           string
+	database           string
+	connectTimeout     time.Duration
+	waitUntilAvailable time.Duration
+	serverSettings     map[string]string
 }
 
 type dialArgs struct {
@@ -354,7 +355,7 @@ func parseConnectDSNAndArgs(
 		database = "edgedb"
 	}
 
-	var addrs []dialArgs
+	var addrs []*dialArgs
 	for i := 0; i < len(hosts); i++ {
 		h := hosts[i]
 		p := ports[i]
@@ -363,9 +364,9 @@ func parseConnectDSNAndArgs(
 			if !strings.Contains(h, ".s.EDGEDB.") {
 				h = path.Join(h, fmt.Sprintf(".s.EDGEDB.%v", p))
 			}
-			addrs = append(addrs, dialArgs{"unix", h})
+			addrs = append(addrs, &dialArgs{"unix", h})
 		} else {
-			addrs = append(addrs, dialArgs{
+			addrs = append(addrs, &dialArgs{
 				"tcp",
 				fmt.Sprintf("%v:%v", h, p),
 			})
@@ -378,13 +379,19 @@ func parseConnectDSNAndArgs(
 		}
 	}
 
+	waitUntilAvailable := opts.WaitUntilAvailable
+	if waitUntilAvailable == 0 {
+		waitUntilAvailable = 30 * time.Second
+	}
+
 	cfg := &connConfig{
-		addrs:          addrs,
-		user:           user,
-		password:       password,
-		database:       database,
-		connectTimeout: opts.ConnectTimeout,
-		serverSettings: serverSettings,
+		addrs:              addrs,
+		user:               user,
+		password:           password,
+		database:           database,
+		connectTimeout:     opts.ConnectTimeout,
+		waitUntilAvailable: waitUntilAvailable,
+		serverSettings:     serverSettings,
 	}
 
 	return cfg, nil
