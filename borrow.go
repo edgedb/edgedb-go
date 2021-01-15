@@ -16,32 +16,32 @@
 
 package edgedb
 
-import (
-	"errors"
-	"testing"
+type borrowable struct {
+	reason string
+}
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
+func (b *borrowable) assertUnborrowed() error {
+	switch b.reason {
+	case "transaction":
+		return &interfaceError{
+			msg: "Connection is borrowed for a transaction. " +
+				"Use the methods on transaction object instead.",
+		}
+	default:
+		return nil
+	}
+}
 
-func TestReleasePoolConn(t *testing.T) {
-	p := &pool{freeConns: make(chan *baseConn, 1)}
-	conn := &baseConn{}
-	pConn := &poolConn{pool: p, baseConn: conn}
+func (b *borrowable) borrow(reason string) error {
+	if b.reason != "" {
+		msg := "connection is already borrowed for " + b.reason
+		return &interfaceError{msg: msg}
+	}
 
-	err := pConn.Release()
-	require.Nil(t, err)
+	b.reason = reason
+	return nil
+}
 
-	result := <-p.freeConns
-	assert.Equal(t, conn, result)
-
-	err = pConn.Release()
-	assert.EqualError(
-		t,
-		err,
-		"edgedb.InterfaceError: connection released more than once",
-	)
-
-	var errReleasedTwice InterfaceError
-	assert.True(t, errors.As(err, &errReleasedTwice))
+func (b *borrowable) unborrow() {
+	b.reason = ""
 }

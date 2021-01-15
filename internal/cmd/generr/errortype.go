@@ -68,8 +68,13 @@ func parseTypes(data [][]interface{}) []*errorType {
 	}
 
 	types := make([]*errorType, 0, len(data))
-	for _, typ := range data {
-		types = append(types, parseType(typ, lookup))
+	for _, d := range data {
+		typ := parseType(d, lookup)
+		if !strings.HasSuffix(typ.name, "Error") {
+			continue
+		}
+
+		types = append(types, parseType(d, lookup))
 	}
 
 	return types

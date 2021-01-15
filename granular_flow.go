@@ -21,6 +21,7 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/aspect"
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/format"
 	"github.com/edgedb/edgedb-go/internal/message"
@@ -245,7 +246,10 @@ func (c *baseConn) execute(
 	}
 
 	tmp := out
-	err := errZeroResults
+	err := error(nil)
+	if q.expCard == cardinality.One {
+		err = errZeroResults
+	}
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
@@ -326,7 +330,10 @@ func (c *baseConn) optimistic(
 	}
 
 	tmp := out
-	err := errZeroResults
+	err := error(nil)
+	if q.expCard == cardinality.One {
+		err = errZeroResults
+	}
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
