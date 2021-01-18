@@ -18,8 +18,6 @@ package types
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 )
 
 // UUID a universally unique identifier
@@ -35,33 +33,4 @@ func (id UUID) String() string {
 		id[8:10],
 		id[10:16],
 	)
-}
-
-// MarshalText returns the id as a byte string.
-func (id UUID) MarshalText() ([]byte, error) {
-	return []byte(id.String()), nil
-}
-
-// UnmarshalText unmarshals the id from a string.
-func (id *UUID) UnmarshalText(b []byte) (err error) {
-	*id, err = UUIDFromString(string(b))
-	return err
-}
-
-// UUIDFromString converts a string to a UUID.
-func UUIDFromString(s string) (UUID, error) {
-	s = strings.Replace(s, "-", "", 4)
-
-	var id UUID
-	for i := 0; i < 16; i++ {
-		val, err := strconv.ParseUint(s[:2], 16, 8)
-		if err != nil {
-			return UUID{}, err
-		}
-
-		id[i] = uint8(val)
-		s = s[2:]
-	}
-
-	return id, nil
 }

@@ -27,7 +27,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/types"
+	"github.com/edgedb/edgedb-go/internal/types"
 )
 
 var (
@@ -127,11 +127,29 @@ func (c *UUID) ID() types.UUID {
 func (c *UUID) setDefaultType() {}
 
 func (c *UUID) setType(typ reflect.Type) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+	return false, c.checkType(typ)
+}
+
+func (c *UUID) checkType(typ reflect.Type) error {
+	switch {
+	case typ.Kind() != c.typ.Kind():
+		fmt.Println("failed kind", typ.Kind(), c.typ.Kind())
+		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+	case typ.Elem() != c.typ.Elem():
+		fmt.Println("failed elem", typ.Elem(), c.typ.Elem())
+		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+	case typ.Len() != c.typ.Len():
+		fmt.Println("failed len", typ.Len(), c.typ.Len())
+		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+	case typ.PkgPath() != "github.com/edgedb/edgedb-go":
+		fmt.Println("failed pkgpath", typ.PkgPath())
+		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+	case typ.Name() != "UUID":
+		fmt.Println("failed name", typ.Name(), c.typ.Name())
+		return fmt.Errorf("expected edgedb.UUID got %v", typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
@@ -146,8 +164,8 @@ func (c *UUID) Decode(r *buff.Reader, out reflect.Value) {
 
 // DecodeReflect decodes a UUID.using reflection
 func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+	if e := c.checkType(out.Type()); e != nil {
+		panic(e)
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))

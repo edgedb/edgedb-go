@@ -20,7 +20,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/edgedb/edgedb-go/types"
+	"github.com/edgedb/edgedb-go/internal/types"
 )
 
 // Writer is a write buffer.

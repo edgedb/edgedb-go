@@ -140,7 +140,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 		case message.PrepareComplete:
 			r.Discard(2)     // number of headers, assume 0
 			_ = r.PopUint8() // cardianlity
-			ids = idPair{in: r.PopUUID(), out: r.PopUUID()}
+			ids = idPair{in: [16]byte(r.PopUUID()), out: [16]byte(r.PopUUID())}
 		case message.ReadyForCommand:
 			// header count (assume 0)
 			// transaction state

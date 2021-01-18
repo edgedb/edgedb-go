@@ -22,7 +22,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/types"
+	"github.com/edgedb/edgedb-go/internal/types"
 )
 
 func popSetCodec(

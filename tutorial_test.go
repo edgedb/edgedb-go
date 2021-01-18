@@ -22,23 +22,22 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/edgedb/edgedb-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type Person struct {
-	ID        types.UUID `edgedb:"id"`
-	FirstName string     `edgedb:"first_name"`
-	LastName  string     `edgedb:"last_name"`
+	ID        UUID   `edgedb:"id"`
+	FirstName string `edgedb:"first_name"`
+	LastName  string `edgedb:"last_name"`
 }
 
 type Movie struct {
-	ID       types.UUID `edgedb:"id"`
-	Title    string     `edgedb:"title"`
-	Year     int64      `edgedb:"year"`
-	Director Person     `edgedb:"director"`
-	Actors   []Person   `edgedb:"actors"`
+	ID       UUID     `edgedb:"id"`
+	Title    string   `edgedb:"title"`
+	Year     int64    `edgedb:"year"`
+	Director Person   `edgedb:"director"`
+	Actors   []Person `edgedb:"actors"`
 }
 
 func TestTutorial(t *testing.T) {
