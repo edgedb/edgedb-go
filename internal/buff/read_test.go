@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/edgedb/edgedb-go/internal/soc"
-	"github.com/edgedb/edgedb-go/types"
+	"github.com/edgedb/edgedb-go/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

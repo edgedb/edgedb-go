@@ -23,7 +23,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/types"
+	"github.com/edgedb/edgedb-go/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +44,6 @@ func TestSetObjectType(t *testing.T) {
 		{name: "med", codec: &Int32{typ: int32Type}},
 		{name: "large", codec: &Int64{typ: int64Type}},
 		{name: "name", codec: &Str{typ: strType}},
-		{name: "id", codec: &UUID{typ: uuidType}},
 	}}
 
 	useReflect, err := codec.setType(reflect.TypeOf(Thing{}))
@@ -56,7 +55,6 @@ func TestSetObjectType(t *testing.T) {
 	assert.Equal(t, uintptr(4), codec.fields[2].offset)
 	assert.Equal(t, uintptr(8), codec.fields[3].offset)
 	assert.Equal(t, uintptr(16), codec.fields[4].offset)
-	assert.Equal(t, uintptr(32), codec.fields[5].offset)
 }
 
 func TestObjectDecodePtr(t *testing.T) {

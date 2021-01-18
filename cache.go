@@ -45,13 +45,12 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/types"
 )
 
 var descCache = cache.New(1_000)
 
 type codecKey struct {
-	ID   types.UUID
+	ID   UUID
 	Type reflect.Type
 }
 
@@ -66,8 +65,8 @@ type descPair struct {
 }
 
 type idPair struct {
-	in  types.UUID
-	out types.UUID
+	in  UUID
+	out UUID
 }
 
 type queryKey struct {

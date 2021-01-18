@@ -23,7 +23,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/soc"
-	"github.com/edgedb/edgedb-go/types"
+	"github.com/edgedb/edgedb-go/internal/types"
 )
 
 // Reader is a buffer reader.
