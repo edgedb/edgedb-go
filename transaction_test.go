@@ -82,6 +82,36 @@ func TestTxRollesBack(t *testing.T) {
 	require.Equal(t, 0, len(testNames), "The transaction wasn't rolled back")
 }
 
+func TestTxRollesBackOnUserError(t *testing.T) {
+	ensureTxTestType(t)
+
+	ctx := context.Background()
+	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
+		query := "INSERT TxTest {name := 'Test Roll Back'};"
+		if e := tx.Execute(ctx, query); e != nil {
+			return e
+		}
+
+		return errors.New("user defined error")
+	})
+
+	require.Equal(t, err, errors.New("user defined error"))
+
+	query := `
+		SELECT (
+			SELECT TxTest {name}
+			FILTER .name = 'Test Roll Back'
+		).name
+		LIMIT 1
+	`
+
+	var testNames []string
+	err = conn.Query(ctx, query, &testNames)
+
+	require.Nil(t, err, "unexpected error: %v", err)
+	require.Equal(t, 0, len(testNames), "The transaction wasn't rolled back")
+}
+
 func TestTxCommits(t *testing.T) {
 	ensureTxTestType(t)
 
