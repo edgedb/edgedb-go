@@ -33,15 +33,15 @@ func TestConnectPool(t *testing.T) {
 	o := opts
 	o.MinConns = 1
 	o.MaxConns = 2
-	pool, err := Connect(ctx, o)
+	p, err := Connect(ctx, o)
 	require.Nil(t, err)
 
 	var result string
-	err = pool.QueryOne(ctx, "SELECT 'hello';", &result)
+	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello", result)
 
-	err = pool.Close()
+	err = p.Close()
 	assert.Nil(t, err)
 }
 
@@ -52,12 +52,12 @@ func TestClosePoolConcurently(t *testing.T) {
 	o := opts
 	o.MinConns = 1
 	o.MaxConns = 2
-	pool, err := Connect(ctx, o)
+	p, err := Connect(ctx, o)
 	require.Nil(t, err)
 
 	errs := make(chan error)
-	go func() { errs <- pool.Close() }()
-	go func() { errs <- pool.Close() }()
+	go func() { errs <- p.Close() }()
+	go func() { errs <- p.Close() }()
 
 	assert.Nil(t, <-errs)
 	var closedErr InterfaceError
@@ -98,13 +98,13 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 }
 
 func TestAcquireFromClosedPool(t *testing.T) {
-	pool := &Pool{
+	p := &pool{
 		isClosed:       true,
 		freeConns:      make(chan *baseConn),
 		potentialConns: make(chan struct{}),
 	}
 
-	conn, err := pool.Acquire(context.TODO())
+	conn, err := p.Acquire(context.TODO())
 	var closedErr InterfaceError
 	require.True(t, errors.As(err, &closedErr))
 	assert.Nil(t, conn)
@@ -112,24 +112,27 @@ func TestAcquireFromClosedPool(t *testing.T) {
 
 func TestAcquireFreeConnFromPool(t *testing.T) {
 	conn := &baseConn{}
-	pool := &Pool{freeConns: make(chan *baseConn, 1)}
-	pool.freeConns <- conn
+	p := &pool{freeConns: make(chan *baseConn, 1)}
+	p.freeConns <- conn
 
-	result, err := pool.Acquire(context.TODO())
+	result, err := p.Acquire(context.TODO())
 	assert.Nil(t, err)
-	assert.Equal(t, conn, result.baseConn)
+
+	pConn, ok := result.(*poolConn)
+	require.True(t, ok, "unexpected return type: %T", result)
+	assert.Equal(t, conn, pConn.baseConn)
 }
 
 func BenchmarkPoolAcquireRelease(b *testing.B) {
-	pool := &Pool{
+	p := &pool{
 		maxConns:       2,
 		minConns:       2,
 		freeConns:      make(chan *baseConn, 2),
 		potentialConns: make(chan struct{}, 2),
 	}
 
-	for i := 0; i < pool.maxConns; i++ {
-		pool.freeConns <- &baseConn{}
+	for i := 0; i < p.maxConns; i++ {
+		p.freeConns <- &baseConn{}
 	}
 
 	var conn *baseConn
@@ -137,8 +140,8 @@ func BenchmarkPoolAcquireRelease(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		conn, _ = pool.acquire(ctx)
-		_ = pool.release(conn, nil)
+		conn, _ = p.acquire(ctx)
+		_ = p.release(conn, nil)
 	}
 }
 
@@ -146,64 +149,84 @@ func TestAcquirePotentialConnFromPool(t *testing.T) {
 	o := opts
 	o.MaxConns = 2
 	o.MinConns = 1
-	pool, err := Connect(context.TODO(), o)
+	p, err := Connect(context.TODO(), o)
 	require.Nil(t, err)
 	defer func() {
-		assert.Nil(t, pool.Close())
+		assert.Nil(t, p.Close())
 	}()
 
 	// free connection
-	a, err := pool.Acquire(context.TODO())
+	a, err := p.Acquire(context.TODO())
 	require.Nil(t, err)
 	require.NotNil(t, a)
 	defer func() { assert.Nil(t, a.Release()) }()
 
 	// potential connection
-	b, err := pool.Acquire(context.TODO())
+	b, err := p.Acquire(context.TODO())
 	require.Nil(t, err)
 	require.NotNil(t, b)
 	defer func() { assert.Nil(t, b.Release()) }()
 }
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
-	pool := &Pool{
+	p := &pool{
 		freeConns:      make(chan *baseConn, 1),
 		potentialConns: make(chan struct{}, 1),
 	}
-	pool.freeConns <- &baseConn{}
-	pool.potentialConns <- struct{}{}
+	p.freeConns <- &baseConn{}
+	p.potentialConns <- struct{}{}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
 	cancel()
 
-	conn, err := pool.Acquire(ctx)
+	conn, err := p.Acquire(ctx)
 	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 	assert.Nil(t, conn)
 }
 
 func TestPoolAcquireThenContextExpires(t *testing.T) {
-	pool := &Pool{}
+	p := &pool{}
 
 	deadline := time.Now().Add(10 * time.Millisecond)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
-	conn, err := pool.Acquire(ctx)
+	conn, err := p.Acquire(ctx)
 	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 	assert.Nil(t, conn)
 	cancel()
 }
 
 func TestClosePool(t *testing.T) {
-	pool := &Pool{
+	p := &pool{
 		maxConns:       0,
 		minConns:       0,
 		freeConns:      make(chan *baseConn),
 		potentialConns: make(chan struct{}),
 	}
 
-	err := pool.Close()
+	err := p.Close()
 	assert.Nil(t, err)
 
-	err = pool.Close()
+	err = p.Close()
 	var closedErr InterfaceError
 	assert.True(t, errors.As(err, &closedErr))
+}
+
+func TestPoolRetry(t *testing.T) {
+	ctx := context.Background()
+
+	o := opts
+	o.MinConns = 1
+	o.MaxConns = 1
+
+	p, err := Connect(ctx, o)
+	require.Nil(t, err, "unexpected error: %v", err)
+	defer p.Close() // nolint:errcheck
+
+	var result int64
+	err = p.Retry(ctx, func(ctx context.Context, tx Tx) error {
+		return tx.QueryOne(ctx, "SELECT 33*21", &result)
+	})
+
+	require.Nil(t, err, "unexpected error: %v", err)
+	require.Equal(t, int64(693), result, "Pool.Retry() failed")
 }

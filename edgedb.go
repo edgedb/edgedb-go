@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"syscall"
@@ -33,7 +34,52 @@ import (
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
+const defaultMaxTxRetries = 3
+
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func defaultBackoff(attempt int) time.Duration {
+	backoff := math.Pow(2.0, float64(attempt)) * 100.0
+	jitter := rnd.Float64() * 100.0
+	return time.Duration(backoff+jitter) * time.Millisecond
+}
+
+// Action is work to be done in a transaction.
+type Action func(context.Context, Tx) error
+
+// Trier allows trying actions in a transaction.
+type Trier interface {
+	// TryTx runs an action in a transaction.
+	// If the action returns an error the transaction is rolled back,
+	// otherwise it is committed.
+	TryTx(context.Context, Action) error
+
+	// Retry does the same as TryTx
+	// but retries the action if it might succeed on a subsequent attempt.
+	Retry(context.Context, Action) error
+}
+
+// Executor allows querying the database.
+type Executor interface {
+	// Execute an EdgeQL command (or commands).
+	Execute(context.Context, string) error
+
+	// Query runs a query and returns the results.
+	Query(context.Context, string, interface{}, ...interface{}) error
+
+	// QueryOne runs a singleton-returning query and returns its element.
+	// If the query executes successfully but doesn't return a result
+	// a NoDataError is returned.
+	QueryOne(context.Context, string, interface{}, ...interface{}) error
+
+	// QueryJSON runs a query and return the results as JSON.
+	QueryJSON(context.Context, string, *[]byte, ...interface{}) error
+
+	// QueryOneJSON runs a singleton-returning query.
+	// If the query executes successfully but doesn't have a result
+	// a NoDataError is returned.
+	QueryOneJSON(context.Context, string, *[]byte, ...interface{}) error
+}
 
 type baseConn struct {
 	conn net.Conn
@@ -139,7 +185,7 @@ handleError:
 	}
 }
 
-// recconnect establishes a new connection with the server
+// reconnect establishes a new connection with the server
 // retrying the connection on failure.
 // An error is returned if the `baseConn` was closed.
 func (c *baseConn) reconnect(ctx context.Context) (err error) {
@@ -260,7 +306,6 @@ func (c *baseConn) ensureConnection(ctx context.Context) error {
 	return c.reconnect(ctx)
 }
 
-// Execute an EdgeQL command (or commands).
 func (c *baseConn) Execute(ctx context.Context, cmd string) error {
 	if e := c.ensureConnection(ctx); e != nil {
 		return e
@@ -278,44 +323,6 @@ func (c *baseConn) Execute(ctx context.Context, cmd string) error {
 	return c.releaseReader(r, c.scriptFlow(r, cmd))
 }
 
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// ErrorZeroResults is returned.
-func (c *baseConn) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) (err error) {
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	val, err := marshal.ValueOf(out)
-	if err != nil {
-		return &invalidArgumentError{msg: err.Error()}
-	}
-
-	q := query{
-		cmd:     cmd,
-		fmt:     format.Binary,
-		expCard: cardinality.One,
-		args:    args,
-	}
-
-	r, err := c.acquireReader(ctx)
-	if err != nil {
-		return err
-	}
-
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
-	return c.releaseReader(r, c.granularFlow(r, val, q))
-}
-
-// Query runs a query and returns the results.
 func (c *baseConn) Query(
 	ctx context.Context,
 	cmd string,
@@ -350,7 +357,40 @@ func (c *baseConn) Query(
 	return c.releaseReader(r, c.granularFlow(r, val, q))
 }
 
-// QueryJSON runs a query and return the results as JSON.
+func (c *baseConn) QueryOne(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) (err error) {
+	if e := c.ensureConnection(ctx); e != nil {
+		return e
+	}
+
+	val, err := marshal.ValueOf(out)
+	if err != nil {
+		return &invalidArgumentError{msg: err.Error()}
+	}
+
+	q := query{
+		cmd:     cmd,
+		fmt:     format.Binary,
+		expCard: cardinality.One,
+		args:    args,
+	}
+
+	r, err := c.acquireReader(ctx)
+	if err != nil {
+		return err
+	}
+
+	if e := c.setDeadline(ctx); e != nil {
+		return e
+	}
+
+	return c.releaseReader(r, c.granularFlow(r, val, q))
+}
+
 func (c *baseConn) QueryJSON(
 	ctx context.Context,
 	cmd string,
@@ -385,10 +425,6 @@ func (c *baseConn) QueryJSON(
 	return c.releaseReader(r, c.granularFlow(r, val, q))
 }
 
-// QueryOneJSON runs a singleton-returning query
-// and return its element in JSON.
-// If the query executes successfully but doesn't return a result
-// []byte{}, ErrorZeroResults is returned.
 func (c *baseConn) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
@@ -421,4 +457,50 @@ func (c *baseConn) QueryOneJSON(
 	}
 
 	return c.releaseReader(r, c.granularFlow(r, val, q))
+}
+
+func (c *baseConn) TryTx(ctx context.Context, action Action) error {
+	tx := &transaction{conn: c, isolation: repeatableRead}
+	if e := tx.start(ctx); e != nil {
+		return e
+	}
+
+	if e := action(ctx, tx); e != nil {
+		return firstError(e, tx.rollback(ctx))
+	}
+
+	return tx.commit(ctx)
+}
+
+func (c *baseConn) Retry(ctx context.Context, action Action) error {
+	var edbErr Error
+
+	for i := 0; i < defaultMaxTxRetries; i++ {
+		tx := &transaction{conn: c, isolation: repeatableRead}
+
+		if e := tx.start(ctx); e != nil {
+			return e
+		}
+
+		err := action(ctx, tx)
+
+		if err == nil {
+			return tx.commit(ctx)
+		}
+
+		if e := tx.rollback(ctx); e != nil && !errors.As(e, &edbErr) {
+			return e
+		}
+
+		if errors.As(err, &edbErr) &&
+			edbErr.HasTag(ShouldRetry) &&
+			(i+1 < defaultMaxTxRetries) {
+			time.Sleep(defaultBackoff(i))
+			continue
+		}
+
+		return err
+	}
+
+	panic("unreachable")
 }

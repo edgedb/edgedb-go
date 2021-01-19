@@ -23,15 +23,24 @@ import (
 )
 
 // PoolConn is a pooled connection.
-type PoolConn struct {
-	pool *Pool
-	err  error
-	*baseConn
+type PoolConn interface {
+	Executor
+	Trier
+
+	// Release the connection back to its pool.
+	// Release returns an error if called more than once.
+	// A PoolConn is not usable after Release has been called.
+	Release() error
 }
 
-// Release the connection back to its pool. Panics if called more than once.
-// PoolConn is not useable after Release has been called.
-func (c *PoolConn) Release() error {
+type poolConn struct {
+	pool *pool
+	err  error
+	*baseConn
+	borrowable
+}
+
+func (c *poolConn) Release() error {
 	if c.pool == nil {
 		msg := "connection released more than once"
 		return &interfaceError{msg: msg}
@@ -45,68 +54,96 @@ func (c *PoolConn) Release() error {
 	return err
 }
 
-func (c *PoolConn) checkErr(err error) {
+func (c *poolConn) checkErr(err error) {
 	if soc.IsPermanentNetErr(err) {
 		c.err = err
 	}
 }
 
-// Execute an EdgeQL command (or commands).
-func (c *PoolConn) Execute(ctx context.Context, cmd string) error {
+func (c *poolConn) Execute(ctx context.Context, cmd string) error {
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
 	err := c.baseConn.Execute(ctx, cmd)
 	c.checkErr(err)
 	return err
 }
 
-// Query runs a query and returns the results.
-func (c *PoolConn) Query(
+func (c *poolConn) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
 	args ...interface{},
 ) error {
-	err := c.baseConn.Query(ctx, cmd, out, args)
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	err := c.baseConn.Query(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
 
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// ErrorZeroResults is returned.
-func (c *PoolConn) QueryOne(
+func (c *poolConn) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
 	args ...interface{},
 ) error {
-	err := c.baseConn.QueryOne(ctx, cmd, out, args)
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	err := c.baseConn.QueryOne(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
 
-// QueryJSON runs a query and return the results as JSON.
-func (c *PoolConn) QueryJSON(
+func (c *poolConn) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
 ) error {
-	err := c.baseConn.QueryJSON(ctx, cmd, out, args)
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	err := c.baseConn.QueryJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
 
-// QueryOneJSON runs a singleton-returning query
-// and return its element in JSON.
-// If the query executes successfully but doesn't return a result
-// []byte{}, ErrorZeroResults is returned.
-func (c *PoolConn) QueryOneJSON(
+func (c *poolConn) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
 ) error {
-	err := c.baseConn.QueryOneJSON(ctx, cmd, out, args)
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	err := c.baseConn.QueryOneJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
+}
+
+func (c *poolConn) TryTx(ctx context.Context, action Action) error {
+	if e := c.borrow("transaction"); e != nil {
+		return e
+	}
+	defer c.unborrow()
+
+	return c.baseConn.TryTx(ctx, action)
+}
+
+func (c *poolConn) Retry(ctx context.Context, action Action) error {
+	if e := c.borrow("transaction"); e != nil {
+		return e
+	}
+	defer c.unborrow()
+
+	return c.baseConn.Retry(ctx, action)
 }

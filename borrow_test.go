@@ -17,31 +17,31 @@
 package edgedb
 
 import (
-	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestReleasePoolConn(t *testing.T) {
-	p := &pool{freeConns: make(chan *baseConn, 1)}
-	conn := &baseConn{}
-	pConn := &poolConn{pool: p, baseConn: conn}
+func TestBorrow(t *testing.T) {
+	b := borrowable{}
+	err := b.assertUnborrowed()
+	require.Nil(t, err, "unexpected err: %v", err)
 
-	err := pConn.Release()
-	require.Nil(t, err)
+	err = b.borrow("transaction")
+	require.Nil(t, err, "unexpected err: %v", err)
 
-	result := <-p.freeConns
-	assert.Equal(t, conn, result)
+	err = b.borrow("something else")
+	expected := "edgedb.InterfaceError: " +
+		"connection is already borrowed for transaction"
+	require.EqualError(t, err, expected)
 
-	err = pConn.Release()
-	assert.EqualError(
-		t,
-		err,
-		"edgedb.InterfaceError: connection released more than once",
-	)
+	err = b.assertUnborrowed()
+	expected = "edgedb.InterfaceError: " +
+		"Connection is borrowed for a transaction. " +
+		"Use the methods on transaction object instead."
+	require.EqualError(t, err, expected)
 
-	var errReleasedTwice InterfaceError
-	assert.True(t, errors.As(err, &errReleasedTwice))
+	b.unborrow()
+	err = b.assertUnborrowed()
+	require.Nil(t, err, err)
 }

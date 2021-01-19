@@ -22,13 +22,107 @@ import (
 	"github.com/edgedb/edgedb-go/internal/cache"
 )
 
-// Conn is a conn created outside of a pool.
-type Conn struct {
-	baseConn
+// Conn is a single connection to a server.
+// Conn implementations are not safe for concurrent use.
+type Conn interface {
+	Executor
+	Trier
+
+	// Close closes the connection.
+	// Connections are not usable after they are closed.
+	Close() error
+}
+
+// connection is the standalone connection implementation.
+type connection struct {
+	*baseConn
+	borrowable
+}
+
+func (c *connection) Close() error {
+	return c.baseConn.close()
+}
+
+func (c *connection) Execute(ctx context.Context, cmd string) error {
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	return c.baseConn.Execute(ctx, cmd)
+}
+
+func (c *connection) Query(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	return c.baseConn.Query(ctx, cmd, out, args...)
+}
+
+func (c *connection) QueryOne(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	return c.baseConn.QueryOne(ctx, cmd, out, args...)
+}
+
+func (c *connection) QueryJSON(
+	ctx context.Context,
+	cmd string,
+	out *[]byte,
+	args ...interface{},
+) error {
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	return c.baseConn.QueryJSON(ctx, cmd, out, args...)
+}
+
+func (c *connection) QueryOneJSON(
+	ctx context.Context,
+	cmd string,
+	out *[]byte,
+	args ...interface{},
+) error {
+	if e := c.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	return c.baseConn.QueryOneJSON(ctx, cmd, out, args...)
+}
+
+func (c *connection) TryTx(ctx context.Context, action Action) error {
+	if e := c.borrow("transaction"); e != nil {
+		return e
+	}
+	defer c.unborrow()
+
+	return c.baseConn.TryTx(ctx, action)
+}
+
+func (c *connection) Retry(ctx context.Context, action Action) error {
+	if e := c.borrow("transaction"); e != nil {
+		return e
+	}
+	defer c.unborrow()
+
+	return c.baseConn.Retry(ctx, action)
 }
 
 // ConnectOne establishes a connection to an EdgeDB server.
-func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
+func ConnectOne(ctx context.Context, opts Options) (Conn, error) { // nolint:gocritic,lll
 	return ConnectOneDSN(ctx, "", opts)
 }
 
@@ -37,7 +131,7 @@ func ConnectOneDSN(
 	ctx context.Context,
 	dsn string,
 	opts Options, // nolint:gocritic
-) (*Conn, error) {
+) (Conn, error) {
 	config, err := parseConnectDSNAndArgs(dsn, &opts)
 	if err != nil {
 		return nil, err
@@ -54,10 +148,5 @@ func ConnectOneDSN(
 		return nil, err
 	}
 
-	return &Conn{*conn}, nil
-}
-
-// Close closes the connection.
-func (c *Conn) Close() error {
-	return c.baseConn.close()
+	return &connection{baseConn: conn}, nil
 }

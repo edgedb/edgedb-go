@@ -22,6 +22,8 @@ package edgedb
 import "fmt"
 
 const (
+	// ShouldRetry is an error tag.
+	ShouldRetry ErrorTag = "SHOULD_RETRY"
 	// ShouldReconnect is an error tag.
 	ShouldReconnect ErrorTag = "SHOULD_RECONNECT"
 )
@@ -2288,6 +2290,8 @@ func (e *transactionSerializationError) isEdgeDBError() {}
 
 func (e *transactionSerializationError) HasTag(tag ErrorTag) bool {
 	switch tag {
+	case ShouldRetry:
+		return true
 	default:
 		return false
 	}
@@ -2324,6 +2328,8 @@ func (e *transactionDeadlockError) isEdgeDBError() {}
 
 func (e *transactionDeadlockError) HasTag(tag ErrorTag) bool {
 	switch tag {
+	case ShouldRetry:
+		return true
 	default:
 		return false
 	}
@@ -2421,70 +2427,6 @@ func (e *authenticationError) isEdgeDBAccessError() {}
 func (e *authenticationError) isEdgeDBError() {}
 
 func (e *authenticationError) HasTag(tag ErrorTag) bool {
-	switch tag {
-	default:
-		return false
-	}
-}
-// LogMessage is an error.
-type LogMessage interface {
-	Error
-	isEdgeDBLogMessage()
-}
-
-type logMessage struct {
-	msg string
-	err error
-}
-
-func (e *logMessage) Error() string {
-	msg := e.msg
-	if e.err != nil {
-		msg = e.err.Error()
-	}
-
-	return "edgedb.LogMessage: " + msg
-}
-
-func (e *logMessage) Unwrap() error { return e.err }
-
-func (e *logMessage) isEdgeDBLogMessage() {}
-
-func (e *logMessage) isEdgeDBError() {}
-
-func (e *logMessage) HasTag(tag ErrorTag) bool {
-	switch tag {
-	default:
-		return false
-	}
-}
-// WarningMessage is an error.
-type WarningMessage interface {
-	Error
-	isEdgeDBWarningMessage()
-}
-
-type warningMessage struct {
-	msg string
-	err error
-}
-
-func (e *warningMessage) Error() string {
-	msg := e.msg
-	if e.err != nil {
-		msg = e.err.Error()
-	}
-
-	return "edgedb.WarningMessage: " + msg
-}
-
-func (e *warningMessage) Unwrap() error { return e.err }
-
-func (e *warningMessage) isEdgeDBWarningMessage() {}
-
-func (e *warningMessage) isEdgeDBError() {}
-
-func (e *warningMessage) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -2626,6 +2568,8 @@ func (e *clientConnectionFailedTemporarilyError) isEdgeDBError() {}
 
 func (e *clientConnectionFailedTemporarilyError) HasTag(tag ErrorTag) bool {
 	switch tag {
+	case ShouldRetry:
+		return true
 	case ShouldReconnect:
 		return true
 	default:
@@ -2664,6 +2608,48 @@ func (e *clientConnectionTimeoutError) isEdgeDBError() {}
 
 func (e *clientConnectionTimeoutError) HasTag(tag ErrorTag) bool {
 	switch tag {
+	case ShouldRetry:
+		return true
+	case ShouldReconnect:
+		return true
+	default:
+		return false
+	}
+}
+// ClientConnectionClosedError is an error.
+type ClientConnectionClosedError interface {
+	ClientConnectionError
+	isEdgeDBClientConnectionClosedError()
+}
+
+type clientConnectionClosedError struct {
+	msg string
+	err error
+}
+
+func (e *clientConnectionClosedError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.ClientConnectionClosedError: " + msg
+}
+
+func (e *clientConnectionClosedError) Unwrap() error { return e.err }
+
+func (e *clientConnectionClosedError) isEdgeDBClientConnectionClosedError() {}
+
+func (e *clientConnectionClosedError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionClosedError) isEdgeDBClientError() {}
+
+func (e *clientConnectionClosedError) isEdgeDBError() {}
+
+func (e *clientConnectionClosedError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldRetry:
+		return true
 	case ShouldReconnect:
 		return true
 	default:
@@ -3024,10 +3010,6 @@ func errorFromCode(code uint32, msg string) error {
 		return &accessError{msg: msg}
 	case 0x07_01_00_00:
 		return &authenticationError{msg: msg}
-	case 0xf0_00_00_00:
-		return &logMessage{msg: msg}
-	case 0xf0_01_00_00:
-		return &warningMessage{msg: msg}
 	case 0xff_00_00_00:
 		return &clientError{msg: msg}
 	case 0xff_01_00_00:
@@ -3038,6 +3020,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &clientConnectionFailedTemporarilyError{msg: msg}
 	case 0xff_01_02_00:
 		return &clientConnectionTimeoutError{msg: msg}
+	case 0xff_01_03_00:
+		return &clientConnectionClosedError{msg: msg}
 	case 0xff_02_00_00:
 		return &interfaceError{msg: msg}
 	case 0xff_02_01_00:

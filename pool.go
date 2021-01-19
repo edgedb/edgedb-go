@@ -26,7 +26,22 @@ import (
 )
 
 // Pool is a pool of connections.
-type Pool struct {
+type Pool interface {
+	Executor
+	Trier
+
+	// Acquire returns a connection from the pool
+	// blocking until a connection is available.
+	// Acquired connections must be released to the pool when no longer needed.
+	Acquire(context.Context) (PoolConn, error)
+
+	// Close closes all connections in the pool.
+	// Calling close blocks until all acquired connections have been released,
+	// and returns an error if called more than once.
+	Close() error
+}
+
+type pool struct {
 	isClosed bool
 	mu       sync.RWMutex // locks isClosed
 
@@ -47,12 +62,12 @@ type Pool struct {
 }
 
 // Connect a pool of connections to a server.
-func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocritic,lll
+func Connect(ctx context.Context, opts Options) (Pool, error) { // nolint:gocritic,lll
 	return ConnectDSN(ctx, "", opts)
 }
 
 // ConnectDSN a pool of connections to a server.
-func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { // nolint:gocritic,lll
+func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { // nolint:gocritic,lll
 	if opts.MinConns < 1 {
 		return nil, &configurationError{msg: fmt.Sprintf(
 			"MinConns may not be less than 1, got: %v",
@@ -72,7 +87,7 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 		return nil, err
 	}
 
-	pool := &Pool{
+	p := &pool{
 		maxConns: opts.MaxConns,
 		minConns: opts.MinConns,
 		cfg:      cfg,
@@ -86,7 +101,7 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 	}
 
 	for i := 0; i < opts.MaxConns-opts.MinConns; i++ {
-		pool.potentialConns <- struct{}{}
+		p.potentialConns <- struct{}{}
 	}
 
 	wg := sync.WaitGroup{}
@@ -94,26 +109,26 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 	for i := 0; i < opts.MinConns; i++ {
 		wg.Add(1)
 		go func(i int) {
-			conn, err := pool.newConn(ctx)
+			conn, err := p.newConn(ctx)
 			if err == nil {
-				pool.freeConns <- conn
+				p.freeConns <- conn
 				return
 			}
 			errs[i] = err
-			pool.potentialConns <- struct{}{}
+			p.potentialConns <- struct{}{}
 		}(i)
 	}
 
 	wg.Done()
 	if err := wrapAll(errs...); err != nil {
-		_ = pool.Close()
+		_ = p.Close()
 		return nil, err
 	}
 
-	return pool, nil
+	return p, nil
 }
 
-func (p *Pool) newConn(ctx context.Context) (*baseConn, error) {
+func (p *pool) newConn(ctx context.Context) (*baseConn, error) {
 	conn := &baseConn{
 		cfg:           p.cfg,
 		typeIDCache:   p.typeIDCache,
@@ -128,7 +143,7 @@ func (p *Pool) newConn(ctx context.Context) (*baseConn, error) {
 	return conn, nil
 }
 
-func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
+func (p *pool) acquire(ctx context.Context) (*baseConn, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -165,16 +180,13 @@ func (p *Pool) acquire(ctx context.Context) (*baseConn, error) {
 	}
 }
 
-// Acquire gets a connection out of the pool
-// blocking until a connection is available.
-// Acquired connections must be released to the pool when no longer needed.
-func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
+func (p *pool) Acquire(ctx context.Context) (PoolConn, error) {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PoolConn{pool: p, baseConn: conn}, nil
+	return &poolConn{pool: p, baseConn: conn}, nil
 }
 
 func unrecoverable(err error) bool {
@@ -190,7 +202,7 @@ func unrecoverable(err error) bool {
 	return true
 }
 
-func (p *Pool) release(conn *baseConn, err error) error {
+func (p *pool) release(conn *baseConn, err error) error {
 	if unrecoverable(err) {
 		p.potentialConns <- struct{}{}
 		return conn.close()
@@ -207,10 +219,7 @@ func (p *Pool) release(conn *baseConn, err error) error {
 	return nil
 }
 
-// Close closes all connections in the pool.
-// Calling close blocks until all acquired connections have been released,
-// and returns an error if called more than once.
-func (p *Pool) Close() error {
+func (p *pool) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -238,7 +247,7 @@ func (p *Pool) Close() error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (p *Pool) Execute(ctx context.Context, cmd string) error {
+func (p *pool) Execute(ctx context.Context, cmd string) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
@@ -248,8 +257,7 @@ func (p *Pool) Execute(ctx context.Context, cmd string) error {
 	return firstError(err, p.release(conn, err))
 }
 
-// Query runs a query and returns the results.
-func (p *Pool) Query(
+func (p *pool) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -264,10 +272,7 @@ func (p *Pool) Query(
 	return firstError(err, p.release(conn, err))
 }
 
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// ErrorZeroResults is returned.
-func (p *Pool) QueryOne(
+func (p *pool) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -282,8 +287,7 @@ func (p *Pool) QueryOne(
 	return firstError(err, p.release(conn, err))
 }
 
-// QueryJSON runs a query and return the results as JSON.
-func (p *Pool) QueryJSON(
+func (p *pool) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -298,11 +302,7 @@ func (p *Pool) QueryJSON(
 	return firstError(err, p.release(conn, err))
 }
 
-// QueryOneJSON runs a singleton-returning query
-// and return its element in JSON.
-// If the query executes successfully but doesn't return a result
-// []byte{}, ErrorZeroResults is returned.
-func (p *Pool) QueryOneJSON(
+func (p *pool) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -315,4 +315,28 @@ func (p *Pool) QueryOneJSON(
 
 	err = conn.QueryOneJSON(ctx, cmd, out, args...)
 	return firstError(err, p.release(conn, err))
+}
+
+func (p *pool) TryTx(ctx context.Context, action Action) error {
+	conn, err := p.acquire(ctx)
+	if err != nil {
+		return err
+	}
+
+	return firstError(
+		conn.TryTx(ctx, action),
+		p.release(conn, err),
+	)
+}
+
+func (p *pool) Retry(ctx context.Context, action Action) error {
+	conn, err := p.acquire(ctx)
+	if err != nil {
+		return err
+	}
+
+	return firstError(
+		conn.Retry(ctx, action),
+		p.release(conn, err),
+	)
 }

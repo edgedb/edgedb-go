@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -35,7 +34,7 @@ import (
 // initialized by TestMain
 var (
 	opts Options
-	conn *Conn
+	conn Conn
 )
 
 func executeOrPanic(command string) {
@@ -44,30 +43,6 @@ func executeOrPanic(command string) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func getLocalServer() error {
-	credFileName, ok := os.LookupEnv("EDGEDB_CREDENTIALS_FILE")
-	if !ok {
-		log.Print("EDGEDB_CREDENTIALS_FILE environment variable not set")
-		return errors.New("credentials not found")
-	}
-
-	creds, err := readCredentials(credFileName)
-	if err != nil {
-		log.Printf("failed to read credentials file: %q", credFileName)
-		return errors.New("credentials not found")
-	}
-
-	opts = Options{
-		Ports:    []int{creds.port},
-		User:     creds.user,
-		Password: creds.password,
-		Database: creds.database,
-	}
-
-	log.Print("using existing server")
-	return nil
 }
 
 func startServer() (err error) {
@@ -154,12 +129,9 @@ func TestMain(m *testing.M) {
 		os.Exit(code)
 	}()
 
-	err = getLocalServer()
+	err = startServer()
 	if err != nil {
-		err = startServer()
-		if err != nil {
-			panic(err)
-		}
+		panic(err)
 	}
 
 	ctx := context.Background()
@@ -170,43 +142,30 @@ func TestMain(m *testing.M) {
 	}
 	log.Println("connected")
 
-	defer func() {
-		e := conn.Close()
-		if e != nil {
-			log.Println("while closing: ", e)
-		}
-	}()
+	defer conn.Close() // nolint:errcheck
 
-	query := `
-		SELECT (
-			SELECT schema::Type
-			FILTER .name = 'default::User'
-		).name
-		LIMIT 1;
-	`
-
-	var name string
-	err = conn.QueryOne(ctx, query, &name)
-	if errors.Is(err, errZeroResults) {
-		fmt.Println("running migration")
-		executeOrPanic(`
+	log.Println("running migration")
+	executeOrPanic(`
 			START MIGRATION TO {
 				module default {
 					type User {
 						property name -> str;
+					}
+					type TxTest {
+						required property name -> str;
 					}
 				}
 			};
 			POPULATE MIGRATION;
 			COMMIT MIGRATION;
 		`)
-		_ = conn.Execute(ctx, `
+	executeOrPanic(`
 			CREATE SUPERUSER ROLE user_with_password {
 				SET password := 'secret';
 			};
 		`)
-		executeOrPanic("CONFIGURE SYSTEM RESET Auth;")
-		executeOrPanic(`
+	executeOrPanic("CONFIGURE SYSTEM RESET Auth;")
+	executeOrPanic(`
 			CONFIGURE SYSTEM INSERT Auth {
 				comment := "no password",
 				priority := 1,
@@ -214,7 +173,7 @@ func TestMain(m *testing.M) {
 				user := {'*'},
 			};
 		`)
-		executeOrPanic(`
+	executeOrPanic(`
 			CONFIGURE SYSTEM INSERT Auth {
 				comment := "password required",
 				priority := 0,
@@ -222,10 +181,6 @@ func TestMain(m *testing.M) {
 				user := {'user_with_password'}
 			}
 		`)
-		err = nil
-	} else if err != nil {
-		return
-	}
 
 	rand.Seed(time.Now().Unix())
 	log.Println("starting tests")
