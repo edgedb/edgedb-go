@@ -16,6 +16,8 @@
 
 package edgedb
 
+import "fmt"
+
 type borrowable struct {
 	reason string
 }
@@ -27,8 +29,10 @@ func (b *borrowable) assertUnborrowed() error {
 			msg: "Connection is borrowed for a transaction. " +
 				"Use the methods on transaction object instead.",
 		}
-	default:
+	case "":
 		return nil
+	default:
+		panic(fmt.Sprintf("unexpected reason: %q", b.reason))
 	}
 }
 
@@ -38,10 +42,18 @@ func (b *borrowable) borrow(reason string) error {
 		return &interfaceError{msg: msg}
 	}
 
+	if reason != "transaction" {
+		panic(fmt.Sprintf("unexpected reason: %q", reason))
+	}
+
 	b.reason = reason
 	return nil
 }
 
 func (b *borrowable) unborrow() {
+	if b.reason == "" {
+		panic("not currently borrowed, can not unborrow")
+	}
+
 	b.reason = ""
 }
