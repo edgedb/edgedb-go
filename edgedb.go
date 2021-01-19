@@ -96,9 +96,6 @@ type baseConn struct {
 
 	serverSettings map[string]string
 
-	// isClosed is true when the connection has been closed by a user.
-	isClosed bool
-
 	cfg *connConfig
 }
 
@@ -185,41 +182,6 @@ handleError:
 	}
 }
 
-// reconnect establishes a new connection with the server
-// retrying the connection on failure.
-// An error is returned if the `baseConn` was closed.
-func (c *baseConn) reconnect(ctx context.Context) (err error) {
-	if c.isClosed {
-		return &interfaceError{msg: "Connection is closed"}
-	}
-
-	maxTime := time.Now().Add(c.cfg.waitUntilAvailable)
-	if deadline, ok := ctx.Deadline(); ok && deadline.Before(maxTime) {
-		maxTime = deadline
-	}
-
-	var connErr ClientConnectionError
-
-	for i := 1; true; i++ {
-		for _, addr := range c.cfg.addrs {
-			err = connectWithTimeout(ctx, c, addr)
-			if err == nil ||
-				errors.Is(err, context.Canceled) ||
-				errors.Is(err, context.DeadlineExceeded) ||
-				!errors.As(err, &connErr) ||
-				!connErr.HasTag("SHOULD_RECONNECT") ||
-				(i > 1 && time.Now().After(maxTime)) {
-				return err
-			}
-		}
-
-		time.Sleep(time.Duration(10+rnd.Intn(200)) * time.Millisecond)
-	}
-
-	// this is unreachable, but the compiler can't tell...
-	return err
-}
-
 func (c *baseConn) setDeadline(ctx context.Context) error {
 	deadline, _ := ctx.Deadline()
 	err := c.conn.SetDeadline(deadline)
@@ -293,24 +255,10 @@ func (c *baseConn) close() error {
 		return &clientConnectionError{err: err}
 	}
 
-	c.isClosed = true
 	return nil
 }
 
-// ensureConnection reconnects to the server if not connected.
-func (c *baseConn) ensureConnection(ctx context.Context) error {
-	if c.conn != nil && !c.isClosed {
-		return nil
-	}
-
-	return c.reconnect(ctx)
-}
-
 func (c *baseConn) Execute(ctx context.Context, cmd string) error {
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -329,10 +277,6 @@ func (c *baseConn) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
 	val, err := marshal.ValueOfSlice(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -363,10 +307,6 @@ func (c *baseConn) QueryOne(
 	out interface{},
 	args ...interface{},
 ) (err error) {
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
 	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -397,10 +337,6 @@ func (c *baseConn) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
 	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -431,10 +367,6 @@ func (c *baseConn) QueryOneJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
 	val, err := marshal.ValueOf(out)
 	if err != nil {
 		return &invalidArgumentError{msg: err.Error()}
@@ -457,50 +389,4 @@ func (c *baseConn) QueryOneJSON(
 	}
 
 	return c.releaseReader(r, c.granularFlow(r, val, q))
-}
-
-func (c *baseConn) TryTx(ctx context.Context, action Action) error {
-	tx := &transaction{conn: c, isolation: repeatableRead}
-	if e := tx.start(ctx); e != nil {
-		return e
-	}
-
-	if e := action(ctx, tx); e != nil {
-		return firstError(e, tx.rollback(ctx))
-	}
-
-	return tx.commit(ctx)
-}
-
-func (c *baseConn) Retry(ctx context.Context, action Action) error {
-	var edbErr Error
-
-	for i := 0; i < defaultMaxTxRetries; i++ {
-		tx := &transaction{conn: c, isolation: repeatableRead}
-
-		if e := tx.start(ctx); e != nil {
-			return e
-		}
-
-		err := action(ctx, tx)
-
-		if err == nil {
-			return tx.commit(ctx)
-		}
-
-		if e := tx.rollback(ctx); e != nil && !errors.As(e, &edbErr) {
-			return e
-		}
-
-		if errors.As(err, &edbErr) &&
-			edbErr.HasTag(ShouldRetry) &&
-			(i+1 < defaultMaxTxRetries) {
-			time.Sleep(defaultBackoff(i))
-			continue
-		}
-
-		return err
-	}
-
-	panic("unreachable")
 }

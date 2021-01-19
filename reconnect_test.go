@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBorrow(t *testing.T) {
-	b := borrowable{}
+func TestRecconnectingConnBorrow(t *testing.T) {
+	b := reconnectingConn{}
 	err := b.assertUnborrowed()
 	require.Nil(t, err, "unexpected err: %v", err)
 

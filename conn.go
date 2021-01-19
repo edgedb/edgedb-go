@@ -35,90 +35,11 @@ type Conn interface {
 
 // connection is the standalone connection implementation.
 type connection struct {
-	*baseConn
-	borrowable
+	*reconnectingConn
 }
 
 func (c *connection) Close() error {
-	return c.baseConn.close()
-}
-
-func (c *connection) Execute(ctx context.Context, cmd string) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	return c.baseConn.Execute(ctx, cmd)
-}
-
-func (c *connection) Query(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	return c.baseConn.Query(ctx, cmd, out, args...)
-}
-
-func (c *connection) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	return c.baseConn.QueryOne(ctx, cmd, out, args...)
-}
-
-func (c *connection) QueryJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	return c.baseConn.QueryJSON(ctx, cmd, out, args...)
-}
-
-func (c *connection) QueryOneJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	return c.baseConn.QueryOneJSON(ctx, cmd, out, args...)
-}
-
-func (c *connection) TryTx(ctx context.Context, action Action) error {
-	if e := c.borrow("transaction"); e != nil {
-		return e
-	}
-	defer c.unborrow()
-
-	return c.baseConn.TryTx(ctx, action)
-}
-
-func (c *connection) Retry(ctx context.Context, action Action) error {
-	if e := c.borrow("transaction"); e != nil {
-		return e
-	}
-	defer c.unborrow()
-
-	return c.baseConn.Retry(ctx, action)
+	return c.reconnectingConn.close()
 }
 
 // ConnectOne establishes a connection to an EdgeDB server.
@@ -137,16 +58,17 @@ func ConnectOneDSN(
 		return nil, err
 	}
 
-	conn := &baseConn{
-		typeIDCache:   cache.New(1_000),
-		inCodecCache:  cache.New(1_000),
-		outCodecCache: cache.New(1_000),
-		cfg:           config,
-	}
+	conn := &reconnectingConn{
+		conn: &baseConn{
+			typeIDCache:   cache.New(1_000),
+			inCodecCache:  cache.New(1_000),
+			outCodecCache: cache.New(1_000),
+			cfg:           config,
+		}}
 
 	if err := conn.reconnect(ctx); err != nil {
 		return nil, err
 	}
 
-	return &connection{baseConn: conn}, nil
+	return &connection{reconnectingConn: conn}, nil
 }

@@ -36,8 +36,7 @@ type PoolConn interface {
 type poolConn struct {
 	pool *pool
 	err  error
-	*baseConn
-	borrowable
+	conn *reconnectingConn
 }
 
 func (c *poolConn) Release() error {
@@ -46,9 +45,9 @@ func (c *poolConn) Release() error {
 		return &interfaceError{msg: msg}
 	}
 
-	err := c.pool.release(c.baseConn, c.err)
+	err := c.pool.release(c.conn, c.err)
 	c.pool = nil
-	c.baseConn = nil
+	c.conn = nil
 	c.err = nil
 
 	return err
@@ -61,11 +60,7 @@ func (c *poolConn) checkErr(err error) {
 }
 
 func (c *poolConn) Execute(ctx context.Context, cmd string) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	err := c.baseConn.Execute(ctx, cmd)
+	err := c.conn.Execute(ctx, cmd)
 	c.checkErr(err)
 	return err
 }
@@ -76,11 +71,7 @@ func (c *poolConn) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	err := c.baseConn.Query(ctx, cmd, out, args...)
+	err := c.conn.Query(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -91,11 +82,7 @@ func (c *poolConn) QueryOne(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	err := c.baseConn.QueryOne(ctx, cmd, out, args...)
+	err := c.conn.QueryOne(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -106,11 +93,7 @@ func (c *poolConn) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	err := c.baseConn.QueryJSON(ctx, cmd, out, args...)
+	err := c.conn.QueryJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -121,29 +104,19 @@ func (c *poolConn) QueryOneJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := c.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	err := c.baseConn.QueryOneJSON(ctx, cmd, out, args...)
+	err := c.conn.QueryOneJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
 
 func (c *poolConn) TryTx(ctx context.Context, action Action) error {
-	if e := c.borrow("transaction"); e != nil {
-		return e
-	}
-	defer c.unborrow()
-
-	return c.baseConn.TryTx(ctx, action)
+	err := c.conn.TryTx(ctx, action)
+	c.checkErr(err)
+	return err
 }
 
 func (c *poolConn) Retry(ctx context.Context, action Action) error {
-	if e := c.borrow("transaction"); e != nil {
-		return e
-	}
-	defer c.unborrow()
-
-	return c.baseConn.Retry(ctx, action)
+	err := c.conn.Retry(ctx, action)
+	c.checkErr(err)
+	return err
 }
