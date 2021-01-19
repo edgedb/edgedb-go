@@ -59,8 +59,8 @@ type Trier interface {
 	Retry(context.Context, Action) error
 }
 
-// Querier allows querying the database.
-type Querier interface {
+// Executor allows querying the database.
+type Executor interface {
 	// Execute an EdgeQL command (or commands).
 	Execute(context.Context, string) error
 

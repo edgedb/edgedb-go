@@ -25,7 +25,7 @@ import (
 // Conn is a single connection to a server.
 // Conn implementations are not safe for concurrent use.
 type Conn interface {
-	Querier
+	Executor
 	Trier
 
 	// Close closes the connection.

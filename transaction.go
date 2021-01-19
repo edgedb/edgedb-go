@@ -40,7 +40,7 @@ const (
 
 // Tx is a transaction.
 type Tx interface {
-	Querier
+	Executor
 }
 
 type transaction struct {

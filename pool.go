@@ -27,7 +27,7 @@ import (
 
 // Pool is a pool of connections.
 type Pool interface {
-	Querier
+	Executor
 	Trier
 
 	// Acquire returns a connection from the pool

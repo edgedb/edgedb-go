@@ -24,7 +24,7 @@ import (
 
 // PoolConn is a pooled connection.
 type PoolConn interface {
-	Querier
+	Executor
 	Trier
 
 	// Release the connection back to its pool.
