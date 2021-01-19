@@ -60,7 +60,7 @@ type pool struct {
 	mu       sync.RWMutex // locks isClosed
 
 	// A buffered channel of connections ready for use.
-	freeConns chan *baseConn
+	freeConns chan *reconnectingConn
 
 	// A buffered channel of structs representing unconnected capacity.
 	potentialConns chan struct{}
@@ -109,7 +109,7 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { /
 		minConns: minConns,
 		cfg:      cfg,
 
-		freeConns:      make(chan *baseConn, minConns),
+		freeConns:      make(chan *reconnectingConn, minConns),
 		potentialConns: make(chan struct{}, maxConns),
 
 		typeIDCache:   cache.New(1_000),
@@ -147,12 +147,14 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { /
 	return p, nil
 }
 
-func (p *pool) newConn(ctx context.Context) (*baseConn, error) {
-	conn := &baseConn{
-		cfg:           p.cfg,
-		typeIDCache:   p.typeIDCache,
-		inCodecCache:  p.inCodecCache,
-		outCodecCache: p.outCodecCache,
+func (p *pool) newConn(ctx context.Context) (*reconnectingConn, error) {
+	conn := &reconnectingConn{
+		conn: &baseConn{
+			cfg:           p.cfg,
+			typeIDCache:   p.typeIDCache,
+			inCodecCache:  p.inCodecCache,
+			outCodecCache: p.outCodecCache,
+		},
 	}
 
 	if err := conn.reconnect(ctx); err != nil {
@@ -162,7 +164,7 @@ func (p *pool) newConn(ctx context.Context) (*baseConn, error) {
 	return conn, nil
 }
 
-func (p *pool) acquire(ctx context.Context) (*baseConn, error) {
+func (p *pool) acquire(ctx context.Context) (*reconnectingConn, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -205,7 +207,7 @@ func (p *pool) Acquire(ctx context.Context) (PoolConn, error) {
 		return nil, err
 	}
 
-	return &poolConn{pool: p, baseConn: conn}, nil
+	return &poolConn{pool: p, conn: conn}, nil
 }
 
 func unrecoverable(err error) bool {
@@ -221,7 +223,7 @@ func unrecoverable(err error) bool {
 	return true
 }
 
-func (p *pool) release(conn *baseConn, err error) error {
+func (p *pool) release(conn *reconnectingConn, err error) error {
 	if unrecoverable(err) {
 		p.potentialConns <- struct{}{}
 		return conn.close()

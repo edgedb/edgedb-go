@@ -93,7 +93,7 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 func TestAcquireFromClosedPool(t *testing.T) {
 	p := &pool{
 		isClosed:       true,
-		freeConns:      make(chan *baseConn),
+		freeConns:      make(chan *reconnectingConn),
 		potentialConns: make(chan struct{}),
 	}
 
@@ -104,8 +104,8 @@ func TestAcquireFromClosedPool(t *testing.T) {
 }
 
 func TestAcquireFreeConnFromPool(t *testing.T) {
-	conn := &baseConn{}
-	p := &pool{freeConns: make(chan *baseConn, 1)}
+	conn := &reconnectingConn{}
+	p := &pool{freeConns: make(chan *reconnectingConn, 1)}
 	p.freeConns <- conn
 
 	result, err := p.Acquire(context.Background())
@@ -113,22 +113,22 @@ func TestAcquireFreeConnFromPool(t *testing.T) {
 
 	pConn, ok := result.(*poolConn)
 	require.True(t, ok, "unexpected return type: %T", result)
-	assert.Equal(t, conn, pConn.baseConn)
+	assert.Equal(t, conn, pConn.conn)
 }
 
 func BenchmarkPoolAcquireRelease(b *testing.B) {
 	p := &pool{
 		maxConns:       2,
 		minConns:       2,
-		freeConns:      make(chan *baseConn, 2),
+		freeConns:      make(chan *reconnectingConn, 2),
 		potentialConns: make(chan struct{}, 2),
 	}
 
 	for i := 0; i < p.maxConns; i++ {
-		p.freeConns <- &baseConn{}
+		p.freeConns <- &reconnectingConn{}
 	}
 
-	var conn *baseConn
+	var conn *reconnectingConn
 	ctx := context.Background()
 	b.ResetTimer()
 
@@ -160,10 +160,10 @@ func TestAcquirePotentialConnFromPool(t *testing.T) {
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
 	p := &pool{
-		freeConns:      make(chan *baseConn, 1),
+		freeConns:      make(chan *reconnectingConn, 1),
 		potentialConns: make(chan struct{}, 1),
 	}
-	p.freeConns <- &baseConn{}
+	p.freeConns <- &reconnectingConn{}
 	p.potentialConns <- struct{}{}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
@@ -189,7 +189,7 @@ func TestClosePool(t *testing.T) {
 	p := &pool{
 		maxConns:       0,
 		minConns:       0,
-		freeConns:      make(chan *baseConn),
+		freeConns:      make(chan *reconnectingConn),
 		potentialConns: make(chan struct{}),
 	}
 
