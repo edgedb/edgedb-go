@@ -24,33 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ensureTxTestType(t *testing.T) {
-	query := `
-		SELECT (
-			SELECT schema::Type
-			FILTER .name = 'default::TxTest'
-		).name
-		LIMIT 1;
-	`
-
-	var result string
-	ctx := context.Background()
-	err := conn.QueryOne(ctx, query, &result)
-
-	var errNoData NoDataError
-	if errors.As(err, &errNoData) {
-		e := conn.Execute(ctx, `CREATE TYPE TxTest {
-			CREATE REQUIRED PROPERTY name -> std::str;
-		}`)
-		require.Nil(t, e, e)
-	} else {
-		require.Nil(t, err, err)
-	}
-}
-
 func TestTxRollesBack(t *testing.T) {
-	ensureTxTestType(t)
-
 	ctx := context.Background()
 	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
@@ -83,8 +57,6 @@ func TestTxRollesBack(t *testing.T) {
 }
 
 func TestTxRollesBackOnUserError(t *testing.T) {
-	ensureTxTestType(t)
-
 	ctx := context.Background()
 	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
@@ -113,8 +85,6 @@ func TestTxRollesBackOnUserError(t *testing.T) {
 }
 
 func TestTxCommits(t *testing.T) {
-	ensureTxTestType(t)
-
 	ctx := context.Background()
 	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
 		return tx.Execute(ctx, "INSERT TxTest {name := 'Test Commit'};")
@@ -142,8 +112,6 @@ func TestTxCommits(t *testing.T) {
 }
 
 func TestTxCanNotUseConn(t *testing.T) {
-	ensureTxTestType(t)
-
 	ctx := context.Background()
 	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
 		var num []int64
