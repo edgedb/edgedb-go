@@ -86,11 +86,14 @@ type Options struct {
 
 	// MinConns determines the minimum number of connections.
 	// If MinConns is zero, 1 will be used.
+	// Has no effect for single connections.
 	MinConns uint
 
 	// MaxConns determines the maximum number of connections.
 	// If MaxConns is zero, max(4, runtime.NumCPU()) will be used.
+	// Has no effect for single connections.
 	MaxConns uint
 
+	// ServerSettings is currently unused.
 	ServerSettings map[string]string
 }

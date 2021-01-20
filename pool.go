@@ -39,7 +39,7 @@ func max(a, b int) int {
 	return b
 }
 
-// Pool is a pool of connections.
+// Pool is a connection pool.
 type Pool interface {
 	Executor
 	Trier
@@ -80,7 +80,15 @@ func Connect(ctx context.Context, opts Options) (Pool, error) { // nolint:gocrit
 	return ConnectDSN(ctx, "", opts)
 }
 
-// ConnectDSN a pool of connections to a server.
+// ConnectDSN connects a pool to a server.
+//
+// dsn is either an instance name
+// https://www.edgedb.com/docs/clients/00_python/instances/#edgedb-instances
+// or it specifies a single string in the following format:
+//
+//     edgedb://user:password@host:port/database?option=value.
+//
+// The following options are recognized: host, port, user, database, password.
 func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { // nolint:gocritic,lll
 	minConns := defaultMinConns
 	if opts.MinConns > 0 {

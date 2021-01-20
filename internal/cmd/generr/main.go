@@ -23,13 +23,22 @@ import (
 	"os"
 )
 
+func printCategories(types []*errorType) {
+	fmt.Print(`
+
+const (`)
+
+	for _, typ := range types {
+		fmt.Printf(`
+	%[1]v ErrorCategory = "errors::%[1]v"`, typ.name)
+	}
+
+	fmt.Print(`
+)`)
+}
+
 func printError(errType *errorType) {
 	fmt.Printf(`
-// %[1]v is an error.
-type %[1]v interface {
-	%[3]v
-	isEdgeDB%[1]v()
-}
 
 type %[2]v struct {
 	msg string
@@ -46,10 +55,27 @@ func (e *%[2]v) Error() string {
 }
 
 func (e *%[2]v) Unwrap() error { return e.err }
+`, errType.name, errType.privateName())
 
-func (e *%[2]v) isEdgeDB%[1]v() {}
-`, errType.name, errType.privateName(), errType.ancestors[0])
+	fmt.Printf(`
 
+func (e *%v) Category(c ErrorCategory) bool {
+	switch c {
+	case %v:
+		return true`, errType.privateName(), errType.name)
+
+	for _, ancestor := range errType.ancestors {
+		fmt.Printf(`
+	case %v:
+		return true`, ancestor)
+	}
+
+	fmt.Print(`
+	default:
+		return false
+	}
+}
+`)
 	for _, ancestor := range errType.ancestors {
 		fmt.Printf(`
 func (e *%v) isEdgeDB%v() {}
@@ -81,6 +107,7 @@ func printErrors(types []*errorType) {
 
 func printCodeMap(types []*errorType) {
 	fmt.Print(`
+
 func errorFromCode(code uint32, msg string) error {
 	switch code {`)
 
@@ -102,11 +129,11 @@ func errorFromCode(code uint32, msg string) error {
 
 func printTags(tags []errorTag) {
 	fmt.Print(`
+
 const (`)
 
 	for _, tag := range tags {
 		fmt.Printf(`
-	// %[1]v is an error tag.
 	%[1]v ErrorTag = %[2]q`, tag.identifyer(), tag)
 	}
 
@@ -146,9 +173,9 @@ func main() {
 	fmt.Println()
 	fmt.Println("package edgedb")
 	fmt.Println()
-	fmt.Println(`import "fmt"`)
+	fmt.Print(`import "fmt"`)
 	printTags(tags)
-	fmt.Println()
+	printCategories(types)
 	printErrors(types)
 	printCodeMap(types)
 }

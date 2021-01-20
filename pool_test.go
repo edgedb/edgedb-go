@@ -71,8 +71,9 @@ func TestClosePoolConcurently(t *testing.T) {
 	go func() { errs <- p.Close() }()
 
 	assert.Nil(t, <-errs)
-	var closedErr InterfaceError
-	assert.True(t, errors.As(<-errs, &closedErr))
+	var edbErr Error
+	require.True(t, errors.As(<-errs, &edbErr), "wrong error: %v", err)
+	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 }
 
 func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
@@ -86,8 +87,14 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 			"MaxConns (1) may not be less than MinConns (5)",
 	)
 
-	var expected ConfigurationError
-	assert.True(t, errors.As(err, &expected))
+	var expected Error
+	require.True(t, errors.As(err, &expected), "wrong error: %v", err)
+	assert.True(
+		t,
+		expected.Category(ConfigurationError),
+		"wrong error: %v",
+		err,
+	)
 }
 
 func TestAcquireFromClosedPool(t *testing.T) {
@@ -97,9 +104,10 @@ func TestAcquireFromClosedPool(t *testing.T) {
 		potentialConns: make(chan struct{}),
 	}
 
-	conn, err := p.Acquire(context.Background())
-	var closedErr InterfaceError
-	require.True(t, errors.As(err, &closedErr))
+	conn, err := p.Acquire(context.TODO())
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 	assert.Nil(t, conn)
 }
 
@@ -197,8 +205,9 @@ func TestClosePool(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = p.Close()
-	var closedErr InterfaceError
-	assert.True(t, errors.As(err, &closedErr))
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 }
 
 func TestPoolRetry(t *testing.T) {

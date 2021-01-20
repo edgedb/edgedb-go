@@ -51,7 +51,6 @@ func parseType(typ []interface{}, lookup map[string]string) *errorType {
 		parent = lookup[parent]
 	}
 
-	errType.ancestors = append(errType.ancestors, "Error")
 	return errType
 }
 

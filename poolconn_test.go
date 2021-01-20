@@ -42,6 +42,7 @@ func TestReleasePoolConn(t *testing.T) {
 		"edgedb.InterfaceError: connection released more than once",
 	)
 
-	var errReleasedTwice InterfaceError
-	assert.True(t, errors.As(err, &errReleasedTwice))
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr))
+	assert.True(t, edbErr.Category(InterfaceError))
 }
