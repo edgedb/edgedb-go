@@ -22,17 +22,91 @@ package edgedb
 import "fmt"
 
 const (
-	// ShouldRetry is an error tag.
-	ShouldRetry ErrorTag = "SHOULD_RETRY"
-	// ShouldReconnect is an error tag.
 	ShouldReconnect ErrorTag = "SHOULD_RECONNECT"
+	ShouldRetry ErrorTag = "SHOULD_RETRY"
 )
 
-// InternalServerError is an error.
-type InternalServerError interface {
-	Error
-	isEdgeDBInternalServerError()
-}
+const (
+	InternalServerError ErrorCategory = "errors::InternalServerError"
+	UnsupportedFeatureError ErrorCategory = "errors::UnsupportedFeatureError"
+	ProtocolError ErrorCategory = "errors::ProtocolError"
+	BinaryProtocolError ErrorCategory = "errors::BinaryProtocolError"
+	UnsupportedProtocolVersionError ErrorCategory = "errors::UnsupportedProtocolVersionError"
+	TypeSpecNotFoundError ErrorCategory = "errors::TypeSpecNotFoundError"
+	UnexpectedMessageError ErrorCategory = "errors::UnexpectedMessageError"
+	InputDataError ErrorCategory = "errors::InputDataError"
+	ResultCardinalityMismatchError ErrorCategory = "errors::ResultCardinalityMismatchError"
+	CapabilityError ErrorCategory = "errors::CapabilityError"
+	UnsupportedCapabilityError ErrorCategory = "errors::UnsupportedCapabilityError"
+	DisabledCapabilityError ErrorCategory = "errors::DisabledCapabilityError"
+	QueryError ErrorCategory = "errors::QueryError"
+	InvalidSyntaxError ErrorCategory = "errors::InvalidSyntaxError"
+	EdgeQLSyntaxError ErrorCategory = "errors::EdgeQLSyntaxError"
+	SchemaSyntaxError ErrorCategory = "errors::SchemaSyntaxError"
+	GraphQLSyntaxError ErrorCategory = "errors::GraphQLSyntaxError"
+	InvalidTypeError ErrorCategory = "errors::InvalidTypeError"
+	InvalidTargetError ErrorCategory = "errors::InvalidTargetError"
+	InvalidLinkTargetError ErrorCategory = "errors::InvalidLinkTargetError"
+	InvalidPropertyTargetError ErrorCategory = "errors::InvalidPropertyTargetError"
+	InvalidReferenceError ErrorCategory = "errors::InvalidReferenceError"
+	UnknownModuleError ErrorCategory = "errors::UnknownModuleError"
+	UnknownLinkError ErrorCategory = "errors::UnknownLinkError"
+	UnknownPropertyError ErrorCategory = "errors::UnknownPropertyError"
+	UnknownUserError ErrorCategory = "errors::UnknownUserError"
+	UnknownDatabaseError ErrorCategory = "errors::UnknownDatabaseError"
+	UnknownParameterError ErrorCategory = "errors::UnknownParameterError"
+	SchemaError ErrorCategory = "errors::SchemaError"
+	SchemaDefinitionError ErrorCategory = "errors::SchemaDefinitionError"
+	InvalidDefinitionError ErrorCategory = "errors::InvalidDefinitionError"
+	InvalidModuleDefinitionError ErrorCategory = "errors::InvalidModuleDefinitionError"
+	InvalidLinkDefinitionError ErrorCategory = "errors::InvalidLinkDefinitionError"
+	InvalidPropertyDefinitionError ErrorCategory = "errors::InvalidPropertyDefinitionError"
+	InvalidUserDefinitionError ErrorCategory = "errors::InvalidUserDefinitionError"
+	InvalidDatabaseDefinitionError ErrorCategory = "errors::InvalidDatabaseDefinitionError"
+	InvalidOperatorDefinitionError ErrorCategory = "errors::InvalidOperatorDefinitionError"
+	InvalidAliasDefinitionError ErrorCategory = "errors::InvalidAliasDefinitionError"
+	InvalidFunctionDefinitionError ErrorCategory = "errors::InvalidFunctionDefinitionError"
+	InvalidConstraintDefinitionError ErrorCategory = "errors::InvalidConstraintDefinitionError"
+	InvalidCastDefinitionError ErrorCategory = "errors::InvalidCastDefinitionError"
+	DuplicateDefinitionError ErrorCategory = "errors::DuplicateDefinitionError"
+	DuplicateModuleDefinitionError ErrorCategory = "errors::DuplicateModuleDefinitionError"
+	DuplicateLinkDefinitionError ErrorCategory = "errors::DuplicateLinkDefinitionError"
+	DuplicatePropertyDefinitionError ErrorCategory = "errors::DuplicatePropertyDefinitionError"
+	DuplicateUserDefinitionError ErrorCategory = "errors::DuplicateUserDefinitionError"
+	DuplicateDatabaseDefinitionError ErrorCategory = "errors::DuplicateDatabaseDefinitionError"
+	DuplicateOperatorDefinitionError ErrorCategory = "errors::DuplicateOperatorDefinitionError"
+	DuplicateViewDefinitionError ErrorCategory = "errors::DuplicateViewDefinitionError"
+	DuplicateFunctionDefinitionError ErrorCategory = "errors::DuplicateFunctionDefinitionError"
+	DuplicateConstraintDefinitionError ErrorCategory = "errors::DuplicateConstraintDefinitionError"
+	DuplicateCastDefinitionError ErrorCategory = "errors::DuplicateCastDefinitionError"
+	QueryTimeoutError ErrorCategory = "errors::QueryTimeoutError"
+	ExecutionError ErrorCategory = "errors::ExecutionError"
+	InvalidValueError ErrorCategory = "errors::InvalidValueError"
+	DivisionByZeroError ErrorCategory = "errors::DivisionByZeroError"
+	NumericOutOfRangeError ErrorCategory = "errors::NumericOutOfRangeError"
+	IntegrityError ErrorCategory = "errors::IntegrityError"
+	ConstraintViolationError ErrorCategory = "errors::ConstraintViolationError"
+	CardinalityViolationError ErrorCategory = "errors::CardinalityViolationError"
+	MissingRequiredError ErrorCategory = "errors::MissingRequiredError"
+	TransactionError ErrorCategory = "errors::TransactionError"
+	TransactionSerializationError ErrorCategory = "errors::TransactionSerializationError"
+	TransactionDeadlockError ErrorCategory = "errors::TransactionDeadlockError"
+	ConfigurationError ErrorCategory = "errors::ConfigurationError"
+	AccessError ErrorCategory = "errors::AccessError"
+	AuthenticationError ErrorCategory = "errors::AuthenticationError"
+	ClientError ErrorCategory = "errors::ClientError"
+	ClientConnectionError ErrorCategory = "errors::ClientConnectionError"
+	ClientConnectionFailedError ErrorCategory = "errors::ClientConnectionFailedError"
+	ClientConnectionFailedTemporarilyError ErrorCategory = "errors::ClientConnectionFailedTemporarilyError"
+	ClientConnectionTimeoutError ErrorCategory = "errors::ClientConnectionTimeoutError"
+	ClientConnectionClosedError ErrorCategory = "errors::ClientConnectionClosedError"
+	InterfaceError ErrorCategory = "errors::InterfaceError"
+	QueryArgumentError ErrorCategory = "errors::QueryArgumentError"
+	MissingArgumentError ErrorCategory = "errors::MissingArgumentError"
+	UnknownArgumentError ErrorCategory = "errors::UnknownArgumentError"
+	InvalidArgumentError ErrorCategory = "errors::InvalidArgumentError"
+	NoDataError ErrorCategory = "errors::NoDataError"
+)
 
 type internalServerError struct {
 	msg string
@@ -50,20 +124,21 @@ func (e *internalServerError) Error() string {
 
 func (e *internalServerError) Unwrap() error { return e.err }
 
-func (e *internalServerError) isEdgeDBInternalServerError() {}
 
-func (e *internalServerError) isEdgeDBError() {}
+func (e *internalServerError) Category(c ErrorCategory) bool {
+	switch c {
+	case InternalServerError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *internalServerError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnsupportedFeatureError is an error.
-type UnsupportedFeatureError interface {
-	Error
-	isEdgeDBUnsupportedFeatureError()
 }
 
 type unsupportedFeatureError struct {
@@ -82,20 +157,21 @@ func (e *unsupportedFeatureError) Error() string {
 
 func (e *unsupportedFeatureError) Unwrap() error { return e.err }
 
-func (e *unsupportedFeatureError) isEdgeDBUnsupportedFeatureError() {}
 
-func (e *unsupportedFeatureError) isEdgeDBError() {}
+func (e *unsupportedFeatureError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnsupportedFeatureError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unsupportedFeatureError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ProtocolError is an error.
-type ProtocolError interface {
-	Error
-	isEdgeDBProtocolError()
 }
 
 type protocolError struct {
@@ -114,20 +190,21 @@ func (e *protocolError) Error() string {
 
 func (e *protocolError) Unwrap() error { return e.err }
 
-func (e *protocolError) isEdgeDBProtocolError() {}
 
-func (e *protocolError) isEdgeDBError() {}
+func (e *protocolError) Category(c ErrorCategory) bool {
+	switch c {
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *protocolError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// BinaryProtocolError is an error.
-type BinaryProtocolError interface {
-	ProtocolError
-	isEdgeDBBinaryProtocolError()
 }
 
 type binaryProtocolError struct {
@@ -146,22 +223,25 @@ func (e *binaryProtocolError) Error() string {
 
 func (e *binaryProtocolError) Unwrap() error { return e.err }
 
-func (e *binaryProtocolError) isEdgeDBBinaryProtocolError() {}
+
+func (e *binaryProtocolError) Category(c ErrorCategory) bool {
+	switch c {
+	case BinaryProtocolError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *binaryProtocolError) isEdgeDBProtocolError() {}
-
-func (e *binaryProtocolError) isEdgeDBError() {}
 
 func (e *binaryProtocolError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnsupportedProtocolVersionError is an error.
-type UnsupportedProtocolVersionError interface {
-	BinaryProtocolError
-	isEdgeDBUnsupportedProtocolVersionError()
 }
 
 type unsupportedProtocolVersionError struct {
@@ -180,24 +260,29 @@ func (e *unsupportedProtocolVersionError) Error() string {
 
 func (e *unsupportedProtocolVersionError) Unwrap() error { return e.err }
 
-func (e *unsupportedProtocolVersionError) isEdgeDBUnsupportedProtocolVersionError() {}
+
+func (e *unsupportedProtocolVersionError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnsupportedProtocolVersionError:
+		return true
+	case BinaryProtocolError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unsupportedProtocolVersionError) isEdgeDBBinaryProtocolError() {}
 
 func (e *unsupportedProtocolVersionError) isEdgeDBProtocolError() {}
-
-func (e *unsupportedProtocolVersionError) isEdgeDBError() {}
 
 func (e *unsupportedProtocolVersionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// TypeSpecNotFoundError is an error.
-type TypeSpecNotFoundError interface {
-	BinaryProtocolError
-	isEdgeDBTypeSpecNotFoundError()
 }
 
 type typeSpecNotFoundError struct {
@@ -216,24 +301,29 @@ func (e *typeSpecNotFoundError) Error() string {
 
 func (e *typeSpecNotFoundError) Unwrap() error { return e.err }
 
-func (e *typeSpecNotFoundError) isEdgeDBTypeSpecNotFoundError() {}
+
+func (e *typeSpecNotFoundError) Category(c ErrorCategory) bool {
+	switch c {
+	case TypeSpecNotFoundError:
+		return true
+	case BinaryProtocolError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *typeSpecNotFoundError) isEdgeDBBinaryProtocolError() {}
 
 func (e *typeSpecNotFoundError) isEdgeDBProtocolError() {}
-
-func (e *typeSpecNotFoundError) isEdgeDBError() {}
 
 func (e *typeSpecNotFoundError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnexpectedMessageError is an error.
-type UnexpectedMessageError interface {
-	BinaryProtocolError
-	isEdgeDBUnexpectedMessageError()
 }
 
 type unexpectedMessageError struct {
@@ -252,24 +342,29 @@ func (e *unexpectedMessageError) Error() string {
 
 func (e *unexpectedMessageError) Unwrap() error { return e.err }
 
-func (e *unexpectedMessageError) isEdgeDBUnexpectedMessageError() {}
+
+func (e *unexpectedMessageError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnexpectedMessageError:
+		return true
+	case BinaryProtocolError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unexpectedMessageError) isEdgeDBBinaryProtocolError() {}
 
 func (e *unexpectedMessageError) isEdgeDBProtocolError() {}
-
-func (e *unexpectedMessageError) isEdgeDBError() {}
 
 func (e *unexpectedMessageError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InputDataError is an error.
-type InputDataError interface {
-	ProtocolError
-	isEdgeDBInputDataError()
 }
 
 type inputDataError struct {
@@ -288,22 +383,25 @@ func (e *inputDataError) Error() string {
 
 func (e *inputDataError) Unwrap() error { return e.err }
 
-func (e *inputDataError) isEdgeDBInputDataError() {}
+
+func (e *inputDataError) Category(c ErrorCategory) bool {
+	switch c {
+	case InputDataError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *inputDataError) isEdgeDBProtocolError() {}
-
-func (e *inputDataError) isEdgeDBError() {}
 
 func (e *inputDataError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ResultCardinalityMismatchError is an error.
-type ResultCardinalityMismatchError interface {
-	ProtocolError
-	isEdgeDBResultCardinalityMismatchError()
 }
 
 type resultCardinalityMismatchError struct {
@@ -322,22 +420,25 @@ func (e *resultCardinalityMismatchError) Error() string {
 
 func (e *resultCardinalityMismatchError) Unwrap() error { return e.err }
 
-func (e *resultCardinalityMismatchError) isEdgeDBResultCardinalityMismatchError() {}
+
+func (e *resultCardinalityMismatchError) Category(c ErrorCategory) bool {
+	switch c {
+	case ResultCardinalityMismatchError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *resultCardinalityMismatchError) isEdgeDBProtocolError() {}
-
-func (e *resultCardinalityMismatchError) isEdgeDBError() {}
 
 func (e *resultCardinalityMismatchError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// CapabilityError is an error.
-type CapabilityError interface {
-	ProtocolError
-	isEdgeDBCapabilityError()
 }
 
 type capabilityError struct {
@@ -356,22 +457,25 @@ func (e *capabilityError) Error() string {
 
 func (e *capabilityError) Unwrap() error { return e.err }
 
-func (e *capabilityError) isEdgeDBCapabilityError() {}
+
+func (e *capabilityError) Category(c ErrorCategory) bool {
+	switch c {
+	case CapabilityError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *capabilityError) isEdgeDBProtocolError() {}
-
-func (e *capabilityError) isEdgeDBError() {}
 
 func (e *capabilityError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnsupportedCapabilityError is an error.
-type UnsupportedCapabilityError interface {
-	CapabilityError
-	isEdgeDBUnsupportedCapabilityError()
 }
 
 type unsupportedCapabilityError struct {
@@ -390,24 +494,29 @@ func (e *unsupportedCapabilityError) Error() string {
 
 func (e *unsupportedCapabilityError) Unwrap() error { return e.err }
 
-func (e *unsupportedCapabilityError) isEdgeDBUnsupportedCapabilityError() {}
+
+func (e *unsupportedCapabilityError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnsupportedCapabilityError:
+		return true
+	case CapabilityError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unsupportedCapabilityError) isEdgeDBCapabilityError() {}
 
 func (e *unsupportedCapabilityError) isEdgeDBProtocolError() {}
-
-func (e *unsupportedCapabilityError) isEdgeDBError() {}
 
 func (e *unsupportedCapabilityError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DisabledCapabilityError is an error.
-type DisabledCapabilityError interface {
-	CapabilityError
-	isEdgeDBDisabledCapabilityError()
 }
 
 type disabledCapabilityError struct {
@@ -426,24 +535,29 @@ func (e *disabledCapabilityError) Error() string {
 
 func (e *disabledCapabilityError) Unwrap() error { return e.err }
 
-func (e *disabledCapabilityError) isEdgeDBDisabledCapabilityError() {}
+
+func (e *disabledCapabilityError) Category(c ErrorCategory) bool {
+	switch c {
+	case DisabledCapabilityError:
+		return true
+	case CapabilityError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *disabledCapabilityError) isEdgeDBCapabilityError() {}
 
 func (e *disabledCapabilityError) isEdgeDBProtocolError() {}
-
-func (e *disabledCapabilityError) isEdgeDBError() {}
 
 func (e *disabledCapabilityError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// QueryError is an error.
-type QueryError interface {
-	Error
-	isEdgeDBQueryError()
 }
 
 type queryError struct {
@@ -462,20 +576,21 @@ func (e *queryError) Error() string {
 
 func (e *queryError) Unwrap() error { return e.err }
 
-func (e *queryError) isEdgeDBQueryError() {}
 
-func (e *queryError) isEdgeDBError() {}
+func (e *queryError) Category(c ErrorCategory) bool {
+	switch c {
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *queryError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidSyntaxError is an error.
-type InvalidSyntaxError interface {
-	QueryError
-	isEdgeDBInvalidSyntaxError()
 }
 
 type invalidSyntaxError struct {
@@ -494,22 +609,25 @@ func (e *invalidSyntaxError) Error() string {
 
 func (e *invalidSyntaxError) Unwrap() error { return e.err }
 
-func (e *invalidSyntaxError) isEdgeDBInvalidSyntaxError() {}
+
+func (e *invalidSyntaxError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidSyntaxError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidSyntaxError) isEdgeDBQueryError() {}
-
-func (e *invalidSyntaxError) isEdgeDBError() {}
 
 func (e *invalidSyntaxError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// EdgeQLSyntaxError is an error.
-type EdgeQLSyntaxError interface {
-	InvalidSyntaxError
-	isEdgeDBEdgeQLSyntaxError()
 }
 
 type edgeQLSyntaxError struct {
@@ -528,24 +646,29 @@ func (e *edgeQLSyntaxError) Error() string {
 
 func (e *edgeQLSyntaxError) Unwrap() error { return e.err }
 
-func (e *edgeQLSyntaxError) isEdgeDBEdgeQLSyntaxError() {}
+
+func (e *edgeQLSyntaxError) Category(c ErrorCategory) bool {
+	switch c {
+	case EdgeQLSyntaxError:
+		return true
+	case InvalidSyntaxError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *edgeQLSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
 func (e *edgeQLSyntaxError) isEdgeDBQueryError() {}
-
-func (e *edgeQLSyntaxError) isEdgeDBError() {}
 
 func (e *edgeQLSyntaxError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// SchemaSyntaxError is an error.
-type SchemaSyntaxError interface {
-	InvalidSyntaxError
-	isEdgeDBSchemaSyntaxError()
 }
 
 type schemaSyntaxError struct {
@@ -564,24 +687,29 @@ func (e *schemaSyntaxError) Error() string {
 
 func (e *schemaSyntaxError) Unwrap() error { return e.err }
 
-func (e *schemaSyntaxError) isEdgeDBSchemaSyntaxError() {}
+
+func (e *schemaSyntaxError) Category(c ErrorCategory) bool {
+	switch c {
+	case SchemaSyntaxError:
+		return true
+	case InvalidSyntaxError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *schemaSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
 func (e *schemaSyntaxError) isEdgeDBQueryError() {}
-
-func (e *schemaSyntaxError) isEdgeDBError() {}
 
 func (e *schemaSyntaxError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// GraphQLSyntaxError is an error.
-type GraphQLSyntaxError interface {
-	InvalidSyntaxError
-	isEdgeDBGraphQLSyntaxError()
 }
 
 type graphQLSyntaxError struct {
@@ -600,24 +728,29 @@ func (e *graphQLSyntaxError) Error() string {
 
 func (e *graphQLSyntaxError) Unwrap() error { return e.err }
 
-func (e *graphQLSyntaxError) isEdgeDBGraphQLSyntaxError() {}
+
+func (e *graphQLSyntaxError) Category(c ErrorCategory) bool {
+	switch c {
+	case GraphQLSyntaxError:
+		return true
+	case InvalidSyntaxError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *graphQLSyntaxError) isEdgeDBInvalidSyntaxError() {}
 
 func (e *graphQLSyntaxError) isEdgeDBQueryError() {}
-
-func (e *graphQLSyntaxError) isEdgeDBError() {}
 
 func (e *graphQLSyntaxError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidTypeError is an error.
-type InvalidTypeError interface {
-	QueryError
-	isEdgeDBInvalidTypeError()
 }
 
 type invalidTypeError struct {
@@ -636,22 +769,25 @@ func (e *invalidTypeError) Error() string {
 
 func (e *invalidTypeError) Unwrap() error { return e.err }
 
-func (e *invalidTypeError) isEdgeDBInvalidTypeError() {}
+
+func (e *invalidTypeError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidTypeError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidTypeError) isEdgeDBQueryError() {}
-
-func (e *invalidTypeError) isEdgeDBError() {}
 
 func (e *invalidTypeError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidTargetError is an error.
-type InvalidTargetError interface {
-	InvalidTypeError
-	isEdgeDBInvalidTargetError()
 }
 
 type invalidTargetError struct {
@@ -670,24 +806,29 @@ func (e *invalidTargetError) Error() string {
 
 func (e *invalidTargetError) Unwrap() error { return e.err }
 
-func (e *invalidTargetError) isEdgeDBInvalidTargetError() {}
+
+func (e *invalidTargetError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidTargetError:
+		return true
+	case InvalidTypeError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidTargetError) isEdgeDBInvalidTypeError() {}
 
 func (e *invalidTargetError) isEdgeDBQueryError() {}
-
-func (e *invalidTargetError) isEdgeDBError() {}
 
 func (e *invalidTargetError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidLinkTargetError is an error.
-type InvalidLinkTargetError interface {
-	InvalidTargetError
-	isEdgeDBInvalidLinkTargetError()
 }
 
 type invalidLinkTargetError struct {
@@ -706,7 +847,21 @@ func (e *invalidLinkTargetError) Error() string {
 
 func (e *invalidLinkTargetError) Unwrap() error { return e.err }
 
-func (e *invalidLinkTargetError) isEdgeDBInvalidLinkTargetError() {}
+
+func (e *invalidLinkTargetError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidLinkTargetError:
+		return true
+	case InvalidTargetError:
+		return true
+	case InvalidTypeError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidLinkTargetError) isEdgeDBInvalidTargetError() {}
 
@@ -714,18 +869,11 @@ func (e *invalidLinkTargetError) isEdgeDBInvalidTypeError() {}
 
 func (e *invalidLinkTargetError) isEdgeDBQueryError() {}
 
-func (e *invalidLinkTargetError) isEdgeDBError() {}
-
 func (e *invalidLinkTargetError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidPropertyTargetError is an error.
-type InvalidPropertyTargetError interface {
-	InvalidTargetError
-	isEdgeDBInvalidPropertyTargetError()
 }
 
 type invalidPropertyTargetError struct {
@@ -744,7 +892,21 @@ func (e *invalidPropertyTargetError) Error() string {
 
 func (e *invalidPropertyTargetError) Unwrap() error { return e.err }
 
-func (e *invalidPropertyTargetError) isEdgeDBInvalidPropertyTargetError() {}
+
+func (e *invalidPropertyTargetError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidPropertyTargetError:
+		return true
+	case InvalidTargetError:
+		return true
+	case InvalidTypeError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidPropertyTargetError) isEdgeDBInvalidTargetError() {}
 
@@ -752,18 +914,11 @@ func (e *invalidPropertyTargetError) isEdgeDBInvalidTypeError() {}
 
 func (e *invalidPropertyTargetError) isEdgeDBQueryError() {}
 
-func (e *invalidPropertyTargetError) isEdgeDBError() {}
-
 func (e *invalidPropertyTargetError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidReferenceError is an error.
-type InvalidReferenceError interface {
-	QueryError
-	isEdgeDBInvalidReferenceError()
 }
 
 type invalidReferenceError struct {
@@ -782,22 +937,25 @@ func (e *invalidReferenceError) Error() string {
 
 func (e *invalidReferenceError) Unwrap() error { return e.err }
 
-func (e *invalidReferenceError) isEdgeDBInvalidReferenceError() {}
+
+func (e *invalidReferenceError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidReferenceError) isEdgeDBQueryError() {}
-
-func (e *invalidReferenceError) isEdgeDBError() {}
 
 func (e *invalidReferenceError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownModuleError is an error.
-type UnknownModuleError interface {
-	InvalidReferenceError
-	isEdgeDBUnknownModuleError()
 }
 
 type unknownModuleError struct {
@@ -816,24 +974,29 @@ func (e *unknownModuleError) Error() string {
 
 func (e *unknownModuleError) Unwrap() error { return e.err }
 
-func (e *unknownModuleError) isEdgeDBUnknownModuleError() {}
+
+func (e *unknownModuleError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownModuleError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownModuleError) isEdgeDBInvalidReferenceError() {}
 
 func (e *unknownModuleError) isEdgeDBQueryError() {}
-
-func (e *unknownModuleError) isEdgeDBError() {}
 
 func (e *unknownModuleError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownLinkError is an error.
-type UnknownLinkError interface {
-	InvalidReferenceError
-	isEdgeDBUnknownLinkError()
 }
 
 type unknownLinkError struct {
@@ -852,24 +1015,29 @@ func (e *unknownLinkError) Error() string {
 
 func (e *unknownLinkError) Unwrap() error { return e.err }
 
-func (e *unknownLinkError) isEdgeDBUnknownLinkError() {}
+
+func (e *unknownLinkError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownLinkError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownLinkError) isEdgeDBInvalidReferenceError() {}
 
 func (e *unknownLinkError) isEdgeDBQueryError() {}
-
-func (e *unknownLinkError) isEdgeDBError() {}
 
 func (e *unknownLinkError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownPropertyError is an error.
-type UnknownPropertyError interface {
-	InvalidReferenceError
-	isEdgeDBUnknownPropertyError()
 }
 
 type unknownPropertyError struct {
@@ -888,24 +1056,29 @@ func (e *unknownPropertyError) Error() string {
 
 func (e *unknownPropertyError) Unwrap() error { return e.err }
 
-func (e *unknownPropertyError) isEdgeDBUnknownPropertyError() {}
+
+func (e *unknownPropertyError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownPropertyError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownPropertyError) isEdgeDBInvalidReferenceError() {}
 
 func (e *unknownPropertyError) isEdgeDBQueryError() {}
-
-func (e *unknownPropertyError) isEdgeDBError() {}
 
 func (e *unknownPropertyError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownUserError is an error.
-type UnknownUserError interface {
-	InvalidReferenceError
-	isEdgeDBUnknownUserError()
 }
 
 type unknownUserError struct {
@@ -924,24 +1097,29 @@ func (e *unknownUserError) Error() string {
 
 func (e *unknownUserError) Unwrap() error { return e.err }
 
-func (e *unknownUserError) isEdgeDBUnknownUserError() {}
+
+func (e *unknownUserError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownUserError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownUserError) isEdgeDBInvalidReferenceError() {}
 
 func (e *unknownUserError) isEdgeDBQueryError() {}
-
-func (e *unknownUserError) isEdgeDBError() {}
 
 func (e *unknownUserError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownDatabaseError is an error.
-type UnknownDatabaseError interface {
-	InvalidReferenceError
-	isEdgeDBUnknownDatabaseError()
 }
 
 type unknownDatabaseError struct {
@@ -960,24 +1138,29 @@ func (e *unknownDatabaseError) Error() string {
 
 func (e *unknownDatabaseError) Unwrap() error { return e.err }
 
-func (e *unknownDatabaseError) isEdgeDBUnknownDatabaseError() {}
+
+func (e *unknownDatabaseError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownDatabaseError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownDatabaseError) isEdgeDBInvalidReferenceError() {}
 
 func (e *unknownDatabaseError) isEdgeDBQueryError() {}
-
-func (e *unknownDatabaseError) isEdgeDBError() {}
 
 func (e *unknownDatabaseError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownParameterError is an error.
-type UnknownParameterError interface {
-	InvalidReferenceError
-	isEdgeDBUnknownParameterError()
 }
 
 type unknownParameterError struct {
@@ -996,24 +1179,29 @@ func (e *unknownParameterError) Error() string {
 
 func (e *unknownParameterError) Unwrap() error { return e.err }
 
-func (e *unknownParameterError) isEdgeDBUnknownParameterError() {}
+
+func (e *unknownParameterError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownParameterError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownParameterError) isEdgeDBInvalidReferenceError() {}
 
 func (e *unknownParameterError) isEdgeDBQueryError() {}
-
-func (e *unknownParameterError) isEdgeDBError() {}
 
 func (e *unknownParameterError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// SchemaError is an error.
-type SchemaError interface {
-	QueryError
-	isEdgeDBSchemaError()
 }
 
 type schemaError struct {
@@ -1032,22 +1220,25 @@ func (e *schemaError) Error() string {
 
 func (e *schemaError) Unwrap() error { return e.err }
 
-func (e *schemaError) isEdgeDBSchemaError() {}
+
+func (e *schemaError) Category(c ErrorCategory) bool {
+	switch c {
+	case SchemaError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *schemaError) isEdgeDBQueryError() {}
-
-func (e *schemaError) isEdgeDBError() {}
 
 func (e *schemaError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// SchemaDefinitionError is an error.
-type SchemaDefinitionError interface {
-	QueryError
-	isEdgeDBSchemaDefinitionError()
 }
 
 type schemaDefinitionError struct {
@@ -1066,22 +1257,25 @@ func (e *schemaDefinitionError) Error() string {
 
 func (e *schemaDefinitionError) Unwrap() error { return e.err }
 
-func (e *schemaDefinitionError) isEdgeDBSchemaDefinitionError() {}
+
+func (e *schemaDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *schemaDefinitionError) isEdgeDBQueryError() {}
-
-func (e *schemaDefinitionError) isEdgeDBError() {}
 
 func (e *schemaDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidDefinitionError is an error.
-type InvalidDefinitionError interface {
-	SchemaDefinitionError
-	isEdgeDBInvalidDefinitionError()
 }
 
 type invalidDefinitionError struct {
@@ -1100,24 +1294,29 @@ func (e *invalidDefinitionError) Error() string {
 
 func (e *invalidDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidDefinitionError) isEdgeDBInvalidDefinitionError() {}
+
+func (e *invalidDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidDefinitionError) isEdgeDBQueryError() {}
-
-func (e *invalidDefinitionError) isEdgeDBError() {}
 
 func (e *invalidDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidModuleDefinitionError is an error.
-type InvalidModuleDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidModuleDefinitionError()
 }
 
 type invalidModuleDefinitionError struct {
@@ -1136,7 +1335,21 @@ func (e *invalidModuleDefinitionError) Error() string {
 
 func (e *invalidModuleDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidModuleDefinitionError) isEdgeDBInvalidModuleDefinitionError() {}
+
+func (e *invalidModuleDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidModuleDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidModuleDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1144,18 +1357,11 @@ func (e *invalidModuleDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidModuleDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidModuleDefinitionError) isEdgeDBError() {}
-
 func (e *invalidModuleDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidLinkDefinitionError is an error.
-type InvalidLinkDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidLinkDefinitionError()
 }
 
 type invalidLinkDefinitionError struct {
@@ -1174,7 +1380,21 @@ func (e *invalidLinkDefinitionError) Error() string {
 
 func (e *invalidLinkDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidLinkDefinitionError) isEdgeDBInvalidLinkDefinitionError() {}
+
+func (e *invalidLinkDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidLinkDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidLinkDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1182,18 +1402,11 @@ func (e *invalidLinkDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidLinkDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidLinkDefinitionError) isEdgeDBError() {}
-
 func (e *invalidLinkDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidPropertyDefinitionError is an error.
-type InvalidPropertyDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidPropertyDefinitionError()
 }
 
 type invalidPropertyDefinitionError struct {
@@ -1212,7 +1425,21 @@ func (e *invalidPropertyDefinitionError) Error() string {
 
 func (e *invalidPropertyDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidPropertyDefinitionError) isEdgeDBInvalidPropertyDefinitionError() {}
+
+func (e *invalidPropertyDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidPropertyDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidPropertyDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1220,18 +1447,11 @@ func (e *invalidPropertyDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidPropertyDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidPropertyDefinitionError) isEdgeDBError() {}
-
 func (e *invalidPropertyDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidUserDefinitionError is an error.
-type InvalidUserDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidUserDefinitionError()
 }
 
 type invalidUserDefinitionError struct {
@@ -1250,7 +1470,21 @@ func (e *invalidUserDefinitionError) Error() string {
 
 func (e *invalidUserDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidUserDefinitionError) isEdgeDBInvalidUserDefinitionError() {}
+
+func (e *invalidUserDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidUserDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidUserDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1258,18 +1492,11 @@ func (e *invalidUserDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidUserDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidUserDefinitionError) isEdgeDBError() {}
-
 func (e *invalidUserDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidDatabaseDefinitionError is an error.
-type InvalidDatabaseDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidDatabaseDefinitionError()
 }
 
 type invalidDatabaseDefinitionError struct {
@@ -1288,7 +1515,21 @@ func (e *invalidDatabaseDefinitionError) Error() string {
 
 func (e *invalidDatabaseDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidDatabaseDefinitionError) isEdgeDBInvalidDatabaseDefinitionError() {}
+
+func (e *invalidDatabaseDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidDatabaseDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidDatabaseDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1296,18 +1537,11 @@ func (e *invalidDatabaseDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidDatabaseDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidDatabaseDefinitionError) isEdgeDBError() {}
-
 func (e *invalidDatabaseDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidOperatorDefinitionError is an error.
-type InvalidOperatorDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidOperatorDefinitionError()
 }
 
 type invalidOperatorDefinitionError struct {
@@ -1326,7 +1560,21 @@ func (e *invalidOperatorDefinitionError) Error() string {
 
 func (e *invalidOperatorDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidOperatorDefinitionError) isEdgeDBInvalidOperatorDefinitionError() {}
+
+func (e *invalidOperatorDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidOperatorDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidOperatorDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1334,18 +1582,11 @@ func (e *invalidOperatorDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidOperatorDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidOperatorDefinitionError) isEdgeDBError() {}
-
 func (e *invalidOperatorDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidAliasDefinitionError is an error.
-type InvalidAliasDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidAliasDefinitionError()
 }
 
 type invalidAliasDefinitionError struct {
@@ -1364,7 +1605,21 @@ func (e *invalidAliasDefinitionError) Error() string {
 
 func (e *invalidAliasDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidAliasDefinitionError) isEdgeDBInvalidAliasDefinitionError() {}
+
+func (e *invalidAliasDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidAliasDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidAliasDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1372,18 +1627,11 @@ func (e *invalidAliasDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidAliasDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidAliasDefinitionError) isEdgeDBError() {}
-
 func (e *invalidAliasDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidFunctionDefinitionError is an error.
-type InvalidFunctionDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidFunctionDefinitionError()
 }
 
 type invalidFunctionDefinitionError struct {
@@ -1402,7 +1650,21 @@ func (e *invalidFunctionDefinitionError) Error() string {
 
 func (e *invalidFunctionDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidFunctionDefinitionError) isEdgeDBInvalidFunctionDefinitionError() {}
+
+func (e *invalidFunctionDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidFunctionDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidFunctionDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1410,18 +1672,11 @@ func (e *invalidFunctionDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidFunctionDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidFunctionDefinitionError) isEdgeDBError() {}
-
 func (e *invalidFunctionDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidConstraintDefinitionError is an error.
-type InvalidConstraintDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidConstraintDefinitionError()
 }
 
 type invalidConstraintDefinitionError struct {
@@ -1440,7 +1695,21 @@ func (e *invalidConstraintDefinitionError) Error() string {
 
 func (e *invalidConstraintDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidConstraintDefinitionError) isEdgeDBInvalidConstraintDefinitionError() {}
+
+func (e *invalidConstraintDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidConstraintDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidConstraintDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1448,18 +1717,11 @@ func (e *invalidConstraintDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidConstraintDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidConstraintDefinitionError) isEdgeDBError() {}
-
 func (e *invalidConstraintDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidCastDefinitionError is an error.
-type InvalidCastDefinitionError interface {
-	InvalidDefinitionError
-	isEdgeDBInvalidCastDefinitionError()
 }
 
 type invalidCastDefinitionError struct {
@@ -1478,7 +1740,21 @@ func (e *invalidCastDefinitionError) Error() string {
 
 func (e *invalidCastDefinitionError) Unwrap() error { return e.err }
 
-func (e *invalidCastDefinitionError) isEdgeDBInvalidCastDefinitionError() {}
+
+func (e *invalidCastDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidCastDefinitionError:
+		return true
+	case InvalidDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidCastDefinitionError) isEdgeDBInvalidDefinitionError() {}
 
@@ -1486,18 +1762,11 @@ func (e *invalidCastDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *invalidCastDefinitionError) isEdgeDBQueryError() {}
 
-func (e *invalidCastDefinitionError) isEdgeDBError() {}
-
 func (e *invalidCastDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateDefinitionError is an error.
-type DuplicateDefinitionError interface {
-	SchemaDefinitionError
-	isEdgeDBDuplicateDefinitionError()
 }
 
 type duplicateDefinitionError struct {
@@ -1516,24 +1785,29 @@ func (e *duplicateDefinitionError) Error() string {
 
 func (e *duplicateDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateDefinitionError) isEdgeDBDuplicateDefinitionError() {}
+
+func (e *duplicateDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateDefinitionError) isEdgeDBQueryError() {}
-
-func (e *duplicateDefinitionError) isEdgeDBError() {}
 
 func (e *duplicateDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateModuleDefinitionError is an error.
-type DuplicateModuleDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateModuleDefinitionError()
 }
 
 type duplicateModuleDefinitionError struct {
@@ -1552,7 +1826,21 @@ func (e *duplicateModuleDefinitionError) Error() string {
 
 func (e *duplicateModuleDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateModuleDefinitionError) isEdgeDBDuplicateModuleDefinitionError() {}
+
+func (e *duplicateModuleDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateModuleDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateModuleDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1560,18 +1848,11 @@ func (e *duplicateModuleDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateModuleDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateModuleDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateModuleDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateLinkDefinitionError is an error.
-type DuplicateLinkDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateLinkDefinitionError()
 }
 
 type duplicateLinkDefinitionError struct {
@@ -1590,7 +1871,21 @@ func (e *duplicateLinkDefinitionError) Error() string {
 
 func (e *duplicateLinkDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateLinkDefinitionError) isEdgeDBDuplicateLinkDefinitionError() {}
+
+func (e *duplicateLinkDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateLinkDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateLinkDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1598,18 +1893,11 @@ func (e *duplicateLinkDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateLinkDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateLinkDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateLinkDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicatePropertyDefinitionError is an error.
-type DuplicatePropertyDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicatePropertyDefinitionError()
 }
 
 type duplicatePropertyDefinitionError struct {
@@ -1628,7 +1916,21 @@ func (e *duplicatePropertyDefinitionError) Error() string {
 
 func (e *duplicatePropertyDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicatePropertyDefinitionError) isEdgeDBDuplicatePropertyDefinitionError() {}
+
+func (e *duplicatePropertyDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicatePropertyDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicatePropertyDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1636,18 +1938,11 @@ func (e *duplicatePropertyDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicatePropertyDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicatePropertyDefinitionError) isEdgeDBError() {}
-
 func (e *duplicatePropertyDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateUserDefinitionError is an error.
-type DuplicateUserDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateUserDefinitionError()
 }
 
 type duplicateUserDefinitionError struct {
@@ -1666,7 +1961,21 @@ func (e *duplicateUserDefinitionError) Error() string {
 
 func (e *duplicateUserDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateUserDefinitionError) isEdgeDBDuplicateUserDefinitionError() {}
+
+func (e *duplicateUserDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateUserDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateUserDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1674,18 +1983,11 @@ func (e *duplicateUserDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateUserDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateUserDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateUserDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateDatabaseDefinitionError is an error.
-type DuplicateDatabaseDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateDatabaseDefinitionError()
 }
 
 type duplicateDatabaseDefinitionError struct {
@@ -1704,7 +2006,21 @@ func (e *duplicateDatabaseDefinitionError) Error() string {
 
 func (e *duplicateDatabaseDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateDatabaseDefinitionError) isEdgeDBDuplicateDatabaseDefinitionError() {}
+
+func (e *duplicateDatabaseDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateDatabaseDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateDatabaseDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1712,18 +2028,11 @@ func (e *duplicateDatabaseDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateDatabaseDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateDatabaseDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateDatabaseDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateOperatorDefinitionError is an error.
-type DuplicateOperatorDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateOperatorDefinitionError()
 }
 
 type duplicateOperatorDefinitionError struct {
@@ -1742,7 +2051,21 @@ func (e *duplicateOperatorDefinitionError) Error() string {
 
 func (e *duplicateOperatorDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateOperatorDefinitionError) isEdgeDBDuplicateOperatorDefinitionError() {}
+
+func (e *duplicateOperatorDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateOperatorDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateOperatorDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1750,18 +2073,11 @@ func (e *duplicateOperatorDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateOperatorDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateOperatorDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateOperatorDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateViewDefinitionError is an error.
-type DuplicateViewDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateViewDefinitionError()
 }
 
 type duplicateViewDefinitionError struct {
@@ -1780,7 +2096,21 @@ func (e *duplicateViewDefinitionError) Error() string {
 
 func (e *duplicateViewDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateViewDefinitionError) isEdgeDBDuplicateViewDefinitionError() {}
+
+func (e *duplicateViewDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateViewDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateViewDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1788,18 +2118,11 @@ func (e *duplicateViewDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateViewDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateViewDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateViewDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateFunctionDefinitionError is an error.
-type DuplicateFunctionDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateFunctionDefinitionError()
 }
 
 type duplicateFunctionDefinitionError struct {
@@ -1818,7 +2141,21 @@ func (e *duplicateFunctionDefinitionError) Error() string {
 
 func (e *duplicateFunctionDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateFunctionDefinitionError) isEdgeDBDuplicateFunctionDefinitionError() {}
+
+func (e *duplicateFunctionDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateFunctionDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateFunctionDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1826,18 +2163,11 @@ func (e *duplicateFunctionDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateFunctionDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateFunctionDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateFunctionDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateConstraintDefinitionError is an error.
-type DuplicateConstraintDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateConstraintDefinitionError()
 }
 
 type duplicateConstraintDefinitionError struct {
@@ -1856,7 +2186,21 @@ func (e *duplicateConstraintDefinitionError) Error() string {
 
 func (e *duplicateConstraintDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateConstraintDefinitionError) isEdgeDBDuplicateConstraintDefinitionError() {}
+
+func (e *duplicateConstraintDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateConstraintDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateConstraintDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1864,18 +2208,11 @@ func (e *duplicateConstraintDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateConstraintDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateConstraintDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateConstraintDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DuplicateCastDefinitionError is an error.
-type DuplicateCastDefinitionError interface {
-	DuplicateDefinitionError
-	isEdgeDBDuplicateCastDefinitionError()
 }
 
 type duplicateCastDefinitionError struct {
@@ -1894,7 +2231,21 @@ func (e *duplicateCastDefinitionError) Error() string {
 
 func (e *duplicateCastDefinitionError) Unwrap() error { return e.err }
 
-func (e *duplicateCastDefinitionError) isEdgeDBDuplicateCastDefinitionError() {}
+
+func (e *duplicateCastDefinitionError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateCastDefinitionError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *duplicateCastDefinitionError) isEdgeDBDuplicateDefinitionError() {}
 
@@ -1902,18 +2253,11 @@ func (e *duplicateCastDefinitionError) isEdgeDBSchemaDefinitionError() {}
 
 func (e *duplicateCastDefinitionError) isEdgeDBQueryError() {}
 
-func (e *duplicateCastDefinitionError) isEdgeDBError() {}
-
 func (e *duplicateCastDefinitionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// QueryTimeoutError is an error.
-type QueryTimeoutError interface {
-	QueryError
-	isEdgeDBQueryTimeoutError()
 }
 
 type queryTimeoutError struct {
@@ -1932,22 +2276,25 @@ func (e *queryTimeoutError) Error() string {
 
 func (e *queryTimeoutError) Unwrap() error { return e.err }
 
-func (e *queryTimeoutError) isEdgeDBQueryTimeoutError() {}
+
+func (e *queryTimeoutError) Category(c ErrorCategory) bool {
+	switch c {
+	case QueryTimeoutError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *queryTimeoutError) isEdgeDBQueryError() {}
-
-func (e *queryTimeoutError) isEdgeDBError() {}
 
 func (e *queryTimeoutError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ExecutionError is an error.
-type ExecutionError interface {
-	Error
-	isEdgeDBExecutionError()
 }
 
 type executionError struct {
@@ -1966,20 +2313,21 @@ func (e *executionError) Error() string {
 
 func (e *executionError) Unwrap() error { return e.err }
 
-func (e *executionError) isEdgeDBExecutionError() {}
 
-func (e *executionError) isEdgeDBError() {}
+func (e *executionError) Category(c ErrorCategory) bool {
+	switch c {
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *executionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidValueError is an error.
-type InvalidValueError interface {
-	ExecutionError
-	isEdgeDBInvalidValueError()
 }
 
 type invalidValueError struct {
@@ -1998,22 +2346,25 @@ func (e *invalidValueError) Error() string {
 
 func (e *invalidValueError) Unwrap() error { return e.err }
 
-func (e *invalidValueError) isEdgeDBInvalidValueError() {}
+
+func (e *invalidValueError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidValueError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidValueError) isEdgeDBExecutionError() {}
-
-func (e *invalidValueError) isEdgeDBError() {}
 
 func (e *invalidValueError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// DivisionByZeroError is an error.
-type DivisionByZeroError interface {
-	InvalidValueError
-	isEdgeDBDivisionByZeroError()
 }
 
 type divisionByZeroError struct {
@@ -2032,24 +2383,29 @@ func (e *divisionByZeroError) Error() string {
 
 func (e *divisionByZeroError) Unwrap() error { return e.err }
 
-func (e *divisionByZeroError) isEdgeDBDivisionByZeroError() {}
+
+func (e *divisionByZeroError) Category(c ErrorCategory) bool {
+	switch c {
+	case DivisionByZeroError:
+		return true
+	case InvalidValueError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *divisionByZeroError) isEdgeDBInvalidValueError() {}
 
 func (e *divisionByZeroError) isEdgeDBExecutionError() {}
-
-func (e *divisionByZeroError) isEdgeDBError() {}
 
 func (e *divisionByZeroError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// NumericOutOfRangeError is an error.
-type NumericOutOfRangeError interface {
-	InvalidValueError
-	isEdgeDBNumericOutOfRangeError()
 }
 
 type numericOutOfRangeError struct {
@@ -2068,24 +2424,29 @@ func (e *numericOutOfRangeError) Error() string {
 
 func (e *numericOutOfRangeError) Unwrap() error { return e.err }
 
-func (e *numericOutOfRangeError) isEdgeDBNumericOutOfRangeError() {}
+
+func (e *numericOutOfRangeError) Category(c ErrorCategory) bool {
+	switch c {
+	case NumericOutOfRangeError:
+		return true
+	case InvalidValueError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *numericOutOfRangeError) isEdgeDBInvalidValueError() {}
 
 func (e *numericOutOfRangeError) isEdgeDBExecutionError() {}
-
-func (e *numericOutOfRangeError) isEdgeDBError() {}
 
 func (e *numericOutOfRangeError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// IntegrityError is an error.
-type IntegrityError interface {
-	ExecutionError
-	isEdgeDBIntegrityError()
 }
 
 type integrityError struct {
@@ -2104,22 +2465,25 @@ func (e *integrityError) Error() string {
 
 func (e *integrityError) Unwrap() error { return e.err }
 
-func (e *integrityError) isEdgeDBIntegrityError() {}
+
+func (e *integrityError) Category(c ErrorCategory) bool {
+	switch c {
+	case IntegrityError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *integrityError) isEdgeDBExecutionError() {}
-
-func (e *integrityError) isEdgeDBError() {}
 
 func (e *integrityError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ConstraintViolationError is an error.
-type ConstraintViolationError interface {
-	IntegrityError
-	isEdgeDBConstraintViolationError()
 }
 
 type constraintViolationError struct {
@@ -2138,24 +2502,29 @@ func (e *constraintViolationError) Error() string {
 
 func (e *constraintViolationError) Unwrap() error { return e.err }
 
-func (e *constraintViolationError) isEdgeDBConstraintViolationError() {}
+
+func (e *constraintViolationError) Category(c ErrorCategory) bool {
+	switch c {
+	case ConstraintViolationError:
+		return true
+	case IntegrityError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *constraintViolationError) isEdgeDBIntegrityError() {}
 
 func (e *constraintViolationError) isEdgeDBExecutionError() {}
-
-func (e *constraintViolationError) isEdgeDBError() {}
 
 func (e *constraintViolationError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// CardinalityViolationError is an error.
-type CardinalityViolationError interface {
-	IntegrityError
-	isEdgeDBCardinalityViolationError()
 }
 
 type cardinalityViolationError struct {
@@ -2174,24 +2543,29 @@ func (e *cardinalityViolationError) Error() string {
 
 func (e *cardinalityViolationError) Unwrap() error { return e.err }
 
-func (e *cardinalityViolationError) isEdgeDBCardinalityViolationError() {}
+
+func (e *cardinalityViolationError) Category(c ErrorCategory) bool {
+	switch c {
+	case CardinalityViolationError:
+		return true
+	case IntegrityError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *cardinalityViolationError) isEdgeDBIntegrityError() {}
 
 func (e *cardinalityViolationError) isEdgeDBExecutionError() {}
-
-func (e *cardinalityViolationError) isEdgeDBError() {}
 
 func (e *cardinalityViolationError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// MissingRequiredError is an error.
-type MissingRequiredError interface {
-	IntegrityError
-	isEdgeDBMissingRequiredError()
 }
 
 type missingRequiredError struct {
@@ -2210,24 +2584,29 @@ func (e *missingRequiredError) Error() string {
 
 func (e *missingRequiredError) Unwrap() error { return e.err }
 
-func (e *missingRequiredError) isEdgeDBMissingRequiredError() {}
+
+func (e *missingRequiredError) Category(c ErrorCategory) bool {
+	switch c {
+	case MissingRequiredError:
+		return true
+	case IntegrityError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *missingRequiredError) isEdgeDBIntegrityError() {}
 
 func (e *missingRequiredError) isEdgeDBExecutionError() {}
-
-func (e *missingRequiredError) isEdgeDBError() {}
 
 func (e *missingRequiredError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// TransactionError is an error.
-type TransactionError interface {
-	ExecutionError
-	isEdgeDBTransactionError()
 }
 
 type transactionError struct {
@@ -2246,22 +2625,25 @@ func (e *transactionError) Error() string {
 
 func (e *transactionError) Unwrap() error { return e.err }
 
-func (e *transactionError) isEdgeDBTransactionError() {}
+
+func (e *transactionError) Category(c ErrorCategory) bool {
+	switch c {
+	case TransactionError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *transactionError) isEdgeDBExecutionError() {}
-
-func (e *transactionError) isEdgeDBError() {}
 
 func (e *transactionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// TransactionSerializationError is an error.
-type TransactionSerializationError interface {
-	TransactionError
-	isEdgeDBTransactionSerializationError()
 }
 
 type transactionSerializationError struct {
@@ -2280,13 +2662,23 @@ func (e *transactionSerializationError) Error() string {
 
 func (e *transactionSerializationError) Unwrap() error { return e.err }
 
-func (e *transactionSerializationError) isEdgeDBTransactionSerializationError() {}
+
+func (e *transactionSerializationError) Category(c ErrorCategory) bool {
+	switch c {
+	case TransactionSerializationError:
+		return true
+	case TransactionError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *transactionSerializationError) isEdgeDBTransactionError() {}
 
 func (e *transactionSerializationError) isEdgeDBExecutionError() {}
-
-func (e *transactionSerializationError) isEdgeDBError() {}
 
 func (e *transactionSerializationError) HasTag(tag ErrorTag) bool {
 	switch tag {
@@ -2295,11 +2687,6 @@ func (e *transactionSerializationError) HasTag(tag ErrorTag) bool {
 	default:
 		return false
 	}
-}
-// TransactionDeadlockError is an error.
-type TransactionDeadlockError interface {
-	TransactionError
-	isEdgeDBTransactionDeadlockError()
 }
 
 type transactionDeadlockError struct {
@@ -2318,13 +2705,23 @@ func (e *transactionDeadlockError) Error() string {
 
 func (e *transactionDeadlockError) Unwrap() error { return e.err }
 
-func (e *transactionDeadlockError) isEdgeDBTransactionDeadlockError() {}
+
+func (e *transactionDeadlockError) Category(c ErrorCategory) bool {
+	switch c {
+	case TransactionDeadlockError:
+		return true
+	case TransactionError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *transactionDeadlockError) isEdgeDBTransactionError() {}
 
 func (e *transactionDeadlockError) isEdgeDBExecutionError() {}
-
-func (e *transactionDeadlockError) isEdgeDBError() {}
 
 func (e *transactionDeadlockError) HasTag(tag ErrorTag) bool {
 	switch tag {
@@ -2333,11 +2730,6 @@ func (e *transactionDeadlockError) HasTag(tag ErrorTag) bool {
 	default:
 		return false
 	}
-}
-// ConfigurationError is an error.
-type ConfigurationError interface {
-	Error
-	isEdgeDBConfigurationError()
 }
 
 type configurationError struct {
@@ -2356,20 +2748,21 @@ func (e *configurationError) Error() string {
 
 func (e *configurationError) Unwrap() error { return e.err }
 
-func (e *configurationError) isEdgeDBConfigurationError() {}
 
-func (e *configurationError) isEdgeDBError() {}
+func (e *configurationError) Category(c ErrorCategory) bool {
+	switch c {
+	case ConfigurationError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *configurationError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// AccessError is an error.
-type AccessError interface {
-	Error
-	isEdgeDBAccessError()
 }
 
 type accessError struct {
@@ -2388,20 +2781,21 @@ func (e *accessError) Error() string {
 
 func (e *accessError) Unwrap() error { return e.err }
 
-func (e *accessError) isEdgeDBAccessError() {}
 
-func (e *accessError) isEdgeDBError() {}
+func (e *accessError) Category(c ErrorCategory) bool {
+	switch c {
+	case AccessError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *accessError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// AuthenticationError is an error.
-type AuthenticationError interface {
-	AccessError
-	isEdgeDBAuthenticationError()
 }
 
 type authenticationError struct {
@@ -2420,22 +2814,25 @@ func (e *authenticationError) Error() string {
 
 func (e *authenticationError) Unwrap() error { return e.err }
 
-func (e *authenticationError) isEdgeDBAuthenticationError() {}
+
+func (e *authenticationError) Category(c ErrorCategory) bool {
+	switch c {
+	case AuthenticationError:
+		return true
+	case AccessError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *authenticationError) isEdgeDBAccessError() {}
-
-func (e *authenticationError) isEdgeDBError() {}
 
 func (e *authenticationError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ClientError is an error.
-type ClientError interface {
-	Error
-	isEdgeDBClientError()
 }
 
 type clientError struct {
@@ -2454,20 +2851,21 @@ func (e *clientError) Error() string {
 
 func (e *clientError) Unwrap() error { return e.err }
 
-func (e *clientError) isEdgeDBClientError() {}
 
-func (e *clientError) isEdgeDBError() {}
+func (e *clientError) Category(c ErrorCategory) bool {
+	switch c {
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *clientError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ClientConnectionError is an error.
-type ClientConnectionError interface {
-	ClientError
-	isEdgeDBClientConnectionError()
 }
 
 type clientConnectionError struct {
@@ -2486,22 +2884,25 @@ func (e *clientConnectionError) Error() string {
 
 func (e *clientConnectionError) Unwrap() error { return e.err }
 
-func (e *clientConnectionError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionError) Category(c ErrorCategory) bool {
+	switch c {
+	case ClientConnectionError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *clientConnectionError) isEdgeDBClientError() {}
-
-func (e *clientConnectionError) isEdgeDBError() {}
 
 func (e *clientConnectionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ClientConnectionFailedError is an error.
-type ClientConnectionFailedError interface {
-	ClientConnectionError
-	isEdgeDBClientConnectionFailedError()
 }
 
 type clientConnectionFailedError struct {
@@ -2520,24 +2921,29 @@ func (e *clientConnectionFailedError) Error() string {
 
 func (e *clientConnectionFailedError) Unwrap() error { return e.err }
 
-func (e *clientConnectionFailedError) isEdgeDBClientConnectionFailedError() {}
+
+func (e *clientConnectionFailedError) Category(c ErrorCategory) bool {
+	switch c {
+	case ClientConnectionFailedError:
+		return true
+	case ClientConnectionError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *clientConnectionFailedError) isEdgeDBClientConnectionError() {}
 
 func (e *clientConnectionFailedError) isEdgeDBClientError() {}
-
-func (e *clientConnectionFailedError) isEdgeDBError() {}
 
 func (e *clientConnectionFailedError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// ClientConnectionFailedTemporarilyError is an error.
-type ClientConnectionFailedTemporarilyError interface {
-	ClientConnectionFailedError
-	isEdgeDBClientConnectionFailedTemporarilyError()
 }
 
 type clientConnectionFailedTemporarilyError struct {
@@ -2556,7 +2962,21 @@ func (e *clientConnectionFailedTemporarilyError) Error() string {
 
 func (e *clientConnectionFailedTemporarilyError) Unwrap() error { return e.err }
 
-func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientConnectionFailedTemporarilyError() {}
+
+func (e *clientConnectionFailedTemporarilyError) Category(c ErrorCategory) bool {
+	switch c {
+	case ClientConnectionFailedTemporarilyError:
+		return true
+	case ClientConnectionFailedError:
+		return true
+	case ClientConnectionError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientConnectionFailedError() {}
 
@@ -2564,22 +2984,15 @@ func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientConnectionError()
 
 func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientError() {}
 
-func (e *clientConnectionFailedTemporarilyError) isEdgeDBError() {}
-
 func (e *clientConnectionFailedTemporarilyError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldRetry:
-		return true
 	case ShouldReconnect:
+		return true
+	case ShouldRetry:
 		return true
 	default:
 		return false
 	}
-}
-// ClientConnectionTimeoutError is an error.
-type ClientConnectionTimeoutError interface {
-	ClientConnectionError
-	isEdgeDBClientConnectionTimeoutError()
 }
 
 type clientConnectionTimeoutError struct {
@@ -2598,28 +3011,33 @@ func (e *clientConnectionTimeoutError) Error() string {
 
 func (e *clientConnectionTimeoutError) Unwrap() error { return e.err }
 
-func (e *clientConnectionTimeoutError) isEdgeDBClientConnectionTimeoutError() {}
 
-func (e *clientConnectionTimeoutError) isEdgeDBClientConnectionError() {}
-
-func (e *clientConnectionTimeoutError) isEdgeDBClientError() {}
-
-func (e *clientConnectionTimeoutError) isEdgeDBError() {}
-
-func (e *clientConnectionTimeoutError) HasTag(tag ErrorTag) bool {
-	switch tag {
-	case ShouldRetry:
+func (e *clientConnectionTimeoutError) Category(c ErrorCategory) bool {
+	switch c {
+	case ClientConnectionTimeoutError:
 		return true
-	case ShouldReconnect:
+	case ClientConnectionError:
+		return true
+	case ClientError:
 		return true
 	default:
 		return false
 	}
 }
-// ClientConnectionClosedError is an error.
-type ClientConnectionClosedError interface {
-	ClientConnectionError
-	isEdgeDBClientConnectionClosedError()
+
+func (e *clientConnectionTimeoutError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionTimeoutError) isEdgeDBClientError() {}
+
+func (e *clientConnectionTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldReconnect:
+		return true
+	case ShouldRetry:
+		return true
+	default:
+		return false
+	}
 }
 
 type clientConnectionClosedError struct {
@@ -2638,28 +3056,33 @@ func (e *clientConnectionClosedError) Error() string {
 
 func (e *clientConnectionClosedError) Unwrap() error { return e.err }
 
-func (e *clientConnectionClosedError) isEdgeDBClientConnectionClosedError() {}
 
-func (e *clientConnectionClosedError) isEdgeDBClientConnectionError() {}
-
-func (e *clientConnectionClosedError) isEdgeDBClientError() {}
-
-func (e *clientConnectionClosedError) isEdgeDBError() {}
-
-func (e *clientConnectionClosedError) HasTag(tag ErrorTag) bool {
-	switch tag {
-	case ShouldRetry:
+func (e *clientConnectionClosedError) Category(c ErrorCategory) bool {
+	switch c {
+	case ClientConnectionClosedError:
 		return true
-	case ShouldReconnect:
+	case ClientConnectionError:
+		return true
+	case ClientError:
 		return true
 	default:
 		return false
 	}
 }
-// InterfaceError is an error.
-type InterfaceError interface {
-	ClientError
-	isEdgeDBInterfaceError()
+
+func (e *clientConnectionClosedError) isEdgeDBClientConnectionError() {}
+
+func (e *clientConnectionClosedError) isEdgeDBClientError() {}
+
+func (e *clientConnectionClosedError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldReconnect:
+		return true
+	case ShouldRetry:
+		return true
+	default:
+		return false
+	}
 }
 
 type interfaceError struct {
@@ -2678,22 +3101,25 @@ func (e *interfaceError) Error() string {
 
 func (e *interfaceError) Unwrap() error { return e.err }
 
-func (e *interfaceError) isEdgeDBInterfaceError() {}
+
+func (e *interfaceError) Category(c ErrorCategory) bool {
+	switch c {
+	case InterfaceError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *interfaceError) isEdgeDBClientError() {}
-
-func (e *interfaceError) isEdgeDBError() {}
 
 func (e *interfaceError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// QueryArgumentError is an error.
-type QueryArgumentError interface {
-	InterfaceError
-	isEdgeDBQueryArgumentError()
 }
 
 type queryArgumentError struct {
@@ -2712,24 +3138,29 @@ func (e *queryArgumentError) Error() string {
 
 func (e *queryArgumentError) Unwrap() error { return e.err }
 
-func (e *queryArgumentError) isEdgeDBQueryArgumentError() {}
+
+func (e *queryArgumentError) Category(c ErrorCategory) bool {
+	switch c {
+	case QueryArgumentError:
+		return true
+	case InterfaceError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *queryArgumentError) isEdgeDBInterfaceError() {}
 
 func (e *queryArgumentError) isEdgeDBClientError() {}
-
-func (e *queryArgumentError) isEdgeDBError() {}
 
 func (e *queryArgumentError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// MissingArgumentError is an error.
-type MissingArgumentError interface {
-	QueryArgumentError
-	isEdgeDBMissingArgumentError()
 }
 
 type missingArgumentError struct {
@@ -2748,7 +3179,21 @@ func (e *missingArgumentError) Error() string {
 
 func (e *missingArgumentError) Unwrap() error { return e.err }
 
-func (e *missingArgumentError) isEdgeDBMissingArgumentError() {}
+
+func (e *missingArgumentError) Category(c ErrorCategory) bool {
+	switch c {
+	case MissingArgumentError:
+		return true
+	case QueryArgumentError:
+		return true
+	case InterfaceError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *missingArgumentError) isEdgeDBQueryArgumentError() {}
 
@@ -2756,18 +3201,11 @@ func (e *missingArgumentError) isEdgeDBInterfaceError() {}
 
 func (e *missingArgumentError) isEdgeDBClientError() {}
 
-func (e *missingArgumentError) isEdgeDBError() {}
-
 func (e *missingArgumentError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// UnknownArgumentError is an error.
-type UnknownArgumentError interface {
-	QueryArgumentError
-	isEdgeDBUnknownArgumentError()
 }
 
 type unknownArgumentError struct {
@@ -2786,7 +3224,21 @@ func (e *unknownArgumentError) Error() string {
 
 func (e *unknownArgumentError) Unwrap() error { return e.err }
 
-func (e *unknownArgumentError) isEdgeDBUnknownArgumentError() {}
+
+func (e *unknownArgumentError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownArgumentError:
+		return true
+	case QueryArgumentError:
+		return true
+	case InterfaceError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *unknownArgumentError) isEdgeDBQueryArgumentError() {}
 
@@ -2794,18 +3246,11 @@ func (e *unknownArgumentError) isEdgeDBInterfaceError() {}
 
 func (e *unknownArgumentError) isEdgeDBClientError() {}
 
-func (e *unknownArgumentError) isEdgeDBError() {}
-
 func (e *unknownArgumentError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// InvalidArgumentError is an error.
-type InvalidArgumentError interface {
-	QueryArgumentError
-	isEdgeDBInvalidArgumentError()
 }
 
 type invalidArgumentError struct {
@@ -2824,7 +3269,21 @@ func (e *invalidArgumentError) Error() string {
 
 func (e *invalidArgumentError) Unwrap() error { return e.err }
 
-func (e *invalidArgumentError) isEdgeDBInvalidArgumentError() {}
+
+func (e *invalidArgumentError) Category(c ErrorCategory) bool {
+	switch c {
+	case InvalidArgumentError:
+		return true
+	case QueryArgumentError:
+		return true
+	case InterfaceError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *invalidArgumentError) isEdgeDBQueryArgumentError() {}
 
@@ -2832,18 +3291,11 @@ func (e *invalidArgumentError) isEdgeDBInterfaceError() {}
 
 func (e *invalidArgumentError) isEdgeDBClientError() {}
 
-func (e *invalidArgumentError) isEdgeDBError() {}
-
 func (e *invalidArgumentError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
 	}
-}
-// NoDataError is an error.
-type NoDataError interface {
-	ClientError
-	isEdgeDBNoDataError()
 }
 
 type noDataError struct {
@@ -2862,11 +3314,19 @@ func (e *noDataError) Error() string {
 
 func (e *noDataError) Unwrap() error { return e.err }
 
-func (e *noDataError) isEdgeDBNoDataError() {}
+
+func (e *noDataError) Category(c ErrorCategory) bool {
+	switch c {
+	case NoDataError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
 
 func (e *noDataError) isEdgeDBClientError() {}
-
-func (e *noDataError) isEdgeDBError() {}
 
 func (e *noDataError) HasTag(tag ErrorTag) bool {
 	switch tag {
@@ -2874,6 +3334,7 @@ func (e *noDataError) HasTag(tag ErrorTag) bool {
 		return false
 	}
 }
+
 func errorFromCode(code uint32, msg string) error {
 	switch code {
 	case 0x01_00_00_00:

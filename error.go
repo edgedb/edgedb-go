@@ -27,13 +27,22 @@ var errZeroResults error = &noDataError{msg: "zero results"}
 // ErrorTag is the argument type to Error.HasTag().
 type ErrorTag string
 
-// Error is wrapped by all errors.
+// ErrorCategory values represent EdgeDB's error types.
+type ErrorCategory string
+
+// Error is the error type returned from edgedb.
 type Error interface {
 	Error() string
+	Unwrap() error
+
+	// HasTag returns true if the error is marked with the supplied tag.
 	HasTag(ErrorTag) bool
-	isEdgeDBError()
+
+	// Category returns true if the error is in the provided category.
+	Category(ErrorCategory) bool
 }
 
+// firstError returns the first non nil error or nil.
 func firstError(a, b error) error {
 	if a != nil {
 		return a
@@ -42,6 +51,8 @@ func firstError(a, b error) error {
 	return b
 }
 
+// decodeError decodes an error response
+// https://www.edgedb.com/docs/internals/protocol/messages#errorresponse
 func decodeError(r *buff.Reader) error {
 	r.Discard(1) // severity
 	err := errorFromCode(r.PopUint32(), r.PopString())

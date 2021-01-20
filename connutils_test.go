@@ -447,8 +447,15 @@ func TestConnectTimeout(t *testing.T) {
 
 	require.NotNil(t, err, "connection didn't timeout")
 
-	var errTimeout ClientConnectionTimeoutError
-	assert.True(t, errors.As(err, &errTimeout), "wrong error: "+err.Error())
+	var edbErr Error
+
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	assert.True(
+		t,
+		edbErr.Category(ClientConnectionTimeoutError),
+		"wrong error: %v",
+		err,
+	)
 }
 
 func TestConnectRefused(t *testing.T) {
@@ -466,8 +473,13 @@ func TestConnectRefused(t *testing.T) {
 	require.NotNil(t, err, "connection wasn't refused")
 
 	msg := "wrong error: " + err.Error()
-	var errTemporary ClientConnectionFailedTemporarilyError
-	assert.True(t, errors.As(err, &errTemporary), msg)
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), msg)
+	assert.True(
+		t,
+		edbErr.Category(ClientConnectionFailedTemporarilyError),
+		msg,
+	)
 	assert.True(t, errors.Is(err, syscall.ECONNREFUSED), msg)
 }
 
@@ -485,8 +497,14 @@ func TestConnectInvalidName(t *testing.T) {
 
 	require.NotNil(t, err, "name was resolved")
 
-	var errTemporary ClientConnectionFailedTemporarilyError
-	assert.True(t, errors.As(err, &errTemporary), "wrong error: "+err.Error())
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	assert.True(
+		t,
+		edbErr.Category(ClientConnectionFailedTemporarilyError),
+		"wrong error: %v",
+		err,
+	)
 	assert.EqualError(
 		t,
 		err,
@@ -511,7 +529,13 @@ func TestConnectRefusedUnixSocket(t *testing.T) {
 
 	require.NotNil(t, err, "connection wasn't refused")
 
-	var errTemporary ClientConnectionFailedTemporarilyError
-	assert.True(t, errors.As(err, &errTemporary), "wrong error: "+err.Error())
-	assert.True(t, errors.Is(err, syscall.ENOENT), "wrong error: "+err.Error())
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	assert.True(
+		t,
+		edbErr.Category(ClientConnectionFailedTemporarilyError),
+		"wrong error: %v",
+		err,
+	)
+	assert.True(t, errors.Is(err, syscall.ENOENT), "wrong error: %v", err)
 }

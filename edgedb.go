@@ -14,6 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package edgedb is the official go EdgeDB driver. https://edgedb.com
+//
+// Datatypes
+//
+// The following list shows the marshal/unmarshal
+// mapping between EdgeDB types and go types:
+//
+//   EdgeDB          Go
+//   ---------       ---------
+//   Set             []anytype
+//   array<anytype>  []anytype
+//   tuple           []interface{}
+//   named tuple     struct
+//   Object          struct
+//   bool            bool
+//   bytes           []byte
+//   str             string
+//   datetime        time.Time
+//   duration        time.Duration
+//   float32         float32
+//   float64         float64
+//   int16           int16
+//   int32           int32
+//   int64           int64
+//   uuid            edgedb.UUID
+//
+//   // not implemented
+//   anyenum
+//   cal::local_date
+//   cal::local_time
+//   cal::local_datetime
+//   bigint
+//   decimal
+//   json
 package edgedb
 
 import (
@@ -54,8 +88,8 @@ type Trier interface {
 	// otherwise it is committed.
 	TryTx(context.Context, Action) error
 
-	// Retry does the same as TryTx
-	// but retries the action if it might succeed on a subsequent attempt.
+	// Retry does the same as TryTx but retries failed actions
+	// if they might succeed on a subsequent attempt.
 	Retry(context.Context, Action) error
 }
 

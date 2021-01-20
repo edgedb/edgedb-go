@@ -35,10 +35,13 @@ func TestTxRollesBack(t *testing.T) {
 		return tx.Execute(ctx, "SELECT 1 / 0;")
 	})
 
-	var errZeroDivision DivisionByZeroError
-	require.True(t,
-		errors.As(err, &errZeroDivision),
-		"wrong error type: %v", err,
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	require.True(
+		t,
+		edbErr.Category(DivisionByZeroError),
+		"wrong error: %v",
+		err,
 	)
 
 	query := `
@@ -118,8 +121,9 @@ func TestTxCanNotUseConn(t *testing.T) {
 		return conn.Query(ctx, "SELECT 7*9;", &num)
 	})
 
-	var errBorrowed InterfaceError
-	require.True(t, errors.As(err, &errBorrowed), "wrong error type: %v", err)
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
+	require.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 
 	expected := "edgedb.InterfaceError: " +
 		"Connection is borrowed for a transaction. " +

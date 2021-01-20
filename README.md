@@ -18,6 +18,7 @@ to get EdgeDB installed and minimally configured.
 package main
 
 import (
+	"context"
   "fmt"
   "log"
 
@@ -25,17 +26,24 @@ import (
 )
 
 func main() {
-  opts := edgedb.ConnConfig{Database: "edgedb", User: "edgedb"}
-  conn, err := edgedb.Connect(opts)
+  opts := edgedb.Options{
+    Database: "edgedb",
+    User: "edgedb",
+    MinConns: 1,
+    MaxConns: 4,
+  }
+
+  ctx := context.Background()
+  conn, err := edgedb.Connect(ctx, opts)
   if err != nil {
-    log.Fatal("could not connect: ", err)
+    log.Fatal(err)
   }
   defer conn.Close()
 
-  var result []string
-  err = conn.Query("SELECT 'hello EdgeDB!'", &result)
+  var result string
+  err = conn.QueryOne(ctx, "SELECT 'hello EdgeDB!'", &result)
   if err != nil {
-    log.Fatal("error running query: ", err)
+    log.Fatal(err)
   }
 
   fmt.Println(result)

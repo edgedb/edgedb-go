@@ -29,27 +29,19 @@ func TestNewErrorFromCodeAs(t *testing.T) {
 	err := &duplicateCastDefinitionError{msg: msg}
 	require.NotNil(t, err)
 
-	msg = "edgedb.DuplicateCastDefinitionError: " + msg
+	assert.EqualError(t, err, "edgedb.DuplicateCastDefinitionError: "+msg)
 
-	var cast DuplicateCastDefinitionError
-	require.True(t, errors.As(err, &cast))
-	assert.Equal(t, msg, cast.Error())
+	var edbErr Error
+	require.True(t, errors.As(err, &edbErr))
 
-	var def DuplicateDefinitionError
-	require.True(t, errors.As(err, &def))
-	assert.Equal(t, msg, def.Error())
+	assert.True(t, edbErr.Category(DuplicateCastDefinitionError))
+	assert.True(t, edbErr.Category(DuplicateDefinitionError))
+	assert.True(t, edbErr.Category(SchemaDefinitionError))
+	assert.True(t, edbErr.Category(QueryError))
 
-	var schem SchemaDefinitionError
-	require.True(t, errors.As(err, &schem))
-	assert.Equal(t, msg, schem.Error())
-
-	var query QueryError
-	require.True(t, errors.As(err, &query))
-	assert.Equal(t, msg, query.Error())
-
-	var base Error
-	require.True(t, errors.As(err, &base))
-	assert.Equal(t, msg, query.Error())
+	// assert.True(t, edbErr.Category())
+	// assert.True(t, edbErr.Category())
+	// assert.True(t, edbErr.Category())
 }
 
 func TestWrapAllAs(t *testing.T) {
@@ -65,21 +57,13 @@ func TestWrapAllAs(t *testing.T) {
 		err.Error(),
 	)
 
-	var bin BinaryProtocolError
+	var bin *binaryProtocolError
 	require.True(t, errors.As(err, &bin), "errors.As failed")
 	assert.Equal(t, "edgedb.BinaryProtocolError: bad bits!", bin.Error())
 
-	var proto ProtocolError
-	require.True(t, errors.As(err, &proto))
-	assert.Equal(t, "edgedb.BinaryProtocolError: bad bits!", proto.Error())
-
-	var val InvalidValueError
+	var val *invalidValueError
 	require.True(t, errors.As(err, &val))
 	assert.Equal(t, "edgedb.InvalidValueError: guess again...", val.Error())
-
-	var exe ExecutionError
-	require.True(t, errors.As(err, &exe))
-	assert.Equal(t, "edgedb.InvalidValueError: guess again...", exe.Error())
 }
 
 func TestWrapAllIs(t *testing.T) {

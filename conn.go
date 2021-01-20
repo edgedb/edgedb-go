@@ -24,6 +24,7 @@ import (
 
 // Conn is a single connection to a server.
 // Conn implementations are not safe for concurrent use.
+// Pool should be preferred over Conn for most use cases.
 type Conn interface {
 	Executor
 	Trier
@@ -48,6 +49,14 @@ func ConnectOne(ctx context.Context, opts Options) (Conn, error) { // nolint:goc
 }
 
 // ConnectOneDSN establishes a connection to an EdgeDB server.
+//
+// dsn is either an instance name
+// https://www.edgedb.com/docs/clients/00_python/instances/#edgedb-instances
+// or it specifies a single string in the following format:
+//
+//     edgedb://user:password@host:port/database?option=value.
+//
+// The following options are recognized: host, port, user, database, password.
 func ConnectOneDSN(
 	ctx context.Context,
 	dsn string,

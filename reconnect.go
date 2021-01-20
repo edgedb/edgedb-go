@@ -80,7 +80,7 @@ func (b *reconnectingConn) reconnect(ctx context.Context) (err error) {
 		maxTime = deadline
 	}
 
-	var connErr ClientConnectionError
+	var edbErr Error
 
 	for i := 1; true; i++ {
 		for _, addr := range b.conn.cfg.addrs {
@@ -88,8 +88,9 @@ func (b *reconnectingConn) reconnect(ctx context.Context) (err error) {
 			if err == nil ||
 				errors.Is(err, context.Canceled) ||
 				errors.Is(err, context.DeadlineExceeded) ||
-				!errors.As(err, &connErr) ||
-				!connErr.HasTag("SHOULD_RECONNECT") ||
+				!errors.As(err, &edbErr) ||
+				!edbErr.Category(ClientConnectionError) ||
+				!edbErr.HasTag("SHOULD_RECONNECT") ||
 				(i > 1 && time.Now().After(maxTime)) {
 				return err
 			}
