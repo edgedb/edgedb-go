@@ -28,6 +28,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// The client should read all messages through ReadyForCommand
+// before returning from a QueryX()
+func TestParseAllMessagesAfterError(t *testing.T) {
+	ctx := context.Background()
+
+	// cause error during prepare
+	var number float64
+	err := conn.QueryOne(ctx, "SELECT 1 / $0", &number, int64(5))
+	expected := "edgedb.QueryError: missing a type cast before the parameter"
+	assert.EqualError(t, err, expected)
+
+	// cause error during execute
+	err = conn.QueryOne(ctx, "SELECT 1 / 0", &number)
+	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
+
+	// cache query so that it is run optimistically next time
+	err = conn.QueryOne(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
+	assert.Nil(t, err)
+
+	// cause error during optimistic execute
+	err = conn.QueryOne(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
+	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
+}
+
 func TestArgumentTypeMissmatch(t *testing.T) {
 	var res []interface{}
 	ctx := context.Background()
