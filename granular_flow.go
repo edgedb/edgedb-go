@@ -149,7 +149,6 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r))
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -206,7 +205,6 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r))
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -282,7 +280,6 @@ func (c *baseConn) execute(
 			}
 
 			err = wrapAll(err, decodeError(r))
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -366,7 +363,6 @@ func (c *baseConn) optimistic(
 			}
 
 			err = wrapAll(err, decodeError(r))
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
