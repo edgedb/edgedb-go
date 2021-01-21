@@ -27,13 +27,8 @@ import (
 )
 
 func TestConnectPool(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
-	o := opts
-	o.MinConns = 1
-	o.MaxConns = 2
-	p, err := Connect(ctx, o)
+	ctx := context.Background()
+	p, err := Connect(ctx, opts)
 	require.Nil(t, err)
 
 	var result string
@@ -45,14 +40,30 @@ func TestConnectPool(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestClosePoolConcurently(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {
 	o := opts
-	o.MinConns = 1
-	o.MaxConns = 2
+	o.MinConns = 0
+	o.MaxConns = 0
+
+	ctx := context.Background()
 	p, err := Connect(ctx, o)
+	require.Nil(t, err)
+
+	require.Equal(t, defaultMinConns, p.(*pool).minConns)
+	require.Equal(t, defaultMaxConns, p.(*pool).maxConns)
+
+	var result string
+	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "hello", result)
+
+	err = p.Close()
+	assert.Nil(t, err)
+}
+
+func TestClosePoolConcurently(t *testing.T) {
+	ctx := context.Background()
+	p, err := Connect(ctx, opts)
 	require.Nil(t, err)
 
 	errs := make(chan error)
@@ -64,26 +75,8 @@ func TestClosePoolConcurently(t *testing.T) {
 	assert.True(t, errors.As(<-errs, &closedErr))
 }
 
-func TestConnectPoolMinConnGteZero(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	o := Options{MinConns: 0, MaxConns: 10}
-	_, err := Connect(ctx, o)
-	assert.EqualError(
-		t,
-		err,
-		"edgedb.ConfigurationError: MinConns may not be less than 1, got: 0",
-	)
-
-	var expected ConfigurationError
-	assert.True(t, errors.As(err, &expected))
-}
-
 func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+	ctx := context.Background()
 	o := Options{MinConns: 5, MaxConns: 1}
 	_, err := Connect(ctx, o)
 	assert.EqualError(
@@ -104,7 +97,7 @@ func TestAcquireFromClosedPool(t *testing.T) {
 		potentialConns: make(chan struct{}),
 	}
 
-	conn, err := p.Acquire(context.TODO())
+	conn, err := p.Acquire(context.Background())
 	var closedErr InterfaceError
 	require.True(t, errors.As(err, &closedErr))
 	assert.Nil(t, conn)
@@ -115,7 +108,7 @@ func TestAcquireFreeConnFromPool(t *testing.T) {
 	p := &pool{freeConns: make(chan *baseConn, 1)}
 	p.freeConns <- conn
 
-	result, err := p.Acquire(context.TODO())
+	result, err := p.Acquire(context.Background())
 	assert.Nil(t, err)
 
 	pConn, ok := result.(*poolConn)
@@ -136,7 +129,7 @@ func BenchmarkPoolAcquireRelease(b *testing.B) {
 	}
 
 	var conn *baseConn
-	ctx := context.TODO()
+	ctx := context.Background()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -146,23 +139,20 @@ func BenchmarkPoolAcquireRelease(b *testing.B) {
 }
 
 func TestAcquirePotentialConnFromPool(t *testing.T) {
-	o := opts
-	o.MaxConns = 2
-	o.MinConns = 1
-	p, err := Connect(context.TODO(), o)
+	p, err := Connect(context.Background(), opts)
 	require.Nil(t, err)
 	defer func() {
 		assert.Nil(t, p.Close())
 	}()
 
 	// free connection
-	a, err := p.Acquire(context.TODO())
+	a, err := p.Acquire(context.Background())
 	require.Nil(t, err)
 	require.NotNil(t, a)
 	defer func() { assert.Nil(t, a.Release()) }()
 
 	// potential connection
-	b, err := p.Acquire(context.TODO())
+	b, err := p.Acquire(context.Background())
 	require.Nil(t, err)
 	require.NotNil(t, b)
 	defer func() { assert.Nil(t, b.Release()) }()
@@ -214,11 +204,7 @@ func TestClosePool(t *testing.T) {
 func TestPoolRetry(t *testing.T) {
 	ctx := context.Background()
 
-	o := opts
-	o.MinConns = 1
-	o.MaxConns = 1
-
-	p, err := Connect(ctx, o)
+	p, err := Connect(ctx, opts)
 	require.Nil(t, err, "unexpected error: %v", err)
 	defer p.Close() // nolint:errcheck
 

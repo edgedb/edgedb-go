@@ -85,10 +85,12 @@ type Options struct {
 	WaitUntilAvailable time.Duration
 
 	// MinConns determines the minimum number of connections.
-	MinConns int
+	// If MinConns is zero, 1 will be used.
+	MinConns uint
 
 	// MaxConns determines the maximum number of connections.
-	MaxConns int
+	// If MaxConns is zero, max(4, runtime.NumCPU()) will be used.
+	MaxConns uint
 
 	ServerSettings map[string]string
 }
