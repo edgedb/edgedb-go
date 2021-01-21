@@ -20,10 +20,24 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
 	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
 )
+
+var (
+	defaultMinConns = 1
+	defaultMaxConns = max(4, runtime.NumCPU())
+)
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
+}
 
 // Pool is a pool of connections.
 type Pool interface {
@@ -68,17 +82,20 @@ func Connect(ctx context.Context, opts Options) (Pool, error) { // nolint:gocrit
 
 // ConnectDSN a pool of connections to a server.
 func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { // nolint:gocritic,lll
-	if opts.MinConns < 1 {
-		return nil, &configurationError{msg: fmt.Sprintf(
-			"MinConns may not be less than 1, got: %v",
-			opts.MinConns,
-		)}
+	minConns := defaultMinConns
+	if opts.MinConns > 0 {
+		minConns = int(opts.MinConns)
 	}
 
-	if opts.MaxConns < opts.MinConns {
+	maxConns := defaultMaxConns
+	if opts.MaxConns > 0 {
+		maxConns = int(opts.MaxConns)
+	}
+
+	if maxConns < minConns {
 		return nil, &configurationError{msg: fmt.Sprintf(
 			"MaxConns (%v) may not be less than MinConns (%v)",
-			opts.MaxConns, opts.MinConns,
+			maxConns, minConns,
 		)}
 	}
 
@@ -88,27 +105,29 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { /
 	}
 
 	p := &pool{
-		maxConns: opts.MaxConns,
-		minConns: opts.MinConns,
+		maxConns: maxConns,
+		minConns: minConns,
 		cfg:      cfg,
 
-		freeConns:      make(chan *baseConn, opts.MinConns),
-		potentialConns: make(chan struct{}, opts.MaxConns),
+		freeConns:      make(chan *baseConn, minConns),
+		potentialConns: make(chan struct{}, maxConns),
 
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
 		outCodecCache: cache.New(1_000),
 	}
 
-	for i := 0; i < opts.MaxConns-opts.MinConns; i++ {
+	for i := 0; i < maxConns-minConns; i++ {
 		p.potentialConns <- struct{}{}
 	}
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	errs := make([]error, opts.MinConns)
-	for i := 0; i < opts.MinConns; i++ {
+	for i := 0; i < minConns; i++ {
 		wg.Add(1)
-		go func(i int) {
+		go func(i int, wg *sync.WaitGroup) {
+			defer wg.Done()
+
 			conn, err := p.newConn(ctx)
 			if err == nil {
 				p.freeConns <- conn
@@ -116,10 +135,10 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (Pool, error) { /
 			}
 			errs[i] = err
 			p.potentialConns <- struct{}{}
-		}(i)
+		}(i, wg)
 	}
 
-	wg.Done()
+	wg.Wait()
 	if err := wrapAll(errs...); err != nil {
 		_ = p.Close()
 		return nil, err
