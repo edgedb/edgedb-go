@@ -124,6 +124,19 @@ func TestEncodeNullTuple(t *testing.T) {
 	assert.Equal(t, expected, conn.written)
 }
 
+func TestTupleEncodeWrongNumberOfArgs(t *testing.T) {
+	w := buff.NewWriter([]byte{})
+	w.BeginMessage(0xff)
+
+	codec := &Tuple{fields: []Codec{
+		&Int64{},
+		&Int64{},
+	}}
+
+	err := codec.Encode(w, []interface{}{int64(2), int64(3), int64(4)})
+	assert.EqualError(t, err, "expected 2 elements in the tuple, got 3")
+}
+
 func TestEncodeTuple(t *testing.T) {
 	w := buff.NewWriter([]byte{})
 	w.BeginMessage(0xff)

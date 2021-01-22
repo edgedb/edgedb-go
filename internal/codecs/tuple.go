@@ -152,6 +152,14 @@ func (c *Tuple) Encode(w *buff.Writer, val interface{}) error {
 		return fmt.Errorf("expected []interface{} got %T", val)
 	}
 
+	if len(in) != len(c.fields) {
+		return fmt.Errorf(
+			"expected %v elements in the tuple, got %v",
+			len(c.fields),
+			len(in),
+		)
+	}
+
 	w.BeginBytes()
 
 	elmCount := len(c.fields)
