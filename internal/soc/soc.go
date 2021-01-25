@@ -20,8 +20,6 @@ package soc
 import (
 	"errors"
 	"net"
-	"reflect"
-	"unsafe"
 )
 
 const minChunkSize = 5
@@ -71,11 +69,8 @@ func Read(conn net.Conn, freeMemory *MemPool, toBeDeserialized chan *Data) {
 		for len(buf) >= minChunkSize {
 			n, err := conn.Read(buf)
 
-			data := &Data{Buf: buf[:n]}
+			data := &Data{Buf: buf[:n:n]}
 			buf = buf[n:]
-
-			// force data.Buf capacity to the length
-			(*reflect.SliceHeader)(unsafe.Pointer(&data.Buf)).Cap = n
 
 			// releasing the last chunk of data written to the slab
 			// releases the whole slab.
