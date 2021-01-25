@@ -21,6 +21,15 @@ import (
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
+func ignoreHeaders(r *buff.Reader) {
+	n := int(r.PopUint16())
+
+	for i := 0; i < n; i++ {
+		r.PopUint16()
+		r.PopBytes()
+	}
+}
+
 func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
@@ -38,12 +47,11 @@ func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandComplete:
-			r.Discard(2) // header count (assume 0)
+			ignoreHeaders(r)
 			r.PopBytes() // command status
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r))

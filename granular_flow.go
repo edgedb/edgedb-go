@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/internal/aspect"
@@ -138,14 +139,12 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.PrepareComplete:
-			r.Discard(2)     // number of headers, assume 0
-			_ = r.PopUint8() // cardianlity
+			ignoreHeaders(r)
+			r.Discard(1) // cardianlity
 			ids = idPair{in: [16]byte(r.PopUUID()), out: [16]byte(r.PopUUID())}
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
-
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r))
@@ -186,22 +185,15 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandDataDescription:
-			// num headers is always 0
-			// cardianlity
-			// input descriptor ID
-			r.Discard(19)
+			ignoreHeaders(r)
+			r.Discard(17)           // cardianlity & input descriptor ID
+			descs.in = r.PopBytes() // input descriptor
 
-			// input descriptor
-			descs.in = r.PopBytes()
-
-			// output descriptor
-			r.Discard(16) // descriptor ID
-			descs.out = r.PopBytes()
+			r.Discard(16)            // descriptor ID
+			descs.out = r.PopBytes() // output descriptor
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
-
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r))
@@ -253,7 +245,13 @@ func (c *baseConn) execute(
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.Data:
-			r.Discard(2) // number of data elements (always 1)
+			elmCount := r.PopUint16()
+			if elmCount != 1 {
+				panic(fmt.Sprintf(
+					"unexpected number of elements: expected 1, got %v",
+					elmCount,
+				))
+			}
 			elmLen := r.PopUint32()
 
 			if !q.flat() {
@@ -269,12 +267,11 @@ func (c *baseConn) execute(
 				err = nil
 			}
 		case message.CommandComplete:
-			r.Discard(2) // header count (assume 0)
+			ignoreHeaders(r)
 			r.PopBytes() // command status
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
 			if err == errZeroResults {
@@ -338,7 +335,13 @@ func (c *baseConn) optimistic(
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.Data:
-			r.Discard(2) // number of data elements (always 1)
+			elmCount := r.PopUint16()
+			if elmCount != 1 {
+				panic(fmt.Sprintf(
+					"unexpected number of elements: expected 1, got %v",
+					elmCount,
+				))
+			}
 
 			elmLen := r.PopUint32()
 
@@ -354,12 +357,11 @@ func (c *baseConn) optimistic(
 				err = nil
 			}
 		case message.CommandComplete:
-			r.Discard(2) // header count (assume 0)
+			ignoreHeaders(r)
 			r.PopBytes() // command status
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
 			if err == errZeroResults {

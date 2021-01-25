@@ -41,7 +41,7 @@ func (c *baseConn) fallThrough(r *buff.Reader) error {
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()
 		message := r.PopString()
-		r.Discard(2) // number of headers, assume 0
+		ignoreHeaders(r)
 		log.Println("SERVER MESSAGE", severity, code, message)
 	default:
 		msg := fmt.Sprintf("unexpected message type: 0x%x", r.MsgType)
