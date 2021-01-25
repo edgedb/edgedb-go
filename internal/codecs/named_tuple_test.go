@@ -59,7 +59,6 @@ func TestNamedTupleSetType(t *testing.T) {
 
 func TestNamedTupleDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
 		0, 0, 0, 0, // reserved
@@ -97,7 +96,6 @@ func TestNamedTupleDecodePtr(t *testing.T) {
 
 func BenchmarkNamedTupleDecodePtr(b *testing.B) {
 	data := []byte{
-		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
 		0, 0, 0, 0, // reserved
@@ -130,7 +128,6 @@ func BenchmarkNamedTupleDecodePtr(b *testing.B) {
 
 func TestNamedTupleDecodeReflect(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
 		0, 0, 0, 0, // reserved
@@ -168,7 +165,6 @@ func TestNamedTupleDecodeReflect(t *testing.T) {
 
 func TestNamedTupleDecodeReflectMap(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 28, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
 		0, 0, 0, 0, // reserved

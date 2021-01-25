@@ -116,24 +116,6 @@ func BenchmarkPopUint32(b *testing.B) {
 	}
 }
 
-func TestPeekUint32(t *testing.T) {
-	r := SimpleReader([]byte{0xff, 0xff, 0xff, 0xff, 1})
-
-	assert.Equal(t, uint32(0xffffffff), r.PeekUint32())
-	assert.Equal(t, uint32(0xffffffff), r.PopUint32())
-	assert.Equal(t, uint8(1), r.PopUint8())
-	assert.Panics(t, func() { r.PeekUint32() })
-}
-
-func BenchmarkPeekUint32(b *testing.B) {
-	r := SimpleReader(newBenchmarkMessage(4))
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		r.PeekUint32()
-	}
-}
-
 func TestPopUint64(t *testing.T) {
 	r := SimpleReader([]byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

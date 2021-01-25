@@ -145,39 +145,57 @@ func (c *NamedTuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
 }
 
 func (c *NamedTuple) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
-	r.Discard(4) // data length
 	elmCount := int(int32(r.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
 		r.Discard(4) // reserved
+
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
 		field := c.fields[i]
-		field.codec.DecodeReflect(r, out.FieldByName(field.name))
+		field.codec.DecodeReflect(
+			r.PopSlice(elmLen),
+			out.FieldByName(field.name),
+		)
 	}
 }
 
 func (c *NamedTuple) decodeReflectMap(r *buff.Reader, out reflect.Value) {
-	r.Discard(4) // data length
 	elmCount := int(int32(r.PopUint32()))
 	out.Set(reflect.MakeMapWithSize(c.typ, elmCount))
 
 	for i := 0; i < elmCount; i++ {
 		r.Discard(4) // reserved
+
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
 		field := c.fields[i]
 		val := reflect.New(field.codec.Type()).Elem()
-		field.codec.DecodeReflect(r, val)
+		field.codec.DecodeReflect(r.PopSlice(elmLen), val)
 		out.SetMapIndex(reflect.ValueOf(field.name), val)
 	}
 }
 
 // DecodePtr decodes a named tuple into an unsafe.Pointer.
 func (c *NamedTuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
 	elmCount := int(int32(r.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
 		r.Discard(4) // reserved
+
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
 		field := c.fields[i]
-		field.codec.DecodePtr(r, pAdd(out, field.offset))
+		field.codec.DecodePtr(r.PopSlice(elmLen), pAdd(out, field.offset))
 	}
 }
 

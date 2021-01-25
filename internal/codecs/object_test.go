@@ -59,7 +59,6 @@ func TestSetObjectType(t *testing.T) {
 
 func TestObjectDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
 		0, 0, 0, 0, // reserved
@@ -102,7 +101,6 @@ func TestObjectDecodePtr(t *testing.T) {
 
 func BenchmarkObjectDecodePtr(b *testing.B) {
 	data := []byte{
-		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
 		0, 0, 0, 0, // reserved
@@ -143,7 +141,6 @@ func BenchmarkObjectDecodePtr(b *testing.B) {
 
 func TestObjectDecodeReflectStruct(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
 		0, 0, 0, 0, // reserved
@@ -186,7 +183,6 @@ func TestObjectDecodeReflectStruct(t *testing.T) {
 
 func TestObjectDecodeReflectMap(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 36, // data length
 		0, 0, 0, 2, // element count
 		// field 0
 		0, 0, 0, 0, // reserved

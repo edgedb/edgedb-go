@@ -106,8 +106,6 @@ func (c *Array) DecodeReflect(r *buff.Reader, out reflect.Value) {
 		panic(fmt.Sprintf("expected %v got: %v", c.Type(), out.Type()))
 	}
 
-	r.Discard(4) // data length
-
 	// number of dimensions is 1 or 0
 	if r.PopUint32() == 0 {
 		r.Discard(8) // reserved
@@ -129,14 +127,17 @@ func (c *Array) DecodeReflect(r *buff.Reader, out reflect.Value) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.DecodeReflect(r, out.Index(i))
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
+		c.child.DecodeReflect(r.PopSlice(elmLen), out.Index(i))
 	}
 }
 
 // DecodePtr decodes an array into an unsafe.Pointer.
 func (c *Array) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
-
 	// number of dimensions is 1 or 0
 	if r.PopUint32() == 0 {
 		r.Discard(8) // reserved
@@ -159,7 +160,15 @@ func (c *Array) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.DecodePtr(r, pAdd(slice.Data, uintptr(i*c.step)))
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
+		c.child.DecodePtr(
+			r.PopSlice(elmLen),
+			pAdd(slice.Data, uintptr(i*c.step)),
+		)
 	}
 }
 

@@ -254,13 +254,15 @@ func (c *baseConn) execute(
 		switch r.MsgType {
 		case message.Data:
 			r.Discard(2) // number of data elements (always 1)
+			elmLen := r.PopUint32()
 
 			if !q.flat() {
 				val := reflect.New(typ).Elem()
-				cdcs.out.Decode(r, val)
+				s := r.PopSlice(elmLen)
+				cdcs.out.Decode(s, val)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r, out)
+				cdcs.out.Decode(r.PopSlice(elmLen), out)
 			}
 
 			if err == errZeroResults {
@@ -338,12 +340,14 @@ func (c *baseConn) optimistic(
 		case message.Data:
 			r.Discard(2) // number of data elements (always 1)
 
+			elmLen := r.PopUint32()
+
 			if !q.flat() {
 				val := reflect.New(typ).Elem()
-				cdcs.out.Decode(r, val)
+				cdcs.out.Decode(r.PopSlice(elmLen), val)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r, out)
+				cdcs.out.Decode(r.PopSlice(elmLen), out)
 			}
 
 			if err == errZeroResults {

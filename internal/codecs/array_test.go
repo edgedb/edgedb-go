@@ -38,7 +38,6 @@ func TestArraySetType(t *testing.T) {
 
 func TestArrayDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 56, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0x14, // reserved
@@ -73,7 +72,6 @@ func TestArrayDecodePtr(t *testing.T) {
 
 func TestArrayDecodeReflect(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 56, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0x14, // reserved

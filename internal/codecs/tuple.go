@@ -109,16 +109,20 @@ func (c *Tuple) Decode(r *buff.Reader, out reflect.Value) {
 
 // DecodeReflect decodes a tuple into a reflect.Value.
 func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
-	r.Discard(4) // data length
-
 	n := int(int32(r.PopUint32()))
 	slice := reflect.MakeSlice(c.typ, 0, n)
 
 	for i := 0; i < n; i++ {
 		r.Discard(4) // reserved
+
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.DecodeReflect(r, val)
+		field.DecodeReflect(r.PopSlice(elmLen), val)
 		slice = reflect.Append(slice, val)
 	}
 
@@ -127,16 +131,20 @@ func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a tuple into an unsafe.Pointer.
 func (c *Tuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
-
 	n := int(int32(r.PopUint32()))
 	slice := reflect.MakeSlice(c.typ, 0, n)
 
 	for i := 0; i < n; i++ {
 		r.Discard(4) // reserved
+
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.DecodePtr(r, unsafe.Pointer(val.UnsafeAddr()))
+		field.DecodePtr(r.PopSlice(elmLen), unsafe.Pointer(val.UnsafeAddr()))
 		slice = reflect.Append(slice, val)
 	}
 

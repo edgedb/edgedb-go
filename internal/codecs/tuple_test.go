@@ -40,7 +40,6 @@ func TestTupleSetType(t *testing.T) {
 
 func TestTupleDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 32, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
 		0, 0, 0, 0, // reserved
@@ -73,7 +72,6 @@ func TestTupleDecodePtr(t *testing.T) {
 
 func TestTupleDecodeReflect(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 32, // data length
 		0, 0, 0, 2, // number of elements
 		// element 0
 		0, 0, 0, 0, // reserved

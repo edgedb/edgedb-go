@@ -17,7 +17,6 @@
 package codecs
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -133,19 +132,14 @@ func (c *UUID) setType(typ reflect.Type) (bool, error) {
 func (c *UUID) checkType(typ reflect.Type) error {
 	switch {
 	case typ.Kind() != c.typ.Kind():
-		fmt.Println("failed kind", typ.Kind(), c.typ.Kind())
 		return fmt.Errorf("expected edgedb.UUID got %v", typ)
 	case typ.Elem() != c.typ.Elem():
-		fmt.Println("failed elem", typ.Elem(), c.typ.Elem())
 		return fmt.Errorf("expected edgedb.UUID got %v", typ)
 	case typ.Len() != c.typ.Len():
-		fmt.Println("failed len", typ.Len(), c.typ.Len())
 		return fmt.Errorf("expected edgedb.UUID got %v", typ)
 	case typ.PkgPath() != "github.com/edgedb/edgedb-go":
-		fmt.Println("failed pkgpath", typ.PkgPath())
 		return fmt.Errorf("expected edgedb.UUID got %v", typ)
 	case typ.Name() != "UUID":
-		fmt.Println("failed name", typ.Name(), c.typ.Name())
 		return fmt.Errorf("expected edgedb.UUID got %v", typ)
 	}
 
@@ -174,8 +168,8 @@ func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value) {
 // DecodePtr decodes a UUID into an unsafe.Pointer.
 func (c *UUID) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	p := (*types.UUID)(out)
-	copy((*p)[:], r.Buf[4:20])
-	r.Discard(20)
+	copy((*p)[:], r.Buf[:16])
+	r.Discard(16)
 }
 
 // Encode a UUID.
@@ -230,7 +224,8 @@ func (c *Str) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a str into an unsafe.Pointer.
 func (c *Str) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	*(*string)(out) = r.PopString()
+	*(*string)(out) = string(r.Buf)
+	r.Discard(len(r.Buf))
 }
 
 // Encode a string.
@@ -285,7 +280,7 @@ func (c *Bytes) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes bytes into an unsafe.Pointer.
 func (c *Bytes) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	n := int(r.PopUint32())
+	n := len(r.Buf)
 
 	p := (*[]byte)(out)
 	if cap(*p) >= n {
@@ -294,8 +289,8 @@ func (c *Bytes) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 		*p = make([]byte, n)
 	}
 
-	copy(*p, r.Buf[:n])
-	r.Buf = r.Buf[n:]
+	copy(*p, r.Buf)
+	r.Discard(len(r.Buf))
 }
 
 // Encode []byte.
@@ -350,7 +345,6 @@ func (c *Int16) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes an int16 into an unsafe.Pointer.
 func (c *Int16) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
 	*(*uint16)(out) = r.PopUint16()
 }
 
@@ -407,8 +401,7 @@ func (c *Int32) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes an int32 into an unsafe.Pointer.
 func (c *Int32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	*(*uint32)(out) = binary.BigEndian.Uint32(r.Buf[4:8])
-	r.Buf = r.Buf[8:]
+	*(*uint32)(out) = r.PopUint32()
 }
 
 // Encode an int32.
@@ -464,8 +457,7 @@ func (c *Int64) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes an int64 into an unsafe.Pointer.
 func (c *Int64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	*(*uint64)(out) = binary.BigEndian.Uint64(r.Buf[4:12])
-	r.Buf = r.Buf[12:]
+	*(*uint64)(out) = r.PopUint64()
 }
 
 // Encode an int64.
@@ -521,8 +513,7 @@ func (c *Float32) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a float32 into an unsafe.Pointer.
 func (c *Float32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	*(*uint32)(out) = binary.BigEndian.Uint32(r.Buf[4:8])
-	r.Buf = r.Buf[8:]
+	*(*uint32)(out) = r.PopUint32()
 }
 
 // Encode a float32.
@@ -578,8 +569,7 @@ func (c *Float64) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a float64 into an unsafe.Pointer.
 func (c *Float64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	*(*uint64)(out) = binary.BigEndian.Uint64(r.Buf[4:12])
-	r.Buf = r.Buf[12:]
+	*(*uint64)(out) = r.PopUint64()
 }
 
 // Encode a float64.
@@ -635,7 +625,6 @@ func (c *Bool) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a bool into an unsafe.Pointer.
 func (c *Bool) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
 	*(*uint8)(out) = r.PopUint8()
 }
 
@@ -699,7 +688,6 @@ func (c *DateTime) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a datetime into an unsafe.Pointer.
 func (c *DateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
 	val := int64(r.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
@@ -765,7 +753,6 @@ func (c *Duration) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes a duration into an unsafe.Pointer.
 func (c *Duration) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
 	microseconds := int64(r.PopUint64())
 	r.Discard(8) // reserved
 	*(*int64)(out) = microseconds * 1_000
