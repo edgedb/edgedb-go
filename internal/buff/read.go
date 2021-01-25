@@ -19,8 +19,6 @@ package buff
 import (
 	"encoding/binary"
 	"fmt"
-	"reflect"
-	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/soc"
 	"github.com/edgedb/edgedb-go/internal/types"
@@ -43,8 +41,7 @@ func NewReader(toBeDeserialized chan *soc.Data) *Reader {
 
 // SimpleReader creates a new reader that operates on a single []byte.
 func SimpleReader(buf []byte) *Reader {
-	r := &Reader{Buf: buf}
-	(*reflect.SliceHeader)(unsafe.Pointer(&r.Buf)).Cap = len(buf)
+	r := &Reader{Buf: buf[:len(buf):len(buf)]}
 	return r
 }
 
@@ -105,7 +102,7 @@ func (r *Reader) Next(doneReadingSignal chan struct{}) bool {
 		return false
 	}
 
-	(*reflect.SliceHeader)(unsafe.Pointer(&r.Buf)).Cap = msgLen
+	r.Buf = r.Buf[:msgLen:msgLen]
 	return true
 }
 
