@@ -73,10 +73,8 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 		case message.ServerKeyData:
 			r.DiscardMessage() // key data
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
-
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			once.Do(done)
 		case message.Authentication:
 			if r.PopUint32() == 0 { // auth status
@@ -207,9 +205,8 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 		case message.ServerKeyData:
 			r.DiscardMessage() // key data
 		case message.ReadyForCommand:
-			// header count (assume 0)
-			// transaction state
-			r.Discard(3)
+			ignoreHeaders(r)
+			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(decodeError(r))

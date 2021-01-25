@@ -33,6 +33,10 @@ func popArrayCodec(
 	i := r.PopUint16() // element type descriptor index
 
 	n := int(r.PopUint16()) // number of array dimensions
+	if n == 0 {
+		panic("too few array dimensions: expected at least 1, got 0")
+	}
+
 	for i := 0; i < n; i++ {
 		r.Discard(4) // array dimension
 	}

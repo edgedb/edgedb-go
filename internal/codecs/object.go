@@ -153,7 +153,14 @@ func (c *Object) DecodeReflect(r *buff.Reader, out reflect.Value) {
 }
 
 func (c *Object) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
-	r.Discard(4) // element count
+	elmCount := int(r.PopUint32())
+	if elmCount != len(c.fields) {
+		panic(fmt.Sprintf(
+			"wrong number of object fields: expected %v, got %v",
+			len(c.fields),
+			elmCount,
+		))
+	}
 
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
@@ -178,8 +185,16 @@ func (c *Object) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
 }
 
 func (c *Object) decodeReflectMap(r *buff.Reader, out reflect.Value) {
-	r.Discard(4) // element count
-	out.Set(reflect.MakeMapWithSize(c.typ, len(c.fields)))
+	elmCount := int(r.PopUint32())
+	if elmCount != len(c.fields) {
+		panic(fmt.Sprintf(
+			"wrong number of object fields: expected %v, got %v",
+			len(c.fields),
+			elmCount,
+		))
+	}
+
+	out.Set(reflect.MakeMapWithSize(c.typ, elmCount))
 
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
@@ -204,7 +219,14 @@ func (c *Object) decodeReflectMap(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes an object into an unsafe.Pointer.
 func (c *Object) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // element count
+	elmCount := int(r.PopUint32())
+	if elmCount != len(c.fields) {
+		panic(fmt.Sprintf(
+			"wrong number of object fields: expected %v, got %v",
+			len(c.fields),
+			elmCount,
+		))
+	}
 
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
