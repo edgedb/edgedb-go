@@ -153,73 +153,75 @@ func (c *Object) DecodeReflect(r *buff.Reader, out reflect.Value) {
 }
 
 func (c *Object) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
-	r.Discard(8) // data length & element count
+	r.Discard(4) // element count
 
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
 
-		switch int32(r.PeekUint32()) {
-		case -1:
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			r.Discard(4)
-		default:
-			if field.name == "__tid__" {
-				r.Discard(20)
-				break
-			}
-
-			field.codec.DecodeReflect(r, out.FieldByName(field.name))
+			continue
 		}
+
+		if field.name == "__tid__" {
+			r.Discard(16)
+			continue
+		}
+
+		field.codec.DecodeReflect(
+			r.PopSlice(elmLen),
+			out.FieldByName(field.name),
+		)
 	}
 }
 
 func (c *Object) decodeReflectMap(r *buff.Reader, out reflect.Value) {
-	r.Discard(8) // data length & element count
+	r.Discard(4) // element count
 	out.Set(reflect.MakeMapWithSize(c.typ, len(c.fields)))
 
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
 
-		switch int32(r.PeekUint32()) {
-		case -1:
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			r.Discard(4)
-		default:
-			if field.name == "__tid__" {
-				r.Discard(20)
-				break
-			}
-
-			val := reflect.New(field.codec.Type()).Elem()
-			field.codec.DecodeReflect(r, val)
-			out.SetMapIndex(reflect.ValueOf(field.name), val)
+			continue
 		}
+
+		if field.name == "__tid__" {
+			r.Discard(16)
+			continue
+		}
+
+		val := reflect.New(field.codec.Type()).Elem()
+		field.codec.DecodeReflect(r.PopSlice(elmLen), val)
+		out.SetMapIndex(reflect.ValueOf(field.name), val)
 	}
 }
 
 // DecodePtr decodes an object into an unsafe.Pointer.
 func (c *Object) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(8) // data length & element count
+	r.Discard(4) // element count
 
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
 
-		switch int32(r.PeekUint32()) {
-		case -1:
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			r.Discard(4)
-		default:
-			if field.name == "__tid__" {
-				r.Discard(20)
-				break
-			}
-
-			p := pAdd(out, field.offset)
-			field.codec.DecodePtr(r, p)
+			continue
 		}
+
+		if field.name == "__tid__" {
+			r.Discard(16)
+			continue
+		}
+
+		field.codec.DecodePtr(r.PopSlice(elmLen), pAdd(out, field.offset))
 	}
 }
 

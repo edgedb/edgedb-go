@@ -88,8 +88,6 @@ func (c *Set) Decode(r *buff.Reader, out reflect.Value) {
 
 // DecodeReflect decodes a set into a reflect.Value.
 func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value) {
-	r.Discard(4) // data length
-
 	// number of dimensions, either 0 or 1
 	if r.PopUint32() == 0 {
 		r.Discard(8) // skip 2 reserved fields
@@ -109,14 +107,13 @@ func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.DecodeReflect(r, out.Index(i))
+		elmLen := r.PopUint32()
+		c.child.DecodeReflect(r.PopSlice(elmLen), out.Index(i))
 	}
 }
 
 // DecodePtr decodes a set into an unsafe.Pointer.
 func (c *Set) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.Discard(4) // data length
-
 	// number of dimensions, either 0 or 1
 	if r.PopUint32() == 0 {
 		r.Discard(8) // skip 2 reserved fields
@@ -140,7 +137,11 @@ func (c *Set) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	}
 
 	for i := 0; i < n; i++ {
-		c.child.DecodePtr(r, pAdd(slice.Data, uintptr(i*c.step)))
+		elmLen := r.PopUint32()
+		c.child.DecodePtr(
+			r.PopSlice(elmLen),
+			pAdd(slice.Data, uintptr(i*c.step)),
+		)
 	}
 }
 

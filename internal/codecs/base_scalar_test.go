@@ -29,7 +29,6 @@ import (
 
 func TestDecodeUUID(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 16, // data length
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	})
 
@@ -42,7 +41,6 @@ func TestDecodeUUID(t *testing.T) {
 
 func BenchmarkDecodeUUID(b *testing.B) {
 	data := []byte{
-		0, 0, 0, 16, // data length
 		0, 1, 2, 3, 3, 2, 1, 0, 8, 7, 6, 5, 5, 6, 7, 8,
 	}
 	r := buff.SimpleReader(data)
@@ -88,10 +86,7 @@ func BenchmarkEncodeUUID(b *testing.B) {
 }
 
 func TestDecodeString(t *testing.T) {
-	data := []byte{
-		0, 0, 0, 5, // data length
-		104, 101, 108, 108, 111,
-	}
+	data := []byte{104, 101, 108, 108, 111}
 	r := buff.SimpleReader(data)
 
 	var result string
@@ -100,15 +95,12 @@ func TestDecodeString(t *testing.T) {
 	assert.Equal(t, "hello", result)
 
 	// make sure that the string value is not tied to the buffer.
-	data[5] = 0
+	data[0] = 0
 	assert.Equal(t, "hello", result)
 }
 
 func BenchmarkDecodeString(b *testing.B) {
-	data := []byte{
-		0, 0, 0, 5, // data length
-		104, 101, 108, 108, 111,
-	}
+	data := []byte{104, 101, 108, 108, 111}
 	r := buff.SimpleReader(data)
 
 	var result string
@@ -139,10 +131,7 @@ func TestEncodeString(t *testing.T) {
 }
 
 func TestDecodeBytes(t *testing.T) {
-	data := []byte{
-		0, 0, 0, 5, // data length
-		104, 101, 108, 108, 111,
-	}
+	data := []byte{104, 101, 108, 108, 111}
 	r := buff.SimpleReader(data)
 
 	var result []byte
@@ -152,15 +141,12 @@ func TestDecodeBytes(t *testing.T) {
 	assert.Equal(t, expected, result)
 
 	// assert that memory is not shared with the buffer
-	data[5] = 0
+	data[0] = 0
 	assert.Equal(t, expected, result)
 }
 
 func BenchmarkDecodeBytes(b *testing.B) {
-	data := []byte{
-		0, 0, 0, 5, // data length
-		104, 101, 108, 108, 111,
-	}
+	data := []byte{104, 101, 108, 108, 111}
 	r := buff.SimpleReader(data)
 
 	var result []byte
@@ -191,10 +177,7 @@ func TestEncodeBytes(t *testing.T) {
 }
 
 func TestDecodeInt16(t *testing.T) {
-	r := buff.SimpleReader([]byte{
-		0, 0, 0, 2, // data length
-		0, 7, // int16
-	})
+	r := buff.SimpleReader([]byte{0, 7})
 
 	var result int16
 	(&Int16{}).DecodePtr(r, unsafe.Pointer(&result))
@@ -203,10 +186,7 @@ func TestDecodeInt16(t *testing.T) {
 }
 
 func BenchmarkDecodeInt16(b *testing.B) {
-	data := []byte{
-		0, 0, 0, 2, // data length
-		1, 2, // int16
-	}
+	data := []byte{1, 2}
 	r := buff.SimpleReader(data)
 
 	var result int16
@@ -237,10 +217,7 @@ func TestEncodeInt16(t *testing.T) {
 }
 
 func TestDecodeInt32(t *testing.T) {
-	r := buff.SimpleReader([]byte{
-		0, 0, 0, 4, // data length
-		0, 0, 0, 7, // int32
-	})
+	r := buff.SimpleReader([]byte{0, 0, 0, 7})
 
 	var result int32
 	(&Int32{}).DecodePtr(r, unsafe.Pointer(&result))
@@ -249,10 +226,7 @@ func TestDecodeInt32(t *testing.T) {
 }
 
 func BenchmarkDecodeInt32(b *testing.B) {
-	data := []byte{
-		0, 0, 0, 4, // data length
-		1, 2, 3, 4, // int32
-	}
+	data := []byte{1, 2, 3, 4}
 	r := buff.SimpleReader(data)
 
 	var result int32
@@ -283,10 +257,7 @@ func TestEncodeInt32(t *testing.T) {
 }
 
 func TestDecodeInt64(t *testing.T) {
-	r := buff.SimpleReader([]byte{
-		0, 0, 0, 8, // data length
-		1, 2, 3, 4, 5, 6, 7, 8, // int64
-	})
+	r := buff.SimpleReader([]byte{1, 2, 3, 4, 5, 6, 7, 8})
 
 	var result int64
 	(&Int64{}).DecodePtr(r, unsafe.Pointer(&result))
@@ -295,10 +266,7 @@ func TestDecodeInt64(t *testing.T) {
 }
 
 func BenchmarkDecodeInt64(b *testing.B) {
-	data := []byte{
-		0, 0, 0, 8, // data length
-		1, 2, 3, 4, 5, 6, 7, 8, // int64
-	}
+	data := []byte{1, 2, 3, 4, 5, 6, 7, 8}
 	r := buff.SimpleReader(data)
 
 	var result int64
@@ -330,7 +298,6 @@ func TestEncodeInt64(t *testing.T) {
 
 func TestDecodeFloat32(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 4, // data length
 		0xc2, 0, 0, 0,
 	})
 
@@ -342,7 +309,6 @@ func TestDecodeFloat32(t *testing.T) {
 
 func BenchmarkDecodeFloat32(b *testing.B) {
 	data := []byte{
-		0, 0, 0, 4, // data length
 		0xc2, 0, 0, 0,
 	}
 	r := buff.SimpleReader(data)
@@ -376,7 +342,6 @@ func TestEncodeFloat32(t *testing.T) {
 
 func TestDecodeFloat64(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 8, // data length
 		0xc0, 0x50, 0, 0, 0, 0, 0, 0,
 	})
 
@@ -388,7 +353,6 @@ func TestDecodeFloat64(t *testing.T) {
 
 func BenchmarkDecodeFloat64(b *testing.B) {
 	data := []byte{
-		0, 0, 0, 8, // data length
 		0xc0, 0x50, 0, 0, 0, 0, 0, 0,
 	}
 	r := buff.SimpleReader(data)
@@ -421,10 +385,7 @@ func TestEncodeFloat64(t *testing.T) {
 }
 
 func TestDecodeBool(t *testing.T) {
-	r := buff.SimpleReader([]byte{
-		0, 0, 0, 1, // data length
-		1,
-	})
+	r := buff.SimpleReader([]byte{1})
 
 	var result bool
 	(&Bool{}).DecodePtr(r, unsafe.Pointer(&result))
@@ -433,10 +394,7 @@ func TestDecodeBool(t *testing.T) {
 }
 
 func BenchmarkDecodeBool(b *testing.B) {
-	data := []byte{
-		0, 0, 0, 1, // data length
-		1,
-	}
+	data := []byte{1}
 	r := buff.SimpleReader(data)
 
 	var result bool
@@ -468,7 +426,6 @@ func TestEncodeBool(t *testing.T) {
 
 func TestDecodeDateTime(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 8, // data length
 		0xff, 0xfc, 0xa2, 0xfe, 0xc4, 0xc8, 0x20, 0x0,
 	})
 
@@ -497,7 +454,6 @@ func TestEncodeDateTime(t *testing.T) {
 
 func TestDecodeDuration(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 0x10, // data length
 		0, 0, 0, 0, 0, 0xf, 0x42, 0x40,
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0, // reserved
@@ -531,7 +487,6 @@ func TestDecodeJSON(t *testing.T) {
 	t.SkipNow()
 
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 0x12, // data length
 		1, // json format
 		0x7b, 0x22, 0x68, 0x65,
 		0x6c, 0x6c, 0x6f, 0x22,

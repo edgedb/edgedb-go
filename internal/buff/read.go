@@ -170,6 +170,15 @@ func (r *Reader) DiscardMessage() {
 	r.Buf = nil
 }
 
+// PopSlice returns a SimpleReader
+// populated with the first n bytes from the buffer
+// and discards those bytes.
+func (r *Reader) PopSlice(n uint32) *Reader {
+	s := SimpleReader(r.Buf[:n])
+	r.Buf = r.Buf[n:]
+	return s
+}
+
 // PopUint8 returns the next byte and advances the buffer.
 func (r *Reader) PopUint8() uint8 {
 	val := r.Buf[0]
@@ -189,11 +198,6 @@ func (r *Reader) PopUint32() uint32 {
 	val := binary.BigEndian.Uint32(r.Buf[:4])
 	r.Buf = r.Buf[4:]
 	return val
-}
-
-// PeekUint32 reads a uint32 but does not advance the buffer.
-func (r *Reader) PeekUint32() uint32 {
-	return binary.BigEndian.Uint32(r.Buf[:4])
 }
 
 // PopUint64 reads a uint64 and advances the buffer.

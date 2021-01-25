@@ -58,9 +58,7 @@ func TestTutorial(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	defer func() {
-		require.Nil(t, edb.Close())
-	}()
+	defer edb.Close() // nolint:errcheck
 
 	err = edb.Execute(ctx, `
 		START MIGRATION TO {

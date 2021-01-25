@@ -38,7 +38,6 @@ func TestSetSetType(t *testing.T) {
 
 func TestSetDecodePtr(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0x14, // reserved
@@ -75,7 +74,6 @@ func TestSetDecodePtr(t *testing.T) {
 
 func TestSetDecodeReflect(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 0x38, // data length
 		0, 0, 0, 1, // dimension count
 		0, 0, 0, 0, // reserved
 		0, 0, 0, 0x14, // reserved
@@ -112,7 +110,6 @@ func TestSetDecodeReflect(t *testing.T) {
 
 func TestDecodeEmptySet(t *testing.T) {
 	r := buff.SimpleReader([]byte{
-		0, 0, 0, 0xc, // data length
 		0, 0, 0, 0, // num dims
 		0, 0, 0, 0, // reserved
 		0, 0, 8, 0xc9, // reserved
