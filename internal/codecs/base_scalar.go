@@ -17,7 +17,6 @@
 package codecs
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -104,7 +103,7 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 	case durationID:
 		return &Duration{id, durationType}, nil
 	case jsonID:
-		return nil, errors.New("JSON type not implemented")
+		return &JSON{id: jsonID}, nil
 	case bigIntID:
 		return nil, errors.New("bigint not implemented")
 	default:
@@ -823,8 +822,7 @@ func (c *Duration) Encode(w *buff.Writer, val interface{}, path Path) error {
 
 // JSON is an EdgeDB json type codec.
 type JSON struct {
-	id  types.UUID
-	typ reflect.Type
+	id types.UUID
 }
 
 // ID returns the descriptor id.
@@ -838,9 +836,9 @@ func (c *JSON) setType( // nolint:unused
 	typ reflect.Type,
 	path Path,
 ) (bool, error) {
-	if typ != c.typ {
+	if typ != bytesType {
 		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
+			"expected %v to be %v got %v", path, bytesType, typ,
 		)
 	}
 
@@ -848,19 +846,19 @@ func (c *JSON) setType( // nolint:unused
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *JSON) Type() reflect.Type {
-	return c.typ
-}
+func (c *JSON) Type() reflect.Type { return bytesType }
 
 // Decode json.
 func (c *JSON) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes JSON into a reflect.Value.
-func (c *JSON) DecodeReflect(r *buff.Reader, out reflect.Value) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+func (c *JSON) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
+	if out.Type() != bytesType {
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, bytesType, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -868,21 +866,35 @@ func (c *JSON) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 // DecodePtr decodes JSON into an unsafe.Pointer.
 func (c *JSON) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	r.PopBytes()
+	format := r.PopUint8()
+	if format != 1 {
+		panic(fmt.Sprintf(
+			"unexpected json format: expected 1, got %v", format,
+		))
+	}
+
+	n := len(r.Buf)
+	p := (*[]byte)(out)
+	if cap(*p) >= n {
+		*p = (*p)[:n]
+	} else {
+		*p = make([]byte, n)
+	}
+
+	copy(*p, r.Buf)
+	r.Discard(n)
 }
 
 // Encode json.
-func (c *JSON) Encode(w *buff.Writer, val interface{}, path Path) {
-	bts, err := json.Marshal(val)
-	if err != nil {
-		// todo err: Encode should return error?
-		panic(err)
+func (c *JSON) Encode(w *buff.Writer, val interface{}, path Path) error {
+	in, ok := val.([]byte)
+
+	if !ok {
+		return fmt.Errorf("expected %v to be []byte, got %T", path, val)
 	}
 
 	// prepend json format, always 1
-	bts = append(bts, 0)
-	copy(bts[1:], bts)
-	bts[0] = 1
-
-	w.PushBytes(bts)
+	// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
+	w.PushBytes(append([]byte{1}, in...))
+	return nil
 }

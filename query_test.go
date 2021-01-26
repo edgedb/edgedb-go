@@ -63,6 +63,16 @@ func TestMissmatchedResultType(t *testing.T) {
 	assert.EqualError(t, err, expected)
 }
 
+func TestSendAndReceveJSON(t *testing.T) {
+	var result []byte
+
+	ctx := context.Background()
+	err := conn.QueryOne(ctx, "SELECT <json>$0", &result, []byte(`"hello"`))
+
+	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, `"hello"`, string(result))
+}
+
 // The client should read all messages through ReadyForCommand
 // before returning from a QueryX()
 func TestParseAllMessagesAfterError(t *testing.T) {

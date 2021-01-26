@@ -484,8 +484,6 @@ func TestEncodeDuration(t *testing.T) {
 }
 
 func TestDecodeJSON(t *testing.T) {
-	t.SkipNow()
-
 	r := buff.SimpleReader([]byte{
 		1, // json format
 		0x7b, 0x22, 0x68, 0x65,
@@ -495,16 +493,15 @@ func TestDecodeJSON(t *testing.T) {
 		0x7d,
 	})
 
-	var result interface{}
+	var result []byte
 	(&JSON{}).DecodePtr(r, unsafe.Pointer(&result))
-	expected := map[string]interface{}{"hello": "world"}
-
-	assert.Equal(t, expected, result)
+	assert.Equal(t, `{"hello":"world"}`, string(result))
 }
 
 func TestEncodeJSON(t *testing.T) {
 	w := buff.NewWriter([]byte{})
-	(&JSON{}).Encode(w, map[string]string{"hello": "world"}, Path(""))
+	err := (&JSON{}).Encode(w, []byte(`{"hello":"world"}`), Path(""))
+	require.Nil(t, err, "unexpected error: %v", err)
 
 	conn := &writeFixture{}
 	require.Nil(t, w.Send(conn))
