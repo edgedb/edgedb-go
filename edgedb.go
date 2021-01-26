@@ -39,6 +39,7 @@
 //   int32           int32
 //   int64           int64
 //   uuid            edgedb.UUID
+//   json            []byte
 //
 //   // not implemented
 //   anyenum
@@ -47,7 +48,6 @@
 //   cal::local_datetime
 //   bigint
 //   decimal
-//   json
 package edgedb
 
 import (
