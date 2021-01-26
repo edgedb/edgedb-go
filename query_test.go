@@ -28,6 +28,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMissmatchedCardinality(t *testing.T) {
+	ctx := context.Background()
+
+	var result []int64
+	err := conn.QueryOne(ctx, "SELECT {1, 2, 3}", &result)
+
+	expected := "edgedb.ResultCardinalityMismatchError: " +
+		"the query has cardinality MANY " +
+		"which does not match the expected cardinality ONE"
+	assert.EqualError(t, err, expected)
+}
+
 // The client should read all messages through ReadyForCommand
 // before returning from a QueryX()
 func TestParseAllMessagesAfterError(t *testing.T) {
