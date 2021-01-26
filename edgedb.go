@@ -116,7 +116,8 @@ type Executor interface {
 }
 
 type baseConn struct {
-	conn net.Conn
+	conn             net.Conn
+	errUnrecoverable error
 
 	// writeMemory is preallocated memory for payloads to be sent to the server
 	writeMemory [1024]byte
@@ -227,6 +228,10 @@ func (c *baseConn) setDeadline(ctx context.Context) error {
 }
 
 func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
+	if c.errUnrecoverable != nil {
+		return nil, c.errUnrecoverable
+	}
+
 	c.acquireReaderSignal <- struct{}{}
 
 	select {
@@ -257,7 +262,9 @@ func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
 	go func() {
 		for r.Next(c.acquireReaderSignal) {
 			if e := c.fallThrough(r); e != nil {
-				panic(e)
+				c.errUnrecoverable = e
+				_ = c.conn.Close()
+				return
 			}
 		}
 

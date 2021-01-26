@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"context"
+	"errors"
 
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
@@ -53,8 +54,16 @@ func (c *poolConn) Release() error {
 	return err
 }
 
+// checkErr records errors that indicate the connection should be closed
+// so that this connection can be recycled when it is released.
 func (c *poolConn) checkErr(err error) {
 	if soc.IsPermanentNetErr(err) {
+		c.err = err
+		return
+	}
+
+	var edbErr Error
+	if errors.As(err, &edbErr) && edbErr.Category(UnexpectedMessageError) {
 		c.err = err
 	}
 }
