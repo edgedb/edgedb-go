@@ -46,7 +46,8 @@ func TestSetObjectType(t *testing.T) {
 		{name: "name", codec: &Str{typ: strType}},
 	}}
 
-	useReflect, err := codec.setType(reflect.TypeOf(Thing{}))
+	typ := reflect.TypeOf(Thing{})
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 
@@ -86,7 +87,8 @@ func TestObjectDecodePtr(t *testing.T) {
 		{name: "B", codec: &Int32{typ: int32Type}},
 		{name: "C", codec: &Int64{typ: int64Type}},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 	codec.DecodePtr(r, unsafe.Pointer(&result))
@@ -130,7 +132,8 @@ func BenchmarkObjectDecodePtr(b *testing.B) {
 		{name: "B", codec: &Int32{typ: int32Type}},
 		{name: "C", codec: &Int64{typ: int64Type}},
 	}}
-	_, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	_, err := codec.setType(typ, Path(""))
 	require.Nil(b, err)
 
 	b.ResetTimer()
@@ -168,10 +171,11 @@ func TestObjectDecodeReflectStruct(t *testing.T) {
 		{name: "B", codec: &Int32{typ: int32Type}},
 		{name: "C", codec: &Int64{typ: int64Type}},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -205,7 +209,7 @@ func TestObjectDecodeReflectMap(t *testing.T) {
 	codec.setDefaultType()
 
 	var result map[string]interface{}
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 
 	// force garbage collection to be sure that
 	// references are durable.

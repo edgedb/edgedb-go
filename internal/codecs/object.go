@@ -87,9 +87,11 @@ func (c *Object) setDefaultType() {
 	c.useReflect = true
 }
 
-func (c *Object) setType(typ reflect.Type) (bool, error) {
+func (c *Object) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ.Kind() != reflect.Struct {
-		return false, fmt.Errorf("expected Struct got %v", typ.Kind())
+		return false, fmt.Errorf(
+			"expected %v to be a Struct got %v", path, typ.Kind(),
+		)
 	}
 
 	for _, field := range c.fields {
@@ -100,12 +102,15 @@ func (c *Object) setType(typ reflect.Type) (bool, error) {
 		f, ok := marshal.StructField(typ, field.name)
 		if !ok {
 			return false, fmt.Errorf(
-				"%v struct is missing field %q",
-				typ, field.name,
+				"expected %v to have a field named %q", path, field.name,
 			)
 		}
 
-		useReflect, err := field.codec.setType(f.Type)
+		useReflect, err := field.codec.setType(
+			f.Type,
+			path.AddField(field.name),
+		)
+
 		if err != nil {
 			return false, err
 		}
@@ -126,33 +131,37 @@ func (c *Object) Type() reflect.Type {
 // Decode an object
 func (c *Object) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
-		c.DecodeReflect(r, out)
+		c.DecodeReflect(r, out, Path(out.Type().String()))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
 }
 
 // DecodeReflect decodes an object into a reflect.Value.
-func (c *Object) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Object) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
 		panic(fmt.Sprintf(
-			"object codec unexpected type: expected %v, but got %v",
-			c.typ,
-			out.Type(),
+			"expected %v to be %v, got %v", path, c.typ, out.Type(),
 		))
 	}
 
 	switch out.Kind() {
 	case reflect.Struct:
-		c.decodeReflectStruct(r, out)
+		c.decodeReflectStruct(r, out, path)
 	case reflect.Map:
-		c.decodeReflectMap(r, out)
+		c.decodeReflectMap(r, out, path)
 	default:
-		panic(fmt.Sprintf("object codec can not decode into %v", out.Kind()))
+		panic(fmt.Sprintf(
+			"expected %v to be Struct or Map, got %v", path, out.Kind(),
+		))
 	}
 }
 
-func (c *Object) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
+func (c *Object) decodeReflectStruct(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	elmCount := int(r.PopUint32())
 	if elmCount != len(c.fields) {
 		panic(fmt.Sprintf(
@@ -180,11 +189,16 @@ func (c *Object) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
 		field.codec.DecodeReflect(
 			r.PopSlice(elmLen),
 			out.FieldByName(field.name),
+			path.AddField(field.name),
 		)
 	}
 }
 
-func (c *Object) decodeReflectMap(r *buff.Reader, out reflect.Value) {
+func (c *Object) decodeReflectMap(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	elmCount := int(r.PopUint32())
 	if elmCount != len(c.fields) {
 		panic(fmt.Sprintf(
@@ -212,7 +226,11 @@ func (c *Object) decodeReflectMap(r *buff.Reader, out reflect.Value) {
 		}
 
 		val := reflect.New(field.codec.Type()).Elem()
-		field.codec.DecodeReflect(r.PopSlice(elmLen), val)
+		field.codec.DecodeReflect(
+			r.PopSlice(elmLen),
+			val,
+			path.AddField(field.name),
+		)
 		out.SetMapIndex(reflect.ValueOf(field.name), val)
 	}
 }
@@ -248,6 +266,6 @@ func (c *Object) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an object
-func (c *Object) Encode(buf *buff.Writer, val interface{}) error {
+func (c *Object) Encode(buf *buff.Writer, val interface{}, path Path) error {
 	panic("objects can't be query parameters")
 }

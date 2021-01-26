@@ -29,7 +29,8 @@ import (
 
 func TestArraySetType(t *testing.T) {
 	codec := &Array{child: &Int64{typ: int64Type}}
-	useReflect, err := codec.setType(reflect.TypeOf([]int64{}))
+	typ := reflect.TypeOf([]int64{})
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 
@@ -57,7 +58,8 @@ func TestArrayDecodePtr(t *testing.T) {
 	var result []int64
 
 	codec := &Array{child: &Int64{typ: int64Type}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 	codec.DecodePtr(r, unsafe.Pointer(&result))
@@ -91,10 +93,11 @@ func TestArrayDecodeReflect(t *testing.T) {
 	var result []int64
 
 	codec := &Array{child: &Int64{typ: int64Type}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -115,7 +118,7 @@ func TestEncodeArray(t *testing.T) {
 		w.BeginMessage(0xff)
 
 		codec := &Array{child: &Int64{}}
-		err := codec.Encode(w, a)
+		err := codec.Encode(w, a, Path(""))
 		require.Nil(t, err)
 		w.EndMessage()
 
@@ -150,6 +153,6 @@ func TestEncodeArrayWrongType(t *testing.T) {
 	w.BeginMessage(0xff)
 
 	codec := &Array{child: &Int64{typ: reflect.TypeOf(int64(1))}}
-	err := codec.Encode(w, "hello")
-	assert.EqualError(t, err, "expected []int64 got: string")
+	err := codec.Encode(w, "hello", Path("args[1]"))
+	assert.EqualError(t, err, "expected args[1] to be []int64 got: string")
 }

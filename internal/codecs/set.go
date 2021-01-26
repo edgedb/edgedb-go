@@ -59,16 +59,18 @@ func (c *Set) setDefaultType() {
 	c.step = calcStep(c.typ.Elem())
 	c.useReflect = true
 }
-func (c *Set) setType(typ reflect.Type) (bool, error) {
+func (c *Set) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ.Kind() != reflect.Slice {
-		return false, fmt.Errorf("expected Slice got %v", typ.Kind())
+		return false, fmt.Errorf(
+			"expected %v to be a Slice got %v", path, typ.Kind(),
+		)
 	}
 
 	c.typ = typ
 	c.step = calcStep(typ.Elem())
 
 	var err error
-	c.useReflect, err = c.child.setType(typ.Elem())
+	c.useReflect, err = c.child.setType(typ.Elem(), path)
 	return c.useReflect, err
 }
 
@@ -80,14 +82,14 @@ func (c *Set) Type() reflect.Type {
 // Decode a set
 func (c *Set) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
-		c.DecodeReflect(r, out)
+		c.DecodeReflect(r, out, Path(out.Type().String()))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
 }
 
 // DecodeReflect decodes a set into a reflect.Value.
-func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	// number of dimensions, either 0 or 1
 	if r.PopUint32() == 0 {
 		r.Discard(8) // skip 2 reserved fields
@@ -108,7 +110,12 @@ func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 	for i := 0; i < n; i++ {
 		elmLen := r.PopUint32()
-		c.child.DecodeReflect(r.PopSlice(elmLen), out.Index(i))
+
+		c.child.DecodeReflect(
+			r.PopSlice(elmLen),
+			out.Index(i),
+			path.AddIndex(i),
+		)
 	}
 }
 
@@ -146,6 +153,6 @@ func (c *Set) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a set
-func (c *Set) Encode(buf *buff.Writer, val interface{}) error {
-	panic("not implemented")
+func (c *Set) Encode(buf *buff.Writer, val interface{}, path Path) error {
+	panic("sets can not be query parameters")
 }

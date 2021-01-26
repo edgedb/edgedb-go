@@ -125,22 +125,22 @@ func (c *UUID) ID() types.UUID {
 
 func (c *UUID) setDefaultType() {}
 
-func (c *UUID) setType(typ reflect.Type) (bool, error) {
-	return false, c.checkType(typ)
+func (c *UUID) setType(typ reflect.Type, path Path) (bool, error) {
+	return false, c.checkType(typ, path)
 }
 
-func (c *UUID) checkType(typ reflect.Type) error {
+func (c *UUID) checkType(typ reflect.Type, path Path) error {
 	switch {
 	case typ.Kind() != c.typ.Kind():
-		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
 	case typ.Elem() != c.typ.Elem():
-		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
 	case typ.Len() != c.typ.Len():
-		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
 	case typ.PkgPath() != "github.com/edgedb/edgedb-go":
-		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
 	case typ.Name() != "UUID":
-		return fmt.Errorf("expected edgedb.UUID got %v", typ)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
 	}
 
 	return nil
@@ -153,12 +153,12 @@ func (c *UUID) Type() reflect.Type {
 
 // Decode a UUID.
 func (c *UUID) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a UUID.using reflection
-func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value) {
-	if e := c.checkType(out.Type()); e != nil {
+func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
+	if e := c.checkType(out.Type(), path); e != nil {
 		panic(e)
 	}
 
@@ -173,10 +173,10 @@ func (c *UUID) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a UUID.
-func (c *UUID) Encode(w *buff.Writer, val interface{}) error {
+func (c *UUID) Encode(w *buff.Writer, val interface{}, path Path) error {
 	tmp, ok := val.(types.UUID)
 	if !ok {
-		return fmt.Errorf("expected types.UUID got %T", val)
+		return fmt.Errorf("expected %v to be types.UUID got %T", path, val)
 	}
 
 	w.PushBytes(tmp[:])
@@ -195,9 +195,11 @@ func (c *Str) ID() types.UUID {
 }
 func (c *Str) setDefaultType() {}
 
-func (c *Str) setType(typ reflect.Type) (bool, error) {
+func (c *Str) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -210,13 +212,15 @@ func (c *Str) Type() reflect.Type {
 
 // Decode a string.
 func (c *Str) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a str into a reflect.Value.
-func (c *Str) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Str) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -229,10 +233,10 @@ func (c *Str) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a string.
-func (c *Str) Encode(w *buff.Writer, val interface{}) error {
+func (c *Str) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(string)
 	if !ok {
-		return fmt.Errorf("expected types.UUID got %T", val)
+		return fmt.Errorf("expected %v to be types.UUID got %T", path, val)
 	}
 
 	w.PushString(in)
@@ -251,9 +255,11 @@ func (c *Bytes) ID() types.UUID {
 }
 func (c *Bytes) setDefaultType() {}
 
-func (c *Bytes) setType(typ reflect.Type) (bool, error) {
+func (c *Bytes) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -266,13 +272,15 @@ func (c *Bytes) Type() reflect.Type {
 
 // Decode []byte.
 func (c *Bytes) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes bytes into a reflect.Value.
-func (c *Bytes) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Bytes) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -294,10 +302,10 @@ func (c *Bytes) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode []byte.
-func (c *Bytes) Encode(w *buff.Writer, val interface{}) error {
+func (c *Bytes) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.([]byte)
 	if !ok {
-		return fmt.Errorf("expected []byte got %T", val)
+		return fmt.Errorf("expected %v to be []byte got %T", path, val)
 	}
 
 	w.PushBytes(in)
@@ -316,9 +324,11 @@ func (c *Int16) ID() types.UUID {
 }
 func (c *Int16) setDefaultType() {}
 
-func (c *Int16) setType(typ reflect.Type) (bool, error) {
+func (c *Int16) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -331,13 +341,15 @@ func (c *Int16) Type() reflect.Type {
 
 // Decode an int16.
 func (c *Int16) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes an int16 into a reflect.Value.
-func (c *Int16) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Int16) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -349,10 +361,10 @@ func (c *Int16) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an int16.
-func (c *Int16) Encode(w *buff.Writer, val interface{}) error {
+func (c *Int16) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(int16)
 	if !ok {
-		return fmt.Errorf("expected int16 got %T", val)
+		return fmt.Errorf("expected %v to be int16 got %T", path, val)
 	}
 
 	w.PushUint32(2) // data length
@@ -372,9 +384,11 @@ func (c *Int32) ID() types.UUID {
 }
 func (c *Int32) setDefaultType() {}
 
-func (c *Int32) setType(typ reflect.Type) (bool, error) {
+func (c *Int32) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -387,13 +401,15 @@ func (c *Int32) Type() reflect.Type {
 
 // Decode an int32.
 func (c *Int32) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes an int32 into a reflect.Value.
-func (c *Int32) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Int32) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -405,10 +421,10 @@ func (c *Int32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an int32.
-func (c *Int32) Encode(w *buff.Writer, val interface{}) error {
+func (c *Int32) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(int32)
 	if !ok {
-		return fmt.Errorf("expected int32 got %T", val)
+		return fmt.Errorf("expected %v to be int32 got %T", path, val)
 	}
 
 	w.PushUint32(4) // data length
@@ -428,9 +444,11 @@ func (c *Int64) ID() types.UUID {
 }
 func (c *Int64) setDefaultType() {}
 
-func (c *Int64) setType(typ reflect.Type) (bool, error) {
+func (c *Int64) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -443,13 +461,15 @@ func (c *Int64) Type() reflect.Type {
 
 // Decode an int64.
 func (c *Int64) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes an int64 into a reflect.Value.
-func (c *Int64) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Int64) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -461,10 +481,10 @@ func (c *Int64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an int64.
-func (c *Int64) Encode(w *buff.Writer, val interface{}) error {
+func (c *Int64) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(int64)
 	if !ok {
-		return fmt.Errorf("expected int64 got %T", val)
+		return fmt.Errorf("expected %v to be int64 got %T", path, val)
 	}
 
 	w.PushUint32(8) // data length
@@ -484,9 +504,11 @@ func (c *Float32) ID() types.UUID {
 }
 func (c *Float32) setDefaultType() {}
 
-func (c *Float32) setType(typ reflect.Type) (bool, error) {
+func (c *Float32) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -499,13 +521,15 @@ func (c *Float32) Type() reflect.Type {
 
 // Decode a float32.
 func (c *Float32) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a float32 into a reflect.Value.
-func (c *Float32) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Float32) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -517,10 +541,10 @@ func (c *Float32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a float32.
-func (c *Float32) Encode(w *buff.Writer, val interface{}) error {
+func (c *Float32) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(float32)
 	if !ok {
-		return fmt.Errorf("expected float32 got %T", val)
+		return fmt.Errorf("expected %v to be float32 got %T", path, val)
 	}
 
 	w.PushUint32(4)
@@ -540,9 +564,11 @@ func (c *Float64) ID() types.UUID {
 }
 func (c *Float64) setDefaultType() {}
 
-func (c *Float64) setType(typ reflect.Type) (bool, error) {
+func (c *Float64) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -555,13 +581,15 @@ func (c *Float64) Type() reflect.Type {
 
 // Decode a float64.
 func (c *Float64) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a float64 into a reflect.Value.
-func (c *Float64) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Float64) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -573,10 +601,10 @@ func (c *Float64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a float64.
-func (c *Float64) Encode(w *buff.Writer, val interface{}) error {
+func (c *Float64) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(float64)
 	if !ok {
-		return fmt.Errorf("expected float64 got %T", val)
+		return fmt.Errorf("expected %v to be float64 got %T", path, val)
 	}
 
 	w.PushUint32(8)
@@ -596,9 +624,11 @@ func (c *Bool) ID() types.UUID {
 }
 func (c *Bool) setDefaultType() {}
 
-func (c *Bool) setType(typ reflect.Type) (bool, error) {
+func (c *Bool) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -611,13 +641,15 @@ func (c *Bool) Type() reflect.Type {
 
 // Decode a bool.
 func (c *Bool) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a bool into a reflect.Value.
-func (c *Bool) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Bool) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -629,10 +661,10 @@ func (c *Bool) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a bool.
-func (c *Bool) Encode(w *buff.Writer, val interface{}) error {
+func (c *Bool) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(bool)
 	if !ok {
-		return fmt.Errorf("expected bool got %T", val)
+		return fmt.Errorf("expected %v to be bool got %T", path, val)
 	}
 
 	w.PushUint32(1) // data length
@@ -659,9 +691,11 @@ func (c *DateTime) ID() types.UUID {
 }
 func (c *DateTime) setDefaultType() {}
 
-func (c *DateTime) setType(typ reflect.Type) (bool, error) {
+func (c *DateTime) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -674,13 +708,19 @@ func (c *DateTime) Type() reflect.Type {
 
 // Decode a datetime.
 func (c *DateTime) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a datetime into a reflect.Value.
-func (c *DateTime) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *DateTime) DecodeReflect(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -698,10 +738,10 @@ func (c *DateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a datetime.
-func (c *DateTime) Encode(w *buff.Writer, val interface{}) error {
+func (c *DateTime) Encode(w *buff.Writer, val interface{}, path Path) error {
 	date, ok := val.(time.Time)
 	if !ok {
-		return fmt.Errorf("expected time.Time got %T", val)
+		return fmt.Errorf("expected %v to be time.Time got %T", path, val)
 	}
 
 	seconds := date.Unix() - 946_684_800
@@ -724,9 +764,12 @@ func (c *Duration) ID() types.UUID {
 }
 
 func (c *Duration) setDefaultType() {}
-func (c *Duration) setType(typ reflect.Type) (bool, error) {
+
+func (c *Duration) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -739,13 +782,19 @@ func (c *Duration) Type() reflect.Type {
 
 // Decode a duration.
 func (c *Duration) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out)
+	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
 // DecodeReflect decodes a duration into a reflect.Value.
-func (c *Duration) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Duration) DecodeReflect(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	if out.Type() != c.typ {
-		panic(fmt.Errorf("expected %v got %v", c.typ, out.Type()))
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, out.Type(),
+		))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -759,10 +808,10 @@ func (c *Duration) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a duration.
-func (c *Duration) Encode(w *buff.Writer, val interface{}) error {
+func (c *Duration) Encode(w *buff.Writer, val interface{}, path Path) error {
 	duration, ok := val.(time.Duration)
 	if !ok {
-		return fmt.Errorf("expected time.Duration got %T", val)
+		return fmt.Errorf("expected %v to be time.Duration got %T", path, val)
 	}
 
 	w.PushUint32(16) // data length
@@ -785,9 +834,14 @@ func (c *JSON) ID() types.UUID {
 
 func (c *JSON) setDefaultType() {} // nolint:unused
 
-func (c *JSON) setType(typ reflect.Type) (bool, error) { // nolint:unused
+func (c *JSON) setType( // nolint:unused
+	typ reflect.Type,
+	path Path,
+) (bool, error) {
 	if typ != c.typ {
-		return false, fmt.Errorf("expected %v got %v", c.typ, typ)
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, c.typ, typ,
+		)
 	}
 
 	return false, nil
@@ -818,7 +872,7 @@ func (c *JSON) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode json.
-func (c *JSON) Encode(w *buff.Writer, val interface{}) {
+func (c *JSON) Encode(w *buff.Writer, val interface{}, path Path) {
 	bts, err := json.Marshal(val)
 	if err != nil {
 		// todo err: Encode should return error?

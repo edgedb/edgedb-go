@@ -237,7 +237,7 @@ func (c *baseConn) execute(
 	w.BeginMessage(message.Execute)
 	w.PushUint16(0)       // no headers
 	w.PushBytes([]byte{}) // no statement name
-	if e := cdcs.in.Encode(w, q.args); e != nil {
+	if e := cdcs.in.Encode(w, q.args, codecs.Path("args")); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
 	}
 	w.EndMessage()
@@ -327,7 +327,7 @@ func (c *baseConn) optimistic(
 	w.PushString(q.cmd)
 	w.PushUUID(cdcs.in.ID())
 	w.PushUUID(cdcs.out.ID())
-	if e := cdcs.in.Encode(w, q.args); e != nil {
+	if e := cdcs.in.Encode(w, q.args, codecs.Path("args")); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
 	}
 	w.EndMessage()
