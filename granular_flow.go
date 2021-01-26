@@ -84,7 +84,7 @@ func (c *baseConn) pesimistic(
 	}
 	c.putTypeIDs(q, ids)
 
-	descs, err := c.describe(r)
+	descs, err := c.describe(r, q)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	return ids, err
 }
 
-func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
+func (c *baseConn) describe(r *buff.Reader, q query) (descPair, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.DescribeStatement)
 	w.PushUint16(0) // no headers
@@ -186,11 +186,25 @@ func (c *baseConn) describe(r *buff.Reader) (descPair, error) {
 		switch r.MsgType {
 		case message.CommandDataDescription:
 			ignoreHeaders(r)
-			r.Discard(17)           // cardianlity & input descriptor ID
-			descs.in = r.PopBytes() // input descriptor
+			card := r.PopUint8()
+			// input descriptor ID
+			r.Discard(16)
 
-			r.Discard(16)            // descriptor ID
-			descs.out = r.PopBytes() // output descriptor
+			// input descriptor
+			descs.in = r.PopBytes()
+
+			// output descriptor
+			r.Discard(16) // descriptor ID
+			descs.out = r.PopBytes()
+
+			if q.expCard == cardinality.One && card == cardinality.Many {
+				err = &resultCardinalityMismatchError{msg: fmt.Sprintf(
+					"the query has cardinality %v "+
+						"which does not match the expected cardinality %v",
+					cardinality.ToStr[card],
+					cardinality.ToStr[q.expCard],
+				)}
+			}
 		case message.ReadyForCommand:
 			ignoreHeaders(r)
 			r.Discard(1) // transaction state
