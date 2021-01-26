@@ -46,7 +46,8 @@ func TestNamedTupleSetType(t *testing.T) {
 		{name: "large", codec: &Int64{typ: int64Type}},
 		{name: "name", codec: &Str{typ: strType}},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(Thing{}))
+	typ := reflect.TypeOf(Thing{})
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 
@@ -81,7 +82,8 @@ func TestNamedTupleDecodePtr(t *testing.T) {
 		{name: "A", codec: &Int32{typ: int32Type}},
 		{name: "B", codec: &Int32{typ: int32Type}},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 	codec.DecodePtr(r, unsafe.Pointer(&result))
@@ -150,10 +152,11 @@ func TestNamedTupleDecodeReflect(t *testing.T) {
 		{name: "A", codec: &Int32{typ: int32Type}},
 		{name: "B", codec: &Int32{typ: int32Type}},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -183,7 +186,7 @@ func TestNamedTupleDecodeReflectMap(t *testing.T) {
 	codec.setDefaultType()
 
 	var result map[string]interface{}
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -200,12 +203,14 @@ func TestEncodeNamedTuple(t *testing.T) {
 		{name: "b", codec: &Int32{}},
 	}}
 
-	w := buff.NewWriter([]byte{})
-	w.BeginMessage(message.Sync)
-	err := codec.Encode(w, []interface{}{map[string]interface{}{
+	val := []interface{}{map[string]interface{}{
 		"a": int32(5),
 		"b": int32(6),
-	}})
+	}}
+
+	w := buff.NewWriter([]byte{})
+	w.BeginMessage(message.Sync)
+	err := codec.Encode(w, val, Path(""))
 	require.Nil(t, err)
 	w.EndMessage()
 

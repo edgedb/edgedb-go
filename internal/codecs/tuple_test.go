@@ -33,7 +33,8 @@ func TestTupleSetType(t *testing.T) {
 		&Int64{typ: int64Type},
 		&Int32{typ: int32Type},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf([]interface{}{}))
+	typ := reflect.TypeOf([]interface{}{})
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 }
@@ -57,7 +58,8 @@ func TestTupleDecodePtr(t *testing.T) {
 		&Int64{typ: int64Type},
 		&Int32{typ: int32Type},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 	codec.DecodePtr(r, unsafe.Pointer(&result))
@@ -89,10 +91,11 @@ func TestTupleDecodeReflect(t *testing.T) {
 		&Int64{typ: int64Type},
 		&Int32{typ: int32Type},
 	}}
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 
 	// force garbage collection to be sure that
 	// references are durable.
@@ -105,7 +108,7 @@ func TestTupleDecodeReflect(t *testing.T) {
 func TestEncodeNullTuple(t *testing.T) {
 	w := buff.NewWriter([]byte{})
 	w.BeginMessage(0xff)
-	err := (&Tuple{}).Encode(w, []interface{}{})
+	err := (&Tuple{}).Encode(w, []interface{}{}, Path(""))
 	require.Nil(t, err)
 	w.EndMessage()
 
@@ -131,16 +134,33 @@ func TestTupleEncodeWrongNumberOfArgs(t *testing.T) {
 		&Int64{},
 	}}
 
-	err := codec.Encode(w, []interface{}{int64(2), int64(3), int64(4)})
-	assert.EqualError(t, err, "expected 2 elements in the tuple, got 3")
+	val := []interface{}{
+		int64(2),
+		int64(3),
+		int64(4),
+	}
+
+	err := codec.Encode(w, val, Path("args[0]"))
+
+	expected := "expected args[0] to be []interface{} with len=2, got len=3"
+	assert.EqualError(t, err, expected)
 }
 
 func TestEncodeTuple(t *testing.T) {
 	w := buff.NewWriter([]byte{})
 	w.BeginMessage(0xff)
 
-	codec := &Tuple{fields: []Codec{&Int64{}, &Int64{}}}
-	err := codec.Encode(w, []interface{}{int64(2), int64(3)})
+	codec := &Tuple{fields: []Codec{
+		&Int64{},
+		&Int64{},
+	}}
+
+	val := []interface{}{
+		int64(2),
+		int64(3),
+	}
+
+	err := codec.Encode(w, val, Path(""))
 	require.Nil(t, err)
 	w.EndMessage()
 
@@ -174,6 +194,6 @@ func BenchmarkEncodeTuple(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = codec.Encode(w, ids)
+		_ = codec.Encode(w, ids, Path(""))
 	}
 }

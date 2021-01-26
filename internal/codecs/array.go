@@ -65,16 +65,18 @@ func (c *Array) setDefaultType() {
 	c.useReflect = true
 }
 
-func (c *Array) setType(typ reflect.Type) (bool, error) {
+func (c *Array) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ.Kind() != reflect.Slice {
-		return false, fmt.Errorf("expected Slice got %v", typ.Kind())
+		return false, fmt.Errorf(
+			"expected %v to be a Slice, got %v", path, typ.Kind(),
+		)
 	}
 
 	c.typ = typ
 	c.step = calcStep(typ.Elem())
 
 	var err error
-	c.useReflect, err = c.child.setType(typ.Elem())
+	c.useReflect, err = c.child.setType(typ.Elem(), path)
 	return c.useReflect, err
 }
 
@@ -97,7 +99,7 @@ func (c *Array) Type() reflect.Type {
 // Decode an array.
 func (c *Array) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
-		c.DecodeReflect(r, out)
+		c.DecodeReflect(r, out, Path(out.Type().String()))
 		return
 	}
 
@@ -105,9 +107,11 @@ func (c *Array) Decode(r *buff.Reader, out reflect.Value) {
 }
 
 // DecodeReflect decodes an array into a reflect.Value.
-func (c *Array) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Array) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if out.Type() != c.Type() {
-		panic(fmt.Sprintf("expected %v got: %v", c.Type(), out.Type()))
+		panic(fmt.Sprintf(
+			"expected %v to be %v got: %v", path, c.Type(), out.Type(),
+		))
 	}
 
 	// number of dimensions is 1 or 0
@@ -136,7 +140,11 @@ func (c *Array) DecodeReflect(r *buff.Reader, out reflect.Value) {
 			continue
 		}
 
-		c.child.DecodeReflect(r.PopSlice(elmLen), out.Index(i))
+		c.child.DecodeReflect(
+			r.PopSlice(elmLen),
+			out.Index(i),
+			path.AddIndex(i),
+		)
 	}
 }
 
@@ -177,10 +185,12 @@ func (c *Array) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode an array.
-func (c *Array) Encode(w *buff.Writer, val interface{}) error {
+func (c *Array) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in := reflect.ValueOf(val)
 	if in.Kind() != reflect.Slice {
-		return fmt.Errorf("expected []%v got: %T", c.child.Type(), val)
+		return fmt.Errorf(
+			"expected %v to be %v got: %T", path, c.Type(), val,
+		)
 	}
 
 	elmCount := in.Len()
@@ -194,7 +204,7 @@ func (c *Array) Encode(w *buff.Writer, val interface{}) error {
 
 	var err error
 	for i := 0; i < elmCount; i++ {
-		err = c.child.Encode(w, in.Index(i).Interface())
+		err = c.child.Encode(w, in.Index(i).Interface(), path.AddIndex(i))
 		if err != nil {
 			return err
 		}

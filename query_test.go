@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -37,6 +36,30 @@ func TestMissmatchedCardinality(t *testing.T) {
 	expected := "edgedb.ResultCardinalityMismatchError: " +
 		"the query has cardinality MANY " +
 		"which does not match the expected cardinality ONE"
+	assert.EqualError(t, err, expected)
+}
+
+func TestMissmatchedResultType(t *testing.T) {
+	type C struct { // nolint:unused
+		z int // nolint:structcheck
+	}
+
+	type B struct { // nolint:unused
+		y C // nolint:structcheck
+	}
+
+	type A struct {
+		x B // nolint:structcheck,unused
+	}
+
+	var result A
+
+	ctx := context.Background()
+	err := conn.QueryOne(ctx, "SELECT (x := (y := (z := 7)))", &result)
+
+	expected := "edgedb.UnsupportedFeatureError: " +
+		"the \"out\" argument does not match query schema: " +
+		"expected edgedb.A.x.y.z to be int64 got int"
 	assert.EqualError(t, err, expected)
 }
 
@@ -72,7 +95,7 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 	require.NotNil(t, err)
 	assert.Equal(
 		t,
-		"edgedb.InvalidArgumentError: expected int16 got int",
+		"edgedb.InvalidArgumentError: expected args[0] to be int16 got int",
 		err.Error(),
 	)
 }
@@ -82,7 +105,7 @@ func TestDeeplyNestedTuple(t *testing.T) {
 	ctx := context.Background()
 	query := "SELECT ([(1, 2), (3, 4)], (5, (6, 7)))"
 	err := conn.QueryOne(ctx, query, &result)
-	require.Nil(t, err, fmt.Sprintf("%v", err))
+	require.Nil(t, err, "unexpected error: %v", err)
 
 	expected := []interface{}{
 		[][]interface{}{

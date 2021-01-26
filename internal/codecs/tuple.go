@@ -66,19 +66,16 @@ func (c *Tuple) setDefaultType() {
 	c.useReflect = true
 }
 
-func (c *Tuple) setType(typ reflect.Type) (bool, error) {
-	if typ.Kind() != reflect.Slice {
-		return false, fmt.Errorf("expected Slice got %v", typ.Kind())
-	}
+func (c *Tuple) setType(typ reflect.Type, path Path) (bool, error) {
+	expectedType := reflect.TypeOf([]interface{}{})
 
-	if typ.Elem().Kind() != reflect.Interface {
+	if typ != expectedType {
 		return false, fmt.Errorf(
-			"expected Interface got %v",
-			typ.Elem().Kind(),
+			"expected %v to be []interface{} got %v", path, typ,
 		)
 	}
 
-	c.typ = reflect.TypeOf([]interface{}{})
+	c.typ = expectedType
 
 	for _, field := range c.fields {
 		// scalar codecs have a preset type
@@ -100,7 +97,7 @@ func (c *Tuple) Type() reflect.Type {
 // Decode a tuple.
 func (c *Tuple) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
-		c.DecodeReflect(r, out)
+		c.DecodeReflect(r, out, Path(out.Type().String()))
 		return
 	}
 
@@ -108,7 +105,7 @@ func (c *Tuple) Decode(r *buff.Reader, out reflect.Value) {
 }
 
 // DecodeReflect decodes a tuple into a reflect.Value.
-func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	n := int(int32(r.PopUint32()))
 	slice := reflect.MakeSlice(c.typ, 0, n)
 
@@ -122,7 +119,7 @@ func (c *Tuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
 
 		field := c.fields[i]
 		val := reflect.New(field.Type()).Elem()
-		field.DecodeReflect(r.PopSlice(elmLen), val)
+		field.DecodeReflect(r.PopSlice(elmLen), val, path.AddIndex(i))
 		slice = reflect.Append(slice, val)
 	}
 
@@ -154,17 +151,16 @@ func (c *Tuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a tuple.
-func (c *Tuple) Encode(w *buff.Writer, val interface{}) error {
+func (c *Tuple) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.([]interface{})
 	if !ok {
-		return fmt.Errorf("expected []interface{} got %T", val)
+		return fmt.Errorf("expected %v to be []interface{} got %T", path, val)
 	}
 
 	if len(in) != len(c.fields) {
 		return fmt.Errorf(
-			"expected %v elements in the tuple, got %v",
-			len(c.fields),
-			len(in),
+			"expected %v to be []interface{} with len=%v, got len=%v",
+			path, len(c.fields), len(in),
 		)
 	}
 
@@ -176,7 +172,7 @@ func (c *Tuple) Encode(w *buff.Writer, val interface{}) error {
 	var err error
 	for i := 0; i < elmCount; i++ {
 		w.PushUint32(0) // reserved
-		err = c.fields[i].Encode(w, in[i])
+		err = c.fields[i].Encode(w, in[i], path.AddIndex(i))
 		if err != nil {
 			return err
 		}

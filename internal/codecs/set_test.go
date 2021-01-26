@@ -29,7 +29,8 @@ import (
 
 func TestSetSetType(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
-	useReflect, err := codec.setType(reflect.TypeOf([]int64{}))
+	typ := reflect.TypeOf([]int64{})
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 
@@ -57,7 +58,8 @@ func TestSetDecodePtr(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
 
 	var result []int64
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 
@@ -93,11 +95,12 @@ func TestSetDecodeReflect(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
 
 	var result []int64
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 
-	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem())
+	codec.DecodeReflect(r, reflect.ValueOf(&result).Elem(), Path(""))
 	require.Equal(t, []byte{}, r.Buf)
 
 	// force garbage collection to be sure that
@@ -118,7 +121,8 @@ func TestDecodeEmptySet(t *testing.T) {
 	codec := Set{child: &Int64{typ: int64Type}}
 
 	var result []int64
-	useReflect, err := codec.setType(reflect.TypeOf(result))
+	typ := reflect.TypeOf(result)
+	useReflect, err := codec.setType(typ, Path(""))
 	require.Nil(t, err)
 	require.False(t, useReflect)
 

@@ -78,9 +78,11 @@ func (c *NamedTuple) setDefaultType() {
 	c.useReflect = true
 }
 
-func (c *NamedTuple) setType(typ reflect.Type) (bool, error) {
+func (c *NamedTuple) setType(typ reflect.Type, path Path) (bool, error) {
 	if typ.Kind() != reflect.Struct {
-		return false, fmt.Errorf("expected Struct got %v", typ.Kind())
+		return false, fmt.Errorf(
+			"expected %v to be a struct got %v", path, typ.Kind(),
+		)
 	}
 
 	for i := 0; i < len(c.fields); i++ {
@@ -89,12 +91,15 @@ func (c *NamedTuple) setType(typ reflect.Type) (bool, error) {
 		f, ok := marshal.StructField(typ, field.name)
 		if !ok {
 			return false, fmt.Errorf(
-				"%v struct is missing field %q",
-				typ, field.name,
+				"%v struct is missing field %q", typ, field.name,
 			)
 		}
 
-		useReflect, err := field.codec.setType(f.Type)
+		useReflect, err := field.codec.setType(
+			f.Type,
+			path.AddField(field.name),
+		)
+
 		if err != nil {
 			return false, err
 		}
@@ -115,36 +120,41 @@ func (c *NamedTuple) Type() reflect.Type {
 // Decode a named tuple.
 func (c *NamedTuple) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
-		c.DecodeReflect(r, out)
+		c.DecodeReflect(r, out, Path(out.Type().String()))
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
 }
 
 // DecodeReflect decodes a named tuple into a reflect.Value.
-func (c *NamedTuple) DecodeReflect(r *buff.Reader, out reflect.Value) {
+func (c *NamedTuple) DecodeReflect(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	if out.Type() != c.typ {
 		panic(fmt.Sprintf(
-			"named tuple codec unexpected type: expected %v, but got %v",
-			c.typ,
-			out.Type(),
+			"expected %v to be %v, got %v", path, c.typ, out.Type(),
 		))
 	}
 
 	switch out.Kind() {
 	case reflect.Struct:
-		c.decodeReflectStruct(r, out)
+		c.decodeReflectStruct(r, out, path)
 	case reflect.Map:
-		c.decodeReflectMap(r, out)
+		c.decodeReflectMap(r, out, path)
 	default:
 		panic(fmt.Sprintf(
-			"named tuple codec can not decode into %v",
-			out.Kind(),
+			"expected %v to be Struct or Map, got %v", path, out.Kind(),
 		))
 	}
 }
 
-func (c *NamedTuple) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
+func (c *NamedTuple) decodeReflectStruct(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	elmCount := int(int32(r.PopUint32()))
 
 	for i := 0; i < elmCount; i++ {
@@ -159,11 +169,16 @@ func (c *NamedTuple) decodeReflectStruct(r *buff.Reader, out reflect.Value) {
 		field.codec.DecodeReflect(
 			r.PopSlice(elmLen),
 			out.FieldByName(field.name),
+			path.AddField(field.name),
 		)
 	}
 }
 
-func (c *NamedTuple) decodeReflectMap(r *buff.Reader, out reflect.Value) {
+func (c *NamedTuple) decodeReflectMap(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
 	elmCount := int(int32(r.PopUint32()))
 	out.Set(reflect.MakeMapWithSize(c.typ, elmCount))
 
@@ -177,7 +192,11 @@ func (c *NamedTuple) decodeReflectMap(r *buff.Reader, out reflect.Value) {
 
 		field := c.fields[i]
 		val := reflect.New(field.codec.Type()).Elem()
-		field.codec.DecodeReflect(r.PopSlice(elmLen), val)
+		field.codec.DecodeReflect(
+			r.PopSlice(elmLen),
+			val,
+			path.AddField(field.name),
+		)
 		out.SetMapIndex(reflect.ValueOf(field.name), val)
 	}
 }
@@ -200,10 +219,10 @@ func (c *NamedTuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Encode a named tuple.
-func (c *NamedTuple) Encode(w *buff.Writer, val interface{}) error {
+func (c *NamedTuple) Encode(w *buff.Writer, val interface{}, path Path) error {
 	args, ok := val.([]interface{})
 	if !ok {
-		return fmt.Errorf("expected []interface{} got %T", val)
+		return fmt.Errorf("expected %v to be []interface{} got %T", path, val)
 	}
 
 	elmCount := len(c.fields)
@@ -212,19 +231,23 @@ func (c *NamedTuple) Encode(w *buff.Writer, val interface{}) error {
 	w.PushUint32(uint32(elmCount))
 
 	if len(args) != 1 {
-		panic(fmt.Sprintf(
-			"wrong number of arguments, expected 1 got: %v",
-			len(args),
-		))
+		return fmt.Errorf(
+			"wrong number of arguments, expected 1 got: %v", len(args),
+		)
 	}
 
-	in := args[0].(map[string]interface{})
+	in, ok := args[0].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf(
+			"expected %v to be map[string]interface{} got %T", path, args[0],
+		)
+	}
 
 	var err error
 	for i := 0; i < elmCount; i++ {
 		w.PushUint32(0) // reserved
 		field := c.fields[i]
-		err = field.codec.Encode(w, in[field.name])
+		err = field.codec.Encode(w, in[field.name], path.AddField(field.name))
 		if err != nil {
 			return err
 		}
