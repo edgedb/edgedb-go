@@ -45,3 +45,5 @@ jobs:
           EDGEDB_SERVER_BIN: edgedb-server
         run: |
           make test
+          # run micro benchmarks to be sure they still work
+          make bench
