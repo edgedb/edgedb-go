@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"errors"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -37,6 +38,93 @@ func TestMissmatchedCardinality(t *testing.T) {
 		"the query has cardinality MANY " +
 		"which does not match the expected cardinality ONE"
 	assert.EqualError(t, err, expected)
+}
+
+func TestFetchBigInt(t *testing.T) {
+	names := []string{
+		"0",
+		"1",
+		"-1",
+		"123",
+		"-123",
+		"123789",
+		"-123789",
+		"19876",
+		"-19876",
+		"19876",
+		"-19876",
+		"198761239812739812739801279371289371932",
+		"-198761182763908473812974620938742386",
+		"98761239812739812739801279371289371932",
+		"-98761182763908473812974620938742386",
+		"8761239812739812739801279371289371932",
+		"-8761182763908473812974620938742386",
+		"761239812739812739801279371289371932",
+		"-761182763908473812974620938742386",
+		"61239812739812739801279371289371932",
+		"-61182763908473812974620938742386",
+		"1239812739812739801279371289371932",
+		"-1182763908473812974620938742386",
+		"9812739812739801279371289371932",
+		"-3908473812974620938742386",
+		"98127373373209",
+		"-4620938742386",
+		"100000000000",
+		"-100000000000",
+		"10000000000",
+		"-10000000000",
+		"1000000000",
+		"-1000000000",
+		"100000000",
+		"-100000000",
+		"10000000",
+		"-10000000",
+		"1000000",
+		"-1000000",
+		"100000",
+		"-100000",
+		"10000",
+		"-10000",
+		"1000",
+		"-1000",
+		"100",
+		"-100",
+		"10",
+		"-10",
+		"100030000010",
+		"-100000600004",
+		"10000000100",
+		"-10030000000",
+		"1000040000",
+		"-1000000000",
+		"1010000001",
+		"-1000000001",
+		"1001001000",
+		"-10000099",
+		"99999",
+		"9999",
+		"999",
+		"1011",
+		"1009",
+		"1709",
+	}
+
+	ctx := context.Background()
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			arg, ok := (&big.Int{}).SetString(name, 10)
+			require.True(t, ok, "invalid big.Int literal: %v", name)
+			require.Equal(t, name, arg.String())
+
+			var result *big.Int
+			err := conn.QueryOne(ctx, "SELECT <bigint>$0", &result, arg)
+
+			require.Nil(t, err, "unexpected error: %v", err)
+			require.Equal(t, name, arg.String(), "argument was mutated")
+			assert.Equal(t, arg, result, "unexpected result")
+		})
+	}
 }
 
 func TestMissmatchedResultType(t *testing.T) {

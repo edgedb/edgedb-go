@@ -88,14 +88,14 @@ func (w *Writer) PushUUID(val types.UUID) {
 	w.buf = append(w.buf, val[:]...)
 }
 
-// PushBytes writes a []byte to the buffer.
+// PushBytes writes []byte to the buffer.
 func (w *Writer) PushBytes(val []byte) {
-	w.PushUint32(uint32(len(val)))
 	w.buf = append(w.buf, val...)
 }
 
 // PushString writes a string to the buffer.
 func (w *Writer) PushString(val string) {
+	w.PushUint32(uint32(len(val)))
 	w.PushBytes([]byte(val))
 }
 
