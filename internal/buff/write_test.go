@@ -109,7 +109,7 @@ func TestPushBytes(t *testing.T) {
 	w := NewWriter([]byte{})
 	w.PushBytes([]byte{7, 5})
 
-	assert.Equal(t, []byte{0, 0, 0, 2, 7, 5}, w.buf)
+	assert.Equal(t, []byte{7, 5}, w.buf)
 }
 
 func BenchmarkPushBytes(b *testing.B) {

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"reflect"
 	"time"
 	"unsafe"
@@ -40,6 +41,7 @@ var (
 	boolType     = reflect.TypeOf(false)
 	dateTimeType = reflect.TypeOf(time.Time{})
 	durationType = reflect.TypeOf(time.Second)
+	bigIntType   = reflect.TypeOf(&big.Int{})
 )
 
 var (
@@ -105,7 +107,7 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 	case jsonID:
 		return &JSON{id: jsonID}, nil
 	case bigIntID:
-		return nil, errors.New("bigint not implemented")
+		return &BigInt{}, nil
 	default:
 		return nil, fmt.Errorf("unknown base scalar type id %v", id)
 	}
@@ -178,6 +180,7 @@ func (c *UUID) Encode(w *buff.Writer, val interface{}, path Path) error {
 		return fmt.Errorf("expected %v to be types.UUID got %T", path, val)
 	}
 
+	w.PushUint32(16)
 	w.PushBytes(tmp[:])
 	return nil
 }
@@ -307,6 +310,7 @@ func (c *Bytes) Encode(w *buff.Writer, val interface{}, path Path) error {
 		return fmt.Errorf("expected %v to be []byte got %T", path, val)
 	}
 
+	w.PushUint32(uint32(len(in)))
 	w.PushBytes(in)
 	return nil
 }
@@ -431,7 +435,7 @@ func (c *Int32) Encode(w *buff.Writer, val interface{}, path Path) error {
 	return nil
 }
 
-// Int64 is an EdgeDB int64 typep codec.
+// Int64 is an EdgeDB int64 type codec.
 type Int64 struct {
 	id  types.UUID
 	typ reflect.Type
@@ -488,6 +492,122 @@ func (c *Int64) Encode(w *buff.Writer, val interface{}, path Path) error {
 
 	w.PushUint32(8) // data length
 	w.PushUint64(uint64(in))
+	return nil
+}
+
+// BigInt is and EdgeDB bigint type codec.
+type BigInt struct{}
+
+// ID returns the descriptor id.
+func (c *BigInt) ID() types.UUID { return bigIntID }
+
+// Type returns the reflect.Type that this codec decodes to.
+func (c *BigInt) Type() reflect.Type { return bigIntType }
+
+func (c *BigInt) setDefaultType() {}
+
+func (c *BigInt) setType(typ reflect.Type, path Path) (bool, error) {
+	if typ != bigIntType {
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, bigIntType, typ,
+		)
+	}
+
+	return false, nil
+}
+
+// Decode a bigint.
+func (c *BigInt) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodeReflect(r, out, Path(out.Type().String()))
+}
+
+// DecodeReflect decodes a bigint into a reflect.Value.
+func (c *BigInt) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
+	if out.Type() != bigIntType {
+		panic(fmt.Errorf(
+			"expected %v to be %v got %v", path, bigIntType, out.Type(),
+		))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+var (
+	big10k  = big.NewInt(10_000)
+	bigOne  = big.NewInt(1)
+	bigZero = big.NewInt(0)
+)
+
+// DecodePtr decodes a bigint into an unsafe.Pointer.
+func (c *BigInt) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+	n := int(r.PopUint16())
+	weight := big.NewInt(int64(r.PopUint16()))
+	sign := r.PopUint16()
+	r.Discard(2) // reserved
+
+	result := (**big.Int)(out)
+	if *result == nil {
+		*result = &big.Int{}
+	}
+
+	digit := &big.Int{}
+	shift := &big.Int{}
+
+	for i := 0; i < n; i++ {
+		shift.Exp(big10k, weight, nil)
+		digit.SetBytes(r.Buf[:2])
+		digit.Mul(digit, shift)
+		(*result).Add(*result, digit)
+		weight.Sub(weight, bigOne)
+		r.Discard(2)
+	}
+
+	if sign == 0x4000 {
+		(*result).Neg(*result)
+	}
+}
+
+// Encode a bigint.
+func (c *BigInt) Encode(w *buff.Writer, val interface{}, path Path) error {
+	in, ok := val.(*big.Int)
+	if !ok {
+		return fmt.Errorf("expected %v to be *big.Int got %T", path, val)
+	}
+
+	// copy to prevent mutating the user's value
+	cpy := &big.Int{}
+	cpy.Set(in)
+
+	var sign uint16 = 0
+	if in.Sign() == -1 {
+		sign = 0x4000
+		cpy = cpy.Neg(cpy)
+	}
+
+	digits := []byte{}
+	rem := &big.Int{}
+
+	for cpy.CmpAbs(bigZero) != 0 {
+		rem.Mod(cpy, big10k)
+
+		// pad bytes
+		bts := rem.Bytes()
+		for len(bts) < 2 {
+			bts = append([]byte{0}, bts...)
+		}
+
+		digits = append(bts, digits...)
+		cpy = cpy.Div(cpy, big10k)
+	}
+
+	w.BeginBytes()
+	w.PushUint16(uint16(len(digits) / 2))
+	w.PushUint16(uint16(len(digits)/2 - 1))
+	w.PushUint16(sign)
+	w.PushUint16(0) // reserved
+	w.PushBytes(digits)
+	w.EndBytes()
+
 	return nil
 }
 
@@ -893,8 +1013,13 @@ func (c *JSON) Encode(w *buff.Writer, val interface{}, path Path) error {
 		return fmt.Errorf("expected %v to be []byte, got %T", path, val)
 	}
 
-	// prepend json format, always 1
+	// data length
+	w.PushUint32(uint32(1 + len(in)))
+
+	// json format, always 1
 	// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
-	w.PushBytes(append([]byte{1}, in...))
+	w.PushUint8(1)
+
+	w.PushBytes(in)
 	return nil
 }

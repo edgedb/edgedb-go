@@ -17,6 +17,7 @@
 package codecs
 
 import (
+	"math/big"
 	"testing"
 	"time"
 	"unsafe"
@@ -290,6 +291,46 @@ func TestEncodeInt64(t *testing.T) {
 	expected := []byte{
 		0, 0, 0, 8, // data length
 		0, 0, 0, 0, 0, 0, 0, 27, // int64
+	}
+
+	assert.Equal(t, expected, conn.written)
+}
+
+func TestBigIntDecode(t *testing.T) {
+	r := buff.SimpleReader([]byte{
+		0, 3, // num digits
+		0, 2, // weight
+		0x40, 0, // sign
+		0, 0, // reserved
+		0, 0x1, 0x9, 0x29, 0x1a, 0x85, // digits
+	})
+
+	var result *big.Int
+	(&BigInt{}).DecodePtr(r, unsafe.Pointer(&result))
+
+	assert.Equal(t, big.NewInt(-123456789), result)
+	assert.Equal(t, []byte{}, r.Buf, "buffer not fully consumed")
+}
+
+func TestBigIntEncode(t *testing.T) {
+	w := buff.NewWriter([]byte{})
+	w.BeginMessage(0xff)
+	err := (&BigInt{}).Encode(w, big.NewInt(-123456789), Path(""))
+	w.EndMessage()
+	require.Nil(t, err)
+
+	conn := &writeFixture{}
+	require.Nil(t, w.Send(conn))
+
+	expected := []byte{
+		0xff,          // message type
+		0, 0, 0, 0x16, // message length
+		0, 0, 0, 0xe, // data length
+		0, 3, // num digits
+		0, 2, // weight
+		0x40, 0, // sign
+		0, 0, // reserved
+		0, 0x1, 0x9, 0x29, 0x1a, 0x85, // digits
 	}
 
 	assert.Equal(t, expected, conn.written)

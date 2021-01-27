@@ -118,7 +118,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	w.PushUint16(0) // no headers
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
-	w.PushBytes([]byte{}) // no statement name
+	w.PushUint32(0) // no statement name
 	w.PushString(q.cmd)
 	w.EndMessage()
 
@@ -235,8 +235,8 @@ func (c *baseConn) execute(
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
-	w.PushUint16(0)       // no headers
-	w.PushBytes([]byte{}) // no statement name
+	w.PushUint16(0) // no headers
+	w.PushUint32(0) // no statement name
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args")); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
 	}

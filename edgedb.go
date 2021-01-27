@@ -40,13 +40,13 @@
 //   int64           int64
 //   uuid            edgedb.UUID
 //   json            []byte
+//   bigint          *big.Int
 //
 //   // not implemented
 //   anyenum
 //   cal::local_date
 //   cal::local_time
 //   cal::local_datetime
-//   bigint
 //   decimal
 package edgedb
 
