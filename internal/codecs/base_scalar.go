@@ -22,7 +22,6 @@ import (
 	"math"
 	"math/big"
 	"reflect"
-	"time"
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -30,38 +29,31 @@ import (
 )
 
 var (
-	uuidType     = reflect.TypeOf(uuidID)
-	strType      = reflect.TypeOf("")
-	bytesType    = reflect.TypeOf([]byte{})
-	int16Type    = reflect.TypeOf(int16(0))
-	int32Type    = reflect.TypeOf(int32(0))
-	int64Type    = reflect.TypeOf(int64(0))
-	float32Type  = reflect.TypeOf(float32(0))
-	float64Type  = reflect.TypeOf(float64(0))
-	boolType     = reflect.TypeOf(false)
-	dateTimeType = reflect.TypeOf(time.Time{})
-	durationType = reflect.TypeOf(time.Second)
-	bigIntType   = reflect.TypeOf(&big.Int{})
+	uuidType    = reflect.TypeOf(uuidID)
+	strType     = reflect.TypeOf("")
+	bytesType   = reflect.TypeOf([]byte{})
+	int16Type   = reflect.TypeOf(int16(0))
+	int32Type   = reflect.TypeOf(int32(0))
+	int64Type   = reflect.TypeOf(int64(0))
+	float32Type = reflect.TypeOf(float32(0))
+	float64Type = reflect.TypeOf(float64(0))
+	boolType    = reflect.TypeOf(false)
+	bigIntType  = reflect.TypeOf(&big.Int{})
 )
 
 var (
-	uuidID      = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
-	strID       = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
-	bytesID     = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
-	int16ID     = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}
-	int32ID     = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}
-	int64ID     = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}
-	float32ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}
-	float64ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}
-	decimalID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}
-	boolID      = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
-	dateTimeID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xa}
-	localDTID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xb}
-	localDateID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xc}
-	localTimeID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xd}
-	durationID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xe}
-	jsonID      = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}
-	bigIntID    = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}
+	uuidID    = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
+	strID     = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+	bytesID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
+	int16ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}
+	int32ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}
+	int64ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}
+	float32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}
+	float64ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}
+	decimalID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}
+	boolID    = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
+	jsonID    = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}
+	bigIntID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}
 )
 
 var (
@@ -97,7 +89,7 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 	case dateTimeID:
 		return &DateTime{id, dateTimeType}, nil
 	case localDTID:
-		return nil, errors.New("local_datetime not implemented")
+		return &LocalDateTime{}, nil
 	case localDateID:
 		return nil, errors.New("local_date not implemented")
 	case localTimeID:
@@ -143,7 +135,7 @@ func (c *UUID) Decode(r *buff.Reader, out reflect.Value) {
 	c.DecodeReflect(r, out, Path(out.Type().String()))
 }
 
-// DecodeReflect decodes a UUID.using reflection
+// DecodeReflect decodes a UUID using reflection
 func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 	if e := c.checkType(out.Type(), path); e != nil {
 		panic(e)
@@ -781,148 +773,6 @@ func (c *Bool) Encode(w *buff.Writer, val interface{}, path Path) error {
 	}
 
 	w.PushUint8(out)
-	return nil
-}
-
-// DateTime is an EdgeDB datetime type codec.
-type DateTime struct {
-	id  types.UUID
-	typ reflect.Type
-}
-
-// ID returns the descriptor id.
-func (c *DateTime) ID() types.UUID {
-	return c.id
-}
-func (c *DateTime) setDefaultType() {}
-
-func (c *DateTime) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
-	}
-
-	return false, nil
-}
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *DateTime) Type() reflect.Type {
-	return c.typ
-}
-
-// Decode a datetime.
-func (c *DateTime) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a datetime into a reflect.Value.
-func (c *DateTime) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a datetime into an unsafe.Pointer.
-func (c *DateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	val := int64(r.PopUint64())
-	seconds := val / 1_000_000
-	microseconds := val % 1_000_000
-	*(*time.Time)(out) = time.Unix(
-		946_684_800+seconds,
-		1_000*microseconds,
-	).UTC()
-}
-
-// Encode a datetime.
-func (c *DateTime) Encode(w *buff.Writer, val interface{}, path Path) error {
-	date, ok := val.(time.Time)
-	if !ok {
-		return fmt.Errorf("expected %v to be time.Time got %T", path, val)
-	}
-
-	seconds := date.Unix() - 946_684_800
-	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
-	microseconds := seconds*1_000_000 + nanoseconds/1_000
-	w.PushUint32(8) // data length
-	w.PushUint64(uint64(microseconds))
-	return nil
-}
-
-// Duration is an EdgeDB duration codec.
-type Duration struct {
-	id  types.UUID
-	typ reflect.Type
-}
-
-// ID returns the descriptor id.
-func (c *Duration) ID() types.UUID {
-	return c.id
-}
-
-func (c *Duration) setDefaultType() {}
-
-func (c *Duration) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
-	}
-
-	return false, nil
-}
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *Duration) Type() reflect.Type {
-	return c.typ
-}
-
-// Decode a duration.
-func (c *Duration) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a duration into a reflect.Value.
-func (c *Duration) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a duration into an unsafe.Pointer.
-func (c *Duration) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	microseconds := int64(r.PopUint64())
-	r.Discard(8) // reserved
-	*(*int64)(out) = microseconds * 1_000
-}
-
-// Encode a duration.
-func (c *Duration) Encode(w *buff.Writer, val interface{}, path Path) error {
-	duration, ok := val.(time.Duration)
-	if !ok {
-		return fmt.Errorf("expected %v to be time.Duration got %T", path, val)
-	}
-
-	w.PushUint32(16) // data length
-	w.PushUint64(uint64(duration / 1_000))
-	w.PushUint32(0) // reserved
-	w.PushUint32(0) // reserved
 	return nil
 }
 

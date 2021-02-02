@@ -248,6 +248,69 @@ func TestSendAndReceveDateTime(t *testing.T) {
 	}
 }
 
+func TestSendAndReceveLocalDateTime(t *testing.T) {
+	ctx := context.Background()
+
+	samples := []struct {
+		str string
+		dt  LocalDateTime
+	}{
+		{
+			str: "2019-05-06T12:00:00",
+			dt:  NewLocalDateTime(2019, 5, 6, 12, 0, 0, 0),
+		},
+		{
+			str: "2018-05-07T15:01:22.306916",
+			dt:  NewLocalDateTime(2018, 5, 7, 15, 1, 22, 306916),
+		},
+		{
+			str: "0001-01-01T01:01:00",
+			dt:  NewLocalDateTime(1, 1, 1, 1, 1, 0, 0),
+		},
+		{
+			str: "9999-09-09T09:09:09",
+			dt:  NewLocalDateTime(9999, 9, 9, 9, 9, 9, 0),
+		},
+	}
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   LocalDateTime `edgedb:"decoded"`
+		RoundTrip LocalDateTime `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			query := `
+				WITH
+					dt := <cal::local_datetime>$0,
+					s := <str>$1
+				SELECT (
+					encoded := <str>dt,
+					decoded := <cal::local_datetime>s,
+					round_trip := dt,
+					is_equal := <cal::local_datetime>s = dt,
+					nested := ([dt],),
+				)
+			`
+
+			var result Result
+			err := conn.QueryOne(ctx, query, &result, s.dt, s.str)
+			assert.Nil(t, err, "unexpected error: %v", err)
+
+			assert.True(t, result.IsEqual, "equality check faild")
+			assert.Equal(t, s.str, result.Encoded, "encoding failed")
+			assert.Equal(t, s.dt, result.Decoded)
+			assert.Equal(t, s.dt, result.RoundTrip)
+
+			nested := result.Nested[0].([]LocalDateTime)[0]
+			assert.Equal(t, s.dt, nested)
+		})
+	}
+}
+
 func TestSendAndReceveJSON(t *testing.T) {
 	json := []byte(`"hello"`)
 
