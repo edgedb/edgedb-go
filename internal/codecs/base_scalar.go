@@ -26,7 +26,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/types"
+	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
 var (
@@ -75,7 +75,7 @@ var (
 func baseScalarCodec(id types.UUID) (Codec, error) {
 	switch id {
 	case uuidID:
-		return &UUID{id, uuidType}, nil
+		return &UUID{}, nil
 	case strID:
 		return &Str{id, strType}, nil
 	case bytesID:
@@ -114,15 +114,10 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 }
 
 // UUID is an EdgeDB UUID type codec.
-type UUID struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type UUID struct{}
 
 // ID returns the descriptor id.
-func (c *UUID) ID() types.UUID {
-	return c.id
-}
+func (c *UUID) ID() types.UUID { return uuidID }
 
 func (c *UUID) setDefaultType() {}
 
@@ -131,26 +126,17 @@ func (c *UUID) setType(typ reflect.Type, path Path) (bool, error) {
 }
 
 func (c *UUID) checkType(typ reflect.Type, path Path) error {
-	switch {
-	case typ.Kind() != c.typ.Kind():
-		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
-	case typ.Elem() != c.typ.Elem():
-		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
-	case typ.Len() != c.typ.Len():
-		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
-	case typ.PkgPath() != "github.com/edgedb/edgedb-go":
-		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
-	case typ.Name() != "UUID":
-		return fmt.Errorf("expected %v to be edgedb.UUID got %v", path, typ)
+	if typ != uuidType {
+		return fmt.Errorf(
+			"expected %v to be edgedb.UUID got %v", path, typ,
+		)
 	}
 
 	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *UUID) Type() reflect.Type {
-	return c.typ
-}
+func (c *UUID) Type() reflect.Type { return uuidType }
 
 // Decode a UUID.
 func (c *UUID) Decode(r *buff.Reader, out reflect.Value) {
@@ -175,13 +161,13 @@ func (c *UUID) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 
 // Encode a UUID.
 func (c *UUID) Encode(w *buff.Writer, val interface{}, path Path) error {
-	tmp, ok := val.(types.UUID)
+	in, ok := val.(types.UUID)
 	if !ok {
-		return fmt.Errorf("expected %v to be types.UUID got %T", path, val)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %T", path, val)
 	}
 
 	w.PushUint32(16)
-	w.PushBytes(tmp[:])
+	w.PushBytes(in[:])
 	return nil
 }
 
@@ -238,7 +224,7 @@ func (c *Str) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 func (c *Str) Encode(w *buff.Writer, val interface{}, path Path) error {
 	in, ok := val.(string)
 	if !ok {
-		return fmt.Errorf("expected %v to be types.UUID got %T", path, val)
+		return fmt.Errorf("expected %v to be edgedb.UUID got %T", path, val)
 	}
 
 	w.PushString(in)

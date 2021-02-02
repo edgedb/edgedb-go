@@ -16,52 +16,8 @@
 
 package edgedb
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-)
+import "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 
 // UUID a universally unique identifier
 // https://www.edgedb.com/docs/datamodel/scalars/uuid#type::std::uuid
-type UUID [16]byte
-
-func (id UUID) String() string {
-	return fmt.Sprintf(
-		"%x-%x-%x-%x-%x",
-		id[0:4],
-		id[4:6],
-		id[6:8],
-		id[8:10],
-		id[10:16],
-	)
-}
-
-// MarshalText returns the id as a byte string.
-func (id UUID) MarshalText() ([]byte, error) {
-	return []byte(id.String()), nil
-}
-
-// UnmarshalText unmarshals the id from a string.
-func (id *UUID) UnmarshalText(b []byte) (err error) {
-	*id, err = UUIDFromString(string(b))
-	return err
-}
-
-// UUIDFromString converts a string to a UUID.
-func UUIDFromString(s string) (UUID, error) {
-	s = strings.Replace(s, "-", "", 4)
-
-	var id UUID
-	for i := 0; i < 16; i++ {
-		val, err := strconv.ParseUint(s[:2], 16, 8)
-		if err != nil {
-			return UUID{}, err
-		}
-
-		id[i] = uint8(val)
-		s = s[2:]
-	}
-
-	return id, nil
-}
+type UUID = edgedbtypes.UUID

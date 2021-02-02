@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package edgedbtypes
 
 import (
 	"encoding/json"
@@ -27,14 +27,6 @@ import (
 func TestUUIDString(t *testing.T) {
 	uuid := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	assert.Equal(t, "00010203-0405-0607-0809-0a0b0c0d0e0f", uuid.String())
-}
-
-func TestUUIDFromString(t *testing.T) {
-	uuid, err := UUIDFromString("00010203-0405-0607-0809-0a0b0c0d0e0f")
-	require.Nil(t, err)
-
-	expected := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-	assert.Equal(t, expected, uuid)
 }
 
 func TestUUIDMarshalJSON(t *testing.T) {
