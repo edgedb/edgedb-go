@@ -18,6 +18,15 @@ package edgedb
 
 import "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 
-// UUID a universally unique identifier
-// https://www.edgedb.com/docs/datamodel/scalars/uuid#type::std::uuid
-type UUID = edgedbtypes.UUID
+type (
+	// UUID a universally unique identifier
+	UUID = edgedbtypes.UUID
+
+	// LocalDateTime is a date and time without time zone.
+	LocalDateTime = edgedbtypes.LocalDateTime
+)
+
+var (
+	// NewLocalDateTime returns a new LocalDateTime
+	NewLocalDateTime = edgedbtypes.NewLocalDateTime
+)
