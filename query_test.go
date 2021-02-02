@@ -28,6 +28,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSendAndReceveUUID(t *testing.T) {
+	id := UUID{
+		0x75, 0x96, 0x37, 0xd8, 0x66, 0x35, 0x11, 0xe9,
+		0xb9, 0xd4, 0x09, 0x80, 0x02, 0xd4, 0x59, 0xd5,
+	}
+
+	var result UUID
+	ctx := context.Background()
+	err := conn.QueryOne(ctx, "SELECT <uuid>$0", &result, id)
+
+	expected := UUID{
+		0x75, 0x96, 0x37, 0xd8, 0x66, 0x35, 0x11, 0xe9,
+		0xb9, 0xd4, 0x09, 0x80, 0x02, 0xd4, 0x59, 0xd5,
+	}
+
+	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, expected, result)
+	assert.Equal(t, expected, id, "input value was mutated")
+
+	var nested []interface{}
+	err = conn.QueryOne(ctx, "SELECT ([<uuid>$0],)", &nested, id)
+
+	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, []interface{}{[]UUID{expected}}, nested)
+	assert.Equal(t, expected, id, "input value was mutated")
+}
+
 func TestMissmatchedCardinality(t *testing.T) {
 	ctx := context.Background()
 

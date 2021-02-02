@@ -19,8 +19,8 @@ package buff
 import (
 	"testing"
 
+	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/message"
-	"github.com/edgedb/edgedb-go/internal/types"
 	"github.com/stretchr/testify/assert"
 )
 

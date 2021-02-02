@@ -22,8 +22,8 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/marshal"
-	"github.com/edgedb/edgedb-go/internal/types"
 )
 
 func popObjectCodec(

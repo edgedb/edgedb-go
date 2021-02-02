@@ -23,7 +23,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/types"
+	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
