@@ -63,14 +63,95 @@ func TestMissmatchedResultType(t *testing.T) {
 	assert.EqualError(t, err, expected)
 }
 
-func TestSendAndReceveJSON(t *testing.T) {
-	var result []byte
-
+func TestSendAndReceveDateTime(t *testing.T) {
 	ctx := context.Background()
-	err := conn.QueryOne(ctx, "SELECT <json>$0", &result, []byte(`"hello"`))
 
+	samples := []struct {
+		str string
+		dt  time.Time
+	}{
+		{
+			"2019-05-06T12:00:00+00:00",
+			time.Date(2019, 5, 6, 12, 0, 0, 0, time.UTC),
+		},
+		{
+			"1986-04-26T08:23:40.000001+00:00",
+			time.Date(
+				1986, 4, 26, 1, 23, 40, 1_000,
+				time.FixedZone("", -25200),
+			),
+		},
+		{
+			"0001-01-01T00:00:00+00:00",
+			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			"9999-09-09T00:09:00+00:00",
+			time.Date(9999, 9, 9, 9, 9, 0, 0, time.FixedZone("", 32400)),
+		},
+	}
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   time.Time     `edgedb:"decoded"`
+		RoundTrip time.Time     `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			query := `SELECT (
+				encoded := <str><datetime>$0,
+				decoded := <datetime><str>$1,
+				round_trip := <datetime>$0,
+				is_equal := <datetime><str>$1 = <datetime>$0,
+				nested := ([<datetime>$0],),
+			)`
+
+			var result Result
+			err := conn.QueryOne(ctx, query, &result, s.dt, s.str)
+			assert.Nil(t, err, "unexpected error: %v", err)
+
+			assert.True(t, result.IsEqual, "equality check faild")
+			assert.Equal(t, s.str, result.Encoded, "encoding failed")
+			assert.True(t,
+				s.dt.Equal(result.Decoded),
+				"decoding failed: %v != %v", s, result.Decoded,
+			)
+			assert.True(t,
+				s.dt.Equal(result.RoundTrip),
+				"round trip failed: %v != %v", s, result.RoundTrip,
+			)
+
+			nested := result.Nested[0].([]time.Time)[0]
+			assert.True(t,
+				s.dt.Equal(nested),
+				"nested failed: %v != %v", s, nested,
+			)
+		})
+	}
+}
+
+func TestSendAndReceveJSON(t *testing.T) {
+	json := []byte(`"hello"`)
+
+	var result []byte
+	ctx := context.Background()
+	err := conn.QueryOne(ctx, "SELECT <json>$0", &result, json)
+
+	expected := []byte(`"hello"`)
 	assert.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, `"hello"`, string(result))
+	assert.Equal(t, expected, json, "input value was mutated")
+
+	var nested []interface{}
+	query := "SELECT ([<json>$0],)"
+	err = conn.QueryOne(ctx, query, &nested, []byte(`"hello"`))
+
+	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, []interface{}{[][]byte{expected}}, nested)
+	assert.Equal(t, expected, json, "input value was mutated")
 }
 
 // The client should read all messages through ReadyForCommand
