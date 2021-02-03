@@ -22,9 +22,11 @@ import (
 	"time"
 )
 
-// timeShift is the number of microseconds
-// between 0001-01-01T00:00 and 2000-01-01T00:00
-const timeShift = 62_135_596_800_000_000
+const (
+	// timeShift is the number of seconds
+	// between 0001-01-01T00:00 and 1970-01-01T00:00
+	timeShift = 62135596800
+)
 
 // NewLocalDateTime returns a new LocalDateTime
 func NewLocalDateTime(
@@ -33,9 +35,9 @@ func NewLocalDateTime(
 	t := time.Date(
 		year, month, day, hour, minute, second, microsecond*1_000, time.UTC,
 	)
-	sec := t.Unix()
-	nsec := int64(t.Sub(time.Unix(sec, 0)))
-	return LocalDateTime{sec*1_000_000 + nsec/1_000 + timeShift}
+	sec := t.Unix() + timeShift
+	nsec := int64(t.Sub(time.Unix(t.Unix(), 0)))
+	return LocalDateTime{sec*1_000_000 + nsec/1_000}
 }
 
 // LocalDateTime is a date and time without timezone.
@@ -45,10 +47,28 @@ type LocalDateTime struct {
 }
 
 func (dt LocalDateTime) String() string {
-	usec := dt.usec - timeShift
-	sec := usec / 1_000_000
-	nsec := (usec % 1_000_000) * 1_000
+	sec := dt.usec/1_000_000 - timeShift
+	nsec := (dt.usec % 1_000_000) * 1_000
 	return time.Unix(sec, nsec).UTC().Format("2006-01-02T15:04:05.999999")
+}
+
+// NewLocalDate returns a new LocalDate
+func NewLocalDate(year int, month time.Month, day int) LocalDate {
+	t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+	return LocalDate{int32((t.Unix() + timeShift) / 86400)}
+}
+
+// LocalDate is a date without a time zone.
+// https://www.edgedb.com/docs/datamodel/scalars/datetime/
+type LocalDate struct {
+	days int32
+}
+
+func (d LocalDate) String() string {
+	return time.Unix(
+		int64(d.days)*86400-timeShift,
+		0,
+	).UTC().Format("2006-01-02")
 }
 
 // Duration represents the elapsed time between two instants
