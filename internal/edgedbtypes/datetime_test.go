@@ -70,6 +70,42 @@ func TestNewLocalDateTime(t *testing.T) {
 	}
 }
 
+func TestLocalDateString(t *testing.T) {
+	samples := []struct {
+		str string
+		d   LocalDate
+	}{
+		{"0001-01-01", LocalDate{0}},
+		{"1969-07-20", LocalDate{718997}},
+		{"2000-01-01", LocalDate{730119}},
+		{"9999-09-09", LocalDate{3651945}},
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			assert.Equal(t, s.str, s.d.String())
+		})
+	}
+}
+
+func TestNewLocalDate(t *testing.T) {
+	samples := []struct {
+		str string
+		d   LocalDate
+	}{
+		{"0001-01-01", NewLocalDate(1, 1, 1)},
+		{"1969-07-20", NewLocalDate(1969, 7, 20)},
+		{"2000-01-01", NewLocalDate(2000, 1, 1)},
+		{"9999-09-09", NewLocalDate(9999, 9, 9)},
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			assert.Equal(t, s.str, s.d.String())
+		})
+	}
+}
+
 func TestDurationString(t *testing.T) {
 	samples := []struct {
 		str string

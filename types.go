@@ -22,8 +22,11 @@ type (
 	// UUID a universally unique identifier
 	UUID = edgedbtypes.UUID
 
-	// LocalDateTime is a date and time without time zone.
+	// LocalDateTime is a date and time without a time zone.
 	LocalDateTime = edgedbtypes.LocalDateTime
+
+	// LocalDate is a date without a time zone.
+	LocalDate = edgedbtypes.LocalDate
 
 	// Duration representing a span of time.
 	Duration = edgedbtypes.Duration
@@ -32,4 +35,7 @@ type (
 var (
 	// NewLocalDateTime returns a new LocalDateTime
 	NewLocalDateTime = edgedbtypes.NewLocalDateTime
+
+	// NewLocalDate returns a new LocalDate
+	NewLocalDate = edgedbtypes.NewLocalDate
 )

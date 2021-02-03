@@ -27,9 +27,10 @@ import (
 )
 
 var (
-	dateTimeType = reflect.TypeOf(time.Time{})
-	localDTType  = reflect.TypeOf(types.LocalDateTime{})
-	durationType = reflect.TypeOf(types.Duration(0))
+	dateTimeType  = reflect.TypeOf(time.Time{})
+	localDTType   = reflect.TypeOf(types.LocalDateTime{})
+	localDateType = reflect.TypeOf(types.LocalDate{})
+	durationType  = reflect.TypeOf(types.Duration(0))
 )
 
 var (
@@ -181,6 +182,75 @@ func (c *LocalDateTime) DecodeReflect(
 // DecodePtr decodes a LocalDateTime into an unsafe.Pointer.
 func (c *LocalDateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
+}
+
+// LocalDate is an EdgeDB cal::local_datetime codec
+type LocalDate struct{}
+
+// ID returns the descriptor id.
+func (c *LocalDate) ID() types.UUID { return localDateID }
+
+// Type returns the reflect.Type that this codec decodes to.
+func (c *LocalDate) Type() reflect.Type { return localDateType }
+
+func (c *LocalDate) setDefaultType() {}
+
+func (c *LocalDate) setType(typ reflect.Type, path Path) (bool, error) {
+	if typ != localDateType {
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, localDateType, typ,
+		)
+	}
+
+	return false, nil
+}
+
+// localDateLayout is the memory layout for edgedbtypes.LocalDate
+type localDateLayout struct {
+	days uint32
+}
+
+// Encode a LocalDate
+func (c *LocalDate) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
+	in, ok := val.(types.LocalDate)
+	if !ok {
+		return fmt.Errorf(
+			"expected %v to be edgedb.LocalDate got %T", path, val,
+		)
+	}
+
+	w.PushUint32(4)
+	w.PushUint32((*localDateLayout)(unsafe.Pointer(&in)).days - 730119)
+	return nil
+}
+
+// Decode a LocalDate
+func (c *LocalDate) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodeReflect decodes a LocalDateTime using reflection
+func (c *LocalDate) DecodeReflect(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
+	if out.Type() != localDateType {
+		panic(fmt.Sprintf(
+			"expected %v to be edgedb.LocalDate got %v", path, out.Type(),
+		))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a LocalDate into an unsafe.Pointer.
+func (c *LocalDate) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+	(*localDateLayout)(out).days = r.PopUint32() + 730119
 }
 
 // Duration is an EdgeDB duration codec.

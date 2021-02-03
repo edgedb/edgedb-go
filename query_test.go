@@ -305,8 +305,66 @@ func TestSendAndReceveLocalDateTime(t *testing.T) {
 			assert.Equal(t, s.dt, result.Decoded)
 			assert.Equal(t, s.dt, result.RoundTrip)
 
-			nested := result.Nested[0].([]LocalDateTime)[0]
-			assert.Equal(t, s.dt, nested)
+			assert.Equal(t, 1, len(result.Nested))
+			nested, ok := result.Nested[0].([]LocalDateTime)
+			assert.True(t, ok)
+			assert.Equal(t, 1, len(nested))
+			assert.Equal(t, s.dt, nested[0])
+		})
+	}
+}
+
+func TestSendAndReceveLocalDate(t *testing.T) {
+	ctx := context.Background()
+
+	samples := []struct {
+		str  string
+		date LocalDate
+	}{
+		{"0001-01-01", NewLocalDate(1, 1, 1)},
+		{"2000-01-01", NewLocalDate(2000, 1, 1)},
+		{"2019-05-06", NewLocalDate(2019, 5, 6)},
+		{"4444-12-30", NewLocalDate(4444, 12, 30)},
+		{"9999-09-09", NewLocalDate(9999, 9, 9)},
+	}
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   LocalDate     `edgedb:"decoded"`
+		RoundTrip LocalDate     `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			query := `
+				WITH
+					d := <cal::local_date>$1,
+					s := <str>$0
+				SELECT (
+					encoded := <str>d,
+					decoded := <cal::local_date>s,
+					round_trip := d,
+					is_equal := <cal::local_date>s = d,
+					nested := ([d],),
+				)
+			`
+
+			var result Result
+			err := conn.QueryOne(ctx, query, &result, s.str, s.date)
+			require.Nil(t, err, "unexpected error: %v", err)
+
+			assert.Equal(t, result.RoundTrip, s.date, "round trip failed")
+			assert.Equal(t, s.date, result.Decoded, "decode is wrong")
+			assert.Equal(t, s.str, result.Encoded, "encode is wrong")
+			assert.True(t, result.IsEqual, "equality failed")
+
+			assert.Equal(t, 1, len(result.Nested))
+			nested, ok := result.Nested[0].([]LocalDate)
+			assert.True(t, ok)
+			assert.Equal(t, 1, len(nested))
+			assert.Equal(t, s.date, nested[0])
 		})
 	}
 }
