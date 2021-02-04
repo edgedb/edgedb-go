@@ -28,6 +28,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSendAndReceveCustomScalars(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><CustomInt64>$0,
+		decoded := <CustomInt64><str>$1,
+		round_trip := <CustomInt64>$0,
+		is_equal := <CustomInt64>$0 = <CustomInt64><str>$1,
+		nested := ([<CustomInt64>$0],),
+	)`
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   int64         `edgedb:"decoded"`
+		RoundTrip int64         `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+	}
+
+	samples := []struct {
+		str string
+		val int64
+	}{
+		{"0", 0},
+		{"1", 1},
+		{"9223372036854775807", 9223372036854775807},
+		{"-9223372036854775808", -9223372036854775808},
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			var result Result
+			err := conn.QueryOne(ctx, query, &result, s.val, s.str)
+
+			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.Equal(t, s.str, result.Encoded)
+			assert.Equal(t, s.val, result.Decoded)
+			assert.Equal(t, s.val, result.Decoded)
+			assert.True(t, result.IsEqual)
+
+			require.Equal(t, 1, len(result.Nested))
+			nested, ok := result.Nested[0].([]int64)
+			require.True(t, ok)
+			require.Equal(t, 1, len(nested))
+			assert.Equal(t, s.val, nested[0])
+		})
+	}
+}
+
 func TestSendAndReceveUUID(t *testing.T) {
 	id := UUID{
 		0x75, 0x96, 0x37, 0xd8, 0x66, 0x35, 0x11, 0xe9,

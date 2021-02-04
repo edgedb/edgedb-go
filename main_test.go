@@ -154,6 +154,7 @@ func TestMain(m *testing.M) {
 					type TxTest {
 						required property name -> str;
 					}
+					scalar type CustomInt64 extending int64;
 				}
 			};
 			POPULATE MIGRATION;

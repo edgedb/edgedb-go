@@ -73,7 +73,7 @@ func BuildCodec(r *buff.Reader) (Codec, error) {
 				return nil, err
 			}
 		case scalarType:
-			return nil, errors.New("scalar type descriptor not implemented")
+			codec = popScalarCodec(r, id, codecs)
 		case tupleType:
 			codec = popTupleCodec(r, id, codecs)
 		case namedTupleType:
