@@ -17,7 +17,6 @@
 package codecs
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"unsafe"
@@ -81,7 +80,7 @@ func BuildCodec(r *buff.Reader) (Codec, error) {
 		case arrayType:
 			codec = popArrayCodec(r, id, codecs)
 		case enumType:
-			return nil, errors.New("enum type descriptor not implemented")
+			codec = popEnumCodec(r, id, codecs)
 		default:
 			if 0x80 <= dType && dType <= 0xff {
 				// ignore unknown type annotations

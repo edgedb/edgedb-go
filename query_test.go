@@ -474,6 +474,57 @@ func TestSendAndReceveDuration(t *testing.T) {
 	}
 }
 
+func TestSendAndReceveEnum(t *testing.T) {
+	ctx := context.Background()
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   string        `edgedb:"decoded"`
+		RoundTrip string        `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+		String    string        `edgedb:"string"`
+	}
+
+	query := `
+		WITH
+			e := <ColorEnum>$0,
+			s := <str>$1
+		SELECT (
+			encoded := <str>e,
+			decoded := <ColorEnum>s,
+			round_trip := e,
+			is_equal := <ColorEnum>s = e,
+			nested := ([e],),
+			string := <str><ColorEnum>s
+		)
+	`
+
+	var result Result
+	color := "Red"
+	err := conn.QueryOne(ctx, query, &result, color, color)
+	require.Nil(t, err, "unexpected error: %v", err)
+
+	assert.Equal(t, color, result.Encoded, "encoding failed")
+	assert.Equal(t, color, result.Decoded, "decoding failed")
+	assert.Equal(t, color, result.RoundTrip, "round trip failed")
+	assert.True(t, result.IsEqual, "equality failed")
+	assert.Equal(t, color, result.String)
+
+	assert.Equal(t, 1, len(result.Nested))
+	nested, ok := result.Nested[0].([]string)
+	assert.True(t, ok)
+	assert.Equal(t, 1, len(nested))
+	assert.Equal(t, color, nested[0], "nested codec failed")
+
+	query = "SELECT (decoded := <ColorEnum><str>$0)"
+	err = conn.QueryOne(ctx, query, &result, "invalid")
+
+	expected := "edgedb.InvalidValueError: " +
+		"invalid input value for enum 'default::ColorEnum': \"invalid\""
+	assert.EqualError(t, err, expected)
+}
+
 func TestSendAndReceveJSON(t *testing.T) {
 	json := []byte(`"hello"`)
 
