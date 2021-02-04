@@ -155,6 +155,7 @@ func TestMain(m *testing.M) {
 						required property name -> str;
 					}
 					scalar type CustomInt64 extending int64;
+					scalar type ColorEnum extending enum<Red, Green, Blue>;
 				}
 			};
 			POPULATE MIGRATION;
