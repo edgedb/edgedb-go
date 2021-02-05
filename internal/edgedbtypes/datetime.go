@@ -17,6 +17,8 @@
 package edgedbtypes
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -47,4 +49,50 @@ func (dt LocalDateTime) String() string {
 	sec := usec / 1_000_000
 	nsec := (usec % 1_000_000) * 1_000
 	return time.Unix(sec, nsec).UTC().Format("2006-01-02T15:04:05.999999")
+}
+
+// Duration represents the elapsed time between two instants
+// as an int64 microsecond count.
+type Duration int64
+
+func (d Duration) String() string {
+	if d == 0 {
+		return "0s"
+	}
+
+	x := int64(d)
+	neg := ""
+	if x < 0 {
+		x = -x
+		neg = "-"
+	}
+
+	if x < 1_000 {
+		return fmt.Sprintf("%v%vus", neg, x)
+	}
+
+	us := x % 1_000
+	ms := (x % 1_000_000) / 1_000
+	if x < 1_000_000 {
+		return fmt.Sprintf("%v%vms", neg, fmtFloat(ms, us*1_000))
+	}
+
+	ms = x % 1_000_000
+	sec := (x % 60000000) / 1_000_000
+	str := fmt.Sprintf("%vs", fmtFloat(sec, ms))
+	str = strings.TrimLeft(str, "0s")
+
+	min := (x % 3600000000) / 60000000
+	str = fmt.Sprintf("%vm%v", min, str)
+	str = strings.TrimLeft(str, "0m")
+
+	hrs := x / 3600000000
+	str = fmt.Sprintf("%vh%v", hrs, str)
+	str = strings.TrimLeft(str, "0h")
+	return neg + str
+}
+
+func fmtFloat(x int64, y int64) string {
+	decimal := strings.TrimRight(fmt.Sprintf(".%06d", y), ".0")
+	return fmt.Sprintf("%v%v", x, decimal)
 }

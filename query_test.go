@@ -311,6 +311,62 @@ func TestSendAndReceveLocalDateTime(t *testing.T) {
 	}
 }
 
+func TestSendAndReceveDuration(t *testing.T) {
+	ctx := context.Background()
+
+	samples := []struct {
+		str string
+		d   Duration
+	}{
+		{"00:00:00", Duration(0)},
+		{"-00:00:00.000001", Duration(-1)},
+		{"24:00:00", Duration(86400000000)},
+		{"00:00:01", Duration(1_000_000)},
+		{"854015929:20:18.258432", Duration(3074457345618258432)},
+	}
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   Duration      `edgedb:"decoded"`
+		RoundTrip Duration      `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+		String    string        `edgedb:"string"`
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			query := `
+				WITH
+					d := <duration>$0,
+				SELECT (
+				encoded := <str>d,
+				decoded := <duration><str>$1,
+				round_trip := d,
+				is_equal := <duration><str>$1 = d,
+				nested := ([d],),
+				string := <str><duration><str>$2,
+			)`
+
+			var result Result
+			err := conn.QueryOne(ctx, query, &result, s.d, s.str, s.d.String())
+			assert.Nil(t, err, "unexpected error: %v", err)
+
+			assert.True(t, result.IsEqual, "equality check faild")
+			assert.Equal(t, s.str, result.Encoded, "encoding failed")
+			assert.Equal(t, s.d, result.Decoded, "decoding failed")
+			assert.Equal(t, s.d, result.RoundTrip)
+			assert.Equal(t, s.str, result.String)
+
+			require.Equal(t, 1, len(result.Nested))
+			nested, ok := result.Nested[0].([]Duration)
+			require.True(t, ok, "%v", result.Nested)
+			require.Equal(t, 1, len(nested))
+			assert.Equal(t, s.d, nested[0])
+		})
+	}
+}
+
 func TestSendAndReceveJSON(t *testing.T) {
 	json := []byte(`"hello"`)
 

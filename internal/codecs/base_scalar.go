@@ -95,7 +95,7 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 	case localTimeID:
 		return nil, errors.New("local_time not implemented")
 	case durationID:
-		return &Duration{id, durationType}, nil
+		return &Duration{}, nil
 	case jsonID:
 		return &JSON{id: jsonID}, nil
 	case bigIntID:
