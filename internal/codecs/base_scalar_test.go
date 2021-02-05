@@ -493,37 +493,6 @@ func TestEncodeDateTime(t *testing.T) {
 	assert.Equal(t, expected, conn.written)
 }
 
-func TestDecodeDuration(t *testing.T) {
-	r := buff.SimpleReader([]byte{
-		0, 0, 0, 0, 0, 0xf, 0x42, 0x40,
-		0, 0, 0, 0, // reserved
-		0, 0, 0, 0, // reserved
-	})
-
-	var result time.Duration
-	(&Duration{}).DecodePtr(r, unsafe.Pointer(&result))
-
-	assert.Equal(t, time.Duration(1_000_000_000), result)
-}
-
-func TestEncodeDuration(t *testing.T) {
-	w := buff.NewWriter([]byte{})
-	err := (&Duration{}).Encode(w, time.Duration(1_000_000_000), Path(""))
-	require.Nil(t, err)
-
-	conn := &writeFixture{}
-	require.Nil(t, w.Send(conn))
-
-	expected := []byte{
-		0, 0, 0, 0x10, // data length
-		0, 0, 0, 0, 0, 0xf, 0x42, 0x40,
-		0, 0, 0, 0, // reserved
-		0, 0, 0, 0, // reserved
-	}
-
-	assert.Equal(t, expected, conn.written)
-}
-
 func TestDecodeJSON(t *testing.T) {
 	r := buff.SimpleReader([]byte{
 		1, // json format

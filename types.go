@@ -24,6 +24,9 @@ type (
 
 	// LocalDateTime is a date and time without time zone.
 	LocalDateTime = edgedbtypes.LocalDateTime
+
+	// Duration representing a span of time.
+	Duration = edgedbtypes.Duration
 )
 
 var (

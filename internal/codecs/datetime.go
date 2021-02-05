@@ -29,7 +29,7 @@ import (
 var (
 	dateTimeType = reflect.TypeOf(time.Time{})
 	localDTType  = reflect.TypeOf(types.LocalDateTime{})
-	durationType = reflect.TypeOf(time.Second)
+	durationType = reflect.TypeOf(types.Duration(0))
 )
 
 var (
@@ -184,22 +184,17 @@ func (c *LocalDateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 }
 
 // Duration is an EdgeDB duration codec.
-type Duration struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Duration struct{}
 
 // ID returns the descriptor id.
-func (c *Duration) ID() types.UUID {
-	return c.id
-}
+func (c *Duration) ID() types.UUID { return durationID }
 
 func (c *Duration) setDefaultType() {}
 
 func (c *Duration) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
+	if typ != durationType {
 		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
+			"expected %v to be edgedb.Duration got %v", path, typ,
 		)
 	}
 
@@ -207,13 +202,11 @@ func (c *Duration) setType(typ reflect.Type, path Path) (bool, error) {
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Duration) Type() reflect.Type {
-	return c.typ
-}
+func (c *Duration) Type() reflect.Type { return durationType }
 
 // Decode a duration.
 func (c *Duration) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
 }
 
 // DecodeReflect decodes a duration into a reflect.Value.
@@ -222,9 +215,9 @@ func (c *Duration) DecodeReflect(
 	out reflect.Value,
 	path Path,
 ) {
-	if out.Type() != c.typ {
+	if out.Type() != durationType {
 		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
+			"expected %v to be edgedb.Duration got %v", path, out.Type(),
 		))
 	}
 
@@ -233,20 +226,21 @@ func (c *Duration) DecodeReflect(
 
 // DecodePtr decodes a duration into an unsafe.Pointer.
 func (c *Duration) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	microseconds := int64(r.PopUint64())
+	*(*uint64)(out) = r.PopUint64()
 	r.Discard(8) // reserved
-	*(*int64)(out) = microseconds * 1_000
 }
 
 // Encode a duration.
 func (c *Duration) Encode(w *buff.Writer, val interface{}, path Path) error {
-	duration, ok := val.(time.Duration)
+	duration, ok := val.(types.Duration)
 	if !ok {
-		return fmt.Errorf("expected %v to be time.Duration got %T", path, val)
+		return fmt.Errorf(
+			"expected %v to be edgedb.Duration got %T", path, val,
+		)
 	}
 
 	w.PushUint32(16) // data length
-	w.PushUint64(uint64(duration / 1_000))
+	w.PushUint64(uint64(duration))
 	w.PushUint32(0) // reserved
 	w.PushUint32(0) // reserved
 	return nil
