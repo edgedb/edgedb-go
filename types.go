@@ -28,6 +28,9 @@ type (
 	// LocalDate is a date without a time zone.
 	LocalDate = edgedbtypes.LocalDate
 
+	// LocalTime is a time without a time zone.
+	LocalTime = edgedbtypes.LocalTime
+
 	// Duration representing a span of time.
 	Duration = edgedbtypes.Duration
 )
@@ -38,4 +41,7 @@ var (
 
 	// NewLocalDate returns a new LocalDate
 	NewLocalDate = edgedbtypes.NewLocalDate
+
+	// NewLocalTime returns a new LocalTime
+	NewLocalTime = edgedbtypes.NewLocalTime
 )

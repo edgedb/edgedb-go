@@ -71,6 +71,43 @@ func (d LocalDate) String() string {
 	).UTC().Format("2006-01-02")
 }
 
+// NewLocalTime returns a new LocalTime
+func NewLocalTime(hour, minute, second, microsecond int) LocalTime {
+	if hour < 0 || hour > 23 {
+		panic("hour out of range 0-23")
+	}
+
+	if minute < 0 || minute > 59 {
+		panic("minute out of range 0-59")
+	}
+
+	if second < 0 || second > 59 {
+		panic("second out of range 0-59")
+	}
+
+	if microsecond < 0 || microsecond > 999_999 {
+		panic("microsecond out of range 0-999_999")
+	}
+
+	t := time.Date(
+		1970, 1, 1, hour, minute, second, microsecond*1_000, time.UTC,
+	)
+	return LocalTime{t.UnixNano() / 1_000}
+}
+
+// LocalTime is a time without a time zone.
+// https://www.edgedb.com/docs/datamodel/scalars/datetime/
+type LocalTime struct {
+	usec int64
+}
+
+func (t LocalTime) String() string {
+	return time.Unix(
+		t.usec/1_000_000,
+		(t.usec%1_000_000)*1_000,
+	).UTC().Format("15:04:05.999999")
+}
+
 // Duration represents the elapsed time between two instants
 // as an int64 microsecond count.
 type Duration int64

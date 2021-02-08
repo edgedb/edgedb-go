@@ -106,6 +106,83 @@ func TestNewLocalDate(t *testing.T) {
 	}
 }
 
+func TestLocalTimeString(t *testing.T) {
+	samples := []struct {
+		str string
+		d   LocalTime
+	}{
+		{"00:00:00", LocalTime{0}},
+		{"00:00:00.000001", LocalTime{1}},
+		{"00:00:00.00001", LocalTime{10}},
+		{"00:00:00.0001", LocalTime{100}},
+		{"00:00:00.001", LocalTime{1000}},
+		{"00:00:00.01", LocalTime{10000}},
+		{"00:00:00.1", LocalTime{100000}},
+		{"00:00:00.123456", LocalTime{123456}},
+		{"05:04:03", LocalTime{18_243_000_000}},
+		{"20:39:57", LocalTime{74_397_000_000}},
+		{"23:59:59.999999", LocalTime{86_399_999_999}},
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			assert.Equal(t, s.str, s.d.String())
+		})
+	}
+}
+
+func TestNewLocalTime(t *testing.T) {
+	samples := []struct {
+		str string
+		d   LocalTime
+	}{
+		{"00:00:00", NewLocalTime(0, 0, 0, 0)},
+		{"00:00:00.000001", NewLocalTime(0, 0, 0, 1)},
+		{"00:00:00.00001", NewLocalTime(0, 0, 0, 10)},
+		{"00:00:00.0001", NewLocalTime(0, 0, 0, 100)},
+		{"00:00:00.001", NewLocalTime(0, 0, 0, 1000)},
+		{"00:00:00.01", NewLocalTime(0, 0, 0, 10000)},
+		{"00:00:00.1", NewLocalTime(0, 0, 0, 100000)},
+		{"00:00:00.123456", NewLocalTime(0, 0, 0, 123456)},
+		{"05:04:03", NewLocalTime(5, 4, 3, 0)},
+		{"20:39:57", NewLocalTime(20, 39, 57, 0)},
+		{"23:59:59.999999", NewLocalTime(23, 59, 59, 999999)},
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			assert.Equal(t, s.str, s.d.String())
+		})
+	}
+}
+
+func TestNewLocalTimeErrors(t *testing.T) {
+	samples := []struct {
+		name string
+		h    int
+		m    int
+		s    int
+		us   int
+	}{
+		{"negative hours", -1, 0, 0, 0},
+		{"negative minutes", 0, -1, 0, 0},
+		{"negative seconds", 0, 0, -1, 0},
+		{"negative microseconds", 0, 0, 0, -1},
+		{"overflow hours", 24, 0, 0, 0},
+		{"overflow minutes", 0, 60, 0, 0},
+		{"overflow seconds", 0, 0, 60, 0},
+		{"overflow microseconds", 0, 0, 0, 1_000_000},
+	}
+
+	for _, s := range samples {
+		t.Run(s.name, func(t *testing.T) {
+			assert.Panics(t, func() {
+				_ = NewLocalTime(s.h, s.m, s.s, s.us)
+			})
+		})
+	}
+}
+
 func TestDurationString(t *testing.T) {
 	samples := []struct {
 		str string

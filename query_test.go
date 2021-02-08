@@ -261,17 +261,24 @@ func TestSendAndReceveDateTime(t *testing.T) {
 		RoundTrip time.Time     `edgedb:"round_trip"`
 		IsEqual   bool          `edgedb:"is_equal"`
 		Nested    []interface{} `edgedb:"nested"`
+		String    string        `edgedb:"string"`
 	}
 
 	for _, s := range samples {
 		t.Run(s.str, func(t *testing.T) {
-			query := `SELECT (
-				encoded := <str><datetime>$0,
-				decoded := <datetime><str>$1,
-				round_trip := <datetime>$0,
-				is_equal := <datetime><str>$1 = <datetime>$0,
-				nested := ([<datetime>$0],),
-			)`
+			query := `
+				WITH
+					dt := <datetime>$0,
+					s := <str>$1
+				SELECT (
+					encoded := <str>dt,
+					decoded := <datetime>s,
+					round_trip := dt,
+					is_equal := <datetime>s = dt,
+					nested := ([dt],),
+					string := <str><datetime>s,
+				)
+			`
 
 			var result Result
 			err := conn.QueryOne(ctx, query, &result, s.dt, s.str)
@@ -279,6 +286,7 @@ func TestSendAndReceveDateTime(t *testing.T) {
 
 			assert.True(t, result.IsEqual, "equality check faild")
 			assert.Equal(t, s.str, result.Encoded, "encoding failed")
+			assert.Equal(t, s.str, result.String)
 			assert.True(t,
 				s.dt.Equal(result.Decoded),
 				"decoding failed: %v != %v", s, result.Decoded,
@@ -288,9 +296,12 @@ func TestSendAndReceveDateTime(t *testing.T) {
 				"round trip failed: %v != %v", s, result.RoundTrip,
 			)
 
-			nested := result.Nested[0].([]time.Time)[0]
+			assert.Equal(t, 1, len(result.Nested))
+			nested, ok := result.Nested[0].([]time.Time)
+			assert.True(t, ok)
+			assert.Equal(t, 1, len(nested))
 			assert.True(t,
-				s.dt.Equal(nested),
+				s.dt.Equal(nested[0]),
 				"nested failed: %v != %v", s, nested,
 			)
 		})
@@ -328,6 +339,7 @@ func TestSendAndReceveLocalDateTime(t *testing.T) {
 		RoundTrip LocalDateTime `edgedb:"round_trip"`
 		IsEqual   bool          `edgedb:"is_equal"`
 		Nested    []interface{} `edgedb:"nested"`
+		String    string        `edgedb:"string"`
 	}
 
 	for _, s := range samples {
@@ -342,6 +354,7 @@ func TestSendAndReceveLocalDateTime(t *testing.T) {
 					round_trip := dt,
 					is_equal := <cal::local_datetime>s = dt,
 					nested := ([dt],),
+					string := <str><cal::local_datetime>s,
 				)
 			`
 
@@ -353,6 +366,7 @@ func TestSendAndReceveLocalDateTime(t *testing.T) {
 			assert.Equal(t, s.str, result.Encoded, "encoding failed")
 			assert.Equal(t, s.dt, result.Decoded)
 			assert.Equal(t, s.dt, result.RoundTrip)
+			assert.Equal(t, s.str, result.String)
 
 			assert.Equal(t, 1, len(result.Nested))
 			nested, ok := result.Nested[0].([]LocalDateTime)
@@ -383,6 +397,7 @@ func TestSendAndReceveLocalDate(t *testing.T) {
 		RoundTrip LocalDate     `edgedb:"round_trip"`
 		IsEqual   bool          `edgedb:"is_equal"`
 		Nested    []interface{} `edgedb:"nested"`
+		String    string        `edgedb:"string"`
 	}
 
 	for _, s := range samples {
@@ -397,6 +412,7 @@ func TestSendAndReceveLocalDate(t *testing.T) {
 					round_trip := d,
 					is_equal := <cal::local_date>s = d,
 					nested := ([d],),
+					string := <str><cal::local_date>s,
 				)
 			`
 
@@ -408,12 +424,77 @@ func TestSendAndReceveLocalDate(t *testing.T) {
 			assert.Equal(t, s.date, result.Decoded, "decode is wrong")
 			assert.Equal(t, s.str, result.Encoded, "encode is wrong")
 			assert.True(t, result.IsEqual, "equality failed")
+			assert.Equal(t, s.str, result.String)
 
 			assert.Equal(t, 1, len(result.Nested))
 			nested, ok := result.Nested[0].([]LocalDate)
 			assert.True(t, ok)
 			assert.Equal(t, 1, len(nested))
 			assert.Equal(t, s.date, nested[0])
+		})
+	}
+}
+
+func TestSendAndReceveLocalTime(t *testing.T) {
+	ctx := context.Background()
+
+	samples := []struct {
+		str  string
+		time LocalTime
+	}{
+		{"00:00:00", NewLocalTime(0, 0, 0, 0)},
+		{"00:00:00.000001", NewLocalTime(0, 0, 0, 1)},
+		{"00:00:00.00001", NewLocalTime(0, 0, 0, 10)},
+		{"00:00:00.0001", NewLocalTime(0, 0, 0, 100)},
+		{"00:00:00.001", NewLocalTime(0, 0, 0, 1000)},
+		{"00:00:00.01", NewLocalTime(0, 0, 0, 10000)},
+		{"00:00:00.1", NewLocalTime(0, 0, 0, 100000)},
+		{"00:00:00.123456", NewLocalTime(0, 0, 0, 123456)},
+		{"05:04:03", NewLocalTime(5, 4, 3, 0)},
+		{"20:39:57", NewLocalTime(20, 39, 57, 0)},
+		{"23:59:59.999999", NewLocalTime(23, 59, 59, 999999)},
+	}
+
+	type Result struct {
+		Encoded   string        `edgedb:"encoded"`
+		Decoded   LocalTime     `edgedb:"decoded"`
+		RoundTrip LocalTime     `edgedb:"round_trip"`
+		IsEqual   bool          `edgedb:"is_equal"`
+		Nested    []interface{} `edgedb:"nested"`
+		String    string        `edgedb:"string"`
+	}
+
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			query := `
+				WITH
+					t := <cal::local_time>$1,
+					s := <str>$0
+				SELECT (
+					encoded := <str>t,
+					decoded := <cal::local_time>s,
+					round_trip := t,
+					is_equal := <cal::local_time>s = t,
+					nested := ([t],),
+					string := <str><cal::local_time>s
+				)
+			`
+
+			var result Result
+			err := conn.QueryOne(ctx, query, &result, s.str, s.time)
+			require.Nil(t, err, "unexpected error: %v", err)
+
+			assert.Equal(t, result.RoundTrip, s.time, "round trip failed")
+			assert.Equal(t, s.time, result.Decoded, "decode is wrong")
+			assert.Equal(t, s.str, result.Encoded, "encode is wrong")
+			assert.True(t, result.IsEqual, "equality failed")
+			assert.Equal(t, s.str, result.String)
+
+			assert.Equal(t, 1, len(result.Nested))
+			nested, ok := result.Nested[0].([]LocalTime)
+			assert.True(t, ok)
+			assert.Equal(t, 1, len(nested))
+			assert.Equal(t, s.time, nested[0])
 		})
 	}
 }

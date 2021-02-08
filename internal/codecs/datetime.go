@@ -30,6 +30,7 @@ var (
 	dateTimeType  = reflect.TypeOf(time.Time{})
 	localDTType   = reflect.TypeOf(types.LocalDateTime{})
 	localDateType = reflect.TypeOf(types.LocalDate{})
+	localTimeType = reflect.TypeOf(types.LocalTime{})
 	durationType  = reflect.TypeOf(types.Duration(0))
 )
 
@@ -184,7 +185,7 @@ func (c *LocalDateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
 }
 
-// LocalDate is an EdgeDB cal::local_datetime codec
+// LocalDate is an EdgeDB cal::local_date codec
 type LocalDate struct{}
 
 // ID returns the descriptor id.
@@ -251,6 +252,75 @@ func (c *LocalDate) DecodeReflect(
 // DecodePtr decodes a LocalDate into an unsafe.Pointer.
 func (c *LocalDate) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateLayout)(out).days = r.PopUint32() + 730119
+}
+
+// LocalTime is an EdgeDB cal::local_time codec
+type LocalTime struct{}
+
+// ID returns the descriptor id.
+func (c *LocalTime) ID() types.UUID { return localTimeID }
+
+// Type returns the reflect.Type that this codec decodes to.
+func (c *LocalTime) Type() reflect.Type { return localTimeType }
+
+func (c *LocalTime) setDefaultType() {}
+
+func (c *LocalTime) setType(typ reflect.Type, path Path) (bool, error) {
+	if typ != localTimeType {
+		return false, fmt.Errorf(
+			"expected %v to be %v got %v", path, localTimeType, typ,
+		)
+	}
+
+	return false, nil
+}
+
+// localTimeLayout is the memory layout for edgedbtypes.LocalTime
+type localTimeLayout struct {
+	usec uint64
+}
+
+// Encode a LocalTime
+func (c *LocalTime) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
+	in, ok := val.(types.LocalTime)
+	if !ok {
+		return fmt.Errorf(
+			"expected %v to be edgedb.LocalTime got %T", path, val,
+		)
+	}
+
+	w.PushUint32(8)
+	w.PushUint64((*localTimeLayout)(unsafe.Pointer(&in)).usec)
+	return nil
+}
+
+// Decode a LocalTime
+func (c *LocalTime) Decode(r *buff.Reader, out reflect.Value) {
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodeReflect decodes a LocalTimeTime using reflection
+func (c *LocalTime) DecodeReflect(
+	r *buff.Reader,
+	out reflect.Value,
+	path Path,
+) {
+	if out.Type() != localTimeType {
+		panic(fmt.Sprintf(
+			"expected %v to be edgedb.LocalTime got %v", path, out.Type(),
+		))
+	}
+
+	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+}
+
+// DecodePtr decodes a LocalTime into an unsafe.Pointer.
+func (c *LocalTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+	(*localTimeLayout)(out).usec = r.PopUint64()
 }
 
 // Duration is an EdgeDB duration codec.

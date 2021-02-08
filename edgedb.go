@@ -23,30 +23,30 @@
 //
 //   EdgeDB          Go
 //   ---------       ---------
-//   Set             []anytype
-//   array<anytype>  []anytype
-//   tuple           []interface{}
-//   named tuple     struct
-//   Object          struct
-//   bool            bool
-//   bytes           []byte
-//   str             string
-//   datetime        time.Time
-//   duration        time.Duration
-//   float32         float32
-//   float64         float64
-//   int16           int16
-//   int32           int32
-//   int64           int64
-//   uuid            edgedb.UUID
-//   json            []byte
-//   bigint          *big.Int
+//   Set                   []anytype
+//   array<anytype>        []anytype
+//   tuple                 []interface{}
+//   named tuple           struct
+//   Object                struct
+//   bool                  bool
+//   bytes                 []byte
+//   str                   string
+//   datetime              time.Time
+//   cal::local_datetime   edgedb.LocalDateTime
+//   cal::local_date       edgedb.LocalDate
+//   cal::local_time       edgedb.LocalTime
+//   duration              time.Duration
+//   float32               float32
+//   float64               float64
+//   int16                 int16
+//   int32                 int32
+//   int64                 int64
+//   uuid                  edgedb.UUID
+//   json                  []byte
+//   bigint                *big.Int
 //
 //   // not implemented
 //   anyenum
-//   cal::local_date
-//   cal::local_time
-//   cal::local_datetime
 //   decimal
 package edgedb
 
