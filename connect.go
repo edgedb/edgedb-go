@@ -27,14 +27,14 @@ import (
 
 const (
 	protocolVersionMajor uint16 = 0
-	protocolVersionMinor uint16 = 8
+	protocolVersionMinor uint16 = 9
 )
 
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ClientHandshake)
-	w.PushUint16(0) // major version
-	w.PushUint16(8) // minor version
+	w.PushUint16(protocolVersionMajor)
+	w.PushUint16(protocolVersionMinor)
 	w.PushUint16(2) // number of parameters
 	w.PushString("database")
 	w.PushString(cfg.database)

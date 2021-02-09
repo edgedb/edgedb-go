@@ -17,18 +17,69 @@
 package edgedb
 
 import (
+	"reflect"
+
 	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/format"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type query struct {
+// sfQuery is a script flow query
+type sfQuery struct {
+	cmd     string
+	headers msgHeaders
+}
+
+type msgHeaders map[uint16][]byte
+
+// gfQuery is a granular flow query
+type gfQuery struct {
+	out     reflect.Value
+	outType reflect.Type
 	cmd     string
 	fmt     uint8
 	expCard uint8
 	args    []interface{}
+	headers msgHeaders
 }
 
-func (q *query) flat() bool {
+// newQuery returns a new granular flow query.
+func newQuery(
+	cmd string,
+	fmt, expCard uint8,
+	args []interface{},
+	headers msgHeaders,
+	out interface{},
+) (*gfQuery, error) {
+	q := gfQuery{
+		cmd:     cmd,
+		fmt:     fmt,
+		expCard: expCard,
+		args:    args,
+		headers: headers,
+	}
+
+	var err error
+
+	if fmt == format.JSON || expCard == cardinality.One {
+		q.out, err = marshal.ValueOf(out)
+	} else {
+		q.out, err = marshal.ValueOfSlice(out)
+	}
+
+	if err != nil {
+		return &gfQuery{}, err
+	}
+
+	q.outType = q.out.Type()
+	if !q.flat() {
+		q.outType = q.outType.Elem()
+	}
+
+	return &q, nil
+}
+
+func (q *gfQuery) flat() bool {
 	if q.expCard != cardinality.Many {
 		return true
 	}

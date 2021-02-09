@@ -19,6 +19,9 @@ package edgedb
 import (
 	"context"
 	"fmt"
+
+	"github.com/edgedb/edgedb-go/internal/cardinality"
+	"github.com/edgedb/edgedb-go/internal/format"
 )
 
 type transactionState int
@@ -53,10 +56,10 @@ type transaction struct {
 
 func (t *transaction) execute(
 	ctx context.Context,
-	query string,
+	cmd string,
 	sucessState transactionState,
 ) error {
-	err := t.conn.Execute(ctx, query)
+	err := t.conn.ScriptFlow(ctx, sfQuery{cmd: cmd})
 
 	switch err {
 	case nil:
@@ -164,7 +167,7 @@ func (t *transaction) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	return t.conn.Execute(ctx, cmd)
+	return t.conn.ScriptFlow(ctx, sfQuery{cmd: cmd})
 }
 
 func (t *transaction) Query(
@@ -177,7 +180,12 @@ func (t *transaction) Query(
 		return e
 	}
 
-	return t.conn.Query(ctx, cmd, out, args...)
+	q, err := newQuery(cmd, format.Binary, cardinality.Many, args, nil, out)
+	if err != nil {
+		return err
+	}
+
+	return t.conn.GranularFlow(ctx, q)
 }
 
 func (t *transaction) QueryOne(
@@ -190,7 +198,12 @@ func (t *transaction) QueryOne(
 		return e
 	}
 
-	return t.conn.QueryOne(ctx, cmd, out, args...)
+	q, err := newQuery(cmd, format.Binary, cardinality.One, args, nil, out)
+	if err != nil {
+		return err
+	}
+
+	return t.conn.GranularFlow(ctx, q)
 }
 
 func (t *transaction) QueryJSON(
@@ -203,7 +216,12 @@ func (t *transaction) QueryJSON(
 		return e
 	}
 
-	return t.conn.QueryJSON(ctx, cmd, out, args...)
+	q, err := newQuery(cmd, format.JSON, cardinality.Many, args, nil, out)
+	if err != nil {
+		return err
+	}
+
+	return t.conn.GranularFlow(ctx, q)
 }
 
 func (t *transaction) QueryOneJSON(
@@ -216,5 +234,10 @@ func (t *transaction) QueryOneJSON(
 		return e
 	}
 
-	return t.conn.QueryOneJSON(ctx, cmd, out, args...)
+	q, err := newQuery(cmd, format.JSON, cardinality.One, args, nil, out)
+	if err != nil {
+		return err
+	}
+
+	return t.conn.GranularFlow(ctx, q)
 }

@@ -62,9 +62,7 @@
 //
 // Most use cases will benefit from the concurrency safe pool implementation
 // returned from Connect() and ConnectDSN(). Pool.Acquire(), ConnectOne() and
-// ConnectOneDSN() will give you access to a single connection,
-// but be aware that connections will reconnect automatically on network errors
-// so use TryTx() and Retry() when you want to run queries in a transaction.
+// ConnectOneDSN() will give you access to a single connection.
 //
 // Errors
 //

@@ -28,19 +28,10 @@ import (
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
-func (c *baseConn) granularFlow(
-	r *buff.Reader,
-	out reflect.Value,
-	q query,
-) (err error) {
-	typ := out.Type()
-	if !q.flat() {
-		typ = typ.Elem()
-	}
-
+func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
 	ids, ok := c.getTypeIDs(q)
 	if !ok {
-		return c.pesimistic(r, out, q, typ)
+		return c.pesimistic(r, q)
 	}
 
 	in, ok := c.inCodecCache.Get(ids.in)
@@ -51,33 +42,28 @@ func (c *baseConn) granularFlow(
 				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
-			return c.pesimistic(r, out, q, typ)
+			return c.pesimistic(r, q)
 		}
 	}
 
-	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: typ})
+	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: q.outType})
 	if !ok {
 		if desc, ok := descCache.Get(ids.out); ok {
 			d := buff.SimpleReader(desc.([]byte))
-			cOut, err = codecs.BuildTypedCodec(d, typ)
+			cOut, err = codecs.BuildTypedCodec(d, q.outType)
 			if err != nil {
 				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
-			return c.pesimistic(r, out, q, typ)
+			return c.pesimistic(r, q)
 		}
 	}
 
 	cdsc := codecPair{in: in.(codecs.Codec), out: cOut.(codecs.Codec)}
-	return c.optimistic(r, out, q, typ, cdsc)
+	return c.optimistic(r, q, cdsc)
 }
 
-func (c *baseConn) pesimistic(
-	r *buff.Reader,
-	out reflect.Value,
-	q query,
-	typ reflect.Type,
-) error {
+func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 	ids, err := c.prepare(r, q)
 	if err != nil {
 		return err
@@ -101,21 +87,21 @@ func (c *baseConn) pesimistic(
 		cdcs.out = codecs.JSONBytes
 	} else {
 		d := buff.SimpleReader(descs.out)
-		cdcs.out, err = codecs.BuildTypedCodec(d, typ)
+		cdcs.out, err = codecs.BuildTypedCodec(d, q.outType)
 		if err != nil {
 			return &unsupportedFeatureError{msg: err.Error()}
 		}
 	}
 
 	c.inCodecCache.Put(ids.in, cdcs.in)
-	c.outCodecCache.Put(codecKey{ID: ids.out, Type: typ}, cdcs.out)
-	return c.execute(r, out, q, typ, cdcs)
+	c.outCodecCache.Put(codecKey{ID: ids.out, Type: q.outType}, cdcs.out)
+	return c.execute(r, q, cdcs)
 }
 
-func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
+func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) (idPair, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Prepare)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, q.headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushUint32(0) // no statement name
@@ -163,7 +149,7 @@ func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	return ids, err
 }
 
-func (c *baseConn) describe(r *buff.Reader, q query) (descPair, error) {
+func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.DescribeStatement)
 	w.PushUint16(0) // no headers
@@ -226,16 +212,10 @@ func (c *baseConn) describe(r *buff.Reader, q query) (descPair, error) {
 	return descs, err
 }
 
-func (c *baseConn) execute(
-	r *buff.Reader,
-	out reflect.Value,
-	q query,
-	typ reflect.Type,
-	cdcs codecPair,
-) error {
+func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs codecPair) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, q.headers)
 	w.PushUint32(0) // no statement name
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args")); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
@@ -249,7 +229,7 @@ func (c *baseConn) execute(
 		return &clientConnectionError{err: e}
 	}
 
-	tmp := out
+	tmp := q.out
 	err := error(nil)
 	if q.expCard == cardinality.One {
 		err = errZeroResults
@@ -269,12 +249,12 @@ func (c *baseConn) execute(
 			elmLen := r.PopUint32()
 
 			if !q.flat() {
-				val := reflect.New(typ).Elem()
+				val := reflect.New(q.outType).Elem()
 				s := r.PopSlice(elmLen)
 				cdcs.out.Decode(s, val)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r.PopSlice(elmLen), out)
+				cdcs.out.Decode(r.PopSlice(elmLen), q.out)
 			}
 
 			if err == errZeroResults {
@@ -306,7 +286,7 @@ func (c *baseConn) execute(
 	}
 
 	if !q.flat() {
-		out.Set(tmp)
+		q.out.Set(tmp)
 	}
 
 	return err
@@ -314,14 +294,12 @@ func (c *baseConn) execute(
 
 func (c *baseConn) optimistic(
 	r *buff.Reader,
-	out reflect.Value,
-	q query,
-	typ reflect.Type,
+	q *gfQuery,
 	cdcs codecPair,
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.OptimisticExecute)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, q.headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
@@ -339,7 +317,7 @@ func (c *baseConn) optimistic(
 		return &clientConnectionError{err: e}
 	}
 
-	tmp := out
+	tmp := q.out
 	err := error(nil)
 	if q.expCard == cardinality.One {
 		err = errZeroResults
@@ -360,11 +338,11 @@ func (c *baseConn) optimistic(
 			elmLen := r.PopUint32()
 
 			if !q.flat() {
-				val := reflect.New(typ).Elem()
+				val := reflect.New(q.outType).Elem()
 				cdcs.out.Decode(r.PopSlice(elmLen), val)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r.PopSlice(elmLen), out)
+				cdcs.out.Decode(r.PopSlice(elmLen), q.out)
 			}
 
 			if err == errZeroResults {
@@ -396,7 +374,7 @@ func (c *baseConn) optimistic(
 	}
 
 	if !q.flat() {
-		out.Set(tmp)
+		q.out.Set(tmp)
 	}
 
 	return err

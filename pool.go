@@ -24,6 +24,9 @@ import (
 	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/cardinality"
+	"github.com/edgedb/edgedb-go/internal/format"
+	"github.com/edgedb/edgedb-go/internal/header"
 )
 
 var (
@@ -282,7 +285,9 @@ func (p *pool) Execute(ctx context.Context, cmd string) error {
 		return err
 	}
 
-	err = conn.Execute(ctx, cmd)
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q := sfQuery{cmd: cmd, headers: hdrs}
+	err = conn.scriptFlow(ctx, q)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -297,7 +302,13 @@ func (p *pool) Query(
 		return err
 	}
 
-	err = conn.Query(ctx, cmd, out, args...)
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.Binary, cardinality.Many, args, hdrs, out)
+	if err != nil {
+		return err
+	}
+
+	err = conn.granularFlow(ctx, q)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -312,7 +323,13 @@ func (p *pool) QueryOne(
 		return err
 	}
 
-	err = conn.QueryOne(ctx, cmd, out, args...)
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.Binary, cardinality.One, args, hdrs, out)
+	if err != nil {
+		return err
+	}
+
+	err = conn.granularFlow(ctx, q)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -327,7 +344,13 @@ func (p *pool) QueryJSON(
 		return err
 	}
 
-	err = conn.QueryJSON(ctx, cmd, out, args...)
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.JSON, cardinality.Many, args, hdrs, out)
+	if err != nil {
+		return err
+	}
+
+	err = conn.granularFlow(ctx, q)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -342,7 +365,13 @@ func (p *pool) QueryOneJSON(
 		return err
 	}
 
-	err = conn.QueryOneJSON(ctx, cmd, out, args...)
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.JSON, cardinality.One, args, hdrs, out)
+	if err != nil {
+		return err
+	}
+
+	err = conn.granularFlow(ctx, q)
 	return firstError(err, p.release(conn, err))
 }
 

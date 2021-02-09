@@ -28,6 +28,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestConnRejectsTransactions(t *testing.T) {
+	expected := "edgedb.DisabledCapabilityError: " +
+		"cannot execute transaction control commands"
+
+	ctx := context.Background()
+	err := conn.Execute(ctx, "START TRANSACTION")
+	assert.EqualError(t, err, expected)
+
+	var result []byte
+	err = conn.Query(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+
+	err = conn.QueryJSON(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+
+	err = conn.QueryOne(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+
+	err = conn.QueryOneJSON(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+}
+
 func TestSendAndReceveCustomScalars(t *testing.T) {
 	ctx := context.Background()
 
