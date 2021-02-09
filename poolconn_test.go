@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -45,4 +46,34 @@ func TestReleasePoolConn(t *testing.T) {
 	var edbErr Error
 	require.True(t, errors.As(err, &edbErr))
 	assert.True(t, edbErr.Category(InterfaceError))
+}
+
+func TestPoolConnectionRejectsTransaction(t *testing.T) {
+	ctx := context.Background()
+	p, err := Connect(ctx, opts)
+	require.Nil(t, err)
+	defer p.Close() // nolint:errcheck
+
+	con, err := p.Acquire(ctx)
+	require.Nil(t, err)
+	defer con.Release() // nolint:errcheck
+
+	expected := "edgedb.DisabledCapabilityError: " +
+		"cannot execute transaction control commands"
+
+	err = con.Execute(ctx, "START TRANSACTION")
+	assert.EqualError(t, err, expected)
+
+	var result []byte
+	err = con.Query(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+
+	err = con.QueryJSON(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+
+	err = con.QueryOne(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
+
+	err = con.QueryOneJSON(ctx, "START TRANSACTION", &result)
+	assert.EqualError(t, err, expected)
 }

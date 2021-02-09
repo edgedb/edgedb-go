@@ -21,6 +21,16 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/edgedb/edgedb-go/internal/cardinality"
+	"github.com/edgedb/edgedb-go/internal/format"
+	"github.com/edgedb/edgedb-go/internal/header"
+)
+
+var (
+	noTxCapabilities = header.NewAllowCapabilitiesWithout(
+		header.AllowCapabilitieTransaction,
+	)
 )
 
 type reconnectingConn struct {
@@ -111,7 +121,7 @@ func (b *reconnectingConn) ensureConnection(ctx context.Context) error {
 	return b.reconnect(ctx)
 }
 
-func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
+func (b *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
 	if e := b.assertUnborrowed(); e != nil {
 		return e
 	}
@@ -120,7 +130,27 @@ func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	return b.conn.Execute(ctx, cmd)
+	return b.conn.ScriptFlow(ctx, q)
+}
+
+func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	return b.scriptFlow(ctx, sfQuery{cmd: cmd, headers: hdrs})
+}
+
+func (b *reconnectingConn) granularFlow(
+	ctx context.Context,
+	q *gfQuery,
+) error {
+	if e := b.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	if e := b.ensureConnection(ctx); e != nil {
+		return e
+	}
+
+	return b.conn.GranularFlow(ctx, q)
 }
 
 func (b *reconnectingConn) Query(
@@ -129,15 +159,13 @@ func (b *reconnectingConn) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
-		return e
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.Binary, cardinality.Many, args, hdrs, out)
+	if err != nil {
+		return err
 	}
 
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.Query(ctx, cmd, out, args...)
+	return b.granularFlow(ctx, q)
 }
 
 func (b *reconnectingConn) QueryOne(
@@ -146,15 +174,13 @@ func (b *reconnectingConn) QueryOne(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
-		return e
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.Binary, cardinality.One, args, hdrs, out)
+	if err != nil {
+		return err
 	}
 
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.QueryOne(ctx, cmd, out, args...)
+	return b.granularFlow(ctx, q)
 }
 
 func (b *reconnectingConn) QueryJSON(
@@ -163,15 +189,13 @@ func (b *reconnectingConn) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
-		return e
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.JSON, cardinality.Many, args, hdrs, out)
+	if err != nil {
+		return err
 	}
 
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.QueryJSON(ctx, cmd, out, args...)
+	return b.granularFlow(ctx, q)
 }
 
 func (b *reconnectingConn) QueryOneJSON(
@@ -180,15 +204,13 @@ func (b *reconnectingConn) QueryOneJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
-		return e
+	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
+	q, err := newQuery(cmd, format.JSON, cardinality.One, args, hdrs, out)
+	if err != nil {
+		return err
 	}
 
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.QueryOneJSON(ctx, cmd, out, args...)
+	return b.granularFlow(ctx, q)
 }
 
 func (b *reconnectingConn) TryTx(ctx context.Context, action Action) error {

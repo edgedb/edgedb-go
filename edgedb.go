@@ -28,9 +28,6 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
-	"github.com/edgedb/edgedb-go/internal/marshal"
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
@@ -265,7 +262,7 @@ func (c *baseConn) close() error {
 	return nil
 }
 
-func (c *baseConn) Execute(ctx context.Context, cmd string) error {
+func (c *baseConn) ScriptFlow(ctx context.Context, q sfQuery) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -275,27 +272,10 @@ func (c *baseConn) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	return c.releaseReader(r, c.scriptFlow(r, cmd))
+	return c.releaseReader(r, c.scriptFlow(r, q))
 }
 
-func (c *baseConn) Query(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	val, err := marshal.ValueOfSlice(out)
-	if err != nil {
-		return &invalidArgumentError{msg: err.Error()}
-	}
-
-	q := query{
-		cmd:     cmd,
-		fmt:     format.Binary,
-		expCard: cardinality.Many,
-		args:    args,
-	}
-
+func (c *baseConn) GranularFlow(ctx context.Context, q *gfQuery) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -305,95 +285,5 @@ func (c *baseConn) Query(
 		return e
 	}
 
-	return c.releaseReader(r, c.granularFlow(r, val, q))
-}
-
-func (c *baseConn) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) (err error) {
-	val, err := marshal.ValueOf(out)
-	if err != nil {
-		return &invalidArgumentError{msg: err.Error()}
-	}
-
-	q := query{
-		cmd:     cmd,
-		fmt:     format.Binary,
-		expCard: cardinality.One,
-		args:    args,
-	}
-
-	r, err := c.acquireReader(ctx)
-	if err != nil {
-		return err
-	}
-
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
-	return c.releaseReader(r, c.granularFlow(r, val, q))
-}
-
-func (c *baseConn) QueryJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	val, err := marshal.ValueOf(out)
-	if err != nil {
-		return &invalidArgumentError{msg: err.Error()}
-	}
-
-	q := query{
-		cmd:     cmd,
-		fmt:     format.JSON,
-		expCard: cardinality.Many,
-		args:    args,
-	}
-
-	r, err := c.acquireReader(ctx)
-	if err != nil {
-		return err
-	}
-
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
-	return c.releaseReader(r, c.granularFlow(r, val, q))
-}
-
-func (c *baseConn) QueryOneJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	val, err := marshal.ValueOf(out)
-	if err != nil {
-		return &invalidArgumentError{msg: err.Error()}
-	}
-
-	q := query{
-		cmd:     cmd,
-		fmt:     format.JSON,
-		expCard: cardinality.One,
-		args:    args,
-	}
-
-	r, err := c.acquireReader(ctx)
-	if err != nil {
-		return err
-	}
-
-	if e := c.setDeadline(ctx); e != nil {
-		return e
-	}
-
-	return c.releaseReader(r, c.granularFlow(r, val, q))
+	return c.releaseReader(r, c.granularFlow(r, q))
 }
