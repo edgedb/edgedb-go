@@ -24,11 +24,15 @@ import (
 	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/header"
 )
 
 var (
-	defaultMinConns = 1
-	defaultMaxConns = max(4, runtime.NumCPU())
+	defaultMinConns  = 1
+	defaultMaxConns  = max(4, runtime.NumCPU())
+	poolCapabilities = header.NewAllowCapabilitiesWithout(
+		header.AllowCapabilitieTransaction,
+	)
 )
 
 func max(a, b int) int {
@@ -282,7 +286,8 @@ func (p *pool) Execute(ctx context.Context, cmd string) error {
 		return err
 	}
 
-	err = conn.Execute(ctx, cmd)
+	headers := msgHeaders{header.AllowCapabilities: poolCapabilities}
+	err = conn.execute(ctx, headers, cmd)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -297,7 +302,8 @@ func (p *pool) Query(
 		return err
 	}
 
-	err = conn.Query(ctx, cmd, out, args...)
+	headers := msgHeaders{header.AllowCapabilities: poolCapabilities}
+	err = conn.query(ctx, headers, cmd, out, args...)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -312,7 +318,9 @@ func (p *pool) QueryOne(
 		return err
 	}
 
-	err = conn.QueryOne(ctx, cmd, out, args...)
+	headers := msgHeaders{header.AllowCapabilities: poolCapabilities}
+	fmt.Println("pool.QueryOne headers:", headers)
+	err = conn.queryOne(ctx, headers, cmd, out, args...)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -327,7 +335,9 @@ func (p *pool) QueryJSON(
 		return err
 	}
 
-	err = conn.QueryJSON(ctx, cmd, out, args...)
+	headers := msgHeaders{header.AllowCapabilities: poolCapabilities}
+	fmt.Println("pool.QueryJSON headers:", headers)
+	err = conn.queryJSON(ctx, headers, cmd, out, args...)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -342,7 +352,8 @@ func (p *pool) QueryOneJSON(
 		return err
 	}
 
-	err = conn.QueryOneJSON(ctx, cmd, out, args...)
+	headers := msgHeaders{header.AllowCapabilities: poolCapabilities}
+	err = conn.queryOneJSON(ctx, headers, cmd, out, args...)
 	return firstError(err, p.release(conn, err))
 }
 

@@ -14,31 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package header
 
-import (
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
+import "encoding/binary"
+
+const (
+	// AllowCapabilities tells the server what capabilities it should allow.
+	AllowCapabilities        = 0xFF04
+	allCapabilities   uint64 = 0xffffffffffffffff
+
+	// AllowCapabilitieTransaction represents the transaction capability
+	// in the AllowCapabilities header.
+	AllowCapabilitieTransaction uint64 = 0b100
 )
 
-type msgHeaders map[uint16][]byte
-
-type query struct {
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	args    []interface{}
-	headers msgHeaders
-}
-
-func (q *query) flat() bool {
-	if q.expCard != cardinality.Many {
-		return true
-	}
-
-	if q.fmt == format.JSON {
-		return true
-	}
-
-	return false
+// NewAllowCapabilitiesWithout returns an AllowCapabilities header value
+// with the bits set in mask masked off.
+func NewAllowCapabilitiesWithout(mask uint64) []byte {
+	bts := make([]byte, 8)
+	binary.BigEndian.PutUint64(bts, allCapabilities^mask)
+	return bts
 }

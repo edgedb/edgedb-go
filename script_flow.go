@@ -30,10 +30,24 @@ func ignoreHeaders(r *buff.Reader) {
 	}
 }
 
-func (c *baseConn) scriptFlow(r *buff.Reader, query string) error {
+func writeHeaders(w *buff.Writer, headers msgHeaders) {
+	w.PushUint16(uint16(len(headers)))
+
+	for key, val := range headers {
+		w.PushUint16(key)
+		w.PushUint32(uint32(len(val)))
+		w.PushBytes(val)
+	}
+}
+
+func (c *baseConn) scriptFlow(
+	r *buff.Reader,
+	headers msgHeaders,
+	query string,
+) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, headers)
 	w.PushString(query)
 	w.EndMessage()
 

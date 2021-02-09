@@ -56,7 +56,7 @@ func (t *transaction) execute(
 	query string,
 	sucessState transactionState,
 ) error {
-	err := t.conn.Execute(ctx, query)
+	err := t.conn.Execute(ctx, nil, query)
 
 	switch err {
 	case nil:
@@ -164,7 +164,7 @@ func (t *transaction) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	return t.conn.Execute(ctx, cmd)
+	return t.conn.Execute(ctx, nil, cmd)
 }
 
 func (t *transaction) Query(
@@ -177,7 +177,7 @@ func (t *transaction) Query(
 		return e
 	}
 
-	return t.conn.Query(ctx, cmd, out, args...)
+	return t.conn.Query(ctx, nil, cmd, out, args...)
 }
 
 func (t *transaction) QueryOne(
@@ -190,7 +190,7 @@ func (t *transaction) QueryOne(
 		return e
 	}
 
-	return t.conn.QueryOne(ctx, cmd, out, args...)
+	return t.conn.QueryOne(ctx, nil, cmd, out, args...)
 }
 
 func (t *transaction) QueryJSON(
@@ -203,7 +203,7 @@ func (t *transaction) QueryJSON(
 		return e
 	}
 
-	return t.conn.QueryJSON(ctx, cmd, out, args...)
+	return t.conn.QueryJSON(ctx, nil, cmd, out, args...)
 }
 
 func (t *transaction) QueryOneJSON(
@@ -216,5 +216,5 @@ func (t *transaction) QueryOneJSON(
 		return e
 	}
 
-	return t.conn.QueryOneJSON(ctx, cmd, out, args...)
+	return t.conn.QueryOneJSON(ctx, nil, cmd, out, args...)
 }

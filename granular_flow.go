@@ -115,7 +115,7 @@ func (c *baseConn) pesimistic(
 func (c *baseConn) prepare(r *buff.Reader, q query) (idPair, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Prepare)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, q.headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushUint32(0) // no statement name
@@ -235,7 +235,7 @@ func (c *baseConn) execute(
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, q.headers)
 	w.PushUint32(0) // no statement name
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args")); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
@@ -321,7 +321,7 @@ func (c *baseConn) optimistic(
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.OptimisticExecute)
-	w.PushUint16(0) // no headers
+	writeHeaders(w, q.headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)

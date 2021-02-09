@@ -265,7 +265,11 @@ func (c *baseConn) close() error {
 	return nil
 }
 
-func (c *baseConn) Execute(ctx context.Context, cmd string) error {
+func (c *baseConn) Execute(
+	ctx context.Context,
+	headers msgHeaders,
+	cmd string,
+) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -275,11 +279,12 @@ func (c *baseConn) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	return c.releaseReader(r, c.scriptFlow(r, cmd))
+	return c.releaseReader(r, c.scriptFlow(r, headers, cmd))
 }
 
 func (c *baseConn) Query(
 	ctx context.Context,
+	headers msgHeaders,
 	cmd string,
 	out interface{},
 	args ...interface{},
@@ -294,6 +299,7 @@ func (c *baseConn) Query(
 		fmt:     format.Binary,
 		expCard: cardinality.Many,
 		args:    args,
+		headers: headers,
 	}
 
 	r, err := c.acquireReader(ctx)
@@ -310,6 +316,7 @@ func (c *baseConn) Query(
 
 func (c *baseConn) QueryOne(
 	ctx context.Context,
+	headers msgHeaders,
 	cmd string,
 	out interface{},
 	args ...interface{},
@@ -324,6 +331,7 @@ func (c *baseConn) QueryOne(
 		fmt:     format.Binary,
 		expCard: cardinality.One,
 		args:    args,
+		headers: headers,
 	}
 
 	r, err := c.acquireReader(ctx)
@@ -340,6 +348,7 @@ func (c *baseConn) QueryOne(
 
 func (c *baseConn) QueryJSON(
 	ctx context.Context,
+	headers msgHeaders,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
@@ -354,6 +363,7 @@ func (c *baseConn) QueryJSON(
 		fmt:     format.JSON,
 		expCard: cardinality.Many,
 		args:    args,
+		headers: headers,
 	}
 
 	r, err := c.acquireReader(ctx)
@@ -370,6 +380,7 @@ func (c *baseConn) QueryJSON(
 
 func (c *baseConn) QueryOneJSON(
 	ctx context.Context,
+	headers msgHeaders,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
@@ -384,6 +395,7 @@ func (c *baseConn) QueryOneJSON(
 		fmt:     format.JSON,
 		expCard: cardinality.One,
 		args:    args,
+		headers: headers,
 	}
 
 	r, err := c.acquireReader(ctx)

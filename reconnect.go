@@ -112,6 +112,14 @@ func (b *reconnectingConn) ensureConnection(ctx context.Context) error {
 }
 
 func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
+	return b.execute(ctx, nil, cmd)
+}
+
+func (b *reconnectingConn) execute(
+	ctx context.Context,
+	headers msgHeaders,
+	cmd string,
+) error {
 	if e := b.assertUnborrowed(); e != nil {
 		return e
 	}
@@ -120,7 +128,7 @@ func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
 		return e
 	}
 
-	return b.conn.Execute(ctx, cmd)
+	return b.conn.Execute(ctx, headers, cmd)
 }
 
 func (b *reconnectingConn) Query(
@@ -129,19 +137,12 @@ func (b *reconnectingConn) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.Query(ctx, cmd, out, args...)
+	return b.query(ctx, nil, cmd, out, args...)
 }
 
-func (b *reconnectingConn) QueryOne(
+func (b *reconnectingConn) query(
 	ctx context.Context,
+	headers msgHeaders,
 	cmd string,
 	out interface{},
 	args ...interface{},
@@ -154,7 +155,34 @@ func (b *reconnectingConn) QueryOne(
 		return e
 	}
 
-	return b.conn.QueryOne(ctx, cmd, out, args...)
+	return b.conn.Query(ctx, headers, cmd, out, args...)
+}
+
+func (b *reconnectingConn) QueryOne(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	return b.queryOne(ctx, nil, cmd, out, args...)
+}
+
+func (b *reconnectingConn) queryOne(
+	ctx context.Context,
+	headers msgHeaders,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	if e := b.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	if e := b.ensureConnection(ctx); e != nil {
+		return e
+	}
+
+	return b.conn.QueryOne(ctx, headers, cmd, out, args...)
 }
 
 func (b *reconnectingConn) QueryJSON(
@@ -163,19 +191,12 @@ func (b *reconnectingConn) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
-		return e
-	}
-
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.QueryJSON(ctx, cmd, out, args...)
+	return b.queryJSON(ctx, nil, cmd, out, args...)
 }
 
-func (b *reconnectingConn) QueryOneJSON(
+func (b *reconnectingConn) queryJSON(
 	ctx context.Context,
+	headers msgHeaders,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
@@ -188,7 +209,34 @@ func (b *reconnectingConn) QueryOneJSON(
 		return e
 	}
 
-	return b.conn.QueryOneJSON(ctx, cmd, out, args...)
+	return b.conn.QueryJSON(ctx, headers, cmd, out, args...)
+}
+
+func (b *reconnectingConn) QueryOneJSON(
+	ctx context.Context,
+	cmd string,
+	out *[]byte,
+	args ...interface{},
+) error {
+	return b.queryOneJSON(ctx, nil, cmd, out, args...)
+}
+
+func (b *reconnectingConn) queryOneJSON(
+	ctx context.Context,
+	headers msgHeaders,
+	cmd string,
+	out *[]byte,
+	args ...interface{},
+) error {
+	if e := b.assertUnborrowed(); e != nil {
+		return e
+	}
+
+	if e := b.ensureConnection(ctx); e != nil {
+		return e
+	}
+
+	return b.conn.QueryOneJSON(ctx, headers, cmd, out, args...)
 }
 
 func (b *reconnectingConn) TryTx(ctx context.Context, action Action) error {
