@@ -21,3 +21,4 @@ errors:
 	edb gen-errors-json --client | \
 		go run internal/cmd/generr/*.go > \
 		generatederrors.go
+	make format

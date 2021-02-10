@@ -22,90 +22,90 @@ package edgedb
 import "fmt"
 
 const (
+	ShouldRetry     ErrorTag = "SHOULD_RETRY"
 	ShouldReconnect ErrorTag = "SHOULD_RECONNECT"
-	ShouldRetry ErrorTag = "SHOULD_RETRY"
 )
 
 const (
-	InternalServerError ErrorCategory = "errors::InternalServerError"
-	UnsupportedFeatureError ErrorCategory = "errors::UnsupportedFeatureError"
-	ProtocolError ErrorCategory = "errors::ProtocolError"
-	BinaryProtocolError ErrorCategory = "errors::BinaryProtocolError"
-	UnsupportedProtocolVersionError ErrorCategory = "errors::UnsupportedProtocolVersionError"
-	TypeSpecNotFoundError ErrorCategory = "errors::TypeSpecNotFoundError"
-	UnexpectedMessageError ErrorCategory = "errors::UnexpectedMessageError"
-	InputDataError ErrorCategory = "errors::InputDataError"
-	ResultCardinalityMismatchError ErrorCategory = "errors::ResultCardinalityMismatchError"
-	CapabilityError ErrorCategory = "errors::CapabilityError"
-	UnsupportedCapabilityError ErrorCategory = "errors::UnsupportedCapabilityError"
-	DisabledCapabilityError ErrorCategory = "errors::DisabledCapabilityError"
-	QueryError ErrorCategory = "errors::QueryError"
-	InvalidSyntaxError ErrorCategory = "errors::InvalidSyntaxError"
-	EdgeQLSyntaxError ErrorCategory = "errors::EdgeQLSyntaxError"
-	SchemaSyntaxError ErrorCategory = "errors::SchemaSyntaxError"
-	GraphQLSyntaxError ErrorCategory = "errors::GraphQLSyntaxError"
-	InvalidTypeError ErrorCategory = "errors::InvalidTypeError"
-	InvalidTargetError ErrorCategory = "errors::InvalidTargetError"
-	InvalidLinkTargetError ErrorCategory = "errors::InvalidLinkTargetError"
-	InvalidPropertyTargetError ErrorCategory = "errors::InvalidPropertyTargetError"
-	InvalidReferenceError ErrorCategory = "errors::InvalidReferenceError"
-	UnknownModuleError ErrorCategory = "errors::UnknownModuleError"
-	UnknownLinkError ErrorCategory = "errors::UnknownLinkError"
-	UnknownPropertyError ErrorCategory = "errors::UnknownPropertyError"
-	UnknownUserError ErrorCategory = "errors::UnknownUserError"
-	UnknownDatabaseError ErrorCategory = "errors::UnknownDatabaseError"
-	UnknownParameterError ErrorCategory = "errors::UnknownParameterError"
-	SchemaError ErrorCategory = "errors::SchemaError"
-	SchemaDefinitionError ErrorCategory = "errors::SchemaDefinitionError"
-	InvalidDefinitionError ErrorCategory = "errors::InvalidDefinitionError"
-	InvalidModuleDefinitionError ErrorCategory = "errors::InvalidModuleDefinitionError"
-	InvalidLinkDefinitionError ErrorCategory = "errors::InvalidLinkDefinitionError"
-	InvalidPropertyDefinitionError ErrorCategory = "errors::InvalidPropertyDefinitionError"
-	InvalidUserDefinitionError ErrorCategory = "errors::InvalidUserDefinitionError"
-	InvalidDatabaseDefinitionError ErrorCategory = "errors::InvalidDatabaseDefinitionError"
-	InvalidOperatorDefinitionError ErrorCategory = "errors::InvalidOperatorDefinitionError"
-	InvalidAliasDefinitionError ErrorCategory = "errors::InvalidAliasDefinitionError"
-	InvalidFunctionDefinitionError ErrorCategory = "errors::InvalidFunctionDefinitionError"
-	InvalidConstraintDefinitionError ErrorCategory = "errors::InvalidConstraintDefinitionError"
-	InvalidCastDefinitionError ErrorCategory = "errors::InvalidCastDefinitionError"
-	DuplicateDefinitionError ErrorCategory = "errors::DuplicateDefinitionError"
-	DuplicateModuleDefinitionError ErrorCategory = "errors::DuplicateModuleDefinitionError"
-	DuplicateLinkDefinitionError ErrorCategory = "errors::DuplicateLinkDefinitionError"
-	DuplicatePropertyDefinitionError ErrorCategory = "errors::DuplicatePropertyDefinitionError"
-	DuplicateUserDefinitionError ErrorCategory = "errors::DuplicateUserDefinitionError"
-	DuplicateDatabaseDefinitionError ErrorCategory = "errors::DuplicateDatabaseDefinitionError"
-	DuplicateOperatorDefinitionError ErrorCategory = "errors::DuplicateOperatorDefinitionError"
-	DuplicateViewDefinitionError ErrorCategory = "errors::DuplicateViewDefinitionError"
-	DuplicateFunctionDefinitionError ErrorCategory = "errors::DuplicateFunctionDefinitionError"
-	DuplicateConstraintDefinitionError ErrorCategory = "errors::DuplicateConstraintDefinitionError"
-	DuplicateCastDefinitionError ErrorCategory = "errors::DuplicateCastDefinitionError"
-	QueryTimeoutError ErrorCategory = "errors::QueryTimeoutError"
-	ExecutionError ErrorCategory = "errors::ExecutionError"
-	InvalidValueError ErrorCategory = "errors::InvalidValueError"
-	DivisionByZeroError ErrorCategory = "errors::DivisionByZeroError"
-	NumericOutOfRangeError ErrorCategory = "errors::NumericOutOfRangeError"
-	IntegrityError ErrorCategory = "errors::IntegrityError"
-	ConstraintViolationError ErrorCategory = "errors::ConstraintViolationError"
-	CardinalityViolationError ErrorCategory = "errors::CardinalityViolationError"
-	MissingRequiredError ErrorCategory = "errors::MissingRequiredError"
-	TransactionError ErrorCategory = "errors::TransactionError"
-	TransactionSerializationError ErrorCategory = "errors::TransactionSerializationError"
-	TransactionDeadlockError ErrorCategory = "errors::TransactionDeadlockError"
-	ConfigurationError ErrorCategory = "errors::ConfigurationError"
-	AccessError ErrorCategory = "errors::AccessError"
-	AuthenticationError ErrorCategory = "errors::AuthenticationError"
-	ClientError ErrorCategory = "errors::ClientError"
-	ClientConnectionError ErrorCategory = "errors::ClientConnectionError"
-	ClientConnectionFailedError ErrorCategory = "errors::ClientConnectionFailedError"
+	InternalServerError                    ErrorCategory = "errors::InternalServerError"
+	UnsupportedFeatureError                ErrorCategory = "errors::UnsupportedFeatureError"
+	ProtocolError                          ErrorCategory = "errors::ProtocolError"
+	BinaryProtocolError                    ErrorCategory = "errors::BinaryProtocolError"
+	UnsupportedProtocolVersionError        ErrorCategory = "errors::UnsupportedProtocolVersionError"
+	TypeSpecNotFoundError                  ErrorCategory = "errors::TypeSpecNotFoundError"
+	UnexpectedMessageError                 ErrorCategory = "errors::UnexpectedMessageError"
+	InputDataError                         ErrorCategory = "errors::InputDataError"
+	ResultCardinalityMismatchError         ErrorCategory = "errors::ResultCardinalityMismatchError"
+	CapabilityError                        ErrorCategory = "errors::CapabilityError"
+	UnsupportedCapabilityError             ErrorCategory = "errors::UnsupportedCapabilityError"
+	DisabledCapabilityError                ErrorCategory = "errors::DisabledCapabilityError"
+	QueryError                             ErrorCategory = "errors::QueryError"
+	InvalidSyntaxError                     ErrorCategory = "errors::InvalidSyntaxError"
+	EdgeQLSyntaxError                      ErrorCategory = "errors::EdgeQLSyntaxError"
+	SchemaSyntaxError                      ErrorCategory = "errors::SchemaSyntaxError"
+	GraphQLSyntaxError                     ErrorCategory = "errors::GraphQLSyntaxError"
+	InvalidTypeError                       ErrorCategory = "errors::InvalidTypeError"
+	InvalidTargetError                     ErrorCategory = "errors::InvalidTargetError"
+	InvalidLinkTargetError                 ErrorCategory = "errors::InvalidLinkTargetError"
+	InvalidPropertyTargetError             ErrorCategory = "errors::InvalidPropertyTargetError"
+	InvalidReferenceError                  ErrorCategory = "errors::InvalidReferenceError"
+	UnknownModuleError                     ErrorCategory = "errors::UnknownModuleError"
+	UnknownLinkError                       ErrorCategory = "errors::UnknownLinkError"
+	UnknownPropertyError                   ErrorCategory = "errors::UnknownPropertyError"
+	UnknownUserError                       ErrorCategory = "errors::UnknownUserError"
+	UnknownDatabaseError                   ErrorCategory = "errors::UnknownDatabaseError"
+	UnknownParameterError                  ErrorCategory = "errors::UnknownParameterError"
+	SchemaError                            ErrorCategory = "errors::SchemaError"
+	SchemaDefinitionError                  ErrorCategory = "errors::SchemaDefinitionError"
+	InvalidDefinitionError                 ErrorCategory = "errors::InvalidDefinitionError"
+	InvalidModuleDefinitionError           ErrorCategory = "errors::InvalidModuleDefinitionError"
+	InvalidLinkDefinitionError             ErrorCategory = "errors::InvalidLinkDefinitionError"
+	InvalidPropertyDefinitionError         ErrorCategory = "errors::InvalidPropertyDefinitionError"
+	InvalidUserDefinitionError             ErrorCategory = "errors::InvalidUserDefinitionError"
+	InvalidDatabaseDefinitionError         ErrorCategory = "errors::InvalidDatabaseDefinitionError"
+	InvalidOperatorDefinitionError         ErrorCategory = "errors::InvalidOperatorDefinitionError"
+	InvalidAliasDefinitionError            ErrorCategory = "errors::InvalidAliasDefinitionError"
+	InvalidFunctionDefinitionError         ErrorCategory = "errors::InvalidFunctionDefinitionError"
+	InvalidConstraintDefinitionError       ErrorCategory = "errors::InvalidConstraintDefinitionError"
+	InvalidCastDefinitionError             ErrorCategory = "errors::InvalidCastDefinitionError"
+	DuplicateDefinitionError               ErrorCategory = "errors::DuplicateDefinitionError"
+	DuplicateModuleDefinitionError         ErrorCategory = "errors::DuplicateModuleDefinitionError"
+	DuplicateLinkDefinitionError           ErrorCategory = "errors::DuplicateLinkDefinitionError"
+	DuplicatePropertyDefinitionError       ErrorCategory = "errors::DuplicatePropertyDefinitionError"
+	DuplicateUserDefinitionError           ErrorCategory = "errors::DuplicateUserDefinitionError"
+	DuplicateDatabaseDefinitionError       ErrorCategory = "errors::DuplicateDatabaseDefinitionError"
+	DuplicateOperatorDefinitionError       ErrorCategory = "errors::DuplicateOperatorDefinitionError"
+	DuplicateViewDefinitionError           ErrorCategory = "errors::DuplicateViewDefinitionError"
+	DuplicateFunctionDefinitionError       ErrorCategory = "errors::DuplicateFunctionDefinitionError"
+	DuplicateConstraintDefinitionError     ErrorCategory = "errors::DuplicateConstraintDefinitionError"
+	DuplicateCastDefinitionError           ErrorCategory = "errors::DuplicateCastDefinitionError"
+	QueryTimeoutError                      ErrorCategory = "errors::QueryTimeoutError"
+	ExecutionError                         ErrorCategory = "errors::ExecutionError"
+	InvalidValueError                      ErrorCategory = "errors::InvalidValueError"
+	DivisionByZeroError                    ErrorCategory = "errors::DivisionByZeroError"
+	NumericOutOfRangeError                 ErrorCategory = "errors::NumericOutOfRangeError"
+	IntegrityError                         ErrorCategory = "errors::IntegrityError"
+	ConstraintViolationError               ErrorCategory = "errors::ConstraintViolationError"
+	CardinalityViolationError              ErrorCategory = "errors::CardinalityViolationError"
+	MissingRequiredError                   ErrorCategory = "errors::MissingRequiredError"
+	TransactionError                       ErrorCategory = "errors::TransactionError"
+	TransactionSerializationError          ErrorCategory = "errors::TransactionSerializationError"
+	TransactionDeadlockError               ErrorCategory = "errors::TransactionDeadlockError"
+	ConfigurationError                     ErrorCategory = "errors::ConfigurationError"
+	AccessError                            ErrorCategory = "errors::AccessError"
+	AuthenticationError                    ErrorCategory = "errors::AuthenticationError"
+	ClientError                            ErrorCategory = "errors::ClientError"
+	ClientConnectionError                  ErrorCategory = "errors::ClientConnectionError"
+	ClientConnectionFailedError            ErrorCategory = "errors::ClientConnectionFailedError"
 	ClientConnectionFailedTemporarilyError ErrorCategory = "errors::ClientConnectionFailedTemporarilyError"
-	ClientConnectionTimeoutError ErrorCategory = "errors::ClientConnectionTimeoutError"
-	ClientConnectionClosedError ErrorCategory = "errors::ClientConnectionClosedError"
-	InterfaceError ErrorCategory = "errors::InterfaceError"
-	QueryArgumentError ErrorCategory = "errors::QueryArgumentError"
-	MissingArgumentError ErrorCategory = "errors::MissingArgumentError"
-	UnknownArgumentError ErrorCategory = "errors::UnknownArgumentError"
-	InvalidArgumentError ErrorCategory = "errors::InvalidArgumentError"
-	NoDataError ErrorCategory = "errors::NoDataError"
+	ClientConnectionTimeoutError           ErrorCategory = "errors::ClientConnectionTimeoutError"
+	ClientConnectionClosedError            ErrorCategory = "errors::ClientConnectionClosedError"
+	InterfaceError                         ErrorCategory = "errors::InterfaceError"
+	QueryArgumentError                     ErrorCategory = "errors::QueryArgumentError"
+	MissingArgumentError                   ErrorCategory = "errors::MissingArgumentError"
+	UnknownArgumentError                   ErrorCategory = "errors::UnknownArgumentError"
+	InvalidArgumentError                   ErrorCategory = "errors::InvalidArgumentError"
+	NoDataError                            ErrorCategory = "errors::NoDataError"
 )
 
 type internalServerError struct {
@@ -123,7 +123,6 @@ func (e *internalServerError) Error() string {
 }
 
 func (e *internalServerError) Unwrap() error { return e.err }
-
 
 func (e *internalServerError) Category(c ErrorCategory) bool {
 	switch c {
@@ -157,7 +156,6 @@ func (e *unsupportedFeatureError) Error() string {
 
 func (e *unsupportedFeatureError) Unwrap() error { return e.err }
 
-
 func (e *unsupportedFeatureError) Category(c ErrorCategory) bool {
 	switch c {
 	case UnsupportedFeatureError:
@@ -190,7 +188,6 @@ func (e *protocolError) Error() string {
 
 func (e *protocolError) Unwrap() error { return e.err }
 
-
 func (e *protocolError) Category(c ErrorCategory) bool {
 	switch c {
 	case ProtocolError:
@@ -222,7 +219,6 @@ func (e *binaryProtocolError) Error() string {
 }
 
 func (e *binaryProtocolError) Unwrap() error { return e.err }
-
 
 func (e *binaryProtocolError) Category(c ErrorCategory) bool {
 	switch c {
@@ -259,7 +255,6 @@ func (e *unsupportedProtocolVersionError) Error() string {
 }
 
 func (e *unsupportedProtocolVersionError) Unwrap() error { return e.err }
-
 
 func (e *unsupportedProtocolVersionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -301,7 +296,6 @@ func (e *typeSpecNotFoundError) Error() string {
 
 func (e *typeSpecNotFoundError) Unwrap() error { return e.err }
 
-
 func (e *typeSpecNotFoundError) Category(c ErrorCategory) bool {
 	switch c {
 	case TypeSpecNotFoundError:
@@ -341,7 +335,6 @@ func (e *unexpectedMessageError) Error() string {
 }
 
 func (e *unexpectedMessageError) Unwrap() error { return e.err }
-
 
 func (e *unexpectedMessageError) Category(c ErrorCategory) bool {
 	switch c {
@@ -383,7 +376,6 @@ func (e *inputDataError) Error() string {
 
 func (e *inputDataError) Unwrap() error { return e.err }
 
-
 func (e *inputDataError) Category(c ErrorCategory) bool {
 	switch c {
 	case InputDataError:
@@ -419,7 +411,6 @@ func (e *resultCardinalityMismatchError) Error() string {
 }
 
 func (e *resultCardinalityMismatchError) Unwrap() error { return e.err }
-
 
 func (e *resultCardinalityMismatchError) Category(c ErrorCategory) bool {
 	switch c {
@@ -457,7 +448,6 @@ func (e *capabilityError) Error() string {
 
 func (e *capabilityError) Unwrap() error { return e.err }
 
-
 func (e *capabilityError) Category(c ErrorCategory) bool {
 	switch c {
 	case CapabilityError:
@@ -493,7 +483,6 @@ func (e *unsupportedCapabilityError) Error() string {
 }
 
 func (e *unsupportedCapabilityError) Unwrap() error { return e.err }
-
 
 func (e *unsupportedCapabilityError) Category(c ErrorCategory) bool {
 	switch c {
@@ -535,7 +524,6 @@ func (e *disabledCapabilityError) Error() string {
 
 func (e *disabledCapabilityError) Unwrap() error { return e.err }
 
-
 func (e *disabledCapabilityError) Category(c ErrorCategory) bool {
 	switch c {
 	case DisabledCapabilityError:
@@ -576,7 +564,6 @@ func (e *queryError) Error() string {
 
 func (e *queryError) Unwrap() error { return e.err }
 
-
 func (e *queryError) Category(c ErrorCategory) bool {
 	switch c {
 	case QueryError:
@@ -608,7 +595,6 @@ func (e *invalidSyntaxError) Error() string {
 }
 
 func (e *invalidSyntaxError) Unwrap() error { return e.err }
-
 
 func (e *invalidSyntaxError) Category(c ErrorCategory) bool {
 	switch c {
@@ -645,7 +631,6 @@ func (e *edgeQLSyntaxError) Error() string {
 }
 
 func (e *edgeQLSyntaxError) Unwrap() error { return e.err }
-
 
 func (e *edgeQLSyntaxError) Category(c ErrorCategory) bool {
 	switch c {
@@ -687,7 +672,6 @@ func (e *schemaSyntaxError) Error() string {
 
 func (e *schemaSyntaxError) Unwrap() error { return e.err }
 
-
 func (e *schemaSyntaxError) Category(c ErrorCategory) bool {
 	switch c {
 	case SchemaSyntaxError:
@@ -727,7 +711,6 @@ func (e *graphQLSyntaxError) Error() string {
 }
 
 func (e *graphQLSyntaxError) Unwrap() error { return e.err }
-
 
 func (e *graphQLSyntaxError) Category(c ErrorCategory) bool {
 	switch c {
@@ -769,7 +752,6 @@ func (e *invalidTypeError) Error() string {
 
 func (e *invalidTypeError) Unwrap() error { return e.err }
 
-
 func (e *invalidTypeError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidTypeError:
@@ -805,7 +787,6 @@ func (e *invalidTargetError) Error() string {
 }
 
 func (e *invalidTargetError) Unwrap() error { return e.err }
-
 
 func (e *invalidTargetError) Category(c ErrorCategory) bool {
 	switch c {
@@ -846,7 +827,6 @@ func (e *invalidLinkTargetError) Error() string {
 }
 
 func (e *invalidLinkTargetError) Unwrap() error { return e.err }
-
 
 func (e *invalidLinkTargetError) Category(c ErrorCategory) bool {
 	switch c {
@@ -892,7 +872,6 @@ func (e *invalidPropertyTargetError) Error() string {
 
 func (e *invalidPropertyTargetError) Unwrap() error { return e.err }
 
-
 func (e *invalidPropertyTargetError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidPropertyTargetError:
@@ -937,7 +916,6 @@ func (e *invalidReferenceError) Error() string {
 
 func (e *invalidReferenceError) Unwrap() error { return e.err }
 
-
 func (e *invalidReferenceError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidReferenceError:
@@ -973,7 +951,6 @@ func (e *unknownModuleError) Error() string {
 }
 
 func (e *unknownModuleError) Unwrap() error { return e.err }
-
 
 func (e *unknownModuleError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1015,7 +992,6 @@ func (e *unknownLinkError) Error() string {
 
 func (e *unknownLinkError) Unwrap() error { return e.err }
 
-
 func (e *unknownLinkError) Category(c ErrorCategory) bool {
 	switch c {
 	case UnknownLinkError:
@@ -1055,7 +1031,6 @@ func (e *unknownPropertyError) Error() string {
 }
 
 func (e *unknownPropertyError) Unwrap() error { return e.err }
-
 
 func (e *unknownPropertyError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1097,7 +1072,6 @@ func (e *unknownUserError) Error() string {
 
 func (e *unknownUserError) Unwrap() error { return e.err }
 
-
 func (e *unknownUserError) Category(c ErrorCategory) bool {
 	switch c {
 	case UnknownUserError:
@@ -1137,7 +1111,6 @@ func (e *unknownDatabaseError) Error() string {
 }
 
 func (e *unknownDatabaseError) Unwrap() error { return e.err }
-
 
 func (e *unknownDatabaseError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1179,7 +1152,6 @@ func (e *unknownParameterError) Error() string {
 
 func (e *unknownParameterError) Unwrap() error { return e.err }
 
-
 func (e *unknownParameterError) Category(c ErrorCategory) bool {
 	switch c {
 	case UnknownParameterError:
@@ -1220,7 +1192,6 @@ func (e *schemaError) Error() string {
 
 func (e *schemaError) Unwrap() error { return e.err }
 
-
 func (e *schemaError) Category(c ErrorCategory) bool {
 	switch c {
 	case SchemaError:
@@ -1257,7 +1228,6 @@ func (e *schemaDefinitionError) Error() string {
 
 func (e *schemaDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *schemaDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case SchemaDefinitionError:
@@ -1293,7 +1263,6 @@ func (e *invalidDefinitionError) Error() string {
 }
 
 func (e *invalidDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *invalidDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1334,7 +1303,6 @@ func (e *invalidModuleDefinitionError) Error() string {
 }
 
 func (e *invalidModuleDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *invalidModuleDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1380,7 +1348,6 @@ func (e *invalidLinkDefinitionError) Error() string {
 
 func (e *invalidLinkDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *invalidLinkDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidLinkDefinitionError:
@@ -1424,7 +1391,6 @@ func (e *invalidPropertyDefinitionError) Error() string {
 }
 
 func (e *invalidPropertyDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *invalidPropertyDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1470,7 +1436,6 @@ func (e *invalidUserDefinitionError) Error() string {
 
 func (e *invalidUserDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *invalidUserDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidUserDefinitionError:
@@ -1514,7 +1479,6 @@ func (e *invalidDatabaseDefinitionError) Error() string {
 }
 
 func (e *invalidDatabaseDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *invalidDatabaseDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1560,7 +1524,6 @@ func (e *invalidOperatorDefinitionError) Error() string {
 
 func (e *invalidOperatorDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *invalidOperatorDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidOperatorDefinitionError:
@@ -1604,7 +1567,6 @@ func (e *invalidAliasDefinitionError) Error() string {
 }
 
 func (e *invalidAliasDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *invalidAliasDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1650,7 +1612,6 @@ func (e *invalidFunctionDefinitionError) Error() string {
 
 func (e *invalidFunctionDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *invalidFunctionDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidFunctionDefinitionError:
@@ -1694,7 +1655,6 @@ func (e *invalidConstraintDefinitionError) Error() string {
 }
 
 func (e *invalidConstraintDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *invalidConstraintDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1740,7 +1700,6 @@ func (e *invalidCastDefinitionError) Error() string {
 
 func (e *invalidCastDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *invalidCastDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidCastDefinitionError:
@@ -1785,7 +1744,6 @@ func (e *duplicateDefinitionError) Error() string {
 
 func (e *duplicateDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *duplicateDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case DuplicateDefinitionError:
@@ -1825,7 +1783,6 @@ func (e *duplicateModuleDefinitionError) Error() string {
 }
 
 func (e *duplicateModuleDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *duplicateModuleDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1871,7 +1828,6 @@ func (e *duplicateLinkDefinitionError) Error() string {
 
 func (e *duplicateLinkDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *duplicateLinkDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case DuplicateLinkDefinitionError:
@@ -1915,7 +1871,6 @@ func (e *duplicatePropertyDefinitionError) Error() string {
 }
 
 func (e *duplicatePropertyDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *duplicatePropertyDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -1961,7 +1916,6 @@ func (e *duplicateUserDefinitionError) Error() string {
 
 func (e *duplicateUserDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *duplicateUserDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case DuplicateUserDefinitionError:
@@ -2005,7 +1959,6 @@ func (e *duplicateDatabaseDefinitionError) Error() string {
 }
 
 func (e *duplicateDatabaseDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *duplicateDatabaseDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2051,7 +2004,6 @@ func (e *duplicateOperatorDefinitionError) Error() string {
 
 func (e *duplicateOperatorDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *duplicateOperatorDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case DuplicateOperatorDefinitionError:
@@ -2095,7 +2047,6 @@ func (e *duplicateViewDefinitionError) Error() string {
 }
 
 func (e *duplicateViewDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *duplicateViewDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2141,7 +2092,6 @@ func (e *duplicateFunctionDefinitionError) Error() string {
 
 func (e *duplicateFunctionDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *duplicateFunctionDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case DuplicateFunctionDefinitionError:
@@ -2185,7 +2135,6 @@ func (e *duplicateConstraintDefinitionError) Error() string {
 }
 
 func (e *duplicateConstraintDefinitionError) Unwrap() error { return e.err }
-
 
 func (e *duplicateConstraintDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2231,7 +2180,6 @@ func (e *duplicateCastDefinitionError) Error() string {
 
 func (e *duplicateCastDefinitionError) Unwrap() error { return e.err }
 
-
 func (e *duplicateCastDefinitionError) Category(c ErrorCategory) bool {
 	switch c {
 	case DuplicateCastDefinitionError:
@@ -2276,7 +2224,6 @@ func (e *queryTimeoutError) Error() string {
 
 func (e *queryTimeoutError) Unwrap() error { return e.err }
 
-
 func (e *queryTimeoutError) Category(c ErrorCategory) bool {
 	switch c {
 	case QueryTimeoutError:
@@ -2313,7 +2260,6 @@ func (e *executionError) Error() string {
 
 func (e *executionError) Unwrap() error { return e.err }
 
-
 func (e *executionError) Category(c ErrorCategory) bool {
 	switch c {
 	case ExecutionError:
@@ -2345,7 +2291,6 @@ func (e *invalidValueError) Error() string {
 }
 
 func (e *invalidValueError) Unwrap() error { return e.err }
-
 
 func (e *invalidValueError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2382,7 +2327,6 @@ func (e *divisionByZeroError) Error() string {
 }
 
 func (e *divisionByZeroError) Unwrap() error { return e.err }
-
 
 func (e *divisionByZeroError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2424,7 +2368,6 @@ func (e *numericOutOfRangeError) Error() string {
 
 func (e *numericOutOfRangeError) Unwrap() error { return e.err }
 
-
 func (e *numericOutOfRangeError) Category(c ErrorCategory) bool {
 	switch c {
 	case NumericOutOfRangeError:
@@ -2465,7 +2408,6 @@ func (e *integrityError) Error() string {
 
 func (e *integrityError) Unwrap() error { return e.err }
 
-
 func (e *integrityError) Category(c ErrorCategory) bool {
 	switch c {
 	case IntegrityError:
@@ -2501,7 +2443,6 @@ func (e *constraintViolationError) Error() string {
 }
 
 func (e *constraintViolationError) Unwrap() error { return e.err }
-
 
 func (e *constraintViolationError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2543,7 +2484,6 @@ func (e *cardinalityViolationError) Error() string {
 
 func (e *cardinalityViolationError) Unwrap() error { return e.err }
 
-
 func (e *cardinalityViolationError) Category(c ErrorCategory) bool {
 	switch c {
 	case CardinalityViolationError:
@@ -2583,7 +2523,6 @@ func (e *missingRequiredError) Error() string {
 }
 
 func (e *missingRequiredError) Unwrap() error { return e.err }
-
 
 func (e *missingRequiredError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2625,7 +2564,6 @@ func (e *transactionError) Error() string {
 
 func (e *transactionError) Unwrap() error { return e.err }
 
-
 func (e *transactionError) Category(c ErrorCategory) bool {
 	switch c {
 	case TransactionError:
@@ -2661,7 +2599,6 @@ func (e *transactionSerializationError) Error() string {
 }
 
 func (e *transactionSerializationError) Unwrap() error { return e.err }
-
 
 func (e *transactionSerializationError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2705,7 +2642,6 @@ func (e *transactionDeadlockError) Error() string {
 
 func (e *transactionDeadlockError) Unwrap() error { return e.err }
 
-
 func (e *transactionDeadlockError) Category(c ErrorCategory) bool {
 	switch c {
 	case TransactionDeadlockError:
@@ -2748,7 +2684,6 @@ func (e *configurationError) Error() string {
 
 func (e *configurationError) Unwrap() error { return e.err }
 
-
 func (e *configurationError) Category(c ErrorCategory) bool {
 	switch c {
 	case ConfigurationError:
@@ -2781,7 +2716,6 @@ func (e *accessError) Error() string {
 
 func (e *accessError) Unwrap() error { return e.err }
 
-
 func (e *accessError) Category(c ErrorCategory) bool {
 	switch c {
 	case AccessError:
@@ -2813,7 +2747,6 @@ func (e *authenticationError) Error() string {
 }
 
 func (e *authenticationError) Unwrap() error { return e.err }
-
 
 func (e *authenticationError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2851,7 +2784,6 @@ func (e *clientError) Error() string {
 
 func (e *clientError) Unwrap() error { return e.err }
 
-
 func (e *clientError) Category(c ErrorCategory) bool {
 	switch c {
 	case ClientError:
@@ -2883,7 +2815,6 @@ func (e *clientConnectionError) Error() string {
 }
 
 func (e *clientConnectionError) Unwrap() error { return e.err }
-
 
 func (e *clientConnectionError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2920,7 +2851,6 @@ func (e *clientConnectionFailedError) Error() string {
 }
 
 func (e *clientConnectionFailedError) Unwrap() error { return e.err }
-
 
 func (e *clientConnectionFailedError) Category(c ErrorCategory) bool {
 	switch c {
@@ -2962,7 +2892,6 @@ func (e *clientConnectionFailedTemporarilyError) Error() string {
 
 func (e *clientConnectionFailedTemporarilyError) Unwrap() error { return e.err }
 
-
 func (e *clientConnectionFailedTemporarilyError) Category(c ErrorCategory) bool {
 	switch c {
 	case ClientConnectionFailedTemporarilyError:
@@ -2986,9 +2915,9 @@ func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientError() {}
 
 func (e *clientConnectionFailedTemporarilyError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldReconnect:
-		return true
 	case ShouldRetry:
+		return true
+	case ShouldReconnect:
 		return true
 	default:
 		return false
@@ -3011,7 +2940,6 @@ func (e *clientConnectionTimeoutError) Error() string {
 
 func (e *clientConnectionTimeoutError) Unwrap() error { return e.err }
 
-
 func (e *clientConnectionTimeoutError) Category(c ErrorCategory) bool {
 	switch c {
 	case ClientConnectionTimeoutError:
@@ -3031,9 +2959,9 @@ func (e *clientConnectionTimeoutError) isEdgeDBClientError() {}
 
 func (e *clientConnectionTimeoutError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldReconnect:
-		return true
 	case ShouldRetry:
+		return true
+	case ShouldReconnect:
 		return true
 	default:
 		return false
@@ -3056,7 +2984,6 @@ func (e *clientConnectionClosedError) Error() string {
 
 func (e *clientConnectionClosedError) Unwrap() error { return e.err }
 
-
 func (e *clientConnectionClosedError) Category(c ErrorCategory) bool {
 	switch c {
 	case ClientConnectionClosedError:
@@ -3076,9 +3003,9 @@ func (e *clientConnectionClosedError) isEdgeDBClientError() {}
 
 func (e *clientConnectionClosedError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldReconnect:
-		return true
 	case ShouldRetry:
+		return true
+	case ShouldReconnect:
 		return true
 	default:
 		return false
@@ -3100,7 +3027,6 @@ func (e *interfaceError) Error() string {
 }
 
 func (e *interfaceError) Unwrap() error { return e.err }
-
 
 func (e *interfaceError) Category(c ErrorCategory) bool {
 	switch c {
@@ -3137,7 +3063,6 @@ func (e *queryArgumentError) Error() string {
 }
 
 func (e *queryArgumentError) Unwrap() error { return e.err }
-
 
 func (e *queryArgumentError) Category(c ErrorCategory) bool {
 	switch c {
@@ -3178,7 +3103,6 @@ func (e *missingArgumentError) Error() string {
 }
 
 func (e *missingArgumentError) Unwrap() error { return e.err }
-
 
 func (e *missingArgumentError) Category(c ErrorCategory) bool {
 	switch c {
@@ -3224,7 +3148,6 @@ func (e *unknownArgumentError) Error() string {
 
 func (e *unknownArgumentError) Unwrap() error { return e.err }
 
-
 func (e *unknownArgumentError) Category(c ErrorCategory) bool {
 	switch c {
 	case UnknownArgumentError:
@@ -3269,7 +3192,6 @@ func (e *invalidArgumentError) Error() string {
 
 func (e *invalidArgumentError) Unwrap() error { return e.err }
 
-
 func (e *invalidArgumentError) Category(c ErrorCategory) bool {
 	switch c {
 	case InvalidArgumentError:
@@ -3313,7 +3235,6 @@ func (e *noDataError) Error() string {
 }
 
 func (e *noDataError) Unwrap() error { return e.err }
-
 
 func (e *noDataError) Category(c ErrorCategory) bool {
 	switch c {
