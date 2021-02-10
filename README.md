@@ -2,9 +2,6 @@
 [![Build Status](https://github.com/edgedb/edgedb-go/workflows/Tests/badge.svg?event=push&branch=master)](https://github.com/edgedb/edgedb-go/actions)
 [![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
-# ⚠️ WIP ⚠️
-This project is far from production ready. Contributions welcome! 😊
-
 ## Installation
 $ go get https://github.com/edgedb/edgedb-go
 
@@ -32,14 +29,14 @@ func main() {
   }
 
   ctx := context.Background()
-  conn, err := edgedb.Connect(ctx, opts)
+  pool, err := edgedb.Connect(ctx, opts)
   if err != nil {
     log.Fatal(err)
   }
-  defer conn.Close()
+  defer pool.Close()
 
   var result string
-  err = conn.QueryOne(ctx, "SELECT 'hello EdgeDB!'", &result)
+  err = pool.QueryOne(ctx, "SELECT 'hello EdgeDB!'", &result)
   if err != nil {
     log.Fatal(err)
   }
@@ -56,7 +53,6 @@ or [build it manually](https://edgedb.com/docs/internals/dev/).
 
 To run the test suite run `make test`.
 To run lints `make lint`.
-To format the code `make format`.
 
 ## License
 edgedb-go is developed and distributed under the Apache 2.0 license.
