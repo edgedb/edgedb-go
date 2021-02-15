@@ -137,15 +137,16 @@ func (d Duration) String() string {
 	ms = x % 1_000_000
 	sec := (x % 60000000) / 1_000_000
 	str := fmt.Sprintf("%vs", fmtFloat(sec, ms))
-	str = strings.TrimLeft(str, "0s")
+	str = strings.TrimPrefix(str, "0s")
 
 	min := (x % 3600000000) / 60000000
 	str = fmt.Sprintf("%vm%v", min, str)
-	str = strings.TrimLeft(str, "0m")
+	str = strings.TrimPrefix(str, "0m")
 
 	hrs := x / 3600000000
 	str = fmt.Sprintf("%vh%v", hrs, str)
-	str = strings.TrimLeft(str, "0h")
+	str = strings.TrimPrefix(str, "0h")
+
 	return neg + str
 }
 

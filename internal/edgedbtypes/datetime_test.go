@@ -234,9 +234,11 @@ func TestDurationString(t *testing.T) {
 		{"-1h", Duration(-3600000000)},
 		{"-24h", Duration(-86400000000)},
 
+		{"11h0.970395s", Duration(39600970395)},
 		{"59m59s", Duration(3599000000)},
 		{"1h59m59s", Duration(7199000000)},
 		{"1h59m", Duration(7140000000)},
+		{"6h11m0.499208s", Duration(22260499208)},
 		{"854015929h20m18.258432s", Duration(3074457345618258432)},
 		{"-59m59s", Duration(-3599000000)},
 		{"-1h59m59s", Duration(-7199000000)},
