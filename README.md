@@ -14,34 +14,34 @@ package main
 
 import (
 	"context"
-  "fmt"
-  "log"
+	"fmt"
+	"log"
 
-  "github.com/edgedb/edgedb-go"
+	"github.com/edgedb/edgedb-go"
 )
 
 func main() {
-  opts := edgedb.Options{
-    Database: "edgedb",
-    User: "edgedb",
-    MinConns: 1,
-    MaxConns: 4,
-  }
+	opts := edgedb.Options{
+		Database: "edgedb",
+		User: "edgedb",
+		MinConns: 1,
+		MaxConns: 4,
+	}
 
-  ctx := context.Background()
-  pool, err := edgedb.Connect(ctx, opts)
-  if err != nil {
-    log.Fatal(err)
-  }
-  defer pool.Close()
+	ctx := context.Background()
+	pool, err := edgedb.Connect(ctx, opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pool.Close()
 
-  var result string
-  err = pool.QueryOne(ctx, "SELECT 'hello EdgeDB!'", &result)
-  if err != nil {
-    log.Fatal(err)
-  }
+	var result string
+	err = pool.QueryOne(ctx, "SELECT 'hello EdgeDB!'", &result)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  fmt.Println(result)
+	fmt.Println(result)
 }
 ```
 
