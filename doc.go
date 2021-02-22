@@ -18,29 +18,38 @@
 //
 // Typical usage looks like this:
 //
+//   import (
+//       "context"
+//       "log"
+//
+//       "github.com/edgedb/edgedb-go"
+//   )
+//
 //   opts := edgedb.Options{
 //       MinConns: 1,
 //       MaxConns: 4,
 //   }
 //
-//   ctx := context.Background()
-//   pool, err := edgedb.ConnectDSN(ctx, "my_instance", opts)
-//   if err != nil {
-//       log.Fatal(err)
-//   }
-//   defer pool.Close()
-//
-//   var (
-//       age int64 = 21
-//       users []struct{
-//           ID edgedb.UUID `edgedb:"id"`
-//           Name string    `edgedb:"name"`
+//   func main() {
+//       ctx := context.Background()
+//       pool, err := edgedb.ConnectDSN(ctx, "my_instance", opts)
+//       if err != nil {
+//           log.Fatal(err)
 //       }
-//   )
+//       defer pool.Close()
 //
-//   query := "SELECT User{name} WHERE .age = <int64>$0"
-//   err = pool.Query(ctx, query, &users, age)
-//   ...
+//       var (
+//           age int64 = 21
+//           users []struct{
+//               ID edgedb.UUID `edgedb:"id"`
+//               Name string    `edgedb:"name"`
+//           }
+//       )
+//
+//       query := "SELECT User{name} WHERE .age = <int64>$0"
+//       err = pool.Query(ctx, query, &users, age)
+//       ...
+//   }
 //
 // You can also connect to a database using a DSN:
 //
