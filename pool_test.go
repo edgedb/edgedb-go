@@ -236,7 +236,7 @@ func TestClosePool(t *testing.T) {
 	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 }
 
-func TestPoolRetry(t *testing.T) {
+func TestPoolRetryingTx(t *testing.T) {
 	ctx := context.Background()
 
 	p, err := Connect(ctx, opts)
@@ -244,10 +244,10 @@ func TestPoolRetry(t *testing.T) {
 	defer p.Close() // nolint:errcheck
 
 	var result int64
-	err = p.Retry(ctx, func(ctx context.Context, tx Tx) error {
+	err = p.RetryingTx(ctx, func(ctx context.Context, tx Tx) error {
 		return tx.QueryOne(ctx, "SELECT 33*21", &result)
 	})
 
 	require.Nil(t, err, "unexpected error: %v", err)
-	require.Equal(t, int64(693), result, "Pool.Retry() failed")
+	require.Equal(t, int64(693), result, "Pool.RetryingTx() failed")
 }
