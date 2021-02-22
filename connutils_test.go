@@ -437,7 +437,7 @@ func TestConnectTimeout(t *testing.T) {
 		User:               opts.User,
 		Password:           opts.Password,
 		Database:           opts.Database,
-		ConnectTimeout:     1 * time.Millisecond,
+		ConnectTimeout:     2 * time.Nanosecond,
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
