@@ -528,10 +528,10 @@ func TestSendAndReceveDuration(t *testing.T) {
 		str string
 		d   Duration
 	}{
-		{"00:00:00", Duration(0)},
-		{"-00:00:00.000001", Duration(-1)},
+		{"0", Duration(0)},
+		{"-0:00:00.000001", Duration(-1)},
 		{"24:00:00", Duration(86400000000)},
-		{"00:00:01", Duration(1_000_000)},
+		{"0:00:01", Duration(1_000_000)},
 		{"854015929:20:18.258432", Duration(3074457345618258432)},
 	}
 
