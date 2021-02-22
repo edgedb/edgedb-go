@@ -118,14 +118,14 @@ func (c *poolConn) QueryOneJSON(
 	return err
 }
 
-func (c *poolConn) TryTx(ctx context.Context, action Action) error {
-	err := c.conn.TryTx(ctx, action)
+func (c *poolConn) RawTx(ctx context.Context, action Action) error {
+	err := c.conn.RawTx(ctx, action)
 	c.checkErr(err)
 	return err
 }
 
-func (c *poolConn) Retry(ctx context.Context, action Action) error {
-	err := c.conn.Retry(ctx, action)
+func (c *poolConn) RetryingTx(ctx context.Context, action Action) error {
+	err := c.conn.RetryingTx(ctx, action)
 	c.checkErr(err)
 	return err
 }

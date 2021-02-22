@@ -375,26 +375,26 @@ func (p *pool) QueryOneJSON(
 	return firstError(err, p.release(conn, err))
 }
 
-func (p *pool) TryTx(ctx context.Context, action Action) error {
+func (p *pool) RawTx(ctx context.Context, action Action) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
 	return firstError(
-		conn.TryTx(ctx, action),
+		conn.RawTx(ctx, action),
 		p.release(conn, err),
 	)
 }
 
-func (p *pool) Retry(ctx context.Context, action Action) error {
+func (p *pool) RetryingTx(ctx context.Context, action Action) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
 	return firstError(
-		conn.Retry(ctx, action),
+		conn.RetryingTx(ctx, action),
 		p.release(conn, err),
 	)
 }

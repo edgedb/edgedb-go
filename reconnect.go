@@ -213,7 +213,7 @@ func (b *reconnectingConn) QueryOneJSON(
 	return b.granularFlow(ctx, q)
 }
 
-func (b *reconnectingConn) TryTx(ctx context.Context, action Action) error {
+func (b *reconnectingConn) RawTx(ctx context.Context, action Action) error {
 	if e := b.borrow("transaction"); e != nil {
 		return e
 	}
@@ -235,7 +235,10 @@ func (b *reconnectingConn) TryTx(ctx context.Context, action Action) error {
 	return tx.commit(ctx)
 }
 
-func (b *reconnectingConn) Retry(ctx context.Context, action Action) error {
+func (b *reconnectingConn) RetryingTx(
+	ctx context.Context,
+	action Action,
+) error {
 	if e := b.borrow("transaction"); e != nil {
 		return e
 	}

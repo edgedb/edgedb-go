@@ -26,7 +26,7 @@ import (
 
 func TestTxRollesBack(t *testing.T) {
 	ctx := context.Background()
-	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
+	err := conn.RawTx(ctx, func(ctx context.Context, tx Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
 		if e := tx.Execute(ctx, query); e != nil {
 			return e
@@ -61,7 +61,7 @@ func TestTxRollesBack(t *testing.T) {
 
 func TestTxRollesBackOnUserError(t *testing.T) {
 	ctx := context.Background()
-	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
+	err := conn.RawTx(ctx, func(ctx context.Context, tx Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
 		if e := tx.Execute(ctx, query); e != nil {
 			return e
@@ -89,7 +89,7 @@ func TestTxRollesBackOnUserError(t *testing.T) {
 
 func TestTxCommits(t *testing.T) {
 	ctx := context.Background()
-	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
+	err := conn.RawTx(ctx, func(ctx context.Context, tx Tx) error {
 		return tx.Execute(ctx, "INSERT TxTest {name := 'Test Commit'};")
 	})
 	require.Nil(t, err, err)
@@ -116,7 +116,7 @@ func TestTxCommits(t *testing.T) {
 
 func TestTxCanNotUseConn(t *testing.T) {
 	ctx := context.Background()
-	err := conn.TryTx(ctx, func(ctx context.Context, tx Tx) error {
+	err := conn.RawTx(ctx, func(ctx context.Context, tx Tx) error {
 		var num []int64
 		return conn.Query(ctx, "SELECT 7*9;", &num)
 	})

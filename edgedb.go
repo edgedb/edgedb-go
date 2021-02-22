@@ -46,14 +46,14 @@ type Action func(context.Context, Tx) error
 
 // Trier allows trying actions in a transaction.
 type Trier interface {
-	// TryTx runs an action in a transaction.
+	// RawTx runs an action in a transaction.
 	// If the action returns an error the transaction is rolled back,
 	// otherwise it is committed.
-	TryTx(context.Context, Action) error
+	RawTx(context.Context, Action) error
 
-	// Retry does the same as TryTx but retries failed actions
+	// RetryingTx does the same as RawTx but retries failed actions
 	// if they might succeed on a subsequent attempt.
-	Retry(context.Context, Action) error
+	RetryingTx(context.Context, Action) error
 }
 
 // Executor allows querying the database.
