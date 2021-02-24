@@ -49,6 +49,12 @@ func StructField(t reflect.Type, name string) (reflect.StructField, bool) {
 // if the out parameter is not valid.
 func ValueOf(i interface{}) (reflect.Value, error) {
 	v := reflect.ValueOf(i)
+	if !v.IsValid() {
+		return reflect.Value{}, fmt.Errorf(
+			"the \"out\" argument must be a pointer, got untyped nil",
+		)
+	}
+
 	if v.Kind() != reflect.Ptr {
 		return reflect.Value{}, fmt.Errorf(
 			"the \"out\" argument must be a pointer, got %v",

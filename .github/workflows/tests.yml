@@ -27,9 +27,9 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.29
+        run: |
+          go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.37.1
+          make lint
 
       - name: Build
         run: |

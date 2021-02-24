@@ -65,6 +65,9 @@ func newQuery(
 		q.out, err = marshal.ValueOf(out)
 	} else {
 		q.out, err = marshal.ValueOfSlice(out)
+		if err == nil {
+			q.out.SetLen(0)
+		}
 	}
 
 	if err != nil {

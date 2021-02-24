@@ -252,3 +252,10 @@ func TestQueryTimesOut(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, int64(2), r)
 }
+
+func TestNilResultValue(t *testing.T) {
+	ctx := context.Background()
+	err := conn.Query(ctx, "SELECT 1", nil)
+	assert.EqualError(t, err,
+		"the \"out\" argument must be a pointer, got untyped nil")
+}
