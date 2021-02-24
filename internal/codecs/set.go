@@ -83,6 +83,7 @@ func (c *Set) Type() reflect.Type {
 func (c *Set) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
 		c.DecodeReflect(r, out, Path(out.Type().String()))
+		return
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -108,9 +109,14 @@ func (c *Set) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 		out.SetLen(n)
 	}
 
-	for i := 0; i < n; i++ {
-		elmLen := r.PopUint32()
+	_, isSetOfArrays := c.child.(*Array)
 
+	for i := 0; i < n; i++ {
+		if isSetOfArrays {
+			r.Discard(12)
+		}
+
+		elmLen := r.PopUint32()
 		c.child.DecodeReflect(
 			r.PopSlice(elmLen),
 			out.Index(i),
@@ -143,7 +149,13 @@ func (c *Set) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 		slice.Len = n
 	}
 
+	_, isSetOfArrays := c.child.(*Array)
+
 	for i := 0; i < n; i++ {
+		if isSetOfArrays {
+			r.Discard(12)
+		}
+
 		elmLen := r.PopUint32()
 		c.child.DecodePtr(
 			r.PopSlice(elmLen),

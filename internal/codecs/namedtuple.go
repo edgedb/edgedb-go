@@ -121,6 +121,7 @@ func (c *NamedTuple) Type() reflect.Type {
 func (c *NamedTuple) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
 		c.DecodeReflect(r, out, Path(out.Type().String()))
+		return
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -168,7 +169,7 @@ func (c *NamedTuple) decodeReflectStruct(
 		field := c.fields[i]
 		field.codec.DecodeReflect(
 			r.PopSlice(elmLen),
-			out.FieldByName(field.name),
+			structField(out, field.name),
 			path.AddField(field.name),
 		)
 	}

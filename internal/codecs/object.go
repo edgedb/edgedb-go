@@ -132,6 +132,7 @@ func (c *Object) Type() reflect.Type {
 func (c *Object) Decode(r *buff.Reader, out reflect.Value) {
 	if c.useReflect {
 		c.DecodeReflect(r, out, Path(out.Type().String()))
+		return
 	}
 
 	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
@@ -155,6 +156,19 @@ func (c *Object) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
 			"expected %v to be Struct or Map, got %v", path, out.Kind(),
 		))
 	}
+}
+
+func structField(val reflect.Value, name string) reflect.Value {
+	typ := val.Type()
+
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if f.Tag.Get("edgedb") == name {
+			return val.Field(i)
+		}
+	}
+
+	return val.FieldByName(name)
 }
 
 func (c *Object) decodeReflectStruct(
@@ -188,7 +202,7 @@ func (c *Object) decodeReflectStruct(
 
 		field.codec.DecodeReflect(
 			r.PopSlice(elmLen),
-			out.FieldByName(field.name),
+			structField(out, field.name),
 			path.AddField(field.name),
 		)
 	}

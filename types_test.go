@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSendAndReceveInt64(t *testing.T) {
+func TestSendAndReceiveInt64(t *testing.T) {
 	ctx := context.Background()
 
 	numbers := []int64{
@@ -117,7 +117,7 @@ func TestSendAndReceveInt64(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveInt32(t *testing.T) {
+func TestSendAndReceiveInt32(t *testing.T) {
 	ctx := context.Background()
 
 	numbers := []int32{-1, 0, 1, 10, 2147483647}
@@ -181,7 +181,7 @@ func TestSendAndReceveInt32(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveInt16(t *testing.T) {
+func TestSendAndReceiveInt16(t *testing.T) {
 	ctx := context.Background()
 
 	numbers := []int16{-1, 0, 1, 10, 15, 22, -1111}
@@ -245,7 +245,7 @@ func TestSendAndReceveInt16(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveBool(t *testing.T) {
+func TestSendAndReceiveBool(t *testing.T) {
 	ctx := context.Background()
 
 	query := `
@@ -290,7 +290,7 @@ func TestSendAndReceveBool(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveFloat64(t *testing.T) {
+func TestSendAndReceiveFloat64(t *testing.T) {
 	ctx := context.Background()
 
 	numbers := []float64{0, 1, 123.2, -1.1}
@@ -359,7 +359,7 @@ func TestSendAndReceveFloat64(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveFloat32(t *testing.T) {
+func TestSendAndReceiveFloat32(t *testing.T) {
 	ctx := context.Background()
 
 	numbers := []float32{0, 1, 123.2, -1.1}
@@ -428,7 +428,7 @@ func TestSendAndReceveFloat32(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveBytes(t *testing.T) {
+func TestSendAndReceiveBytes(t *testing.T) {
 	ctx := context.Background()
 
 	samples := [][]byte{
@@ -474,7 +474,7 @@ func TestSendAndReceveBytes(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveString(t *testing.T) {
+func TestSendAndReceiveString(t *testing.T) {
 	ctx := context.Background()
 
 	query := `
@@ -501,7 +501,21 @@ func TestSendAndReceveString(t *testing.T) {
 	assert.Equal(t, []interface{}{[]string{sample}}, result.Nested)
 }
 
-func TestSendAndReceveJSON(t *testing.T) {
+func TestFetchLargeString(t *testing.T) {
+	// This test is meant to stress the buffer implementation.
+	ctx := context.Background()
+
+	var result string
+	err := conn.QueryOne(ctx, "SELECT str_repeat('a', <int64>(10^6))", &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, strings.Repeat("a", 1_000_000), result)
+
+	err = conn.QueryOne(ctx, "SELECT str_repeat('aa', <int64>(10^8))", &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, strings.Repeat("aa", 100_000_000), result)
+}
+
+func TestSendAndReceiveJSON(t *testing.T) {
 	ctx := context.Background()
 
 	strings := []string{"123", "-3.14", "true", "false", "[1, 2, 3]", "null"}
@@ -540,7 +554,7 @@ func TestSendAndReceveJSON(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveEnum(t *testing.T) {
+func TestSendAndReceiveEnum(t *testing.T) {
 	ctx := context.Background()
 
 	type Result struct {
@@ -586,7 +600,7 @@ func TestSendAndReceveEnum(t *testing.T) {
 	assert.EqualError(t, err, expected)
 }
 
-func TestSendAndReceveDuration(t *testing.T) {
+func TestSendAndReceiveDuration(t *testing.T) {
 	ctx := context.Background()
 
 	durations := []Duration{
@@ -659,7 +673,7 @@ func TestSendAndReceveDuration(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveLocalTime(t *testing.T) {
+func TestSendAndReceiveLocalTime(t *testing.T) {
 	ctx := context.Background()
 
 	times := []LocalTime{
@@ -743,7 +757,7 @@ func TestSendAndReceveLocalTime(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveLocalDate(t *testing.T) {
+func TestSendAndReceiveLocalDate(t *testing.T) {
 	ctx := context.Background()
 
 	dates := []LocalDate{
@@ -818,7 +832,7 @@ func TestSendAndReceveLocalDate(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveLocalDateTime(t *testing.T) {
+func TestSendAndReceiveLocalDateTime(t *testing.T) {
 	ctx := context.Background()
 
 	datetimes := []LocalDateTime{
@@ -900,7 +914,7 @@ func TestSendAndReceveLocalDateTime(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveDateTime(t *testing.T) {
+func TestSendAndReceiveDateTime(t *testing.T) {
 	ctx := context.Background()
 	format := "2006-01-02T15:04:05.999999-07:00"
 
@@ -990,7 +1004,7 @@ func TestSendAndReceveDateTime(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveBigInt(t *testing.T) {
+func TestSendAndReceiveBigInt(t *testing.T) {
 	ctx := context.Background()
 
 	query := `
@@ -1154,7 +1168,7 @@ func TestSendAndReceveBigInt(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveUUID(t *testing.T) {
+func TestSendAndReceiveUUID(t *testing.T) {
 	ctx := context.Background()
 
 	query := `
@@ -1214,7 +1228,7 @@ func TestSendAndReceveUUID(t *testing.T) {
 	}
 }
 
-func TestSendAndReceveCustomScalars(t *testing.T) {
+func TestSendAndReceiveCustomScalars(t *testing.T) {
 	ctx := context.Background()
 
 	query := `
@@ -1280,4 +1294,233 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, result)
+}
+
+func TestReceiveObject(t *testing.T) {
+	ctx := context.Background()
+
+	// decode into struct using unsafe.Pointer
+	query := `
+		SELECT schema::Function {
+			name,
+			params: {
+				kind,
+				num,
+				foo := 42,
+			} ORDER BY .num ASC
+		}
+		FILTER .name = 'std::str_repeat'
+		LIMIT 1
+	`
+
+	type Params struct {
+		ID   UUID   `edgedb:"id"`
+		Kind string `edgedb:"kind"`
+		Num  int64  `edgedb:"num"`
+		Foo  int64  `edgedb:"foo"`
+	}
+
+	type Function struct {
+		ID     UUID          `edgedb:"id"`
+		Name   string        `edgedb:"name"`
+		Params []Params      `edgedb:"params"`
+		Tuple  []interface{} `edgedb:"tuple"`
+	}
+
+	var result Function
+	err := conn.QueryOne(ctx, query, &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, "std::str_repeat", result.Name)
+	assert.Equal(t, 2, len(result.Params))
+	assert.Equal(t, "PositionalParam", result.Params[0].Kind)
+	assert.Equal(t, int64(42), result.Params[1].Foo)
+
+	// decode into []interface{} using reflect
+	query = `
+		WITH
+			x := (
+				SELECT schema::Function { name }
+				FILTER .name = 'std::str_repeat'
+				LIMIT 1
+			)
+		SELECT (x {name},)
+	`
+	var nested []interface{}
+	err = conn.QueryOne(ctx, query, &nested)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, 1, len(nested))
+	actual, ok := nested[0].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, 2, len(actual))
+	assert.Equal(t, "std::str_repeat", actual["name"])
+	_, ok = actual["id"]
+	assert.True(t, ok)
+
+	// decode into struct using reflect
+	query = `
+		SELECT schema::Function {
+			name,
+			tuple := (1, 2),
+		}
+		FILTER .name = 'std::str_repeat'
+		LIMIT 1
+	`
+
+	result = Function{}
+	err = conn.QueryOne(ctx, query, &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, "std::str_repeat", result.Name)
+	assert.Equal(t, []interface{}{int64(1), int64(2)}, result.Tuple)
+}
+
+func TestReceiveNamedTuple(t *testing.T) {
+	ctx := context.Background()
+
+	// decoding using pointers
+	{
+		type NamedTuple struct {
+			A int64 `edgedb:"a"`
+		}
+
+		var result NamedTuple
+		err := conn.QueryOne(ctx, "SELECT (a := 1,)", &result)
+		require.Nil(t, err)
+		assert.Equal(t, NamedTuple{A: 1}, result)
+	}
+
+	// decoding into map using reflect
+	{
+		var result []interface{}
+		err := conn.QueryOne(ctx, "SELECT ((a := 1),)", &result)
+		require.Nil(t, err)
+		expected := []interface{}{
+			map[string]interface{}{"a": int64(1)},
+		}
+		assert.Equal(t, expected, result)
+	}
+
+	// decoding into struct using reflect
+	{
+		type NamedTuple struct {
+			A []interface{} `edgedb:"a"`
+		}
+
+		var result NamedTuple
+		err := conn.QueryOne(ctx, "SELECT (a := ((1,),))", &result)
+		require.Nil(t, err)
+
+		expected := NamedTuple{A: []interface{}{[]interface{}{int64(1)}}}
+		assert.Equal(t, expected, result)
+	}
+}
+
+func TestReceiveTuple(t *testing.T) {
+	ctx := context.Background()
+
+	// decoding uses pointers when all tuple elements are scalars
+	var result [][]interface{}
+	err := conn.Query(ctx, `SELECT ()`, &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	require.Equal(t, [][]interface{}{{}}, result)
+
+	err = conn.Query(ctx, `SELECT (<int64>$0,)`, &result, int64(1))
+	require.Nil(t, err, "unexpected error: %v", err)
+	require.Equal(t, [][]interface{}{{int64(1)}}, result)
+
+	err = conn.Query(ctx, `SELECT (1, "abc")`, &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	require.Equal(t, [][]interface{}{{int64(1), "abc"}}, result)
+
+	err = conn.Query(ctx, `SELECT {(1, "abc"), (2, "def")}`, &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	expected := [][]interface{}{
+		{int64(1), "abc"},
+		{int64(2), "def"},
+	}
+	require.Equal(t, expected, result)
+
+	// decoding uses reflect when any tuple element is not a scalar
+	err = conn.Query(ctx, `SELECT (1, ("abc",))`, &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	expected = [][]interface{}{{int64(1), []interface{}{"abc"}}}
+	require.Equal(t, expected, result)
+}
+
+func TestSendAndReceiveArray(t *testing.T) {
+	ctx := context.Background()
+
+	var result []int64
+	err := conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, "hello")
+	assert.EqualError(t, err,
+		"edgedb.InvalidArgumentError: "+
+			"expected args[0] to be []int64 got: string")
+
+	// decoding uses reflect when parent is a tuple
+	var nested []interface{}
+	err = conn.QueryOne(ctx, "SELECT (<array<int64>>$0,)", &nested, []int64{1})
+	require.Nil(t, err)
+	assert.Equal(t, []interface{}{[]int64{1}}, nested)
+
+	// decoding using pointers
+	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64(nil))
+	require.Nil(t, err)
+	assert.Equal(t, []int64(nil), result)
+
+	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
+	require.Nil(t, err)
+	assert.Equal(t, []int64{1}, result)
+
+	arg := []int64{1, 2, 3}
+	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, arg)
+	require.Nil(t, err)
+	assert.Equal(t, []int64{1, 2, 3}, result)
+}
+
+func TestReceiveSet(t *testing.T) {
+	ctx := context.Background()
+
+	// decoding using pointers
+	{
+		type Function struct {
+			ID   UUID      `edgedb:"id"`
+			Sets [][]int64 `edgedb:"sets"`
+		}
+
+		query := `
+			SELECT schema::Function {
+				id,
+				sets := {[1, 2], [1]}
+			}
+			LIMIT 1
+		`
+
+		var result Function
+		err := conn.QueryOne(ctx, query, &result)
+		require.Nil(t, err)
+		assert.Equal(t, [][]int64{{1, 2}, {1}}, result.Sets)
+	}
+
+	// decoding using reflect
+	{
+		type Function struct {
+			ID   UUID              `edgedb:"id"`
+			Sets [][][]interface{} `edgedb:"sets"`
+		}
+
+		query := `
+			SELECT schema::Function {
+				id,
+				sets := {[(1, (2,))], [(3, (4,))]}
+			}
+			LIMIT 1
+		`
+
+		var result Function
+		err := conn.QueryOne(ctx, query, &result)
+		require.Nil(t, err)
+		assert.Equal(t, [][][]interface{}{
+			{{int64(1), []interface{}{int64(2)}}},
+			{{int64(3), []interface{}{int64(4)}}},
+		}, result.Sets)
+	}
 }
