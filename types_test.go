@@ -619,8 +619,9 @@ func TestSendAndReceiveDuration(t *testing.T) {
 		"854015929:20:18.258432",
 	}
 
+	var maxDuration int64 = 3_154_000_000_000_000
 	for i := 0; i < 1000; i++ {
-		d := Duration(rand.Int63n(86400000000))
+		d := Duration(rand.Int63n(2*maxDuration) - maxDuration)
 		durations = append(durations, d)
 		strings = append(strings, d.String())
 	}
