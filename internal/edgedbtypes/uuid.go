@@ -23,6 +23,27 @@ import (
 	"strings"
 )
 
+// ParseUUID parses s into a UUID or returns an error.
+func ParseUUID(s string) (UUID, error) {
+	s = strings.ReplaceAll(s, "-", "")
+	if len(s) != 32 {
+		return UUID{}, errMalformedUUID
+	}
+
+	var tmp UUID
+	for i := 0; i < 16; i++ {
+		val, err := strconv.ParseUint(s[:2], 16, 8)
+		if err != nil {
+			return UUID{}, errMalformedUUID
+		}
+
+		tmp[i] = uint8(val)
+		s = s[2:]
+	}
+
+	return tmp, nil
+}
+
 // UUID a universally unique identifier
 // https://www.edgedb.com/docs/datamodel/scalars/uuid#type::std::uuid
 type UUID [16]byte
@@ -47,21 +68,9 @@ var errMalformedUUID = errors.New("malformed edgedb.UUID")
 
 // UnmarshalText unmarshals the id from a string.
 func (id *UUID) UnmarshalText(b []byte) error {
-	s := string(b)
-	s = strings.ReplaceAll(s, "-", "")
-	if len(s) != 32 {
-		return errMalformedUUID
-	}
-
-	var tmp UUID
-	for i := 0; i < 16; i++ {
-		val, err := strconv.ParseUint(s[:2], 16, 8)
-		if err != nil {
-			return errMalformedUUID
-		}
-
-		tmp[i] = uint8(val)
-		s = s[2:]
+	tmp, err := ParseUUID(string(b))
+	if err != nil {
+		return err
 	}
 
 	*id = tmp

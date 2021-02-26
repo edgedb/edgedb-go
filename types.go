@@ -36,6 +36,9 @@ type (
 )
 
 var (
+	// ParseUUID parses s into a UUID or returns an error.
+	ParseUUID = edgedbtypes.ParseUUID
+
 	// NewLocalDateTime returns a new LocalDateTime
 	NewLocalDateTime = edgedbtypes.NewLocalDateTime
 
