@@ -17,7 +17,9 @@
 package edgedbtypes
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +29,29 @@ import (
 func TestUUIDString(t *testing.T) {
 	uuid := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	assert.Equal(t, "00010203-0405-0607-0809-0a0b0c0d0e0f", uuid.String())
+}
+
+func TestUUIDParse(t *testing.T) {
+	parsed, err := ParseUUID("00010203-0405-0607-0809-0a0b0c0d0e0f")
+	require.Nil(t, err)
+	expected := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+	require.Equal(t, expected, parsed)
+
+	samples := make([]UUID, 1000)
+	for i := 0; i < 1000; i++ {
+		var id UUID
+		binary.BigEndian.PutUint64(id[:8], rand.Uint64())
+		binary.BigEndian.PutUint64(id[8:], rand.Uint64())
+		samples[i] = id
+	}
+
+	for _, id := range samples {
+		t.Run(id.String(), func(t *testing.T) {
+			parsed, err := ParseUUID(id.String())
+			require.Nil(t, err)
+			assert.Equal(t, id, parsed)
+		})
+	}
 }
 
 func TestUUIDMarshalJSON(t *testing.T) {
