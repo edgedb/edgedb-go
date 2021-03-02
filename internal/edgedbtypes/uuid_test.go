@@ -47,3 +47,20 @@ func TestUUIDUnmarshalJSON(t *testing.T) {
 	expected := UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	assert.Equal(t, expected, uuid)
 }
+
+func TestUUIDUnmarshalJSONInvalid(t *testing.T) {
+	samples := []string{
+		`""`,
+		`"000102030405060708090a0b0c0d0e"`,
+		`"00010203-0405-060700809-0a0b0c0d0e0f"`,
+		`"zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"`,
+	}
+
+	for _, s := range samples {
+		t.Run(s, func(t *testing.T) {
+			var uuid UUID
+			err := json.Unmarshal([]byte(s), &uuid)
+			assert.EqualError(t, err, "malformed edgedb.UUID")
+		})
+	}
+}

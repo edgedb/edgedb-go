@@ -17,6 +17,7 @@
 package edgedbtypes
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -42,16 +43,21 @@ func (id UUID) MarshalText() ([]byte, error) {
 	return []byte(id.String()), nil
 }
 
+var errMalformedUUID = errors.New("malformed edgedb.UUID")
+
 // UnmarshalText unmarshals the id from a string.
 func (id *UUID) UnmarshalText(b []byte) error {
 	s := string(b)
-	s = strings.Replace(s, "-", "", 4)
+	s = strings.ReplaceAll(s, "-", "")
+	if len(s) != 32 {
+		return errMalformedUUID
+	}
 
 	var tmp UUID
 	for i := 0; i < 16; i++ {
 		val, err := strconv.ParseUint(s[:2], 16, 8)
 		if err != nil {
-			return err
+			return errMalformedUUID
 		}
 
 		tmp[i] = uint8(val)
