@@ -53,6 +53,7 @@ func TestUUIDUnmarshalJSONInvalid(t *testing.T) {
 		`""`,
 		`"000102030405060708090a0b0c0d0e"`,
 		`"00010203-0405-060700809-0a0b0c0d0e0f"`,
+		`"00010203-0405-06070-08090a0b0c-0d0e0f"`,
 		`"zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"`,
 	}
 
