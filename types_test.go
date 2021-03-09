@@ -67,12 +67,11 @@ func TestSendAndReceiveInt64(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   int64         `edgedb:"decoded"`
-		RoundTrip int64         `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   int64  `edgedb:"decoded"`
+		RoundTrip int64  `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
 	}
 
 	query := `
@@ -92,7 +91,6 @@ func TestSendAndReceiveInt64(t *testing.T) {
 			decoded := <int64>x.s,
 			round_trip := x.n,
 			is_equal := <int64>x.s = x.n,
-			nested := ([x.n],),
 			string := <str><int64>x.s,
 		)
 	`
@@ -112,7 +110,6 @@ func TestSendAndReceiveInt64(t *testing.T) {
 			assert.Equal(t, n, r.Decoded, "decoding failed")
 			assert.Equal(t, n, r.RoundTrip, "round trip failed")
 			assert.Equal(t, s, r.String)
-			assert.Equal(t, []interface{}{[]int64{n}}, r.Nested)
 		})
 	}
 }
@@ -131,12 +128,11 @@ func TestSendAndReceiveInt32(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   int32         `edgedb:"decoded"`
-		RoundTrip int32         `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   int32  `edgedb:"decoded"`
+		RoundTrip int32  `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
 	}
 
 	query := `
@@ -156,7 +152,6 @@ func TestSendAndReceiveInt32(t *testing.T) {
 			decoded := <int32>x.s,
 			round_trip := x.n,
 			is_equal := <int32>x.s = x.n,
-			nested := ([x.n],),
 			string := <str><int32>x.s,
 		)
 	`
@@ -176,7 +171,6 @@ func TestSendAndReceiveInt32(t *testing.T) {
 			assert.Equal(t, n, r.Decoded, "decoding failed")
 			assert.Equal(t, n, r.RoundTrip)
 			assert.Equal(t, s, r.String)
-			assert.Equal(t, []interface{}{[]int32{n}}, r.Nested)
 		})
 	}
 }
@@ -195,12 +189,11 @@ func TestSendAndReceiveInt16(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   int16         `edgedb:"decoded"`
-		RoundTrip int16         `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   int16  `edgedb:"decoded"`
+		RoundTrip int16  `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
 	}
 
 	query := `
@@ -220,7 +213,6 @@ func TestSendAndReceiveInt16(t *testing.T) {
 			decoded := <int16>x.s,
 			round_trip := x.n,
 			is_equal := <int16>x.s = x.n,
-			nested := ([x.n],),
 			string := <str><int16>x.s,
 		)
 	`
@@ -240,7 +232,6 @@ func TestSendAndReceiveInt16(t *testing.T) {
 			assert.Equal(t, n, r.Decoded, "decoding failed")
 			assert.Equal(t, n, r.RoundTrip, "round trip failed")
 			assert.Equal(t, s, r.String)
-			assert.Equal(t, []interface{}{[]int16{n}}, r.Nested)
 		})
 	}
 }
@@ -257,18 +248,16 @@ func TestSendAndReceiveBool(t *testing.T) {
 			decoded := <bool>s,
 			round_trip := i,
 			is_equal := <bool>s = i,
-			nested := ([i],),
 			string := <str><bool>s,
 		)
 	`
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   bool          `edgedb:"decoded"`
-		RoundTrip bool          `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   bool   `edgedb:"decoded"`
+		RoundTrip bool   `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
 	}
 
 	samples := []bool{true, false}
@@ -285,7 +274,6 @@ func TestSendAndReceiveBool(t *testing.T) {
 			assert.Equal(t, i, result.Decoded, "decoding failed")
 			assert.Equal(t, i, result.RoundTrip)
 			assert.Equal(t, s, result.String)
-			assert.Equal(t, []interface{}{[]bool{i}}, result.Nested)
 		})
 	}
 }
@@ -309,11 +297,10 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   float64       `edgedb:"decoded"`
-		RoundTrip float64       `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
+		Encoded   string  `edgedb:"encoded"`
+		Decoded   float64 `edgedb:"decoded"`
+		RoundTrip float64 `edgedb:"round_trip"`
+		IsEqual   bool    `edgedb:"is_equal"`
 	}
 
 	query := `
@@ -333,7 +320,6 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 			decoded := <float64>x.s,
 			round_trip := x.n,
 			is_equal := <float64>x.s = x.n,
-			nested := ([x.n],),
 		)
 	`
 
@@ -354,7 +340,6 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 			assert.Equal(t, n, encoded, "encoding failed")
 			assert.Equal(t, n, r.Decoded, "decoding failed")
 			assert.Equal(t, n, r.RoundTrip, "round trip failed")
-			assert.Equal(t, []interface{}{[]float64{n}}, r.Nested)
 		})
 	}
 }
@@ -378,11 +363,10 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   float32       `edgedb:"decoded"`
-		RoundTrip float32       `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
+		Encoded   string  `edgedb:"encoded"`
+		Decoded   float32 `edgedb:"decoded"`
+		RoundTrip float32 `edgedb:"round_trip"`
+		IsEqual   bool    `edgedb:"is_equal"`
 	}
 
 	query := `
@@ -402,7 +386,6 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 			decoded := <float32>x.s,
 			round_trip := x.n,
 			is_equal := <float32>x.s = x.n,
-			nested := ([x.n],),
 		)
 	`
 
@@ -423,7 +406,6 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 			assert.Equal(t, n, float32(encoded), "encoding failed")
 			assert.Equal(t, n, r.Decoded, "decoding failed")
 			assert.Equal(t, n, r.RoundTrip, "round trip failed")
-			assert.Equal(t, []interface{}{[]float32{n}}, r.Nested)
 		})
 	}
 }
@@ -446,30 +428,16 @@ func TestSendAndReceiveBytes(t *testing.T) {
 		samples = append(samples, b)
 	}
 
-	type Result struct {
-		RoundTrip []byte        `edgedb:"round_trip"`
-		Nested    []interface{} `edgedb:"nested"`
-	}
+	query := `SELECT array_unpack(<array<bytes>>$0)`
 
-	query := `
-		WITH b := array_unpack(<array<bytes>>$0)
-		SELECT (
-			round_trip := b,
-			nested := ([b],),
-		)
-	`
-
-	var results []Result
+	var results [][]byte
 	err := conn.Query(ctx, query, &results, samples)
 	require.Nil(t, err, "unexpected error: %v", err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
 	for i, b := range samples {
 		t.Run(string(b), func(t *testing.T) {
-			r := results[i]
-
-			assert.Equal(t, b, r.RoundTrip)
-			assert.Equal(t, []interface{}{[][]byte{b}}, r.Nested)
+			assert.Equal(t, b, results[i])
 		})
 	}
 }
@@ -477,28 +445,10 @@ func TestSendAndReceiveBytes(t *testing.T) {
 func TestSendAndReceiveString(t *testing.T) {
 	ctx := context.Background()
 
-	query := `
-		WITH
-			s := <str>$0,
-		SELECT (
-			round_trip := s,
-			nested := ([s],),
-		)
-	`
-
-	type Result struct {
-		RoundTrip string        `edgedb:"round_trip"`
-		Nested    []interface{} `edgedb:"nested"`
-	}
-
-	sample := "abcdef"
-
-	var result Result
-	err := conn.QueryOne(ctx, query, &result, sample)
+	var result string
+	err := conn.QueryOne(ctx, `SELECT <str>$0`, &result, "abcdef")
 	require.Nil(t, err, "unexpected error: %v", err)
-
-	assert.Equal(t, sample, result.RoundTrip, "round trip failed")
-	assert.Equal(t, []interface{}{[]string{sample}}, result.Nested)
+	assert.Equal(t, "abcdef", result, "round trip failed")
 }
 
 func TestFetchLargeString(t *testing.T) {
@@ -525,31 +475,16 @@ func TestSendAndReceiveJSON(t *testing.T) {
 		samples[i] = []byte(s)
 	}
 
-	type Result struct {
-		RoundTrip []byte        `edgedb:"round_trip"`
-		Nested    []interface{} `edgedb:"nested"`
-	}
+	query := `SELECT array_unpack(<array<json>>$0)`
 
-	query := `
-		WITH j := array_unpack(<array<json>>$0)
-		SELECT (
-			round_trip := j,
-			nested := ([j],),
-		)
-	`
-
-	var results []Result
+	var results [][]byte
 	err := conn.Query(ctx, query, &results, samples)
 	require.Nil(t, err, "unexpected error: %v", err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
 	for i, s := range strings {
 		t.Run(s, func(t *testing.T) {
-			b := samples[i]
-			r := results[i]
-
-			assert.Equal(t, b, r.RoundTrip)
-			assert.Equal(t, []interface{}{[][]byte{b}}, r.Nested)
+			assert.Equal(t, samples[i], results[i])
 		})
 	}
 }
@@ -558,12 +493,11 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	ctx := context.Background()
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   string        `edgedb:"decoded"`
-		RoundTrip string        `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   string `edgedb:"decoded"`
+		RoundTrip string `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
 	}
 
 	query := `
@@ -575,7 +509,6 @@ func TestSendAndReceiveEnum(t *testing.T) {
 			decoded := <ColorEnum>s,
 			round_trip := e,
 			is_equal := <ColorEnum>s = e,
-			nested := ([e],),
 			string := <str><ColorEnum>s
 		)
 	`
@@ -590,7 +523,6 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	assert.Equal(t, color, result.RoundTrip, "round trip failed")
 	assert.True(t, result.IsEqual, "equality failed")
 	assert.Equal(t, color, result.String)
-	assert.Equal(t, []interface{}{[]string{color}}, result.Nested)
 
 	query = "SELECT (decoded := <ColorEnum><str>$0)"
 	err = conn.QueryOne(ctx, query, &result, "invalid")
@@ -627,10 +559,9 @@ func TestSendAndReceiveDuration(t *testing.T) {
 	}
 
 	type Result struct {
-		Decoded   Duration      `edgedb:"decoded"`
-		RoundTrip Duration      `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
+		Decoded   Duration `edgedb:"decoded"`
+		RoundTrip Duration `edgedb:"round_trip"`
+		IsEqual   bool     `edgedb:"is_equal"`
 	}
 
 	query := `
@@ -649,7 +580,6 @@ func TestSendAndReceiveDuration(t *testing.T) {
 			decoded := <duration>sample.str,
 			round_trip := sample.d,
 			is_equal := <duration>sample.str = sample.d,
-			nested := ([sample.d],),
 		)
 	`
 
@@ -665,11 +595,6 @@ func TestSendAndReceiveDuration(t *testing.T) {
 			assert.True(t, result.IsEqual, "equality check faild")
 			assert.Equal(t, d, result.RoundTrip, "round trip failed")
 			assert.Equal(t, d, result.Decoded, "decoding failed")
-			assert.Equal(t,
-				[]interface{}{[]Duration{d}},
-				result.Nested,
-				"nested value failed",
-			)
 		})
 	}
 }
@@ -709,12 +634,11 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   LocalTime     `edgedb:"decoded"`
-		RoundTrip LocalTime     `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string    `edgedb:"encoded"`
+		Decoded   LocalTime `edgedb:"decoded"`
+		RoundTrip LocalTime `edgedb:"round_trip"`
+		IsEqual   bool      `edgedb:"is_equal"`
+		String    string    `edgedb:"string"`
 	}
 
 	query := `
@@ -734,7 +658,6 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 			decoded := <cal::local_time>x.s,
 			round_trip := x.t,
 			is_equal := <cal::local_time>x.s = x.t,
-			nested := ([x.t],),
 			string := <str><cal::local_time><str>x.s,
 		)
 	`
@@ -753,7 +676,6 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 			assert.Equal(t, s, r.Encoded, "encode is wrong")
 			assert.True(t, r.IsEqual, "equality failed")
 			assert.Equal(t, s, r.String)
-			assert.Equal(t, []interface{}{[]LocalTime{time}}, r.Nested)
 		})
 	}
 }
@@ -783,12 +705,11 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   LocalDate     `edgedb:"decoded"`
-		RoundTrip LocalDate     `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string    `edgedb:"encoded"`
+		Decoded   LocalDate `edgedb:"decoded"`
+		RoundTrip LocalDate `edgedb:"round_trip"`
+		IsEqual   bool      `edgedb:"is_equal"`
+		String    string    `edgedb:"string"`
 	}
 
 	query := `
@@ -808,7 +729,6 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 			decoded := <cal::local_date>x.s,
 			round_trip := x.d,
 			is_equal := <cal::local_date>x.s = x.d,
-			nested := ([x.d],),
 			string := <str><cal::local_date>x.s,
 		)
 	`
@@ -828,7 +748,6 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 			assert.Equal(t, s, r.Encoded, "encode is wrong")
 			assert.True(t, r.IsEqual, "equality failed")
 			assert.Equal(t, s, r.String)
-			assert.Equal(t, []interface{}{[]LocalDate{d}}, r.Nested)
 		})
 	}
 }
@@ -867,7 +786,6 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 		Decoded   LocalDateTime `edgedb:"decoded"`
 		RoundTrip LocalDateTime `edgedb:"round_trip"`
 		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
 		String    string        `edgedb:"string"`
 	}
 
@@ -890,7 +808,6 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 			decoded := <cal::local_datetime>x.s,
 			round_trip := x.dt,
 			is_equal := <cal::local_datetime>x.s = x.dt,
-			nested := ([x.dt],),
 			string := <str><cal::local_datetime>x.s,
 		)
 	`
@@ -910,7 +827,6 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 			assert.Equal(t, dt, r.Decoded)
 			assert.Equal(t, dt, r.RoundTrip)
 			assert.Equal(t, s, r.String)
-			assert.Equal(t, []interface{}{[]LocalDateTime{dt}}, r.Nested)
 		})
 	}
 }
@@ -942,12 +858,11 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   time.Time     `edgedb:"decoded"`
-		RoundTrip time.Time     `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string    `edgedb:"encoded"`
+		Decoded   time.Time `edgedb:"decoded"`
+		RoundTrip time.Time `edgedb:"round_trip"`
+		IsEqual   bool      `edgedb:"is_equal"`
+		String    string    `edgedb:"string"`
 	}
 
 	query := `
@@ -967,7 +882,6 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 			decoded := <datetime>x.s,
 			round_trip := x.dt,
 			is_equal := <datetime>x.s = x.dt,
-			nested := ([x.dt],),
 			string := <str><datetime>x.s,
 		)
 	`
@@ -993,14 +907,6 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 				dt.Equal(r.RoundTrip),
 				"round trip failed: %v != %v", dt, r.RoundTrip,
 			)
-
-			// equivalent time.Time structs are not always ==
-			// unpack the data structure to use time.Time.Equal()
-			assert.Equal(t, 1, len(r.Nested))
-			nested, ok := r.Nested[0].([]time.Time)
-			assert.True(t, ok)
-			assert.Equal(t, 1, len(nested))
-			assert.True(t, dt.Equal(nested[0]))
 		})
 	}
 }
@@ -1017,18 +923,16 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 			decoded := <bigint>s,
 			round_trip := i,
 			is_equal := <bigint>s = i,
-			nested := ([i],),
 			string := <str><bigint>s,
 		)
 	`
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   *big.Int      `edgedb:"decoded"`
-		RoundTrip *big.Int      `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string   `edgedb:"encoded"`
+		Decoded   *big.Int `edgedb:"decoded"`
+		RoundTrip *big.Int `edgedb:"round_trip"`
+		IsEqual   bool     `edgedb:"is_equal"`
+		String    string   `edgedb:"string"`
 	}
 
 	samples := []string{
@@ -1163,7 +1067,6 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 			assert.Equal(t, i, result.Decoded)
 			assert.Equal(t, i, result.RoundTrip)
 			assert.Equal(t, s, result.String)
-			assert.Equal(t, []interface{}{[]*big.Int{i}}, result.Nested)
 			require.Equal(t, s, i.String(), "argument was mutated")
 		})
 	}
@@ -1181,18 +1084,16 @@ func TestSendAndReceiveUUID(t *testing.T) {
 			decoded := <uuid>s,
 			round_trip := id,
 			is_equal := <uuid>s = id,
-			nested := ([id],),
 			string := <str><uuid>s,
 		)
 	`
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   UUID          `edgedb:"decoded"`
-		RoundTrip UUID          `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
-		String    string        `edgedb:"string"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   UUID   `edgedb:"decoded"`
+		RoundTrip UUID   `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
 	}
 
 	samples := []string{
@@ -1223,7 +1124,6 @@ func TestSendAndReceiveUUID(t *testing.T) {
 			assert.Equal(t, id, result.Decoded)
 			assert.Equal(t, id, result.RoundTrip)
 			assert.Equal(t, s, result.String)
-			assert.Equal(t, []interface{}{[]UUID{id}}, result.Nested)
 			require.Equal(t, s, id.String(), "argument was mutated")
 		})
 	}
@@ -1241,16 +1141,14 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 			decoded := <CustomInt64>s,
 			round_trip := i,
 			is_equal := i = <CustomInt64>s,
-			nested := ([i],),
 		)
 	`
 
 	type Result struct {
-		Encoded   string        `edgedb:"encoded"`
-		Decoded   int64         `edgedb:"decoded"`
-		RoundTrip int64         `edgedb:"round_trip"`
-		IsEqual   bool          `edgedb:"is_equal"`
-		Nested    []interface{} `edgedb:"nested"`
+		Encoded   string `edgedb:"encoded"`
+		Decoded   int64  `edgedb:"decoded"`
+		RoundTrip int64  `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
 	}
 
 	samples := []int64{0, 1, 9223372036854775807, -9223372036854775808}
@@ -1270,7 +1168,6 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 			assert.Equal(t, i, result.Decoded)
 			assert.Equal(t, i, result.Decoded)
 			assert.True(t, result.IsEqual)
-			assert.Equal(t, []interface{}{[]int64{i}}, result.Nested)
 		})
 	}
 }
@@ -1279,19 +1176,31 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 	ctx := context.Background()
 	query := "SELECT ([(1, 2), (3, 4)], (5, (6, 7)))"
 
-	var result []interface{}
+	type Tuple struct {
+		first  int64 `edgedb:"0"`
+		second int64 `edgedb:"1"`
+	}
+
+	type OtherTuple struct {
+		first  int64 `edgedb:"0"`
+		second Tuple `edgedb:"1"`
+	}
+
+	type ParentTuple struct {
+		first  []Tuple    `edgedb:"0"`
+		second OtherTuple `edgedb:"1"`
+	}
+
+	var result ParentTuple
 	err := conn.QueryOne(ctx, query, &result)
 	require.Nil(t, err, "unexpected error: %v", err)
 
-	expected := []interface{}{
-		[][]interface{}{
-			{int64(1), int64(2)},
-			{int64(3), int64(4)},
+	expected := ParentTuple{
+		first: []Tuple{
+			{1, 2},
+			{3, 4},
 		},
-		[]interface{}{
-			int64(5),
-			[]interface{}{int64(6), int64(7)},
-		},
+		second: OtherTuple{5, Tuple{6, 7}},
 	}
 
 	assert.Equal(t, expected, result)
@@ -1300,7 +1209,6 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 func TestReceiveObject(t *testing.T) {
 	ctx := context.Background()
 
-	// decode into struct using unsafe.Pointer
 	query := `
 		SELECT schema::Function {
 			name,
@@ -1335,116 +1243,82 @@ func TestReceiveObject(t *testing.T) {
 	assert.Equal(t, 2, len(result.Params))
 	assert.Equal(t, "PositionalParam", result.Params[0].Kind)
 	assert.Equal(t, int64(42), result.Params[1].Foo)
-
-	// decode into []interface{} using reflect
-	query = `
-		WITH
-			x := (
-				SELECT schema::Function { name }
-				FILTER .name = 'std::str_repeat'
-				LIMIT 1
-			)
-		SELECT (x {name},)
-	`
-	var nested []interface{}
-	err = conn.QueryOne(ctx, query, &nested)
-	require.Nil(t, err, "unexpected error: %v", err)
-	assert.Equal(t, 1, len(nested))
-	actual, ok := nested[0].(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, 2, len(actual))
-	assert.Equal(t, "std::str_repeat", actual["name"])
-	_, ok = actual["id"]
-	assert.True(t, ok)
-
-	// decode into struct using reflect
-	query = `
-		SELECT schema::Function {
-			name,
-			tuple := (1, 2),
-		}
-		FILTER .name = 'std::str_repeat'
-		LIMIT 1
-	`
-
-	result = Function{}
-	err = conn.QueryOne(ctx, query, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
-	assert.Equal(t, "std::str_repeat", result.Name)
-	assert.Equal(t, []interface{}{int64(1), int64(2)}, result.Tuple)
 }
 
 func TestReceiveNamedTuple(t *testing.T) {
 	ctx := context.Background()
 
-	// decoding using pointers
-	{
-		type NamedTuple struct {
-			A int64 `edgedb:"a"`
-		}
-
-		var result NamedTuple
-		err := conn.QueryOne(ctx, "SELECT (a := 1,)", &result)
-		require.Nil(t, err)
-		assert.Equal(t, NamedTuple{A: 1}, result)
+	type NamedTuple struct {
+		A int64 `edgedb:"a"`
 	}
 
-	// decoding into map using reflect
-	{
-		var result []interface{}
-		err := conn.QueryOne(ctx, "SELECT ((a := 1),)", &result)
-		require.Nil(t, err)
-		expected := []interface{}{
-			map[string]interface{}{"a": int64(1)},
-		}
-		assert.Equal(t, expected, result)
-	}
-
-	// decoding into struct using reflect
-	{
-		type NamedTuple struct {
-			A []interface{} `edgedb:"a"`
-		}
-
-		var result NamedTuple
-		err := conn.QueryOne(ctx, "SELECT (a := ((1,),))", &result)
-		require.Nil(t, err)
-
-		expected := NamedTuple{A: []interface{}{[]interface{}{int64(1)}}}
-		assert.Equal(t, expected, result)
-	}
+	var result NamedTuple
+	err := conn.QueryOne(ctx, "SELECT (a := 1,)", &result)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, NamedTuple{A: 1}, result)
 }
 
 func TestReceiveTuple(t *testing.T) {
 	ctx := context.Background()
 
-	// decoding uses pointers when all tuple elements are scalars
-	var result [][]interface{}
-	err := conn.Query(ctx, `SELECT ()`, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
-	require.Equal(t, [][]interface{}{{}}, result)
+	var wrongType string
+	err := conn.QueryOne(ctx, `SELECT ()`, &wrongType)
+	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected string to be a struct got string")
 
+	var emptyStruct struct{}
+	err = conn.QueryOne(ctx, `SELECT ()`, &emptyStruct)
+	require.Nil(t, err, "unexpected error: %v", err)
+
+	var missingTag struct{ first int64 }
+	err = conn.QueryOne(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
+	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected struct { first int64 } struct to have a int64 field "+
+		"with the tag `edgedb:\"0\"`")
+
+	type NestedTuple struct {
+		second bool    `edgedb:"1"`
+		first  float64 `edgedb:"0"`
+	}
+
+	type Tuple struct {
+		first  int64       `edgedb:"0"` // nolint:structcheck
+		second string      `edgedb:"1"` // nolint:structcheck
+		third  NestedTuple `edgedb:"2"` // nolint:structcheck
+	}
+
+	result := []Tuple{}
 	err = conn.Query(ctx, `SELECT (<int64>$0,)`, &result, int64(1))
 	require.Nil(t, err, "unexpected error: %v", err)
-	require.Equal(t, [][]interface{}{{int64(1)}}, result)
+	assert.Equal(t, []Tuple{{first: 1}}, result)
 
-	err = conn.Query(ctx, `SELECT (1, "abc")`, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
-	require.Equal(t, [][]interface{}{{int64(1), "abc"}}, result)
-
+	result = []Tuple{}
 	err = conn.Query(ctx, `SELECT {(1, "abc"), (2, "def")}`, &result)
 	require.Nil(t, err, "unexpected error: %v", err)
-	expected := [][]interface{}{
-		{int64(1), "abc"},
-		{int64(2), "def"},
-	}
-	require.Equal(t, expected, result)
+	require.Equal(t,
+		[]Tuple{
+			{first: 1, second: "abc"},
+			{first: 2, second: "def"},
+		},
+		result,
+	)
 
-	// decoding uses reflect when any tuple element is not a scalar
-	err = conn.Query(ctx, `SELECT (1, ("abc",))`, &result)
+	result = []Tuple{}
+	err = conn.Query(ctx, `SELECT (1, "abc", (2.3, true))`, &result)
 	require.Nil(t, err, "unexpected error: %v", err)
-	expected = [][]interface{}{{int64(1), []interface{}{"abc"}}}
-	require.Equal(t, expected, result)
+	require.Equal(t,
+		[]Tuple{{
+			1,
+			"abc",
+			NestedTuple{
+				first:  2.3,
+				second: true,
+			},
+		}},
+		result,
+	)
 }
 
 func TestSendAndReceiveArray(t *testing.T) {
@@ -1456,24 +1330,26 @@ func TestSendAndReceiveArray(t *testing.T) {
 		"edgedb.InvalidArgumentError: "+
 			"expected args[0] to be []int64 got: string")
 
-	// decoding uses reflect when parent is a tuple
-	var nested []interface{}
-	err = conn.QueryOne(ctx, "SELECT (<array<int64>>$0,)", &nested, []int64{1})
-	require.Nil(t, err)
-	assert.Equal(t, []interface{}{[]int64{1}}, nested)
+	type Tuple struct {
+		first []int64 `edgedb:"0"`
+	}
 
-	// decoding using pointers
+	var nested Tuple
+	err = conn.QueryOne(ctx, "SELECT (<array<int64>>$0,)", &nested, []int64{1})
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t, Tuple{[]int64{1}}, nested)
+
 	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64(nil))
-	require.Nil(t, err)
+	require.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, []int64(nil), result)
 
 	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
-	require.Nil(t, err)
+	require.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, []int64{1}, result)
 
 	arg := []int64{1, 2, 3}
 	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, arg)
-	require.Nil(t, err)
+	require.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, []int64{1, 2, 3}, result)
 }
 
@@ -1497,15 +1373,24 @@ func TestReceiveSet(t *testing.T) {
 
 		var result Function
 		err := conn.QueryOne(ctx, query, &result)
-		require.Nil(t, err)
+		require.Nil(t, err, "unexpected error: %v", err)
 		assert.Equal(t, [][]int64{{1, 2}, {1}}, result.Sets)
 	}
 
 	// decoding using reflect
 	{
+		type NestedTuple struct {
+			first int64 `edgedb:"0"`
+		}
+
+		type Tuple struct {
+			first  int64       `edgedb:"0"` // nolint:structcheck
+			second NestedTuple `edgedb:"1"` // nolint:structcheck
+		}
+
 		type Function struct {
-			ID   UUID              `edgedb:"id"`
-			Sets [][][]interface{} `edgedb:"sets"`
+			ID   UUID      `edgedb:"id"`
+			Sets [][]Tuple `edgedb:"sets"`
 		}
 
 		query := `
@@ -1518,10 +1403,13 @@ func TestReceiveSet(t *testing.T) {
 
 		var result Function
 		err := conn.QueryOne(ctx, query, &result)
-		require.Nil(t, err)
-		assert.Equal(t, [][][]interface{}{
-			{{int64(1), []interface{}{int64(2)}}},
-			{{int64(3), []interface{}{int64(4)}}},
-		}, result.Sets)
+		require.Nil(t, err, "unexpected error: %v", err)
+		assert.Equal(t,
+			[][]Tuple{
+				{{1, NestedTuple{2}}},
+				{{3, NestedTuple{4}}},
+			},
+			result.Sets,
+		)
 	}
 }

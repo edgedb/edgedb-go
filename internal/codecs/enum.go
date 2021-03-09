@@ -27,5 +27,5 @@ func popEnumCodec(r *buff.Reader, id types.UUID, codecs []Codec) Codec {
 		r.PopBytes()
 	}
 
-	return &Str{id, strType}
+	return &Str{id}
 }

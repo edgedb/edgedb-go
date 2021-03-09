@@ -37,7 +37,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -63,7 +63,7 @@ func BenchmarkDecodeString(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -78,7 +78,7 @@ func BenchmarkDecodeBytes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -93,7 +93,7 @@ func BenchmarkDecodeInt16(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -108,7 +108,7 @@ func BenchmarkDecodeInt32(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -123,7 +123,7 @@ func BenchmarkDecodeInt64(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -140,7 +140,7 @@ func BenchmarkDecodeFloat32(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -157,7 +157,7 @@ func BenchmarkDecodeFloat64(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }
 
@@ -172,6 +172,6 @@ func BenchmarkDecodeBool(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Buf = data
-		codec.DecodePtr(r, ptr)
+		codec.Decode(r, ptr)
 	}
 }

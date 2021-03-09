@@ -61,7 +61,7 @@ var (
 	// In go query json should return bytes not str.
 	// but the descriptor type ID sent to the server
 	// should still be str.
-	JSONBytes = &Bytes{strID, bytesType}
+	JSONBytes = &Bytes{strID}
 )
 
 func baseScalarCodec(id types.UUID) (Codec, error) {
@@ -69,25 +69,25 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 	case uuidID:
 		return &UUID{}, nil
 	case strID:
-		return &Str{id, strType}, nil
+		return &Str{id}, nil
 	case bytesID:
-		return &Bytes{id, bytesType}, nil
+		return &Bytes{id}, nil
 	case int16ID:
-		return &Int16{id, int16Type}, nil
+		return &Int16{}, nil
 	case int32ID:
-		return &Int32{id, int32Type}, nil
+		return &Int32{}, nil
 	case int64ID:
-		return &Int64{id, int64Type}, nil
+		return &Int64{}, nil
 	case float32ID:
-		return &Float32{id, float32Type}, nil
+		return &Float32{}, nil
 	case float64ID:
-		return &Float64{id, float64Type}, nil
+		return &Float64{}, nil
 	case decimalID:
 		return nil, errors.New("decimal not implemented")
 	case boolID:
-		return &Bool{id, boolType}, nil
+		return &Bool{}, nil
 	case dateTimeID:
-		return &DateTime{id, dateTimeType}, nil
+		return &DateTime{}, nil
 	case localDTID:
 		return &LocalDateTime{}, nil
 	case localDateID:
@@ -97,7 +97,7 @@ func baseScalarCodec(id types.UUID) (Codec, error) {
 	case durationID:
 		return &Duration{}, nil
 	case jsonID:
-		return &JSON{id: jsonID}, nil
+		return &JSON{}, nil
 	case bigIntID:
 		return &BigInt{}, nil
 	default:
@@ -111,14 +111,8 @@ type UUID struct{}
 // ID returns the descriptor id.
 func (c *UUID) ID() types.UUID { return uuidID }
 
-func (c *UUID) setDefaultType() {}
-
-func (c *UUID) setType(typ reflect.Type, path Path) (bool, error) {
-	return false, c.checkType(typ, path)
-}
-
-func (c *UUID) checkType(typ reflect.Type, path Path) error {
-	if typ != uuidType {
+func (c *UUID) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
 		return fmt.Errorf(
 			"expected %v to be edgedb.UUID got %v", path, typ,
 		)
@@ -131,21 +125,7 @@ func (c *UUID) checkType(typ reflect.Type, path Path) error {
 func (c *UUID) Type() reflect.Type { return uuidType }
 
 // Decode a UUID.
-func (c *UUID) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a UUID using reflection
-func (c *UUID) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if e := c.checkType(out.Type(), path); e != nil {
-		panic(e)
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a UUID into an unsafe.Pointer.
-func (c *UUID) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *UUID) Decode(r *buff.Reader, out unsafe.Pointer) {
 	p := (*types.UUID)(out)
 	copy((*p)[:], r.Buf[:16])
 	r.Discard(16)
@@ -165,49 +145,25 @@ func (c *UUID) Encode(w *buff.Writer, val interface{}, path Path) error {
 
 // Str is an EdgeDB string type codec.
 type Str struct {
-	id  types.UUID
-	typ reflect.Type
+	id types.UUID
 }
 
 // ID returns the descriptor id.
-func (c *Str) ID() types.UUID {
-	return c.id
-}
-func (c *Str) setDefaultType() {}
+func (c *Str) ID() types.UUID { return c.id }
 
-func (c *Str) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Str) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Str) Type() reflect.Type {
-	return c.typ
-}
+func (c *Str) Type() reflect.Type { return strType }
 
 // Decode a string.
-func (c *Str) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a str into a reflect.Value.
-func (c *Str) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a str into an unsafe.Pointer.
-func (c *Str) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Str) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*string)(out) = string(r.Buf)
 	r.Discard(len(r.Buf))
 }
@@ -225,49 +181,27 @@ func (c *Str) Encode(w *buff.Writer, val interface{}, path Path) error {
 
 // Bytes is an EdgeDB bytes type codec.
 type Bytes struct {
-	id  types.UUID
-	typ reflect.Type
+	id types.UUID
 }
 
 // ID returns the descriptor id.
-func (c *Bytes) ID() types.UUID {
-	return c.id
-}
-func (c *Bytes) setDefaultType() {}
+func (c *Bytes) ID() types.UUID { return c.id }
 
-func (c *Bytes) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
+func (c *Bytes) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf(
+			"expected %v to be %v got %v", path, c.Type(), typ,
 		)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Bytes) Type() reflect.Type {
-	return c.typ
-}
+func (c *Bytes) Type() reflect.Type { return bytesType }
 
 // Decode []byte.
-func (c *Bytes) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes bytes into a reflect.Value.
-func (c *Bytes) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes bytes into an unsafe.Pointer.
-func (c *Bytes) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Bytes) Decode(r *buff.Reader, out unsafe.Pointer) {
 	n := len(r.Buf)
 
 	p := (*[]byte)(out)
@@ -294,50 +228,24 @@ func (c *Bytes) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // Int16 is an EdgeDB int64 type codec.
-type Int16 struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Int16 struct{}
 
 // ID returns the descriptor id.
-func (c *Int16) ID() types.UUID {
-	return c.id
-}
-func (c *Int16) setDefaultType() {}
+func (c *Int16) ID() types.UUID { return int16ID }
 
-func (c *Int16) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Int16) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Int16) Type() reflect.Type {
-	return c.typ
-}
+func (c *Int16) Type() reflect.Type { return int16Type }
 
 // Decode an int16.
-func (c *Int16) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes an int16 into a reflect.Value.
-func (c *Int16) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes an int16 into an unsafe.Pointer.
-func (c *Int16) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Int16) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint16)(out) = r.PopUint16()
 }
 
@@ -354,50 +262,24 @@ func (c *Int16) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // Int32 is an EdgeDB int32 type codec.
-type Int32 struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Int32 struct{}
 
 // ID returns the descriptor id.
-func (c *Int32) ID() types.UUID {
-	return c.id
-}
-func (c *Int32) setDefaultType() {}
+func (c *Int32) ID() types.UUID { return int32ID }
 
-func (c *Int32) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Int32) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Int32) Type() reflect.Type {
-	return c.typ
-}
+func (c *Int32) Type() reflect.Type { return int32Type }
 
 // Decode an int32.
-func (c *Int32) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes an int32 into a reflect.Value.
-func (c *Int32) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes an int32 into an unsafe.Pointer.
-func (c *Int32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Int32) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = r.PopUint32()
 }
 
@@ -414,50 +296,24 @@ func (c *Int32) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // Int64 is an EdgeDB int64 type codec.
-type Int64 struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Int64 struct{}
 
 // ID returns the descriptor id.
-func (c *Int64) ID() types.UUID {
-	return c.id
-}
-func (c *Int64) setDefaultType() {}
+func (c *Int64) ID() types.UUID { return int64ID }
 
-func (c *Int64) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Int64) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Int64) Type() reflect.Type {
-	return c.typ
-}
+func (c *Int64) Type() reflect.Type { return int64Type }
 
 // Decode an int64.
-func (c *Int64) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes an int64 into a reflect.Value.
-func (c *Int64) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes an int64 into an unsafe.Pointer.
-func (c *Int64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Int64) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 }
 
@@ -482,32 +338,12 @@ func (c *BigInt) ID() types.UUID { return bigIntID }
 // Type returns the reflect.Type that this codec decodes to.
 func (c *BigInt) Type() reflect.Type { return bigIntType }
 
-func (c *BigInt) setDefaultType() {}
-
-func (c *BigInt) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != bigIntType {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, bigIntType, typ,
-		)
+func (c *BigInt) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
-}
-
-// Decode a bigint.
-func (c *BigInt) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a bigint into a reflect.Value.
-func (c *BigInt) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != bigIntType {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, bigIntType, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
+	return nil
 }
 
 var (
@@ -516,8 +352,8 @@ var (
 	bigZero = big.NewInt(0)
 )
 
-// DecodePtr decodes a bigint into an unsafe.Pointer.
-func (c *BigInt) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+// Decode a bigint.
+func (c *BigInt) Decode(r *buff.Reader, out unsafe.Pointer) {
 	n := int(r.PopUint16())
 	weight := big.NewInt(int64(r.PopUint16()))
 	sign := r.PopUint16()
@@ -590,50 +426,24 @@ func (c *BigInt) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // Float32 is an EdgeDB float32 type codec.
-type Float32 struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Float32 struct{}
 
 // ID returns the descriptor id.
-func (c *Float32) ID() types.UUID {
-	return c.id
-}
-func (c *Float32) setDefaultType() {}
+func (c *Float32) ID() types.UUID { return float32ID }
 
-func (c *Float32) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Float32) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Float32) Type() reflect.Type {
-	return c.typ
-}
+func (c *Float32) Type() reflect.Type { return float32Type }
 
 // Decode a float32.
-func (c *Float32) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a float32 into a reflect.Value.
-func (c *Float32) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a float32 into an unsafe.Pointer.
-func (c *Float32) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Float32) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = r.PopUint32()
 }
 
@@ -650,50 +460,24 @@ func (c *Float32) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // Float64 is an EdgeDB float64 type codec.
-type Float64 struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Float64 struct{}
 
 // ID returns the descriptor id.
-func (c *Float64) ID() types.UUID {
-	return c.id
-}
-func (c *Float64) setDefaultType() {}
+func (c *Float64) ID() types.UUID { return float64ID }
 
-func (c *Float64) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Float64) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Float64) Type() reflect.Type {
-	return c.typ
-}
+func (c *Float64) Type() reflect.Type { return float64Type }
 
 // Decode a float64.
-func (c *Float64) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a float64 into a reflect.Value.
-func (c *Float64) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a float64 into an unsafe.Pointer.
-func (c *Float64) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Float64) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 }
 
@@ -710,50 +494,24 @@ func (c *Float64) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // Bool is an EdgeDB bool type codec.
-type Bool struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type Bool struct{}
 
 // ID returns the descriptor id.
-func (c *Bool) ID() types.UUID {
-	return c.id
-}
-func (c *Bool) setDefaultType() {}
+func (c *Bool) ID() types.UUID { return boolID }
 
-func (c *Bool) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *Bool) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *Bool) Type() reflect.Type {
-	return c.typ
-}
+func (c *Bool) Type() reflect.Type { return boolType }
 
 // Decode a bool.
-func (c *Bool) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a bool into a reflect.Value.
-func (c *Bool) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a bool into an unsafe.Pointer.
-func (c *Bool) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Bool) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint8)(out) = r.PopUint8()
 }
 
@@ -777,51 +535,24 @@ func (c *Bool) Encode(w *buff.Writer, val interface{}, path Path) error {
 }
 
 // JSON is an EdgeDB json type codec.
-type JSON struct {
-	id types.UUID
-}
+type JSON struct{}
 
 // ID returns the descriptor id.
-func (c *JSON) ID() types.UUID {
-	return c.id
-}
+func (c *JSON) ID() types.UUID { return jsonID }
 
-func (c *JSON) setDefaultType() {} // nolint:unused
-
-func (c *JSON) setType( // nolint:unused
-	typ reflect.Type,
-	path Path,
-) (bool, error) {
-	if typ != bytesType {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, bytesType, typ,
-		)
+func (c *JSON) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
 func (c *JSON) Type() reflect.Type { return bytesType }
 
 // Decode json.
-func (c *JSON) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes JSON into a reflect.Value.
-func (c *JSON) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != bytesType {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, bytesType, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes JSON into an unsafe.Pointer.
-func (c *JSON) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *JSON) Decode(r *buff.Reader, out unsafe.Pointer) {
 	format := r.PopUint8()
 	if format != 1 {
 		panic(fmt.Sprintf(

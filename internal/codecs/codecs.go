@@ -38,17 +38,11 @@ const (
 
 // Codec interface
 type Codec interface {
-	Decode(*buff.Reader, reflect.Value)
-	DecodeReflect(*buff.Reader, reflect.Value, Path)
-	DecodePtr(*buff.Reader, unsafe.Pointer)
+	Decode(*buff.Reader, unsafe.Pointer)
 	Encode(*buff.Writer, interface{}, Path) error
 	ID() types.UUID
 	Type() reflect.Type
-	setDefaultType()
-
-	// setType returns true if the memory layout for reflect.Type
-	// is not fully known.
-	setType(reflect.Type, Path) (bool, error)
+	setType(reflect.Type, Path) error
 }
 
 // BuildCodec a decoder
@@ -105,7 +99,7 @@ func BuildTypedCodec(r *buff.Reader, typ reflect.Type) (Codec, error) {
 	}
 
 	path := Path(typ.String())
-	if _, err = codec.setType(typ, path); err != nil {
+	if err = codec.setType(typ, path); err != nil {
 		return nil, fmt.Errorf(
 			"the \"out\" argument does not match query schema: %v", err,
 		)

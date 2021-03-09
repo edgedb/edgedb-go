@@ -110,16 +110,17 @@ func TestParseAllMessagesAfterError(t *testing.T) {
 }
 
 func TestArgumentTypeMissmatch(t *testing.T) {
-	var res []interface{}
+	type Tuple struct {
+		first int16 `edgedb:"0"` // nolint:unused,structcheck
+	}
+
+	var res Tuple
 	ctx := context.Background()
 	err := conn.QueryOne(ctx, "SELECT (<int16>$0 + <int16>$1,)", &res, 1, 1111)
 
 	require.NotNil(t, err)
-	assert.Equal(
-		t,
-		"edgedb.InvalidArgumentError: expected args[0] to be int16 got int",
-		err.Error(),
-	)
+	assert.EqualError(t, err,
+		"edgedb.InvalidArgumentError: expected args[0] to be int16 got int")
 }
 
 func TestNamedQueryArguments(t *testing.T) {

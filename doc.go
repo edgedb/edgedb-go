@@ -101,7 +101,7 @@
 //   ---------             ---------
 //   Set                   []anytype
 //   array<anytype>        []anytype
-//   tuple                 []interface{}
+//   tuple                 struct
 //   named tuple           struct
 //   Object                struct
 //   bool                  bool
