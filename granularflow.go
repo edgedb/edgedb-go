@@ -19,6 +19,7 @@ package edgedb
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/aspect"
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -251,10 +252,13 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs codecPair) error {
 			if !q.flat() {
 				val := reflect.New(q.outType).Elem()
 				s := r.PopSlice(elmLen)
-				cdcs.out.Decode(s, val)
+				cdcs.out.Decode(s, unsafe.Pointer(val.UnsafeAddr()))
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r.PopSlice(elmLen), q.out)
+				cdcs.out.Decode(
+					r.PopSlice(elmLen),
+					unsafe.Pointer(q.out.UnsafeAddr()),
+				)
 			}
 
 			if err == errZeroResults {
@@ -339,10 +343,16 @@ func (c *baseConn) optimistic(
 
 			if !q.flat() {
 				val := reflect.New(q.outType).Elem()
-				cdcs.out.Decode(r.PopSlice(elmLen), val)
+				cdcs.out.Decode(
+					r.PopSlice(elmLen),
+					unsafe.Pointer(val.UnsafeAddr()),
+				)
 				tmp = reflect.Append(tmp, val)
 			} else {
-				cdcs.out.Decode(r.PopSlice(elmLen), q.out)
+				cdcs.out.Decode(
+					r.PopSlice(elmLen),
+					unsafe.Pointer(q.out.UnsafeAddr()),
+				)
 			}
 
 			if err == errZeroResults {

@@ -58,107 +58,54 @@ type NamedTuple struct {
 	id     types.UUID
 	fields []*objectField
 	typ    reflect.Type
-
-	// useReflect indicates weather reflection or a known memory layout
-	// should be used to deserialize data.
-	useReflect bool
 }
 
 // ID returns the descriptor id.
-func (c *NamedTuple) ID() types.UUID {
-	return c.id
-}
+func (c *NamedTuple) ID() types.UUID { return c.id }
 
-func (c *NamedTuple) setDefaultType() {
-	for _, field := range c.fields {
-		field.codec.setDefaultType()
-	}
-
-	c.typ = reflect.TypeOf(map[string]interface{}{})
-	c.useReflect = true
-}
-
-func (c *NamedTuple) setType(typ reflect.Type, path Path) (bool, error) {
+func (c *NamedTuple) setType(typ reflect.Type, path Path) error {
 	if typ.Kind() != reflect.Struct {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"expected %v to be a struct got %v", path, typ.Kind(),
 		)
 	}
 
-	for i := 0; i < len(c.fields); i++ {
-		field := c.fields[i]
-
+	for _, field := range c.fields {
 		f, ok := marshal.StructField(typ, field.name)
 		if !ok {
-			return false, fmt.Errorf(
-				"%v struct is missing field %q", typ, field.name,
-			)
+			return fmt.Errorf("%v struct is missing field %q", typ, field.name)
 		}
 
-		useReflect, err := field.codec.setType(
+		err := field.codec.setType(
 			f.Type,
 			path.AddField(field.name),
 		)
 
 		if err != nil {
-			return false, err
+			return err
 		}
 
-		c.useReflect = c.useReflect || useReflect
 		field.offset = f.Offset
 	}
 
 	c.typ = typ
-	return c.useReflect, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *NamedTuple) Type() reflect.Type {
-	return c.typ
-}
+func (c *NamedTuple) Type() reflect.Type { return c.typ }
 
 // Decode a named tuple.
-func (c *NamedTuple) Decode(r *buff.Reader, out reflect.Value) {
-	if c.useReflect {
-		c.DecodeReflect(r, out, Path(out.Type().String()))
-		return
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodeReflect decodes a named tuple into a reflect.Value.
-func (c *NamedTuple) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != c.typ {
+func (c *NamedTuple) Decode(r *buff.Reader, out unsafe.Pointer) {
+	elmCount := int(int32(r.PopUint32()))
+	if elmCount != len(c.fields) {
 		panic(fmt.Sprintf(
-			"expected %v to be %v, got %v", path, c.typ, out.Type(),
+			"wrong number of elements expected %v got %v",
+			len(c.fields), elmCount,
 		))
 	}
 
-	switch out.Kind() {
-	case reflect.Struct:
-		c.decodeReflectStruct(r, out, path)
-	case reflect.Map:
-		c.decodeReflectMap(r, out, path)
-	default:
-		panic(fmt.Sprintf(
-			"expected %v to be Struct or Map, got %v", path, out.Kind(),
-		))
-	}
-}
-
-func (c *NamedTuple) decodeReflectStruct(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	elmCount := int(int32(r.PopUint32()))
-
-	for i := 0; i < elmCount; i++ {
+	for _, field := range c.fields {
 		r.Discard(4) // reserved
 
 		elmLen := r.PopUint32()
@@ -166,56 +113,7 @@ func (c *NamedTuple) decodeReflectStruct(
 			continue
 		}
 
-		field := c.fields[i]
-		field.codec.DecodeReflect(
-			r.PopSlice(elmLen),
-			structField(out, field.name),
-			path.AddField(field.name),
-		)
-	}
-}
-
-func (c *NamedTuple) decodeReflectMap(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	elmCount := int(int32(r.PopUint32()))
-	out.Set(reflect.MakeMapWithSize(c.typ, elmCount))
-
-	for i := 0; i < elmCount; i++ {
-		r.Discard(4) // reserved
-
-		elmLen := r.PopUint32()
-		if elmLen == 0xffffffff {
-			continue
-		}
-
-		field := c.fields[i]
-		val := reflect.New(field.codec.Type()).Elem()
-		field.codec.DecodeReflect(
-			r.PopSlice(elmLen),
-			val,
-			path.AddField(field.name),
-		)
-		out.SetMapIndex(reflect.ValueOf(field.name), val)
-	}
-}
-
-// DecodePtr decodes a named tuple into an unsafe.Pointer.
-func (c *NamedTuple) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
-	elmCount := int(int32(r.PopUint32()))
-
-	for i := 0; i < elmCount; i++ {
-		r.Discard(4) // reserved
-
-		elmLen := r.PopUint32()
-		if elmLen == 0xffffffff {
-			continue
-		}
-
-		field := c.fields[i]
-		field.codec.DecodePtr(r.PopSlice(elmLen), pAdd(out, field.offset))
+		field.codec.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
 	}
 }
 
@@ -245,9 +143,8 @@ func (c *NamedTuple) Encode(w *buff.Writer, val interface{}, path Path) error {
 	}
 
 	var err error
-	for i := 0; i < elmCount; i++ {
+	for _, field := range c.fields {
 		w.PushUint32(0) // reserved
-		field := c.fields[i]
 		err = field.codec.Encode(w, in[field.name], path.AddField(field.name))
 		if err != nil {
 			return err

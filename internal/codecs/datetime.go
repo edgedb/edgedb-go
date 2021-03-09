@@ -43,54 +43,24 @@ var (
 )
 
 // DateTime is an EdgeDB datetime type codec.
-type DateTime struct {
-	id  types.UUID
-	typ reflect.Type
-}
+type DateTime struct{}
 
 // ID returns the descriptor id.
-func (c *DateTime) ID() types.UUID {
-	return c.id
-}
-func (c *DateTime) setDefaultType() {}
+func (c *DateTime) ID() types.UUID { return dateTimeID }
 
-func (c *DateTime) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != c.typ {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, typ,
-		)
+func (c *DateTime) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
-func (c *DateTime) Type() reflect.Type {
-	return c.typ
-}
+func (c *DateTime) Type() reflect.Type { return dateTimeType }
 
 // Decode a datetime.
-func (c *DateTime) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodeReflect(r, out, Path(out.Type().String()))
-}
-
-// DecodeReflect decodes a datetime into a reflect.Value.
-func (c *DateTime) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != c.typ {
-		panic(fmt.Errorf(
-			"expected %v to be %v got %v", path, c.typ, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a datetime into an unsafe.Pointer.
-func (c *DateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *DateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
 	val := int64(r.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
@@ -124,16 +94,14 @@ func (c *LocalDateTime) ID() types.UUID { return localDTID }
 // Type returns the reflect.Type that this codec decodes to.
 func (c *LocalDateTime) Type() reflect.Type { return localDTType }
 
-func (c *LocalDateTime) setDefaultType() {}
-
-func (c *LocalDateTime) setType(typ reflect.Type, path Path) (bool, error) {
+func (c *LocalDateTime) setType(typ reflect.Type, path Path) error {
 	if typ != localDTType {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"expected %v to be %v got %v", path, localDTType, typ,
 		)
 	}
 
-	return false, nil
+	return nil
 }
 
 // localDateTimeLayout is the memory layout for edgedbtypes.LocalDateTime
@@ -161,27 +129,7 @@ func (c *LocalDateTime) Encode(
 }
 
 // Decode a LocalDateTime
-func (c *LocalDateTime) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodeReflect decodes a LocalDateTime using reflection
-func (c *LocalDateTime) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != localDTType {
-		panic(fmt.Sprintf(
-			"expected %v to be edgedb.LocalDateTime got %v", path, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a LocalDateTime into an unsafe.Pointer.
-func (c *LocalDateTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *LocalDateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
 }
 
@@ -194,16 +142,12 @@ func (c *LocalDate) ID() types.UUID { return localDateID }
 // Type returns the reflect.Type that this codec decodes to.
 func (c *LocalDate) Type() reflect.Type { return localDateType }
 
-func (c *LocalDate) setDefaultType() {}
-
-func (c *LocalDate) setType(typ reflect.Type, path Path) (bool, error) {
+func (c *LocalDate) setType(typ reflect.Type, path Path) error {
 	if typ != localDateType {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, localDateType, typ,
-		)
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // localDateLayout is the memory layout for edgedbtypes.LocalDate
@@ -230,27 +174,7 @@ func (c *LocalDate) Encode(
 }
 
 // Decode a LocalDate
-func (c *LocalDate) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodeReflect decodes a LocalDateTime using reflection
-func (c *LocalDate) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != localDateType {
-		panic(fmt.Sprintf(
-			"expected %v to be edgedb.LocalDate got %v", path, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a LocalDate into an unsafe.Pointer.
-func (c *LocalDate) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *LocalDate) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateLayout)(out).days = r.PopUint32() + 730119
 }
 
@@ -263,16 +187,12 @@ func (c *LocalTime) ID() types.UUID { return localTimeID }
 // Type returns the reflect.Type that this codec decodes to.
 func (c *LocalTime) Type() reflect.Type { return localTimeType }
 
-func (c *LocalTime) setDefaultType() {}
-
-func (c *LocalTime) setType(typ reflect.Type, path Path) (bool, error) {
+func (c *LocalTime) setType(typ reflect.Type, path Path) error {
 	if typ != localTimeType {
-		return false, fmt.Errorf(
-			"expected %v to be %v got %v", path, localTimeType, typ,
-		)
+		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
 	}
 
-	return false, nil
+	return nil
 }
 
 // localTimeLayout is the memory layout for edgedbtypes.LocalTime
@@ -299,27 +219,7 @@ func (c *LocalTime) Encode(
 }
 
 // Decode a LocalTime
-func (c *LocalTime) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodeReflect decodes a LocalTimeTime using reflection
-func (c *LocalTime) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != localTimeType {
-		panic(fmt.Sprintf(
-			"expected %v to be edgedb.LocalTime got %v", path, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a LocalTime into an unsafe.Pointer.
-func (c *LocalTime) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *LocalTime) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localTimeLayout)(out).usec = r.PopUint64()
 }
 
@@ -329,43 +229,21 @@ type Duration struct{}
 // ID returns the descriptor id.
 func (c *Duration) ID() types.UUID { return durationID }
 
-func (c *Duration) setDefaultType() {}
-
-func (c *Duration) setType(typ reflect.Type, path Path) (bool, error) {
-	if typ != durationType {
-		return false, fmt.Errorf(
+func (c *Duration) setType(typ reflect.Type, path Path) error {
+	if typ != c.Type() {
+		return fmt.Errorf(
 			"expected %v to be edgedb.Duration got %v", path, typ,
 		)
 	}
 
-	return false, nil
+	return nil
 }
 
 // Type returns the reflect.Type that this codec decodes to.
 func (c *Duration) Type() reflect.Type { return durationType }
 
 // Decode a duration.
-func (c *Duration) Decode(r *buff.Reader, out reflect.Value) {
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodeReflect decodes a duration into a reflect.Value.
-func (c *Duration) DecodeReflect(
-	r *buff.Reader,
-	out reflect.Value,
-	path Path,
-) {
-	if out.Type() != durationType {
-		panic(fmt.Errorf(
-			"expected %v to be edgedb.Duration got %v", path, out.Type(),
-		))
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodePtr decodes a duration into an unsafe.Pointer.
-func (c *Duration) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Duration) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 	r.Discard(8) // reserved
 }

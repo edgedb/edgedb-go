@@ -52,22 +52,11 @@ type Array struct {
 
 	// step is the element width in bytes for a go array of type `Array.typ`.
 	step int
-
-	// useReflect indicates weather reflection or a known memory layout
-	// should be used to deserialize data.
-	useReflect bool
 }
 
-func (c *Array) setDefaultType() {
-	c.child.setDefaultType()
-	c.typ = reflect.SliceOf(c.child.Type())
-	c.step = calcStep(c.typ.Elem())
-	c.useReflect = true
-}
-
-func (c *Array) setType(typ reflect.Type, path Path) (bool, error) {
+func (c *Array) setType(typ reflect.Type, path Path) error {
 	if typ.Kind() != reflect.Slice {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"expected %v to be a Slice, got %v", path, typ.Kind(),
 		)
 	}
@@ -75,9 +64,7 @@ func (c *Array) setType(typ reflect.Type, path Path) (bool, error) {
 	c.typ = typ
 	c.step = calcStep(typ.Elem())
 
-	var err error
-	c.useReflect, err = c.child.setType(typ.Elem(), path)
-	return c.useReflect, err
+	return c.child.setType(typ.Elem(), path)
 }
 
 // ID returns the descriptor id.
@@ -97,59 +84,7 @@ func (c *Array) Type() reflect.Type {
 }
 
 // Decode an array.
-func (c *Array) Decode(r *buff.Reader, out reflect.Value) {
-	if c.useReflect {
-		c.DecodeReflect(r, out, Path(out.Type().String()))
-		return
-	}
-
-	c.DecodePtr(r, unsafe.Pointer(out.UnsafeAddr()))
-}
-
-// DecodeReflect decodes an array into a reflect.Value.
-func (c *Array) DecodeReflect(r *buff.Reader, out reflect.Value, path Path) {
-	if out.Type() != c.Type() {
-		panic(fmt.Sprintf(
-			"expected %v to be %v got: %v", path, c.Type(), out.Type(),
-		))
-	}
-
-	// number of dimensions is 1 or 0
-	if r.PopUint32() == 0 {
-		r.Discard(8) // reserved
-		return
-	}
-
-	r.Discard(8) // reserved
-
-	upper := int32(r.PopUint32())
-	lower := int32(r.PopUint32())
-	n := int(upper - lower + 1)
-
-	if out.Cap() < n {
-		out.Set(reflect.MakeSlice(c.Type(), n, n))
-	}
-
-	if out.Len() > n {
-		out.Set(out.Slice(0, n))
-	}
-
-	for i := 0; i < n; i++ {
-		elmLen := r.PopUint32()
-		if elmLen == 0xffffffff {
-			continue
-		}
-
-		c.child.DecodeReflect(
-			r.PopSlice(elmLen),
-			out.Index(i),
-			path.AddIndex(i),
-		)
-	}
-}
-
-// DecodePtr decodes an array into an unsafe.Pointer.
-func (c *Array) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
+func (c *Array) Decode(r *buff.Reader, out unsafe.Pointer) {
 	// number of dimensions is 1 or 0
 	if r.PopUint32() == 0 {
 		r.Discard(8) // reserved
@@ -177,7 +112,7 @@ func (c *Array) DecodePtr(r *buff.Reader, out unsafe.Pointer) {
 			continue
 		}
 
-		c.child.DecodePtr(
+		c.child.Decode(
 			r.PopSlice(elmLen),
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
