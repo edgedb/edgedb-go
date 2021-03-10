@@ -45,6 +45,7 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
 
 var descCache = cache.New(1_000)
@@ -55,13 +56,13 @@ type codecKey struct {
 }
 
 type codecPair struct {
-	in  codecs.Codec
-	out codecs.Codec
+	in  codecs.Encoder
+	out codecs.Decoder
 }
 
 type descPair struct {
-	in  []byte
-	out []byte
+	in  descriptor.Descriptor
+	out descriptor.Descriptor
 }
 
 type idPair struct {

@@ -114,6 +114,48 @@ func TestSendAndReceiveInt64(t *testing.T) {
 	}
 }
 
+type Int64Codec struct {
+	data [8]byte
+}
+
+func (m Int64Codec) MarshalEdgeDBInt64() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *Int64Codec) UnmarshalEdgeDBInt64(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveInt64Marshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <int64>$0,
+		decoded := 123_456_789_987_654_321,
+	)`
+
+	type Result struct {
+		Encoded int64      `edgedb:"encoded"`
+		Decoded Int64Codec `edgedb:"decoded"`
+	}
+
+	data := [8]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}
+	arg := &Int64Codec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: 123_456_789_987_654_321,
+			Decoded: Int64Codec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveInt32(t *testing.T) {
 	ctx := context.Background()
 
@@ -173,6 +215,48 @@ func TestSendAndReceiveInt32(t *testing.T) {
 			assert.Equal(t, s, r.String)
 		})
 	}
+}
+
+type Int32Codec struct {
+	data [4]byte
+}
+
+func (m Int32Codec) MarshalEdgeDBInt32() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *Int32Codec) UnmarshalEdgeDBInt32(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveInt32Marshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <int32>$0,
+		decoded := <int32>655_665,
+	)`
+
+	type Result struct {
+		Encoded int32      `edgedb:"encoded"`
+		Decoded Int32Codec `edgedb:"decoded"`
+	}
+
+	data := [4]byte{0x00, 0x0a, 0x01, 0x31}
+	arg := &Int32Codec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: 655_665,
+			Decoded: Int32Codec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveInt16(t *testing.T) {
@@ -236,6 +320,48 @@ func TestSendAndReceiveInt16(t *testing.T) {
 	}
 }
 
+type Int16Codec struct {
+	data [2]byte
+}
+
+func (m Int16Codec) MarshalEdgeDBInt16() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *Int16Codec) UnmarshalEdgeDBInt16(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveInt16Marshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <int16>$0,
+		decoded := <int16>6556,
+	)`
+
+	type Result struct {
+		Encoded int16      `edgedb:"encoded"`
+		Decoded Int16Codec `edgedb:"decoded"`
+	}
+
+	data := [2]byte{0x19, 0x9c}
+	arg := &Int16Codec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: 6556,
+			Decoded: Int16Codec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveBool(t *testing.T) {
 	ctx := context.Background()
 
@@ -276,6 +402,48 @@ func TestSendAndReceiveBool(t *testing.T) {
 			assert.Equal(t, s, result.String)
 		})
 	}
+}
+
+type BoolCodec struct {
+	data [1]byte
+}
+
+func (m BoolCodec) MarshalEdgeDBBool() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *BoolCodec) UnmarshalEdgeDBBool(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveBoolMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <bool>$0,
+		decoded := <bool>true,
+	)`
+
+	type Result struct {
+		Encoded bool      `edgedb:"encoded"`
+		Decoded BoolCodec `edgedb:"decoded"`
+	}
+
+	data := [1]byte{0x01}
+	arg := &BoolCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: true,
+			Decoded: BoolCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveFloat64(t *testing.T) {
@@ -344,6 +512,48 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 	}
 }
 
+type Float64Codec struct {
+	data [8]byte
+}
+
+func (m Float64Codec) MarshalEdgeDBFloat64() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *Float64Codec) UnmarshalEdgeDBFloat64(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <float64>$0,
+		decoded := <float64>-15.625,
+	)`
+
+	type Result struct {
+		Encoded float64      `edgedb:"encoded"`
+		Decoded Float64Codec `edgedb:"decoded"`
+	}
+
+	data := [8]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}
+	arg := &Float64Codec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: -15.625,
+			Decoded: Float64Codec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveFloat32(t *testing.T) {
 	ctx := context.Background()
 
@@ -410,6 +620,48 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 	}
 }
 
+type Float32Codec struct {
+	data [4]byte
+}
+
+func (m Float32Codec) MarshalEdgeDBFloat32() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *Float32Codec) UnmarshalEdgeDBFloat32(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <float32>$0,
+		decoded := <float32>-15.625,
+	)`
+
+	type Result struct {
+		Encoded float32      `edgedb:"encoded"`
+		Decoded Float32Codec `edgedb:"decoded"`
+	}
+
+	data := [4]byte{0xc1, 0x7a, 0x00, 0x00}
+	arg := &Float32Codec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: -15.625,
+			Decoded: Float32Codec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveBytes(t *testing.T) {
 	ctx := context.Background()
 
@@ -442,7 +694,50 @@ func TestSendAndReceiveBytes(t *testing.T) {
 	}
 }
 
-func TestSendAndReceiveString(t *testing.T) {
+type BytesCodec struct {
+	data []byte
+}
+
+func (m BytesCodec) MarshalEdgeDBBytes() ([]byte, error) {
+	return m.data, nil
+}
+
+func (m *BytesCodec) UnmarshalEdgeDBBytes(data []byte) error {
+	m.data = data
+	fmt.Println(m.data)
+	return nil
+}
+
+func TestSendAndReceiveBytesMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <bytes>$0,
+		decoded := b'\x01\x02\x03',
+	)`
+
+	type Result struct {
+		Encoded []byte     `edgedb:"encoded"`
+		Decoded BytesCodec `edgedb:"decoded"`
+	}
+
+	data := []byte{0x01, 0x02, 0x03}
+	arg := &BytesCodec{make([]byte, len(data))}
+	copy(arg.data, data)
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: data,
+			Decoded: BytesCodec{data},
+		},
+		result,
+	)
+}
+
+func TestSendAndReceiveStr(t *testing.T) {
 	ctx := context.Background()
 
 	var result string
@@ -451,7 +746,7 @@ func TestSendAndReceiveString(t *testing.T) {
 	assert.Equal(t, "abcdef", result, "round trip failed")
 }
 
-func TestFetchLargeString(t *testing.T) {
+func TestFetchLargeStr(t *testing.T) {
 	// This test is meant to stress the buffer implementation.
 	ctx := context.Background()
 
@@ -463,6 +758,50 @@ func TestFetchLargeString(t *testing.T) {
 	err = conn.QueryOne(ctx, "SELECT str_repeat('aa', <int64>(10^8))", &result)
 	require.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, strings.Repeat("aa", 100_000_000), result)
+}
+
+type StrCodec struct {
+	data []byte
+}
+
+func (m StrCodec) MarshalEdgeDBStr() ([]byte, error) {
+	return m.data, nil
+}
+
+func (m *StrCodec) UnmarshalEdgeDBStr(data []byte) error {
+	m.data = data
+	return nil
+}
+
+func TestSendAndReceiveStrMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str>$0,
+		decoded := 'Hello! 🙂',
+	)`
+
+	type Result struct {
+		Encoded string   `edgedb:"encoded"`
+		Decoded StrCodec `edgedb:"decoded"`
+	}
+
+	data := []byte{
+		0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x20, 0xf0, 0x9f, 0x99, 0x82,
+	}
+	arg := &StrCodec{make([]byte, len(data))}
+	copy(arg.data, data)
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "Hello! 🙂",
+			Decoded: StrCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveJSON(t *testing.T) {
@@ -487,6 +826,49 @@ func TestSendAndReceiveJSON(t *testing.T) {
 			assert.Equal(t, samples[i], results[i])
 		})
 	}
+}
+
+type JSONCodec struct {
+	data []byte
+}
+
+func (m JSONCodec) MarshalEdgeDBJSON() ([]byte, error) {
+	return m.data, nil
+}
+
+func (m *JSONCodec) UnmarshalEdgeDBJSON(data []byte) error {
+	m.data = data
+	fmt.Println(m.data)
+	return nil
+}
+
+func TestSendAndReceiveJSONMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := to_str(<json>$0),
+		decoded := <json>(hello := "world"),
+	)`
+
+	type Result struct {
+		Encoded string    `edgedb:"encoded"`
+		Decoded JSONCodec `edgedb:"decoded"`
+	}
+
+	data := append([]byte{1}, []byte(`{"hello": "world"}`)...)
+	arg := &JSONCodec{make([]byte, len(data))}
+	copy(arg.data, data)
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: `{"hello": "world"}`,
+			Decoded: JSONCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveEnum(t *testing.T) {
@@ -530,6 +912,47 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	expected := "edgedb.InvalidValueError: " +
 		"invalid input value for enum 'default::ColorEnum': \"invalid\""
 	assert.EqualError(t, err, expected)
+}
+
+type EnumCodec struct {
+	data []byte
+}
+
+func (m EnumCodec) MarshalEdgeDBStr() ([]byte, error) {
+	return m.data, nil
+}
+
+func (m *EnumCodec) UnmarshalEdgeDBStr(data []byte) error {
+	m.data = data
+	return nil
+}
+
+func TestSendAndReceiveEnumMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <ColorEnum>$0,
+		decoded := <ColorEnum>'Red',
+	)`
+
+	type Result struct {
+		Encoded string    `edgedb:"encoded"`
+		Decoded EnumCodec `edgedb:"decoded"`
+	}
+	data := []byte{0x52, 0x65, 0x64}
+	arg := &EnumCodec{make([]byte, len(data))}
+	copy(arg.data, data)
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "Red",
+			Decoded: EnumCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveDuration(t *testing.T) {
@@ -597,6 +1020,52 @@ func TestSendAndReceiveDuration(t *testing.T) {
 			assert.Equal(t, d, result.Decoded, "decoding failed")
 		})
 	}
+}
+
+type DurationCodec struct {
+	data [16]byte
+}
+
+func (m DurationCodec) MarshalEdgeDBDuration() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *DurationCodec) UnmarshalEdgeDBDuration(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveDurationMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <duration>$0,
+		decoded := <duration>'48 hours 45 minutes 7.6 seconds',
+	)`
+
+	type Result struct {
+		Encoded Duration      `edgedb:"encoded"`
+		Decoded DurationCodec `edgedb:"decoded"`
+	}
+
+	data := [16]byte{
+		0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+		0x00, 0x00, 0x00, 0x00, // days
+		0x00, 0x00, 0x00, 0x00, // months
+	}
+	arg := &DurationCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: Duration(0x28dd117280),
+			Decoded: DurationCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveLocalTime(t *testing.T) {
@@ -680,6 +1149,48 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 	}
 }
 
+type LocalTimeCodec struct {
+	data [8]byte
+}
+
+func (m LocalTimeCodec) MarshalEdgeDBLocalTime() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *LocalTimeCodec) UnmarshalEdgeDBLocalTime(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><cal::local_time>$0,
+		decoded := <cal::local_time>'12:10:00',
+	)`
+
+	type Result struct {
+		Encoded string         `edgedb:"encoded"`
+		Decoded LocalTimeCodec `edgedb:"decoded"`
+	}
+
+	data := [8]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}
+	arg := &LocalTimeCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "12:10:00",
+			Decoded: LocalTimeCodec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveLocalDate(t *testing.T) {
 	ctx := context.Background()
 
@@ -750,6 +1261,48 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 			assert.Equal(t, s, r.String)
 		})
 	}
+}
+
+type LocalDateCodec struct {
+	data [4]byte
+}
+
+func (m LocalDateCodec) MarshalEdgeDBLocalDate() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *LocalDateCodec) UnmarshalEdgeDBLocalDate(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><cal::local_date>$0,
+		decoded := <cal::local_date>'2019-05-06',
+	)`
+
+	type Result struct {
+		Encoded string         `edgedb:"encoded"`
+		Decoded LocalDateCodec `edgedb:"decoded"`
+	}
+
+	data := [4]byte{0x00, 0x00, 0x1b, 0x99}
+	arg := &LocalDateCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "2019-05-06",
+			Decoded: LocalDateCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveLocalDateTime(t *testing.T) {
@@ -831,6 +1384,48 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 	}
 }
 
+type LocalDateTimeCodec struct {
+	data [8]byte
+}
+
+func (m LocalDateTimeCodec) MarshalEdgeDBLocalDateTime() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *LocalDateTimeCodec) UnmarshalEdgeDBLocalDateTime(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><cal::local_datetime>$0,
+		decoded := <cal::local_datetime>'2019-05-06T12:00:00',
+	)`
+
+	type Result struct {
+		Encoded string             `edgedb:"encoded"`
+		Decoded LocalDateTimeCodec `edgedb:"decoded"`
+	}
+
+	data := [8]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}
+	arg := &LocalDateTimeCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "2019-05-06T12:00:00",
+			Decoded: LocalDateTimeCodec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveDateTime(t *testing.T) {
 	ctx := context.Background()
 	format := "2006-01-02T15:04:05.999999-07:00"
@@ -909,6 +1504,48 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 			)
 		})
 	}
+}
+
+type DateTimeCodec struct {
+	data [8]byte
+}
+
+func (m DateTimeCodec) MarshalEdgeDBDateTime() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *DateTimeCodec) UnmarshalEdgeDBDateTime(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><datetime>$0,
+		decoded := <datetime>'2019-05-06T12:00:00+00:00',
+	)`
+
+	type Result struct {
+		Encoded string        `edgedb:"encoded"`
+		Decoded DateTimeCodec `edgedb:"decoded"`
+	}
+
+	data := [8]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}
+	arg := &DateTimeCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "2019-05-06T12:00:00+00:00",
+			Decoded: DateTimeCodec{data},
+		},
+		result,
+	)
 }
 
 func TestSendAndReceiveBigInt(t *testing.T) {
@@ -1072,6 +1709,101 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 	}
 }
 
+type BigIntCodec struct {
+	data []byte
+}
+
+func (m BigIntCodec) MarshalEdgeDBBigInt() ([]byte, error) {
+	return m.data, nil
+}
+
+func (m *BigIntCodec) UnmarshalEdgeDBBigInt(data []byte) error {
+	m.data = data
+	fmt.Println(m.data)
+	return nil
+}
+
+func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><bigint>$0,
+		decoded := <bigint>-15000n,
+	)`
+
+	type Result struct {
+		Encoded string      `edgedb:"encoded"`
+		Decoded BigIntCodec `edgedb:"decoded"`
+	}
+
+	data := []byte{
+		0x00, 0x02, // ndigits
+		0x00, 0x01, // weight
+		0x40, 0x00, // sign
+		0x00, 0x00, // reserved
+		0x00, 0x01, 0x13, 0x88, // digits
+	}
+	arg := &BigIntCodec{make([]byte, len(data))}
+	copy(arg.data, data)
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: `-15000`,
+			Decoded: BigIntCodec{data},
+		},
+		result,
+	)
+}
+
+type DecimalCodec struct {
+	data []byte
+}
+
+func (d DecimalCodec) MarshalEdgeDBDecimal() ([]byte, error) {
+	return d.data, nil
+}
+
+func (d *DecimalCodec) UnmarshalEdgeDBDecimal(data []byte) error {
+	d.data = data
+	return nil
+}
+
+func TestSendAndReceiveDecimalMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	data := []byte{
+		0x00, 0x03, // ndigits
+		0x00, 0x01, // weight
+		0x40, 0x00, // sign
+		0x00, 0x07, // dscale
+		0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+	}
+
+	arg := DecimalCodec{make([]byte, len(data))}
+	copy(arg.data, data)
+
+	type Result struct {
+		Decoded DecimalCodec `edgedb:"decoded"`
+		Encoded string       `edgedb:"encoded"`
+	}
+
+	query := `SELECT (
+		decoded := -15000.6250000n,
+		encoded := <str><decimal>$0,
+	)`
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+
+	expected := DecimalCodec{make([]byte, len(data))}
+	copy(expected.data, data)
+	assert.Equal(t, Result{expected, "-15000.6250000"}, result)
+}
+
 func TestSendAndReceiveUUID(t *testing.T) {
 	ctx := context.Background()
 
@@ -1129,6 +1861,51 @@ func TestSendAndReceiveUUID(t *testing.T) {
 	}
 }
 
+type UUIDCodec struct {
+	data [16]byte
+}
+
+func (m UUIDCodec) MarshalEdgeDBUUID() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *UUIDCodec) UnmarshalEdgeDBUUID(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <str><uuid>$0,
+		decoded := <uuid>'b9545c35-1fe7-485f-a6ea-f8ead251abd3',
+	)`
+
+	type Result struct {
+		Encoded string    `edgedb:"encoded"`
+		Decoded UUIDCodec `edgedb:"decoded"`
+	}
+
+	data := [16]byte{
+		0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+		0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+	}
+	arg := &UUIDCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: "b9545c35-1fe7-485f-a6ea-f8ead251abd3",
+			Decoded: UUIDCodec{data},
+		},
+		result,
+	)
+}
+
 func TestSendAndReceiveCustomScalars(t *testing.T) {
 	ctx := context.Background()
 
@@ -1170,6 +1947,48 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 			assert.True(t, result.IsEqual)
 		})
 	}
+}
+
+type CustomScalarCodec struct {
+	data [8]byte
+}
+
+func (m CustomScalarCodec) MarshalEdgeDBInt64() ([]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *CustomScalarCodec) UnmarshalEdgeDBInt64(data []byte) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveCustomScalarMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	query := `SELECT (
+		encoded := <CustomInt64>$0,
+		decoded := <CustomInt64>123_456_789_987_654_321,
+	)`
+
+	type Result struct {
+		Encoded int64             `edgedb:"encoded"`
+		Decoded CustomScalarCodec `edgedb:"decoded"`
+	}
+
+	data := [8]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}
+	arg := &CustomScalarCodec{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err := conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: 123_456_789_987_654_321,
+			Decoded: CustomScalarCodec{data},
+		},
+		result,
+	)
 }
 
 func TestDecodeDeeplyNestedTuple(t *testing.T) {
@@ -1275,7 +2094,7 @@ func TestReceiveTuple(t *testing.T) {
 	err = conn.QueryOne(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
 	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected struct { first int64 } struct to have a int64 field "+
+		"expected struct { first int64 } to have a field "+
 		"with the tag `edgedb:\"0\"`")
 
 	type NestedTuple struct {
@@ -1328,7 +2147,7 @@ func TestSendAndReceiveArray(t *testing.T) {
 	err := conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, "hello")
 	assert.EqualError(t, err,
 		"edgedb.InvalidArgumentError: "+
-			"expected args[0] to be []int64 got: string")
+			"expected args[0] to be a slice got: string")
 
 	type Tuple struct {
 		first []int64 `edgedb:"0"`

@@ -17,95 +17,172 @@
 package codecs
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-const (
-	setType = iota
-	objectType
-	baseScalarType
-	scalarType
-	tupleType
-	namedTupleType
-	arrayType
-	enumType
-)
-
-// Codec interface
-type Codec interface {
-	Decode(*buff.Reader, unsafe.Pointer)
+// Encoder can encode objects into the data wire format.
+type Encoder interface {
+	DescriptorID() types.UUID
 	Encode(*buff.Writer, interface{}, Path) error
-	ID() types.UUID
-	Type() reflect.Type
-	setType(reflect.Type, Path) error
 }
 
-// BuildCodec a decoder
-func BuildCodec(r *buff.Reader) (Codec, error) {
-	codecs := []Codec{}
+// EncoderField is a link to a child encoder
+// used by objects, named tuples and tuples.
+type EncoderField struct {
+	name    string
+	encoder Encoder
+}
 
-	for len(r.Buf) > 0 {
-		dType := r.PopUint8()
-		id := r.PopUUID()
-		var codec Codec
+// Decoder can decode the data wire format into objects.
+type Decoder interface {
+	DescriptorID() types.UUID
+	Decode(*buff.Reader, unsafe.Pointer)
+}
 
-		switch dType {
-		case setType:
-			codec = popSetCodec(r, id, codecs)
-		case objectType:
-			codec = popObjectCodec(r, id, codecs)
-		case baseScalarType:
-			var err error
-			codec, err = baseScalarCodec(id)
-			if err != nil {
-				return nil, err
-			}
-		case scalarType:
-			codec = popScalarCodec(r, id, codecs)
-		case tupleType:
-			codec = popTupleCodec(r, id, codecs)
-		case namedTupleType:
-			codec = popNamedTupleCodec(r, id, codecs)
-		case arrayType:
-			codec = popArrayCodec(r, id, codecs)
-		case enumType:
-			codec = popEnumCodec(r, id, codecs)
-		default:
-			if 0x80 <= dType && dType <= 0xff {
-				// ignore unknown type annotations
-				r.PopBytes()
-				break
-			}
+// DecoderField is a link to a child decoder
+// used by objects, named tuples and tuples.
+type DecoderField struct {
+	name    string
+	offset  uintptr
+	decoder Decoder
+}
 
-			return nil, fmt.Errorf("unknown descriptor type 0x%x", dType)
-		}
+// Codec can Encode and Decode
+type Codec interface {
+	Encoder
+	Decoder
+	Type() reflect.Type
+}
 
-		codecs = append(codecs, codec)
+// BuildEncoder builds and Encoder from a Descriptor.
+func BuildEncoder(desc descriptor.Descriptor) (Encoder, error) {
+	switch desc.Type {
+	case descriptor.Set:
+		return nil, fmt.Errorf("sets can not be encoded")
+	case descriptor.Object:
+		return nil, fmt.Errorf("objects can not be encoded")
+	case descriptor.BaseScalar, descriptor.Enum:
+		return buildScalarEncoder(desc)
+	case descriptor.Tuple:
+		return buildTupleEncoder(desc)
+	case descriptor.NamedTuple:
+		return buildNamedTupleEncoder(desc)
+	case descriptor.Array:
+		return buildArrayEncoder(desc)
+	default:
+		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
+	}
+}
+
+func buildScalarEncoder(desc descriptor.Descriptor) (Encoder, error) {
+	if desc.ID == decimalID {
+		return &decimalEncoder{}, nil
 	}
 
-	return codecs[len(codecs)-1], nil
+	return buildScalarCodec(desc)
 }
 
-// BuildTypedCodec builds a codec for decoding into a specific type.
-func BuildTypedCodec(r *buff.Reader, typ reflect.Type) (Codec, error) {
-	codec, err := BuildCodec(r)
+// BuildDecoder builds a Decoder from a Descriptor.
+func BuildDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	switch desc.Type {
+	case descriptor.Set:
+		return buildSetDecoder(desc, typ, path)
+	case descriptor.Object:
+		return buildObjectDecoder(desc, typ, path)
+	case descriptor.BaseScalar, descriptor.Enum:
+		return buildScalarDecoder(desc, typ, path)
+	case descriptor.Tuple:
+		return buildTupleDecoder(desc, typ, path)
+	case descriptor.NamedTuple:
+		return buildNamedTupleDecoder(desc, typ, path)
+	case descriptor.Array:
+		return buildArrayDecoder(desc, typ, path)
+	default:
+		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
+	}
+}
+
+func buildScalarDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	decoder, ok := buildUnmarshaler(desc, typ)
+	if ok {
+		return decoder, nil
+	}
+
+	codec, err := buildScalarCodec(desc)
 	if err != nil {
 		return nil, err
 	}
 
-	path := Path(typ.String())
-	if err = codec.setType(typ, path); err != nil {
+	if codec.Type() != typ {
 		return nil, fmt.Errorf(
-			"the \"out\" argument does not match query schema: %v", err,
+			"expected %v to be %v got %v", path, codec.Type(), typ,
 		)
 	}
 
 	return codec, nil
+}
+
+func buildScalarCodec(desc descriptor.Descriptor) (Codec, error) {
+	if desc.Type == descriptor.Enum {
+		return &strCodec{desc.ID}, nil
+	}
+
+	switch desc.ID {
+	case uuidID:
+		return &uuidCodec{}, nil
+	case strID:
+		return &strCodec{strID}, nil
+	case bytesID:
+		return &bytesCodec{bytesID}, nil
+	case int16ID:
+		return &int16Codec{}, nil
+	case int32ID:
+		return &int32Codec{}, nil
+	case int64ID:
+		return &int64Codec{}, nil
+	case float32ID:
+		return &float32Codec{}, nil
+	case float64ID:
+		return &float64Codec{}, nil
+	case decimalID:
+		return nil, errors.New("decimal codec not implemented. " +
+			"Consider implementing your own edgedb.DecimalMarshaler " +
+			"and edgedb.DecimalUnmarshaler.")
+	case boolID:
+		return &boolCodec{}, nil
+	case dateTimeID:
+		return &dateTimeCodec{}, nil
+	case localDTID:
+		return &localDateTimeCodec{}, nil
+	case localDateID:
+		return &localDateCodec{}, nil
+	case localTimeID:
+		return &localTimeCodec{}, nil
+	case durationID:
+		return &durationCodec{}, nil
+	case jsonID:
+		return &jsonCodec{}, nil
+	case bigIntID:
+		return &bigIntCodec{}, nil
+	default:
+		s := fmt.Sprintf("%#v\n", desc)
+		return nil, fmt.Errorf("unknown scalar type id %v %v", desc.ID, s)
+	}
 }
 
 func pAdd(p unsafe.Pointer, i uintptr) unsafe.Pointer {

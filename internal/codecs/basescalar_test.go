@@ -32,7 +32,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 
 	var result types.UUID
 	ptr := unsafe.Pointer(&result)
-	codec := &UUID{}
+	codec := &uuidCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -44,7 +44,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 func BenchmarkEncodeUUID(b *testing.B) {
 	w := buff.NewWriter([]byte{})
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
-	codec := &UUID{}
+	codec := &uuidCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -58,7 +58,7 @@ func BenchmarkDecodeString(b *testing.B) {
 
 	var result string
 	ptr := unsafe.Pointer(&result)
-	codec := &Str{}
+	codec := &strCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -73,7 +73,7 @@ func BenchmarkDecodeBytes(b *testing.B) {
 
 	var result []byte
 	ptr := unsafe.Pointer(&result)
-	codec := &Bytes{}
+	codec := &bytesCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -88,7 +88,7 @@ func BenchmarkDecodeInt16(b *testing.B) {
 
 	var result int16
 	ptr := unsafe.Pointer(&result)
-	codec := &Int16{}
+	codec := &int16Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -103,7 +103,7 @@ func BenchmarkDecodeInt32(b *testing.B) {
 
 	var result int32
 	ptr := unsafe.Pointer(&result)
-	codec := &Int32{}
+	codec := &int32Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -118,7 +118,7 @@ func BenchmarkDecodeInt64(b *testing.B) {
 
 	var result int64
 	ptr := unsafe.Pointer(&result)
-	codec := &Int64{}
+	codec := &int64Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -135,7 +135,7 @@ func BenchmarkDecodeFloat32(b *testing.B) {
 
 	var result float32
 	ptr := unsafe.Pointer(&result)
-	codec := &Float32{}
+	codec := &float32Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -152,7 +152,7 @@ func BenchmarkDecodeFloat64(b *testing.B) {
 
 	var result float64
 	ptr := unsafe.Pointer(&result)
-	codec := &Float64{}
+	codec := &float64Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -167,7 +167,7 @@ func BenchmarkDecodeBool(b *testing.B) {
 
 	var result bool
 	ptr := unsafe.Pointer(&result)
-	codec := &Bool{}
+	codec := &boolCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

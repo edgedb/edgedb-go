@@ -22,103 +22,41 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-func popNamedTupleCodec(
-	r *buff.Reader,
-	id types.UUID,
-	codecs []Codec,
-) Codec {
-	fields := []*objectField{}
+func buildNamedTupleEncoder(desc descriptor.Descriptor) (Encoder, error) {
+	fields := make([]*EncoderField, len(desc.Fields))
 
-	elmCount := int(r.PopUint16())
-	for i := 0; i < elmCount; i++ {
-		name := r.PopString()
-		index := r.PopUint16()
-
-		if name == "__tid__" {
-			continue
-		}
-
-		field := &objectField{
-			name:  name,
-			codec: codecs[index],
-		}
-
-		fields = append(fields, field)
-	}
-
-	return &NamedTuple{id: id, fields: fields}
-}
-
-// NamedTuple is an EdgeDB namedtuple type codec.
-type NamedTuple struct {
-	id     types.UUID
-	fields []*objectField
-	typ    reflect.Type
-}
-
-// ID returns the descriptor id.
-func (c *NamedTuple) ID() types.UUID { return c.id }
-
-func (c *NamedTuple) setType(typ reflect.Type, path Path) error {
-	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf(
-			"expected %v to be a struct got %v", path, typ.Kind(),
-		)
-	}
-
-	for _, field := range c.fields {
-		f, ok := marshal.StructField(typ, field.name)
-		if !ok {
-			return fmt.Errorf("%v struct is missing field %q", typ, field.name)
-		}
-
-		err := field.codec.setType(
-			f.Type,
-			path.AddField(field.name),
-		)
-
+	for i, field := range desc.Fields {
+		encoder, err := BuildEncoder(field.Desc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		field.offset = f.Offset
-	}
-
-	c.typ = typ
-	return nil
-}
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *NamedTuple) Type() reflect.Type { return c.typ }
-
-// Decode a named tuple.
-func (c *NamedTuple) Decode(r *buff.Reader, out unsafe.Pointer) {
-	elmCount := int(int32(r.PopUint32()))
-	if elmCount != len(c.fields) {
-		panic(fmt.Sprintf(
-			"wrong number of elements expected %v got %v",
-			len(c.fields), elmCount,
-		))
-	}
-
-	for _, field := range c.fields {
-		r.Discard(4) // reserved
-
-		elmLen := r.PopUint32()
-		if elmLen == 0xffffffff {
-			continue
+		fields[i] = &EncoderField{
+			name:    field.Name,
+			encoder: encoder,
 		}
-
-		field.codec.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
 	}
+
+	return &namedTupleEncoder{desc.ID, fields}, nil
 }
 
-// Encode a named tuple.
-func (c *NamedTuple) Encode(w *buff.Writer, val interface{}, path Path) error {
+type namedTupleEncoder struct {
+	id     types.UUID
+	fields []*EncoderField
+}
+
+func (c *namedTupleEncoder) DescriptorID() types.UUID { return c.id }
+
+func (c *namedTupleEncoder) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
 	args, ok := val.([]interface{})
 	if !ok {
 		return fmt.Errorf("expected %v to be []interface{} got %T", path, val)
@@ -145,7 +83,12 @@ func (c *NamedTuple) Encode(w *buff.Writer, val interface{}, path Path) error {
 	var err error
 	for _, field := range c.fields {
 		w.PushUint32(0) // reserved
-		err = field.codec.Encode(w, in[field.name], path.AddField(field.name))
+		err = field.encoder.Encode(
+			w,
+			in[field.name],
+			path.AddField(field.name),
+		)
+
 		if err != nil {
 			return err
 		}
@@ -153,4 +96,73 @@ func (c *NamedTuple) Encode(w *buff.Writer, val interface{}, path Path) error {
 
 	w.EndBytes()
 	return nil
+}
+
+func buildNamedTupleDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf(
+			"expected %v to be a struct got %v", path, typ.Kind(),
+		)
+	}
+
+	fields := make([]*DecoderField, len(desc.Fields))
+
+	for i, field := range desc.Fields {
+		sf, ok := marshal.StructField(typ, field.Name)
+		if !ok {
+			return nil, fmt.Errorf(
+				"%v struct is missing field %q", typ, field.Name,
+			)
+		}
+
+		child, err := BuildDecoder(
+			field.Desc,
+			sf.Type,
+			path.AddField(field.Name),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		fields[i] = &DecoderField{
+			name:    field.Name,
+			offset:  sf.Offset,
+			decoder: child,
+		}
+	}
+
+	return &namedTupleDecoder{desc.ID, fields}, nil
+}
+
+type namedTupleDecoder struct {
+	id     types.UUID
+	fields []*DecoderField
+}
+
+func (c *namedTupleDecoder) DescriptorID() types.UUID { return c.id }
+
+func (c *namedTupleDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	elmCount := int(int32(r.PopUint32()))
+	if elmCount != len(c.fields) {
+		panic(fmt.Sprintf(
+			"wrong number of elements expected %v got %v",
+			len(c.fields), elmCount,
+		))
+	}
+
+	for _, field := range c.fields {
+		r.Discard(4) // reserved
+
+		elmLen := r.PopUint32()
+		if elmLen == 0xffffffff {
+			continue
+		}
+
+		field.decoder.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
+	}
 }
