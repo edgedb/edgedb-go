@@ -27,6 +27,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestWrongNumberOfArguments(t *testing.T) {
+	var result string
+	ctx := context.Background()
+	err := conn.QueryOne(ctx, `SELECT <str>$0`, &result)
+	assert.EqualError(t, err,
+		"edgedb.InvalidArgumentError: expected 1 arguments got 0")
+}
+
 func TestConnRejectsTransactions(t *testing.T) {
 	expected := "edgedb.DisabledCapabilityError: " +
 		"cannot execute transaction control commands"

@@ -63,8 +63,7 @@ func (c *tupleEncoder) Encode(
 
 	if len(in) != len(c.fields) {
 		return fmt.Errorf(
-			"expected %v to be []interface{} with len=%v, got len=%v",
-			path, len(c.fields), len(in),
+			"expected %v arguments got %v", len(c.fields), len(in),
 		)
 	}
 
