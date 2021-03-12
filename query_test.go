@@ -93,10 +93,14 @@ func TestParseAllMessagesAfterError(t *testing.T) {
 	// cause error during prepare
 	var number float64
 	err := conn.QueryOne(ctx, "SELECT 1 / $0", &number, int64(5))
-	expected := "edgedb.QueryError: missing a type cast before the parameter"
+	expected := `edgedb.QueryError: missing a type cast before the parameter
+query:1:12
+
+SELECT 1 / $0
+           ^ error`
 	assert.EqualError(t, err, expected)
 
-	// cause error during execute
+	// cause erroy during execute
 	err = conn.QueryOne(ctx, "SELECT 1 / 0", &number)
 	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
 
@@ -228,7 +232,11 @@ func TestError(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		"edgedb.EdgeQLSyntaxError: Unexpected 'malformed'",
+		`edgedb.EdgeQLSyntaxError: Unexpected 'malformed'
+query:1:1
+
+malformed query;
+^ error`,
 	)
 
 	var expected Error
