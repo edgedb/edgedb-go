@@ -93,7 +93,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 
 			once.Do(done)
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r))
+			err = wrapAll(err, decodeError(r, ""))
 			once.Do(done)
 		default:
 			if e := c.fallThrough(r); e != nil {
@@ -154,7 +154,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 
 			done.Signal()
 		case message.ErrorResponse:
-			err = decodeError(r)
+			err = decodeError(r, "")
 			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
@@ -209,7 +209,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(decodeError(r))
+			err = wrapAll(decodeError(r, ""))
 			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {

@@ -64,7 +64,7 @@ func (c *baseConn) scriptFlow(r *buff.Reader, q sfQuery) error {
 			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r))
+			err = wrapAll(err, decodeError(r, q.cmd))
 			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {

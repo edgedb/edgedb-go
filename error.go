@@ -18,6 +18,10 @@ package edgedb
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 )
@@ -51,19 +55,89 @@ func firstError(a, b error) error {
 	return b
 }
 
-// decodeError decodes an error response
-// https://www.edgedb.com/docs/internals/protocol/messages#errorresponse
-func decodeError(r *buff.Reader) error {
-	r.Discard(1) // severity
-	err := errorFromCode(r.PopUint32(), r.PopString())
-	n := int(r.PopUint16())
+const (
+	hint          = 0x0001
+	positionStart = 0xfff1
+	lineStart     = 0xfff3
+)
 
-	for i := 0; i < n; i++ {
-		r.PopUint16() // key
-		r.PopString() // value
+func atoiOrPanic(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
 	}
 
-	return err
+	return i
+}
+
+type position struct {
+	lineNo int
+	byteNo int
+}
+
+func positionFromHeaders(headers map[uint16]string) (position, bool) {
+	lineNo, ok := headers[lineStart]
+	if !ok {
+		return position{}, false
+	}
+
+	byteNo, ok := headers[positionStart]
+	if !ok {
+		return position{}, false
+	}
+
+	return position{
+		lineNo: atoiOrPanic(lineNo) - 1,
+		byteNo: atoiOrPanic(byteNo),
+	}, true
+}
+
+// decodeError decodes an error response
+// https://www.edgedb.com/docs/internals/protocol/messages#errorresponse
+func decodeError(r *buff.Reader, query string) error {
+	r.Discard(1) // severity
+	code := r.PopUint32()
+	msg := r.PopString()
+
+	n := int(r.PopUint16())
+	headers := make(map[uint16]string, n)
+	for i := 0; i < n; i++ {
+		headers[r.PopUint16()] = r.PopString()
+	}
+
+	pos, ok := positionFromHeaders(headers)
+	if !ok {
+		return errorFromCode(code, msg)
+	}
+
+	hintmsg, ok := headers[hint]
+	if !ok {
+		hintmsg = "error"
+	}
+
+	lines := strings.Split(query, "\n")
+
+	// replace tabs with a single space
+	// because we don't know how they will be printed.
+	line := strings.ReplaceAll(lines[pos.lineNo], "\t", " ")
+
+	for i := 0; i < pos.lineNo; i++ {
+		pos.byteNo -= 1 + len(lines[i])
+	}
+
+	runeCount := utf8.RuneCountInString(line[:pos.byteNo])
+	padding := strings.Repeat(" ", runeCount)
+
+	msg += fmt.Sprintf(
+		"\nquery:%v:%v\n\n%v\n%v^ %v",
+		1+pos.lineNo,
+		1+runeCount,
+		line,
+		padding,
+		hintmsg,
+	)
+
+	return errorFromCode(code, msg)
 }
 
 type wrappedManyError struct {

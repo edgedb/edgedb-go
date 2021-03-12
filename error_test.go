@@ -17,12 +17,57 @@
 package edgedb
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSyntaxError(t *testing.T) {
+	samples := []struct {
+		query string
+		err   string
+	}{
+		{
+			"SELECT 1 2 3",
+			`edgedb.EdgeQLSyntaxError: Unexpected '2'
+query:1:10
+
+SELECT 1 2 3
+         ^ error`,
+		},
+		{
+			"SELECT (foo (((1 2) 3)) 4)",
+			`edgedb.EdgeQLSyntaxError: Unexpected token: <Token ICONST "2">
+query:1:18
+
+SELECT (foo (((1 2) 3)) 4)
+                 ^ It appears that a ',' is missing in a tuple before '2'`,
+		},
+		{
+			`SELECT (Foo {
+				foo
+				bar
+			} 2);`,
+			`edgedb.EdgeQLSyntaxError: Unexpected token: <Token IDENT "bar">
+query:3:5
+
+    bar
+    ^ It appears that a ',' is missing in a shape before 'bar'`,
+		},
+	}
+
+	for _, s := range samples {
+		t.Run(s.query, func(t *testing.T) {
+			var result int64
+			ctx := context.Background()
+			err := conn.QueryOne(ctx, s.query, &result)
+			assert.EqualError(t, err, s.err)
+		})
+	}
+}
 
 func TestNewErrorFromCodeAs(t *testing.T) {
 	msg := "example error message"
@@ -38,10 +83,6 @@ func TestNewErrorFromCodeAs(t *testing.T) {
 	assert.True(t, edbErr.Category(DuplicateDefinitionError))
 	assert.True(t, edbErr.Category(SchemaDefinitionError))
 	assert.True(t, edbErr.Category(QueryError))
-
-	// assert.True(t, edbErr.Category())
-	// assert.True(t, edbErr.Category())
-	// assert.True(t, edbErr.Category())
 }
 
 func TestWrapAllAs(t *testing.T) {

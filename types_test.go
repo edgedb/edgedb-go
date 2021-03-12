@@ -704,7 +704,6 @@ func (m CustomBytes) MarshalEdgeDBBytes() ([]byte, error) {
 
 func (m *CustomBytes) UnmarshalEdgeDBBytes(data []byte) error {
 	m.data = data
-	fmt.Println(m.data)
 	return nil
 }
 
@@ -838,7 +837,6 @@ func (m CustomJSON) MarshalEdgeDBJSON() ([]byte, error) {
 
 func (m *CustomJSON) UnmarshalEdgeDBJSON(data []byte) error {
 	m.data = data
-	fmt.Println(m.data)
 	return nil
 }
 
@@ -1719,7 +1717,6 @@ func (m CustomBigInt) MarshalEdgeDBBigInt() ([]byte, error) {
 
 func (m *CustomBigInt) UnmarshalEdgeDBBigInt(data []byte) error {
 	m.data = data
-	fmt.Println(m.data)
 	return nil
 }
 

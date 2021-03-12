@@ -144,7 +144,7 @@ func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) (idPair, error) {
 			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r))
+			err = wrapAll(err, decodeError(r, q.cmd))
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -207,7 +207,7 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r))
+			err = wrapAll(err, decodeError(r, q.cmd))
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -286,7 +286,7 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs codecPair) error {
 				err = nil
 			}
 
-			err = wrapAll(err, decodeError(r))
+			err = wrapAll(err, decodeError(r, q.cmd))
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -380,7 +380,7 @@ func (c *baseConn) optimistic(
 				err = nil
 			}
 
-			err = wrapAll(err, decodeError(r))
+			err = wrapAll(err, decodeError(r, q.cmd))
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
