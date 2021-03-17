@@ -105,20 +105,20 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 
 	False := false
 	p := &Pool{
-		isClosed: &False,
-		mu:       &sync.RWMutex{},
-		maxConns: maxConns,
-		minConns: minConns,
-		cfg:      cfg,
-		txOpts: TxOptions{
-			isolation:  RepeatableRead,
-			readOnly:   false,
-			deferrable: false,
-		},
-
+		isClosed:       &False,
+		mu:             &sync.RWMutex{},
 		freeConns:      make(chan *reconnectingConn, minConns),
 		potentialConns: make(chan struct{}, maxConns),
-
+		maxConns:       maxConns,
+		minConns:       minConns,
+		txOpts: TxOptions{
+			fromFactory: false,
+			readOnly:    false,
+			deferrable:  false,
+			isolation:   RepeatableRead,
+		},
+		retryOpts:     RetryOptions{},
+		cfg:           cfg,
 		typeIDCache:   cache.New(1_000),
 		inCodecCache:  cache.New(1_000),
 		outCodecCache: cache.New(1_000),

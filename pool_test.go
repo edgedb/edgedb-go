@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -138,10 +139,16 @@ func mockPool(opts Options) *Pool { // nolint:gocritic
 	return &Pool{
 		isClosed:       &False,
 		mu:             &sync.RWMutex{},
-		maxConns:       int(opts.MaxConns),
-		minConns:       int(opts.MinConns),
 		freeConns:      make(chan *reconnectingConn, opts.MinConns),
 		potentialConns: make(chan struct{}, opts.MaxConns),
+		maxConns:       int(opts.MaxConns),
+		minConns:       int(opts.MinConns),
+		txOpts:         TxOptions{},
+		retryOpts:      RetryOptions{},
+		cfg:            &connConfig{},
+		typeIDCache:    &cache.Cache{},
+		inCodecCache:   &cache.Cache{},
+		outCodecCache:  &cache.Cache{},
 	}
 }
 
