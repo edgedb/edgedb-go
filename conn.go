@@ -22,29 +22,41 @@ import (
 	"github.com/edgedb/edgedb-go/internal/cache"
 )
 
-// Conn is a single connection to a server.
-// Conn implementations are not safe for concurrent use.
+// Conn is a single Conn to a server.
+// Conn is not safe for concurrent use.
 // Pool should be preferred over Conn for most use cases.
-type Conn interface {
-	Executor
-	Trier
-
-	// Close closes the connection.
-	// Connections are not usable after they are closed.
-	Close() error
-}
-
-// connection is the standalone connection implementation.
-type connection struct {
+type Conn struct {
 	*reconnectingConn
+	txOpts    TxOptions
+	retryOpts RetryOptions
 }
 
-func (c *connection) Close() error {
+// Close closes the connection.
+// Connections are not usable after they are closed.
+func (c *Conn) Close() error {
 	return c.reconnectingConn.close()
 }
 
+// RawTx runs an action in a transaction.
+// If the action returns an error the transaction is rolled back,
+// otherwise it is committed.
+func (c *Conn) RawTx(ctx context.Context, action Action) error {
+	return c.reconnectingConn.rawTx(ctx, action, c.txOpts)
+}
+
+// RetryingTx does the same as RawTx but retries failed actions
+// if they might succeed on a subsequent attempt.
+func (c *Conn) RetryingTx(ctx context.Context, action Action) error {
+	return c.reconnectingConn.retryingTx(
+		ctx,
+		action,
+		c.txOpts,
+		c.retryOpts,
+	)
+}
+
 // ConnectOne establishes a connection to an EdgeDB server.
-func ConnectOne(ctx context.Context, opts Options) (Conn, error) { // nolint:gocritic,lll
+func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
 	return ConnectOneDSN(ctx, "", opts)
 }
 
@@ -61,7 +73,7 @@ func ConnectOneDSN(
 	ctx context.Context,
 	dsn string,
 	opts Options, // nolint:gocritic
-) (Conn, error) {
+) (*Conn, error) {
 	config, err := parseConnectDSNAndArgs(dsn, &opts)
 	if err != nil {
 		return nil, err
@@ -79,5 +91,12 @@ func ConnectOneDSN(
 		return nil, err
 	}
 
-	return &connection{reconnectingConn: conn}, nil
+	return &Conn{
+		reconnectingConn: conn,
+		txOpts: TxOptions{
+			isolation:  RepeatableRead,
+			readOnly:   false,
+			deferrable: false,
+		},
+	}, nil
 }

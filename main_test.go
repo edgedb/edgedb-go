@@ -34,7 +34,7 @@ import (
 // initialized by TestMain
 var (
 	opts Options
-	conn Conn
+	conn *Conn
 )
 
 func executeOrPanic(command string) {
