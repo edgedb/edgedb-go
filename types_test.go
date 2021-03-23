@@ -114,15 +114,15 @@ func TestSendAndReceiveInt64(t *testing.T) {
 	}
 }
 
-type Int64Codec struct {
+type CustomInt64 struct {
 	data [8]byte
 }
 
-func (m Int64Codec) MarshalEdgeDBInt64() ([]byte, error) {
+func (m CustomInt64) MarshalEdgeDBInt64() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *Int64Codec) UnmarshalEdgeDBInt64(data []byte) error {
+func (m *CustomInt64) UnmarshalEdgeDBInt64(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -136,12 +136,12 @@ func TestSendAndReceiveInt64Marshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded int64      `edgedb:"encoded"`
-		Decoded Int64Codec `edgedb:"decoded"`
+		Encoded int64       `edgedb:"encoded"`
+		Decoded CustomInt64 `edgedb:"decoded"`
 	}
 
 	data := [8]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}
-	arg := &Int64Codec{}
+	arg := &CustomInt64{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -150,7 +150,7 @@ func TestSendAndReceiveInt64Marshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: 123_456_789_987_654_321,
-			Decoded: Int64Codec{data},
+			Decoded: CustomInt64{data},
 		},
 		result,
 	)
@@ -217,15 +217,15 @@ func TestSendAndReceiveInt32(t *testing.T) {
 	}
 }
 
-type Int32Codec struct {
+type CustomInt32 struct {
 	data [4]byte
 }
 
-func (m Int32Codec) MarshalEdgeDBInt32() ([]byte, error) {
+func (m CustomInt32) MarshalEdgeDBInt32() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *Int32Codec) UnmarshalEdgeDBInt32(data []byte) error {
+func (m *CustomInt32) UnmarshalEdgeDBInt32(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -239,12 +239,12 @@ func TestSendAndReceiveInt32Marshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded int32      `edgedb:"encoded"`
-		Decoded Int32Codec `edgedb:"decoded"`
+		Encoded int32       `edgedb:"encoded"`
+		Decoded CustomInt32 `edgedb:"decoded"`
 	}
 
 	data := [4]byte{0x00, 0x0a, 0x01, 0x31}
-	arg := &Int32Codec{}
+	arg := &CustomInt32{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -253,7 +253,7 @@ func TestSendAndReceiveInt32Marshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: 655_665,
-			Decoded: Int32Codec{data},
+			Decoded: CustomInt32{data},
 		},
 		result,
 	)
@@ -320,15 +320,15 @@ func TestSendAndReceiveInt16(t *testing.T) {
 	}
 }
 
-type Int16Codec struct {
+type CustomInt16 struct {
 	data [2]byte
 }
 
-func (m Int16Codec) MarshalEdgeDBInt16() ([]byte, error) {
+func (m CustomInt16) MarshalEdgeDBInt16() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *Int16Codec) UnmarshalEdgeDBInt16(data []byte) error {
+func (m *CustomInt16) UnmarshalEdgeDBInt16(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -342,12 +342,12 @@ func TestSendAndReceiveInt16Marshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded int16      `edgedb:"encoded"`
-		Decoded Int16Codec `edgedb:"decoded"`
+		Encoded int16       `edgedb:"encoded"`
+		Decoded CustomInt16 `edgedb:"decoded"`
 	}
 
 	data := [2]byte{0x19, 0x9c}
-	arg := &Int16Codec{}
+	arg := &CustomInt16{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -356,7 +356,7 @@ func TestSendAndReceiveInt16Marshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: 6556,
-			Decoded: Int16Codec{data},
+			Decoded: CustomInt16{data},
 		},
 		result,
 	)
@@ -404,15 +404,15 @@ func TestSendAndReceiveBool(t *testing.T) {
 	}
 }
 
-type BoolCodec struct {
+type CustomBool struct {
 	data [1]byte
 }
 
-func (m BoolCodec) MarshalEdgeDBBool() ([]byte, error) {
+func (m CustomBool) MarshalEdgeDBBool() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *BoolCodec) UnmarshalEdgeDBBool(data []byte) error {
+func (m *CustomBool) UnmarshalEdgeDBBool(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -426,12 +426,12 @@ func TestSendAndReceiveBoolMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded bool      `edgedb:"encoded"`
-		Decoded BoolCodec `edgedb:"decoded"`
+		Encoded bool       `edgedb:"encoded"`
+		Decoded CustomBool `edgedb:"decoded"`
 	}
 
 	data := [1]byte{0x01}
-	arg := &BoolCodec{}
+	arg := &CustomBool{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -440,7 +440,7 @@ func TestSendAndReceiveBoolMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: true,
-			Decoded: BoolCodec{data},
+			Decoded: CustomBool{data},
 		},
 		result,
 	)
@@ -512,15 +512,15 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 	}
 }
 
-type Float64Codec struct {
+type CustomFloat64 struct {
 	data [8]byte
 }
 
-func (m Float64Codec) MarshalEdgeDBFloat64() ([]byte, error) {
+func (m CustomFloat64) MarshalEdgeDBFloat64() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *Float64Codec) UnmarshalEdgeDBFloat64(data []byte) error {
+func (m *CustomFloat64) UnmarshalEdgeDBFloat64(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -534,12 +534,12 @@ func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded float64      `edgedb:"encoded"`
-		Decoded Float64Codec `edgedb:"decoded"`
+		Encoded float64       `edgedb:"encoded"`
+		Decoded CustomFloat64 `edgedb:"decoded"`
 	}
 
 	data := [8]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}
-	arg := &Float64Codec{}
+	arg := &CustomFloat64{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -548,7 +548,7 @@ func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: -15.625,
-			Decoded: Float64Codec{data},
+			Decoded: CustomFloat64{data},
 		},
 		result,
 	)
@@ -620,15 +620,15 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 	}
 }
 
-type Float32Codec struct {
+type CustomFloat32 struct {
 	data [4]byte
 }
 
-func (m Float32Codec) MarshalEdgeDBFloat32() ([]byte, error) {
+func (m CustomFloat32) MarshalEdgeDBFloat32() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *Float32Codec) UnmarshalEdgeDBFloat32(data []byte) error {
+func (m *CustomFloat32) UnmarshalEdgeDBFloat32(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -642,12 +642,12 @@ func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded float32      `edgedb:"encoded"`
-		Decoded Float32Codec `edgedb:"decoded"`
+		Encoded float32       `edgedb:"encoded"`
+		Decoded CustomFloat32 `edgedb:"decoded"`
 	}
 
 	data := [4]byte{0xc1, 0x7a, 0x00, 0x00}
-	arg := &Float32Codec{}
+	arg := &CustomFloat32{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -656,7 +656,7 @@ func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: -15.625,
-			Decoded: Float32Codec{data},
+			Decoded: CustomFloat32{data},
 		},
 		result,
 	)
@@ -694,15 +694,15 @@ func TestSendAndReceiveBytes(t *testing.T) {
 	}
 }
 
-type BytesCodec struct {
+type CustomBytes struct {
 	data []byte
 }
 
-func (m BytesCodec) MarshalEdgeDBBytes() ([]byte, error) {
+func (m CustomBytes) MarshalEdgeDBBytes() ([]byte, error) {
 	return m.data, nil
 }
 
-func (m *BytesCodec) UnmarshalEdgeDBBytes(data []byte) error {
+func (m *CustomBytes) UnmarshalEdgeDBBytes(data []byte) error {
 	m.data = data
 	fmt.Println(m.data)
 	return nil
@@ -717,12 +717,12 @@ func TestSendAndReceiveBytesMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded []byte     `edgedb:"encoded"`
-		Decoded BytesCodec `edgedb:"decoded"`
+		Encoded []byte      `edgedb:"encoded"`
+		Decoded CustomBytes `edgedb:"decoded"`
 	}
 
 	data := []byte{0x01, 0x02, 0x03}
-	arg := &BytesCodec{make([]byte, len(data))}
+	arg := &CustomBytes{make([]byte, len(data))}
 	copy(arg.data, data)
 
 	var result Result
@@ -731,7 +731,7 @@ func TestSendAndReceiveBytesMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: data,
-			Decoded: BytesCodec{data},
+			Decoded: CustomBytes{data},
 		},
 		result,
 	)
@@ -760,15 +760,15 @@ func TestFetchLargeStr(t *testing.T) {
 	assert.Equal(t, strings.Repeat("aa", 100_000_000), result)
 }
 
-type StrCodec struct {
+type CustomStr struct {
 	data []byte
 }
 
-func (m StrCodec) MarshalEdgeDBStr() ([]byte, error) {
+func (m CustomStr) MarshalEdgeDBStr() ([]byte, error) {
 	return m.data, nil
 }
 
-func (m *StrCodec) UnmarshalEdgeDBStr(data []byte) error {
+func (m *CustomStr) UnmarshalEdgeDBStr(data []byte) error {
 	m.data = data
 	return nil
 }
@@ -782,14 +782,14 @@ func TestSendAndReceiveStrMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string   `edgedb:"encoded"`
-		Decoded StrCodec `edgedb:"decoded"`
+		Encoded string    `edgedb:"encoded"`
+		Decoded CustomStr `edgedb:"decoded"`
 	}
 
 	data := []byte{
 		0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x20, 0xf0, 0x9f, 0x99, 0x82,
 	}
-	arg := &StrCodec{make([]byte, len(data))}
+	arg := &CustomStr{make([]byte, len(data))}
 	copy(arg.data, data)
 
 	var result Result
@@ -798,7 +798,7 @@ func TestSendAndReceiveStrMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "Hello! 🙂",
-			Decoded: StrCodec{data},
+			Decoded: CustomStr{data},
 		},
 		result,
 	)
@@ -828,15 +828,15 @@ func TestSendAndReceiveJSON(t *testing.T) {
 	}
 }
 
-type JSONCodec struct {
+type CustomJSON struct {
 	data []byte
 }
 
-func (m JSONCodec) MarshalEdgeDBJSON() ([]byte, error) {
+func (m CustomJSON) MarshalEdgeDBJSON() ([]byte, error) {
 	return m.data, nil
 }
 
-func (m *JSONCodec) UnmarshalEdgeDBJSON(data []byte) error {
+func (m *CustomJSON) UnmarshalEdgeDBJSON(data []byte) error {
 	m.data = data
 	fmt.Println(m.data)
 	return nil
@@ -851,12 +851,12 @@ func TestSendAndReceiveJSONMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string    `edgedb:"encoded"`
-		Decoded JSONCodec `edgedb:"decoded"`
+		Encoded string     `edgedb:"encoded"`
+		Decoded CustomJSON `edgedb:"decoded"`
 	}
 
 	data := append([]byte{1}, []byte(`{"hello": "world"}`)...)
-	arg := &JSONCodec{make([]byte, len(data))}
+	arg := &CustomJSON{make([]byte, len(data))}
 	copy(arg.data, data)
 
 	var result Result
@@ -865,7 +865,7 @@ func TestSendAndReceiveJSONMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: `{"hello": "world"}`,
-			Decoded: JSONCodec{data},
+			Decoded: CustomJSON{data},
 		},
 		result,
 	)
@@ -914,15 +914,15 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	assert.EqualError(t, err, expected)
 }
 
-type EnumCodec struct {
+type CustomEnum struct {
 	data []byte
 }
 
-func (m EnumCodec) MarshalEdgeDBStr() ([]byte, error) {
+func (m CustomEnum) MarshalEdgeDBStr() ([]byte, error) {
 	return m.data, nil
 }
 
-func (m *EnumCodec) UnmarshalEdgeDBStr(data []byte) error {
+func (m *CustomEnum) UnmarshalEdgeDBStr(data []byte) error {
 	m.data = data
 	return nil
 }
@@ -936,11 +936,11 @@ func TestSendAndReceiveEnumMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string    `edgedb:"encoded"`
-		Decoded EnumCodec `edgedb:"decoded"`
+		Encoded string     `edgedb:"encoded"`
+		Decoded CustomEnum `edgedb:"decoded"`
 	}
 	data := []byte{0x52, 0x65, 0x64}
-	arg := &EnumCodec{make([]byte, len(data))}
+	arg := &CustomEnum{make([]byte, len(data))}
 	copy(arg.data, data)
 
 	var result Result
@@ -949,7 +949,7 @@ func TestSendAndReceiveEnumMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "Red",
-			Decoded: EnumCodec{data},
+			Decoded: CustomEnum{data},
 		},
 		result,
 	)
@@ -1022,15 +1022,15 @@ func TestSendAndReceiveDuration(t *testing.T) {
 	}
 }
 
-type DurationCodec struct {
+type CustomDuration struct {
 	data [16]byte
 }
 
-func (m DurationCodec) MarshalEdgeDBDuration() ([]byte, error) {
+func (m CustomDuration) MarshalEdgeDBDuration() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *DurationCodec) UnmarshalEdgeDBDuration(data []byte) error {
+func (m *CustomDuration) UnmarshalEdgeDBDuration(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1044,8 +1044,8 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded Duration      `edgedb:"encoded"`
-		Decoded DurationCodec `edgedb:"decoded"`
+		Encoded Duration       `edgedb:"encoded"`
+		Decoded CustomDuration `edgedb:"decoded"`
 	}
 
 	data := [16]byte{
@@ -1053,7 +1053,7 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, // days
 		0x00, 0x00, 0x00, 0x00, // months
 	}
-	arg := &DurationCodec{}
+	arg := &CustomDuration{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1062,7 +1062,7 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: Duration(0x28dd117280),
-			Decoded: DurationCodec{data},
+			Decoded: CustomDuration{data},
 		},
 		result,
 	)
@@ -1149,15 +1149,15 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 	}
 }
 
-type LocalTimeCodec struct {
+type CustomLocalTime struct {
 	data [8]byte
 }
 
-func (m LocalTimeCodec) MarshalEdgeDBLocalTime() ([]byte, error) {
+func (m CustomLocalTime) MarshalEdgeDBLocalTime() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *LocalTimeCodec) UnmarshalEdgeDBLocalTime(data []byte) error {
+func (m *CustomLocalTime) UnmarshalEdgeDBLocalTime(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1171,12 +1171,12 @@ func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string         `edgedb:"encoded"`
-		Decoded LocalTimeCodec `edgedb:"decoded"`
+		Encoded string          `edgedb:"encoded"`
+		Decoded CustomLocalTime `edgedb:"decoded"`
 	}
 
 	data := [8]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}
-	arg := &LocalTimeCodec{}
+	arg := &CustomLocalTime{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1185,7 +1185,7 @@ func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "12:10:00",
-			Decoded: LocalTimeCodec{data},
+			Decoded: CustomLocalTime{data},
 		},
 		result,
 	)
@@ -1263,15 +1263,15 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 	}
 }
 
-type LocalDateCodec struct {
+type CustomLocalDate struct {
 	data [4]byte
 }
 
-func (m LocalDateCodec) MarshalEdgeDBLocalDate() ([]byte, error) {
+func (m CustomLocalDate) MarshalEdgeDBLocalDate() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *LocalDateCodec) UnmarshalEdgeDBLocalDate(data []byte) error {
+func (m *CustomLocalDate) UnmarshalEdgeDBLocalDate(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1285,12 +1285,12 @@ func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string         `edgedb:"encoded"`
-		Decoded LocalDateCodec `edgedb:"decoded"`
+		Encoded string          `edgedb:"encoded"`
+		Decoded CustomLocalDate `edgedb:"decoded"`
 	}
 
 	data := [4]byte{0x00, 0x00, 0x1b, 0x99}
-	arg := &LocalDateCodec{}
+	arg := &CustomLocalDate{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1299,7 +1299,7 @@ func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "2019-05-06",
-			Decoded: LocalDateCodec{data},
+			Decoded: CustomLocalDate{data},
 		},
 		result,
 	)
@@ -1384,15 +1384,15 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 	}
 }
 
-type LocalDateTimeCodec struct {
+type CustomLocalDateTime struct {
 	data [8]byte
 }
 
-func (m LocalDateTimeCodec) MarshalEdgeDBLocalDateTime() ([]byte, error) {
+func (m CustomLocalDateTime) MarshalEdgeDBLocalDateTime() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *LocalDateTimeCodec) UnmarshalEdgeDBLocalDateTime(data []byte) error {
+func (m *CustomLocalDateTime) UnmarshalEdgeDBLocalDateTime(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1406,12 +1406,12 @@ func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string             `edgedb:"encoded"`
-		Decoded LocalDateTimeCodec `edgedb:"decoded"`
+		Encoded string              `edgedb:"encoded"`
+		Decoded CustomLocalDateTime `edgedb:"decoded"`
 	}
 
 	data := [8]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}
-	arg := &LocalDateTimeCodec{}
+	arg := &CustomLocalDateTime{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1420,7 +1420,7 @@ func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "2019-05-06T12:00:00",
-			Decoded: LocalDateTimeCodec{data},
+			Decoded: CustomLocalDateTime{data},
 		},
 		result,
 	)
@@ -1506,15 +1506,15 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 	}
 }
 
-type DateTimeCodec struct {
+type CustomDateTime struct {
 	data [8]byte
 }
 
-func (m DateTimeCodec) MarshalEdgeDBDateTime() ([]byte, error) {
+func (m CustomDateTime) MarshalEdgeDBDateTime() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *DateTimeCodec) UnmarshalEdgeDBDateTime(data []byte) error {
+func (m *CustomDateTime) UnmarshalEdgeDBDateTime(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1528,12 +1528,12 @@ func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string        `edgedb:"encoded"`
-		Decoded DateTimeCodec `edgedb:"decoded"`
+		Encoded string         `edgedb:"encoded"`
+		Decoded CustomDateTime `edgedb:"decoded"`
 	}
 
 	data := [8]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}
-	arg := &DateTimeCodec{}
+	arg := &CustomDateTime{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1542,7 +1542,7 @@ func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "2019-05-06T12:00:00+00:00",
-			Decoded: DateTimeCodec{data},
+			Decoded: CustomDateTime{data},
 		},
 		result,
 	)
@@ -1709,15 +1709,15 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 	}
 }
 
-type BigIntCodec struct {
+type CustomBigInt struct {
 	data []byte
 }
 
-func (m BigIntCodec) MarshalEdgeDBBigInt() ([]byte, error) {
+func (m CustomBigInt) MarshalEdgeDBBigInt() ([]byte, error) {
 	return m.data, nil
 }
 
-func (m *BigIntCodec) UnmarshalEdgeDBBigInt(data []byte) error {
+func (m *CustomBigInt) UnmarshalEdgeDBBigInt(data []byte) error {
 	m.data = data
 	fmt.Println(m.data)
 	return nil
@@ -1732,8 +1732,8 @@ func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string      `edgedb:"encoded"`
-		Decoded BigIntCodec `edgedb:"decoded"`
+		Encoded string       `edgedb:"encoded"`
+		Decoded CustomBigInt `edgedb:"decoded"`
 	}
 
 	data := []byte{
@@ -1743,7 +1743,7 @@ func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
 		0x00, 0x00, // reserved
 		0x00, 0x01, 0x13, 0x88, // digits
 	}
-	arg := &BigIntCodec{make([]byte, len(data))}
+	arg := &CustomBigInt{make([]byte, len(data))}
 	copy(arg.data, data)
 
 	var result Result
@@ -1752,21 +1752,21 @@ func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: `-15000`,
-			Decoded: BigIntCodec{data},
+			Decoded: CustomBigInt{data},
 		},
 		result,
 	)
 }
 
-type DecimalCodec struct {
+type CustomDecimal struct {
 	data []byte
 }
 
-func (d DecimalCodec) MarshalEdgeDBDecimal() ([]byte, error) {
+func (d CustomDecimal) MarshalEdgeDBDecimal() ([]byte, error) {
 	return d.data, nil
 }
 
-func (d *DecimalCodec) UnmarshalEdgeDBDecimal(data []byte) error {
+func (d *CustomDecimal) UnmarshalEdgeDBDecimal(data []byte) error {
 	d.data = data
 	return nil
 }
@@ -1782,12 +1782,12 @@ func TestSendAndReceiveDecimalMarshaler(t *testing.T) {
 		0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
 	}
 
-	arg := DecimalCodec{make([]byte, len(data))}
+	arg := CustomDecimal{make([]byte, len(data))}
 	copy(arg.data, data)
 
 	type Result struct {
-		Decoded DecimalCodec `edgedb:"decoded"`
-		Encoded string       `edgedb:"encoded"`
+		Decoded CustomDecimal `edgedb:"decoded"`
+		Encoded string        `edgedb:"encoded"`
 	}
 
 	query := `SELECT (
@@ -1799,7 +1799,7 @@ func TestSendAndReceiveDecimalMarshaler(t *testing.T) {
 	err := conn.QueryOne(ctx, query, &result, arg)
 	require.Nil(t, err, "unexpected error: %v", err)
 
-	expected := DecimalCodec{make([]byte, len(data))}
+	expected := CustomDecimal{make([]byte, len(data))}
 	copy(expected.data, data)
 	assert.Equal(t, Result{expected, "-15000.6250000"}, result)
 }
@@ -1861,15 +1861,15 @@ func TestSendAndReceiveUUID(t *testing.T) {
 	}
 }
 
-type UUIDCodec struct {
+type CustomUUID struct {
 	data [16]byte
 }
 
-func (m UUIDCodec) MarshalEdgeDBUUID() ([]byte, error) {
+func (m CustomUUID) MarshalEdgeDBUUID() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *UUIDCodec) UnmarshalEdgeDBUUID(data []byte) error {
+func (m *CustomUUID) UnmarshalEdgeDBUUID(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1883,15 +1883,15 @@ func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded string    `edgedb:"encoded"`
-		Decoded UUIDCodec `edgedb:"decoded"`
+		Encoded string     `edgedb:"encoded"`
+		Decoded CustomUUID `edgedb:"decoded"`
 	}
 
 	data := [16]byte{
 		0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
 		0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
 	}
-	arg := &UUIDCodec{}
+	arg := &CustomUUID{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1900,7 +1900,7 @@ func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: "b9545c35-1fe7-485f-a6ea-f8ead251abd3",
-			Decoded: UUIDCodec{data},
+			Decoded: CustomUUID{data},
 		},
 		result,
 	)
@@ -1949,15 +1949,15 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 	}
 }
 
-type CustomScalarCodec struct {
+type CustomScalar struct {
 	data [8]byte
 }
 
-func (m CustomScalarCodec) MarshalEdgeDBInt64() ([]byte, error) {
+func (m CustomScalar) MarshalEdgeDBInt64() ([]byte, error) {
 	return m.data[:], nil
 }
 
-func (m *CustomScalarCodec) UnmarshalEdgeDBInt64(data []byte) error {
+func (m *CustomScalar) UnmarshalEdgeDBInt64(data []byte) error {
 	copy(m.data[:], data)
 	return nil
 }
@@ -1971,12 +1971,12 @@ func TestSendAndReceiveCustomScalarMarshaler(t *testing.T) {
 	)`
 
 	type Result struct {
-		Encoded int64             `edgedb:"encoded"`
-		Decoded CustomScalarCodec `edgedb:"decoded"`
+		Encoded int64        `edgedb:"encoded"`
+		Decoded CustomScalar `edgedb:"decoded"`
 	}
 
 	data := [8]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}
-	arg := &CustomScalarCodec{}
+	arg := &CustomScalar{}
 	copy(arg.data[:], data[:])
 
 	var result Result
@@ -1985,7 +1985,7 @@ func TestSendAndReceiveCustomScalarMarshaler(t *testing.T) {
 	assert.Equal(t,
 		Result{
 			Encoded: 123_456_789_987_654_321,
-			Decoded: CustomScalarCodec{data},
+			Decoded: CustomScalar{data},
 		},
 		result,
 	)
