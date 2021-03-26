@@ -25,6 +25,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/format"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
@@ -38,7 +39,7 @@ func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
 	in, ok := c.inCodecCache.Get(ids.in)
 	if !ok {
 		if desc, OK := descCache.Get(ids.in); OK {
-			in, err = codecs.BuildCodec(buff.SimpleReader(desc.([]byte)))
+			in, err = codecs.BuildEncoder(desc.(descriptor.Descriptor))
 			if err != nil {
 				return &unsupportedFeatureError{msg: err.Error()}
 			}
@@ -50,9 +51,14 @@ func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
 	cOut, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: q.outType})
 	if !ok {
 		if desc, ok := descCache.Get(ids.out); ok {
-			d := buff.SimpleReader(desc.([]byte))
-			cOut, err = codecs.BuildTypedCodec(d, q.outType)
+			d := desc.(descriptor.Descriptor)
+			path := codecs.Path(q.outType.String())
+			cOut, err = codecs.BuildDecoder(d, q.outType, path)
 			if err != nil {
+				err = fmt.Errorf(
+					"the \"out\" argument does not match query schema: %v",
+					err,
+				)
 				return &unsupportedFeatureError{msg: err.Error()}
 			}
 		} else {
@@ -60,7 +66,7 @@ func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
 		}
 	}
 
-	cdsc := codecPair{in: in.(codecs.Codec), out: cOut.(codecs.Codec)}
+	cdsc := codecPair{in: in.(codecs.Encoder), out: cOut.(codecs.Decoder)}
 	return c.optimistic(r, q, cdsc)
 }
 
@@ -79,7 +85,7 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 	descCache.Put(ids.out, descs.out)
 
 	var cdcs codecPair
-	cdcs.in, err = codecs.BuildCodec(buff.SimpleReader(descs.in))
+	cdcs.in, err = codecs.BuildEncoder(descs.in)
 	if err != nil {
 		return &unsupportedFeatureError{msg: err.Error()}
 	}
@@ -87,9 +93,13 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 	if q.fmt == format.JSON {
 		cdcs.out = codecs.JSONBytes
 	} else {
-		d := buff.SimpleReader(descs.out)
-		cdcs.out, err = codecs.BuildTypedCodec(d, q.outType)
+		path := codecs.Path(q.outType.String())
+		cdcs.out, err = codecs.BuildDecoder(descs.out, q.outType, path)
 		if err != nil {
+			err = fmt.Errorf(
+				"the \"out\" argument does not match query schema: %v",
+				err,
+			)
 			return &unsupportedFeatureError{msg: err.Error()}
 		}
 	}
@@ -178,11 +188,11 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 			r.Discard(16)
 
 			// input descriptor
-			descs.in = r.PopBytes()
+			descs.in = descriptor.Pop(r.PopSlice(r.PopUint32()))
 
 			// output descriptor
 			r.Discard(16) // descriptor ID
-			descs.out = r.PopBytes()
+			descs.out = descriptor.Pop(r.PopSlice(r.PopUint32()))
 
 			if q.expCard == cardinality.One && card == cardinality.Many {
 				err = &resultCardinalityMismatchError{msg: fmt.Sprintf(
@@ -307,8 +317,8 @@ func (c *baseConn) optimistic(
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
-	w.PushUUID(cdcs.in.ID())
-	w.PushUUID(cdcs.out.ID())
+	w.PushUUID(cdcs.in.DescriptorID())
+	w.PushUUID(cdcs.out.DescriptorID())
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args")); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
 	}

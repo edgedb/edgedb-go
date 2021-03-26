@@ -16,7 +16,9 @@
 
 package edgedb
 
-import "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+import (
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+)
 
 type (
 	// UUID a universally unique identifier

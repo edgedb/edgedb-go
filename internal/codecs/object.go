@@ -22,96 +22,60 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-func popObjectCodec(
-	r *buff.Reader,
-	id types.UUID,
-	codecs []Codec,
-) Codec {
-	fields := []*objectField{}
-
-	elmCount := int(r.PopUint16())
-	for i := 0; i < elmCount; i++ {
-		flags := r.PopUint8()
-		name := r.PopString()
-		index := r.PopUint16()
-
-		field := &objectField{
-			isImplicit:     flags&0b1 != 0,
-			isLinkProperty: flags&0b10 != 0,
-			isLink:         flags&0b100 != 0,
-			name:           name,
-			codec:          codecs[index],
-		}
-
-		fields = append(fields, field)
-	}
-
-	return &Object{id: id, fields: fields}
-}
-
-type objectField struct {
-	name           string
-	offset         uintptr
-	codec          Codec
-	isImplicit     bool
-	isLinkProperty bool
-	isLink         bool
-}
-
-// Object is an EdgeDB object type codec.
-type Object struct {
-	id     types.UUID
-	fields []*objectField
-	typ    reflect.Type
-}
-
-// ID returns the descriptor id.
-func (c *Object) ID() types.UUID { return c.id }
-
-func (c *Object) setType(typ reflect.Type, path Path) error {
+func buildObjectDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
 	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"expected %v to be a Struct got %v", path, typ.Kind(),
 		)
 	}
 
-	for _, field := range c.fields {
-		if field.name == "__tid__" {
-			continue
-		}
+	fields := make([]*DecoderField, len(desc.Fields))
 
-		f, ok := marshal.StructField(typ, field.name)
+	for i, field := range desc.Fields {
+		sf, ok := marshal.StructField(typ, field.Name)
 		if !ok {
-			return fmt.Errorf(
-				"expected %v to have a field named %q", path, field.name,
+			return nil, fmt.Errorf(
+				"expected %v to have a field named %q", path, field.Name,
 			)
 		}
 
-		err := field.codec.setType(
-			f.Type,
-			path.AddField(field.name),
+		child, err := BuildDecoder(
+			field.Desc,
+			sf.Type,
+			path.AddField(field.Name),
 		)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		field.offset = f.Offset
+		fields[i] = &DecoderField{
+			name:    field.Name,
+			offset:  sf.Offset,
+			decoder: child,
+		}
 	}
 
-	c.typ = typ
-	return nil
+	return &objectDecoder{desc.ID, fields}, nil
 }
 
-// Type returns the reflect.Type that this codec decodes to.
-func (c *Object) Type() reflect.Type { return c.typ }
+type objectDecoder struct {
+	id     types.UUID
+	fields []*DecoderField
+}
 
-// Decode an object
-func (c *Object) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *objectDecoder) DescriptorID() types.UUID { return c.id }
+
+func (c *objectDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	elmCount := int(r.PopUint32())
 	if elmCount != len(c.fields) {
 		panic(fmt.Sprintf(
@@ -131,16 +95,6 @@ func (c *Object) Decode(r *buff.Reader, out unsafe.Pointer) {
 			continue
 		}
 
-		if field.name == "__tid__" {
-			r.Discard(16)
-			continue
-		}
-
-		field.codec.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
+		field.decoder.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
 	}
-}
-
-// Encode an object
-func (c *Object) Encode(buf *buff.Writer, val interface{}, path Path) error {
-	panic("objects can't be query parameters")
 }

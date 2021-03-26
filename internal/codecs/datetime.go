@@ -27,11 +27,11 @@ import (
 )
 
 var (
-	dateTimeType  = reflect.TypeOf(time.Time{})
-	localDTType   = reflect.TypeOf(types.LocalDateTime{})
-	localDateType = reflect.TypeOf(types.LocalDate{})
-	localTimeType = reflect.TypeOf(types.LocalTime{})
-	durationType  = reflect.TypeOf(types.Duration(0))
+	dateTimeType      = reflect.TypeOf(time.Time{})
+	localDateTimeType = reflect.TypeOf(types.LocalDateTime{})
+	localDateType     = reflect.TypeOf(types.LocalDate{})
+	localTimeType     = reflect.TypeOf(types.LocalTime{})
+	durationType      = reflect.TypeOf(types.Duration(0))
 )
 
 var (
@@ -42,25 +42,34 @@ var (
 	durationID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xe}
 )
 
-// DateTime is an EdgeDB datetime type codec.
-type DateTime struct{}
-
-// ID returns the descriptor id.
-func (c *DateTime) ID() types.UUID { return dateTimeID }
-
-func (c *DateTime) setType(typ reflect.Type, path Path) error {
-	if typ != c.Type() {
-		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
-	}
-
-	return nil
+// DateTimeMarshaler is the interface implemented by an object
+// that can marshal itself into the datetime wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-datetime
+//
+// MarshalEdgeDBDateTime encodes the receiver
+// into a binary form and returns the result.
+type DateTimeMarshaler interface {
+	MarshalEdgeDBDateTime() ([]byte, error)
 }
 
-// Type returns the reflect.Type that this codec decodes to.
-func (c *DateTime) Type() reflect.Type { return dateTimeType }
+// DateTimeUnmarshaler is the interface implemented by an object
+// that can unmarshal the datetime wire format representation of itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-datetime
+//
+// UnmarshalEdgeDBDateTime must be able to decode the datetime wire format.
+// UnmarshalEdgeDBDateTime must copy the data if it wishes to retain the data
+// after returning.
+type DateTimeUnmarshaler interface {
+	UnmarshalEdgeDBDateTime(data []byte) error
+}
 
-// Decode a datetime.
-func (c *DateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
+type dateTimeCodec struct{}
+
+func (c *dateTimeCodec) Type() reflect.Type { return dateTimeType }
+
+func (c *dateTimeCodec) DescriptorID() types.UUID { return dateTimeID }
+
+func (c *dateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	val := int64(r.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
@@ -70,196 +79,281 @@ func (c *DateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
 	).UTC()
 }
 
-// Encode a datetime.
-func (c *DateTime) Encode(w *buff.Writer, val interface{}, path Path) error {
-	date, ok := val.(time.Time)
-	if !ok {
+func (c *dateTimeCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
+	switch date := val.(type) {
+	case time.Time:
+		seconds := date.Unix() - 946_684_800
+		nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
+		microseconds := seconds*1_000_000 + nanoseconds/1_000
+		w.PushUint32(8) // data length
+		w.PushUint64(uint64(microseconds))
+	case DateTimeMarshaler:
+		data, err := date.MarshalEdgeDBDateTime()
+		if err != nil {
+			return err
+		}
+
+		w.BeginBytes()
+		w.PushBytes(data)
+		w.EndBytes()
+	default:
 		return fmt.Errorf("expected %v to be time.Time got %T", path, val)
 	}
 
-	seconds := date.Unix() - 946_684_800
-	nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
-	microseconds := seconds*1_000_000 + nanoseconds/1_000
-	w.PushUint32(8) // data length
-	w.PushUint64(uint64(microseconds))
 	return nil
 }
 
-// LocalDateTime is an EdgeDB cal::local_datetime codec
-type LocalDateTime struct{}
-
-// ID returns the descriptor id.
-func (c *LocalDateTime) ID() types.UUID { return localDTID }
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *LocalDateTime) Type() reflect.Type { return localDTType }
-
-func (c *LocalDateTime) setType(typ reflect.Type, path Path) error {
-	if typ != localDTType {
-		return fmt.Errorf(
-			"expected %v to be %v got %v", path, localDTType, typ,
-		)
-	}
-
-	return nil
+// LocalDateTimeMarshaler is the interface implemented by an object
+// that can marshal itself into the local_datetime wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats
+//
+// MarshalEdgeDBLocalDateTime encodes the receiver
+// into a binary form and returns the result.
+type LocalDateTimeMarshaler interface {
+	MarshalEdgeDBLocalDateTime() ([]byte, error)
 }
+
+// LocalDateTimeUnmarshaler is the interface implemented by an object
+// that can unmarshal the local_datetime wire format representation of itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats
+//
+// UnmarshalEdgeDBLocalDateTime must be able to decode the local_datetime wire
+// format. UnmarshalEdgeDBLocalDateTime must copy the data if it wishes to
+// retain the data after returning.
+type LocalDateTimeUnmarshaler interface {
+	UnmarshalEdgeDBLocalDateTime(data []byte) error
+}
+
+type localDateTimeCodec struct{}
+
+func (c *localDateTimeCodec) Type() reflect.Type { return localDateTimeType }
+
+func (c *localDateTimeCodec) DescriptorID() types.UUID { return localDTID }
 
 // localDateTimeLayout is the memory layout for edgedbtypes.LocalDateTime
 type localDateTimeLayout struct {
 	usec uint64
 }
 
-// Encode a LocalDateTime
-func (c *LocalDateTime) Encode(
+func (c *localDateTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
 ) error {
-	in, ok := val.(types.LocalDateTime)
-	if !ok {
+	switch in := val.(type) {
+	case types.LocalDateTime:
+		val := (*localDateTimeLayout)(unsafe.Pointer(&in))
+		w.PushUint32(8)
+		w.PushUint64(val.usec - 63_082_281_600_000_000)
+	case LocalDateTimeMarshaler:
+		data, err := in.MarshalEdgeDBLocalDateTime()
+		if err != nil {
+			return err
+		}
+
+		w.BeginBytes()
+		w.PushBytes(data)
+		w.EndBytes()
+	default:
 		return fmt.Errorf(
 			"expected %v to be edgedb.LocalDateTime got %T", path, val,
 		)
 	}
 
-	w.PushUint32(8)
-	w.PushUint64((*localDateTimeLayout)(unsafe.Pointer(&in)).usec -
-		63_082_281_600_000_000)
 	return nil
 }
 
-// Decode a LocalDateTime
-func (c *LocalDateTime) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *localDateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
 }
 
-// LocalDate is an EdgeDB cal::local_date codec
-type LocalDate struct{}
-
-// ID returns the descriptor id.
-func (c *LocalDate) ID() types.UUID { return localDateID }
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *LocalDate) Type() reflect.Type { return localDateType }
-
-func (c *LocalDate) setType(typ reflect.Type, path Path) error {
-	if typ != localDateType {
-		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
-	}
-
-	return nil
+// LocalDateMarshaler is the interface implemented by an object
+// that can marshal itself into the local_date wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-local-date
+//
+// MarshalEdgeDBLocalDate encodes the receiver
+// into a binary form and returns the result.
+type LocalDateMarshaler interface {
+	MarshalEdgeDBLocalDate() ([]byte, error)
 }
+
+// LocalDateUnmarshaler is the interface implemented by an object
+// that can unmarshal the local_date wire format representation of itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-local-date
+//
+// UnmarshalEdgeDBLocalDate must be able to decode the local_date wire format.
+// UnmarshalEdgeDBLocalDate must copy the data if it wishes to retain the data
+// after returning.
+type LocalDateUnmarshaler interface {
+	UnmarshalEdgeDBLocalDate(data []byte) error
+}
+
+type localDateCodec struct{}
+
+func (c *localDateCodec) Type() reflect.Type { return localDateType }
+
+func (c *localDateCodec) DescriptorID() types.UUID { return localDateID }
 
 // localDateLayout is the memory layout for edgedbtypes.LocalDate
 type localDateLayout struct {
 	days uint32
 }
 
-// Encode a LocalDate
-func (c *LocalDate) Encode(
+func (c *localDateCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
 ) error {
-	in, ok := val.(types.LocalDate)
-	if !ok {
+	switch in := val.(type) {
+	case types.LocalDate:
+		w.PushUint32(4)
+		w.PushUint32((*localDateLayout)(unsafe.Pointer(&in)).days - 730119)
+	case LocalDateMarshaler:
+		data, err := in.MarshalEdgeDBLocalDate()
+		if err != nil {
+			return err
+		}
+
+		w.BeginBytes()
+		w.PushBytes(data)
+		w.EndBytes()
+	default:
 		return fmt.Errorf(
 			"expected %v to be edgedb.LocalDate got %T", path, val,
 		)
 	}
 
-	w.PushUint32(4)
-	w.PushUint32((*localDateLayout)(unsafe.Pointer(&in)).days - 730119)
 	return nil
 }
 
-// Decode a LocalDate
-func (c *LocalDate) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *localDateCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateLayout)(out).days = r.PopUint32() + 730119
 }
 
-// LocalTime is an EdgeDB cal::local_time codec
-type LocalTime struct{}
-
-// ID returns the descriptor id.
-func (c *LocalTime) ID() types.UUID { return localTimeID }
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *LocalTime) Type() reflect.Type { return localTimeType }
-
-func (c *LocalTime) setType(typ reflect.Type, path Path) error {
-	if typ != localTimeType {
-		return fmt.Errorf("expected %v to be %v got %v", path, c.Type(), typ)
-	}
-
-	return nil
+// LocalTimeMarshaler is the interface implemented by an object
+// that can marshal itself into the local_time wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-local-time
+//
+// MarshalEdgeDBLocalTime encodes the receiver
+// into a binary form and returns the result.
+type LocalTimeMarshaler interface {
+	MarshalEdgeDBLocalTime() ([]byte, error)
 }
+
+// LocalTimeUnmarshaler is the interface implemented by an object
+// that can unmarshal the local_time wire format representation of itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-local-time
+//
+// UnmarshalEdgeDBLocalTime must be able to decode the local_time wire format.
+// UnmarshalEdgeDBLocalTime must copy the data if it wishes to retain the data
+// after returning.
+type LocalTimeUnmarshaler interface {
+	UnmarshalEdgeDBLocalTime(data []byte) error
+}
+
+type localTimeCodec struct{}
+
+func (c *localTimeCodec) Type() reflect.Type { return localTimeType }
+
+func (c *localTimeCodec) DescriptorID() types.UUID { return localTimeID }
 
 // localTimeLayout is the memory layout for edgedbtypes.LocalTime
 type localTimeLayout struct {
 	usec uint64
 }
 
-// Encode a LocalTime
-func (c *LocalTime) Encode(
+func (c *localTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
 ) error {
-	in, ok := val.(types.LocalTime)
-	if !ok {
+	switch in := val.(type) {
+	case types.LocalTime:
+		w.PushUint32(8)
+		w.PushUint64((*localTimeLayout)(unsafe.Pointer(&in)).usec)
+	case LocalTimeMarshaler:
+		data, err := in.MarshalEdgeDBLocalTime()
+		if err != nil {
+			return err
+		}
+
+		w.BeginBytes()
+		w.PushBytes(data)
+		w.EndBytes()
+	default:
 		return fmt.Errorf(
 			"expected %v to be edgedb.LocalTime got %T", path, val,
 		)
 	}
 
-	w.PushUint32(8)
-	w.PushUint64((*localTimeLayout)(unsafe.Pointer(&in)).usec)
 	return nil
 }
 
-// Decode a LocalTime
-func (c *LocalTime) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *localTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localTimeLayout)(out).usec = r.PopUint64()
 }
 
-// Duration is an EdgeDB duration codec.
-type Duration struct{}
-
-// ID returns the descriptor id.
-func (c *Duration) ID() types.UUID { return durationID }
-
-func (c *Duration) setType(typ reflect.Type, path Path) error {
-	if typ != c.Type() {
-		return fmt.Errorf(
-			"expected %v to be edgedb.Duration got %v", path, typ,
-		)
-	}
-
-	return nil
+// DurationMarshaler is the interface implemented by an object
+// that can marshal itself into the duration wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-duration
+//
+// MarshalEdgeDBDuration encodes the receiver
+// into a binary form and returns the result.
+type DurationMarshaler interface {
+	MarshalEdgeDBDuration() ([]byte, error)
 }
 
-// Type returns the reflect.Type that this codec decodes to.
-func (c *Duration) Type() reflect.Type { return durationType }
+// DurationUnmarshaler is the interface implemented by an object
+// that can unmarshal the duration wire format representation of itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-duration
+//
+// UnmarshalEdgeDBDuration must be able to decode the duration wire format.
+// UnmarshalEdgeDBDuration must copy the data if it wishes to retain the data
+// after returning.
+type DurationUnmarshaler interface {
+	UnmarshalEdgeDBDuration(data []byte) error
+}
 
-// Decode a duration.
-func (c *Duration) Decode(r *buff.Reader, out unsafe.Pointer) {
+type durationCodec struct{}
+
+func (c *durationCodec) Type() reflect.Type { return durationType }
+
+func (c *durationCodec) DescriptorID() types.UUID { return durationID }
+
+func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 	r.Discard(8) // reserved
 }
 
-// Encode a duration.
-func (c *Duration) Encode(w *buff.Writer, val interface{}, path Path) error {
-	duration, ok := val.(types.Duration)
-	if !ok {
+func (c *durationCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
+	switch in := val.(type) {
+	case types.Duration:
+		w.PushUint32(16) // data length
+		w.PushUint64(uint64(in))
+		w.PushUint32(0) // reserved
+		w.PushUint32(0) // reserved
+	case DurationMarshaler:
+		data, err := in.MarshalEdgeDBDuration()
+		if err != nil {
+			return err
+		}
+
+		w.BeginBytes()
+		w.PushBytes(data)
+		w.EndBytes()
+	default:
 		return fmt.Errorf(
 			"expected %v to be edgedb.Duration got %T", path, val,
 		)
 	}
 
-	w.PushUint32(16) // data length
-	w.PushUint64(uint64(duration))
-	w.PushUint32(0) // reserved
-	w.PushUint32(0) // reserved
 	return nil
 }

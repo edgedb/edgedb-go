@@ -22,46 +22,41 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func popSetCodec(
-	r *buff.Reader,
-	id types.UUID,
-	codecs []Codec,
-) Codec {
-	n := r.PopUint16()
-	return &Set{id: id, child: codecs[n]}
+func buildSetDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Slice {
+		return nil, fmt.Errorf(
+			"expected %v to be a Slice got %v", path, typ.Kind(),
+		)
+	}
+
+	child, err := BuildDecoder(desc.Fields[0].Desc, typ.Elem(), path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &setDecoder{desc.ID, child, typ, calcStep(typ.Elem())}, nil
 }
 
-// Set is an EdgeDB set type codec.
-type Set struct {
+type setDecoder struct {
 	id    types.UUID
-	child Codec
+	child Decoder
 	typ   reflect.Type
 
 	// step is the element width in bytes for a go array of type `Array.typ`.
 	step int
 }
 
-// ID returns the descriptor id.
-func (c *Set) ID() types.UUID { return c.id }
+func (c *setDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *Set) setType(typ reflect.Type, path Path) error {
-	if typ.Kind() != reflect.Slice {
-		return fmt.Errorf("expected %v to be a Slice got %v", path, typ.Kind())
-	}
-
-	c.typ = typ
-	c.step = calcStep(typ.Elem())
-	return c.child.setType(typ.Elem(), path)
-}
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *Set) Type() reflect.Type { return c.typ }
-
-// Decode a set
-func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	// number of dimensions, either 0 or 1
 	if r.PopUint32() == 0 {
 		r.Discard(8) // skip 2 reserved fields
@@ -84,7 +79,7 @@ func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
 		slice.Len = n
 	}
 
-	_, isSetOfArrays := c.child.(*Array)
+	_, isSetOfArrays := c.child.(*arrayDecoder)
 
 	for i := 0; i < n; i++ {
 		if isSetOfArrays {
@@ -97,9 +92,4 @@ func (c *Set) Decode(r *buff.Reader, out unsafe.Pointer) {
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
 	}
-}
-
-// Encode a set
-func (c *Set) Encode(buf *buff.Writer, val interface{}, path Path) error {
-	panic("sets can not be query parameters")
 }

@@ -122,6 +122,11 @@
 //   json                  []byte
 //   bigint                *big.Int
 //
-//   // not yet implemented in this driver
-//   decimal
+//   decimal               user defined (see Custom Codecs)
+//
+// Custom Codecs
+//
+// User defined marshaler/unmarshalers can be defined for any scalar EdgeDB
+// type except arrays. The marshaler interfaces are documented in the
+// internal/codecs package.
 package edgedb

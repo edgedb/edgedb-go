@@ -22,69 +22,91 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func popArrayCodec(
-	r *buff.Reader,
-	id types.UUID,
-	codecs []Codec,
-) Codec {
-	i := r.PopUint16() // element type descriptor index
+func buildArrayEncoder(desc descriptor.Descriptor) (Encoder, error) {
+	child, err := BuildEncoder(desc.Fields[0].Desc)
 
-	n := int(r.PopUint16()) // number of array dimensions
-	if n == 0 {
-		panic("too few array dimensions: expected at least 1, got 0")
+	if err != nil {
+		return nil, err
 	}
 
-	for i := 0; i < n; i++ {
-		r.Discard(4) // array dimension
-	}
-
-	return &Array{id: id, child: codecs[i]}
+	return &arrayEncoder{desc.ID, child}, nil
 }
 
-// Array is an EdgeDB array type codec.
-type Array struct {
+type arrayEncoder struct {
 	id    types.UUID
-	child Codec
+	child Encoder
+}
+
+func (c *arrayEncoder) DescriptorID() types.UUID { return c.id }
+
+func (c *arrayEncoder) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
+	in := reflect.ValueOf(val)
+	if in.Kind() != reflect.Slice {
+		return fmt.Errorf(
+			"expected %v to be a slice got: %T", path, val,
+		)
+	}
+
+	elmCount := in.Len()
+
+	w.BeginBytes()
+	w.PushUint32(1)                // number of dimensions
+	w.PushUint32(0)                // reserved
+	w.PushUint32(0)                // reserved
+	w.PushUint32(uint32(elmCount)) // dimension.upper
+	w.PushUint32(1)                // dimension.lower
+
+	var err error
+	for i := 0; i < elmCount; i++ {
+		err = c.child.Encode(w, in.Index(i).Interface(), path.AddIndex(i))
+		if err != nil {
+			return err
+		}
+	}
+
+	w.EndBytes()
+	return nil
+}
+
+func buildArrayDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Slice {
+		return nil, fmt.Errorf(
+			"expected %v to be a Slice, got %v", path, typ.Kind(),
+		)
+	}
+
+	child, err := BuildDecoder(desc.Fields[0].Desc, typ.Elem(), path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &arrayDecoder{desc.ID, child, typ, calcStep(typ.Elem())}, nil
+}
+
+type arrayDecoder struct {
+	id    types.UUID
+	child Decoder
 	typ   reflect.Type
 
 	// step is the element width in bytes for a go array of type `Array.typ`.
 	step int
 }
 
-func (c *Array) setType(typ reflect.Type, path Path) error {
-	if typ.Kind() != reflect.Slice {
-		return fmt.Errorf(
-			"expected %v to be a Slice, got %v", path, typ.Kind(),
-		)
-	}
+func (c *arrayDecoder) DescriptorID() types.UUID { return c.id }
 
-	c.typ = typ
-	c.step = calcStep(typ.Elem())
-
-	return c.child.setType(typ.Elem(), path)
-}
-
-// ID returns the descriptor id.
-func (c *Array) ID() types.UUID {
-	return c.id
-}
-
-// Type returns the reflect.Type that this codec decodes to.
-func (c *Array) Type() reflect.Type {
-	typ := c.child.Type()
-
-	if typ == nil {
-		return nil
-	}
-
-	return reflect.SliceOf(typ)
-}
-
-// Decode an array.
-func (c *Array) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	// number of dimensions is 1 or 0
 	if r.PopUint32() == 0 {
 		r.Discard(8) // reserved
@@ -117,34 +139,4 @@ func (c *Array) Decode(r *buff.Reader, out unsafe.Pointer) {
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
 	}
-}
-
-// Encode an array.
-func (c *Array) Encode(w *buff.Writer, val interface{}, path Path) error {
-	in := reflect.ValueOf(val)
-	if in.Kind() != reflect.Slice {
-		return fmt.Errorf(
-			"expected %v to be %v got: %T", path, c.Type(), val,
-		)
-	}
-
-	elmCount := in.Len()
-
-	w.BeginBytes()
-	w.PushUint32(1)                // number of dimensions
-	w.PushUint32(0)                // reserved
-	w.PushUint32(0)                // reserved
-	w.PushUint32(uint32(elmCount)) // dimension.upper
-	w.PushUint32(1)                // dimension.lower
-
-	var err error
-	for i := 0; i < elmCount; i++ {
-		err = c.child.Encode(w, in.Index(i).Interface(), path.AddIndex(i))
-		if err != nil {
-			return err
-		}
-	}
-
-	w.EndBytes()
-	return nil
 }
