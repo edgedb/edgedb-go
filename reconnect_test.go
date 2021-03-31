@@ -27,18 +27,19 @@ func TestRecconnectingConnBorrow(t *testing.T) {
 	err := b.assertUnborrowed()
 	require.NoError(t, err)
 
-	err = b.borrow("transaction")
+	_, err = b.borrow("transaction")
 	require.NoError(t, err)
 
-	err = b.borrow("something else")
+	_, err = b.borrow("something else")
 	expected := "edgedb.InterfaceError: " +
-		"connection is already borrowed for transaction"
+		"The connection is borrowed for a transaction. " +
+		"Use the methods on the transaction object instead."
 	require.EqualError(t, err, expected)
 
 	err = b.assertUnborrowed()
 	expected = "edgedb.InterfaceError: " +
-		"Connection is borrowed for a transaction. " +
-		"Use the methods on transaction object instead."
+		"The connection is borrowed for a transaction. " +
+		"Use the methods on the transaction object instead."
 	require.EqualError(t, err, expected)
 
 	b.unborrow()

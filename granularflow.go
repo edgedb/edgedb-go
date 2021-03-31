@@ -31,7 +31,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
-func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
+func (c *baseConn) execGranularFlow(r *buff.Reader, q *gfQuery) (err error) {
 	ids, ok := c.getTypeIDs(q)
 	if !ok {
 		return c.pesimistic(r, q)
@@ -129,7 +129,7 @@ func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) (idPair, error) {
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return idPair{}, &clientConnectionError{err: e}
 	}
 
@@ -179,7 +179,7 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 	w.EndMessage()
 
 	var descs descPair
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return descPair{}, &clientConnectionError{err: e}
 	}
 
@@ -255,7 +255,7 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs codecPair) error {
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -352,7 +352,7 @@ func (c *baseConn) optimistic(
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 

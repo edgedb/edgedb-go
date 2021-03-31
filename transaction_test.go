@@ -115,23 +115,6 @@ func TestTxCommits(t *testing.T) {
 	)
 }
 
-func TestTxCanNotUseConn(t *testing.T) {
-	ctx := context.Background()
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		var num []int64
-		return conn.Query(ctx, "SELECT 7*9;", &num)
-	})
-
-	var edbErr Error
-	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
-	require.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
-
-	expected := "edgedb.InterfaceError: " +
-		"Connection is borrowed for a transaction. " +
-		"Use the methods on transaction object instead."
-	require.EqualError(t, err, expected)
-}
-
 func newTxOpts(level IsolationLevel, readOnly, deferrable bool) TxOptions {
 	return NewTxOptions().
 		WithIsolation(level).

@@ -28,7 +28,7 @@ import (
 )
 
 func TestObjectWithoutID(t *testing.T) {
-	if conn.conn.protocolVersion.LT(protocolVersion0p10) {
+	if conn.transactableConn.protocolVersion.LT(protocolVersion0p10) {
 		t.Skip("not expected to pass on protocol versions below 0.10")
 	}
 

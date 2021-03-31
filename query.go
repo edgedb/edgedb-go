@@ -17,6 +17,8 @@
 package edgedb
 
 import (
+	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/internal/cardinality"
@@ -36,6 +38,7 @@ type msgHeaders map[uint16][]byte
 type gfQuery struct {
 	out     reflect.Value
 	outType reflect.Type
+	method  string
 	cmd     string
 	fmt     uint8
 	expCard uint8
@@ -45,15 +48,37 @@ type gfQuery struct {
 
 // newQuery returns a new granular flow query.
 func newQuery(
-	cmd string,
-	fmt, expCard uint8,
+	method, cmd string,
 	args []interface{},
 	headers msgHeaders,
 	out interface{},
 ) (*gfQuery, error) {
+	var (
+		expCard uint8
+		frmt    uint8
+	)
+
+	switch method {
+	case "Query":
+		expCard = cardinality.Many
+		frmt = format.Binary
+	case "QuerySingle":
+		expCard = cardinality.AtMostOne
+		frmt = format.Binary
+	case "QueryJSON":
+		expCard = cardinality.Many
+		frmt = format.JSON
+	case "QuerySingleJSON":
+		expCard = cardinality.AtMostOne
+		frmt = format.JSON
+	default:
+		return nil, fmt.Errorf("unknown query method %q", method)
+	}
+
 	q := gfQuery{
+		method:  method,
 		cmd:     cmd,
-		fmt:     fmt,
+		fmt:     frmt,
 		expCard: expCard,
 		args:    args,
 		headers: headers,
@@ -61,7 +86,7 @@ func newQuery(
 
 	var err error
 
-	if fmt == format.JSON || expCard == cardinality.AtMostOne {
+	if frmt == format.JSON || expCard == cardinality.AtMostOne {
 		q.out, err = introspect.ValueOf(out)
 	} else {
 		q.out, err = introspect.ValueOfSlice(out)
@@ -92,4 +117,24 @@ func (q *gfQuery) flat() bool {
 	}
 
 	return false
+}
+
+type queryable interface {
+	headers() msgHeaders
+	granularFlow(context.Context, *gfQuery) error
+}
+
+func runQuery(
+	ctx context.Context,
+	c queryable,
+	method, cmd string,
+	out interface{},
+	args []interface{},
+) error {
+	q, err := newQuery(method, cmd, args, c.headers(), out)
+	if err != nil {
+		return err
+	}
+
+	return c.granularFlow(ctx, q)
 }

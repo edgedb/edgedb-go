@@ -19,48 +19,29 @@ package edgedb
 import (
 	"context"
 	"fmt"
-
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
 )
 
-type transactionState int
+// TxBlock is work to be done in a transaction.
+type TxBlock func(context.Context, *Tx) error
+
+type txStatus int
 
 const (
-	newTx transactionState = iota
+	newTx txStatus = iota
 	startedTx
 	committedTx
 	rolledBackTx
 	failedTx
 )
 
-// Tx is a transaction. Use RetryingTx() or RawTx() to get a transaction.
-type Tx struct {
-	conn    *baseConn
-	state   transactionState
-	options TxOptions
-}
-
-func (t *Tx) execute(
-	ctx context.Context,
-	cmd string,
-	sucessState transactionState,
-) error {
-	err := t.conn.ScriptFlow(ctx, sfQuery{cmd: cmd})
-
-	switch err {
-	case nil:
-		t.state = sucessState
-	default:
-		t.state = failedTx
-	}
-
-	return err
+type txState struct {
+	txStatus         txStatus
+	txSavepointCount int
 }
 
 // assertNotDone returns an error if the transaction is in a done state.
-func (t *Tx) assertNotDone(opName string) error {
-	switch t.state {
+func (s *txState) assertNotDone(opName string) error {
+	switch s.txStatus {
 	case committedTx:
 		return &interfaceError{msg: fmt.Sprintf(
 			"cannot %v; the transaction is already committed", opName,
@@ -79,8 +60,8 @@ func (t *Tx) assertNotDone(opName string) error {
 }
 
 // assertStarted returns an error if the transaction is not in Started state.
-func (t *Tx) assertStarted(opName string) error {
-	switch t.state {
+func (s *txState) assertStarted(opName string) error {
+	switch s.txStatus {
 	case startedTx:
 		return nil
 	case newTx:
@@ -88,8 +69,37 @@ func (t *Tx) assertStarted(opName string) error {
 			"cannot %v; the transaction is not yet started", opName,
 		)}
 	default:
-		return t.assertNotDone(opName)
+		return s.assertNotDone(opName)
 	}
+}
+
+func (s *txState) nextSavepointName() string {
+	s.txSavepointCount++
+	return fmt.Sprintf("EdgeDBGoSavepoint%v", s.txSavepointCount)
+}
+
+// Tx is a transaction. Use RetryingTx() or RawTx() to get a transaction.
+type Tx struct {
+	borrowableConn
+	*txState
+	options TxOptions
+}
+
+func (t *Tx) execute(
+	ctx context.Context,
+	cmd string,
+	sucessState txStatus,
+) error {
+	err := t.borrowableConn.scriptFlow(ctx, sfQuery{cmd: cmd})
+
+	switch err {
+	case nil:
+		t.txStatus = sucessState
+	default:
+		t.txStatus = failedTx
+	}
+
+	return err
 }
 
 func (t *Tx) start(ctx context.Context) error {
@@ -97,7 +107,7 @@ func (t *Tx) start(ctx context.Context) error {
 		return e
 	}
 
-	if t.state == startedTx {
+	if t.txStatus == startedTx {
 		return &interfaceError{
 			msg: "cannot start; the transaction is already started",
 		}
@@ -123,13 +133,39 @@ func (t *Tx) rollback(ctx context.Context) error {
 	return t.execute(ctx, "ROLLBACK;", rolledBackTx)
 }
 
-// Execute an EdgeQL command (or commands).
-func (t *Tx) Execute(ctx context.Context, cmd string) error {
+func (t *Tx) txOptions() TxOptions { return t.options }
+
+func (t *Tx) txstate() *txState { return t.txState }
+
+// Subtx runs an action in a savepoint.
+// If the action returns an error the savepoint is rolled back,
+// otherwise it is released.
+func (t *Tx) Subtx(ctx context.Context, action SubtxBlock) error {
+	return runSubtx(ctx, action, t)
+}
+
+func (t *Tx) scriptFlow(ctx context.Context, q sfQuery) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
 	}
 
-	return t.conn.ScriptFlow(ctx, sfQuery{cmd: cmd})
+	return t.borrowableConn.scriptFlow(ctx, q)
+}
+
+func (t *Tx) granularFlow(ctx context.Context, q *gfQuery) error {
+	if e := t.assertStarted(q.method); e != nil {
+		return e
+	}
+
+	return t.borrowableConn.granularFlow(ctx, q)
+}
+
+// Execute an EdgeQL command (or commands).
+func (t *Tx) Execute(ctx context.Context, cmd string) error {
+	return t.scriptFlow(ctx, sfQuery{
+		cmd:     cmd,
+		headers: t.headers(),
+	})
 }
 
 // Query runs a query and returns the results.
@@ -139,16 +175,7 @@ func (t *Tx) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := t.assertStarted("Query"); e != nil {
-		return e
-	}
-
-	q, err := newQuery(cmd, format.Binary, cardinality.Many, args, nil, out)
-	if err != nil {
-		return err
-	}
-
-	return t.conn.GranularFlow(ctx, q)
+	return runQuery(ctx, t, "Query", cmd, out, args)
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
@@ -174,23 +201,7 @@ func (t *Tx) QuerySingle(
 	out interface{},
 	args ...interface{},
 ) error {
-	if e := t.assertStarted("QuerySingle"); e != nil {
-		return e
-	}
-
-	q, err := newQuery(
-		cmd,
-		format.Binary,
-		cardinality.AtMostOne,
-		args,
-		nil,
-		out,
-	)
-	if err != nil {
-		return err
-	}
-
-	return t.conn.GranularFlow(ctx, q)
+	return runQuery(ctx, t, "QuerySingle", cmd, out, args)
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -200,16 +211,7 @@ func (t *Tx) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := t.assertStarted("QueryJSON"); e != nil {
-		return e
-	}
-
-	q, err := newQuery(cmd, format.JSON, cardinality.Many, args, nil, out)
-	if err != nil {
-		return err
-	}
-
-	return t.conn.GranularFlow(ctx, q)
+	return runQuery(ctx, t, "QueryJSON", cmd, out, args)
 }
 
 // QueryOneJSON runs a singleton-returning query.
@@ -235,14 +237,5 @@ func (t *Tx) QuerySingleJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	if e := t.assertStarted("QueryJSON"); e != nil {
-		return e
-	}
-
-	q, err := newQuery(cmd, format.JSON, cardinality.AtMostOne, args, nil, out)
-	if err != nil {
-		return err
-	}
-
-	return t.conn.GranularFlow(ctx, q)
+	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args)
 }

@@ -50,14 +50,14 @@ func writeHeaders(w *buff.Writer, headers msgHeaders) {
 	}
 }
 
-func (c *baseConn) scriptFlow(r *buff.Reader, q sfQuery) error {
+func (c *baseConn) execScriptFlow(r *buff.Reader, q sfQuery) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
 	writeHeaders(w, q.headers)
 	w.PushString(q.cmd)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 

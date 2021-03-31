@@ -48,7 +48,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 
 	c.protocolVersion = protocolVersionMax
 
-	if err := w.Send(c.conn); err != nil {
+	if err := w.Send(c.netConn); err != nil {
 		return &clientConnectionError{err: err}
 	}
 
@@ -68,7 +68,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 
 			if protocolVersion.LT(protocolVersionMin) ||
 				protocolVersion.GT(protocolVersionMax) {
-				_ = c.conn.Close()
+				_ = c.netConn.Close()
 				msg := fmt.Sprintf(
 					"unsupported protocol version: %v.%v",
 					protocolVersion.Major,
@@ -117,7 +117,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 		}
 	}
 
-	_, isTLS := c.conn.(*tls.Conn)
+	_, isTLS := c.netConn.(*tls.Conn)
 	if !isTLS && c.protocolVersion.GTE(protocolVersion0p11) {
 		_ = c.close()
 		return &clientConnectionError{msg: fmt.Sprintf(
@@ -153,7 +153,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(scramMsg)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -201,7 +201,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(scramMsg)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -254,7 +254,7 @@ func (c *baseConn) terminate() error {
 	w.BeginMessage(message.Terminate)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 

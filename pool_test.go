@@ -139,10 +139,10 @@ func mockPool(opts Options) *Pool { // nolint:gocritic
 	return &Pool{
 		isClosed:       &False,
 		mu:             &sync.RWMutex{},
-		freeConns:      make(chan *reconnectingConn, opts.MinConns),
-		potentialConns: make(chan struct{}, opts.MaxConns),
 		maxConns:       int(opts.MaxConns),
 		minConns:       int(opts.MinConns),
+		freeConns:      make(chan transactableConn, opts.MinConns),
+		potentialConns: make(chan struct{}, opts.MaxConns),
 		txOpts:         TxOptions{},
 		retryOpts:      RetryOptions{},
 		cfg:            &connConfig{},
@@ -166,28 +166,28 @@ func TestAcquireFromClosedPool(t *testing.T) {
 
 func TestAcquireFreeConnFromPool(t *testing.T) {
 	p := mockPool(Options{MinConns: 1})
-	conn := &reconnectingConn{}
+	conn := transactableConn{}
 	p.freeConns <- conn
 
 	pConn, err := p.Acquire(context.Background())
 	assert.NoError(t, err)
-	assert.Equal(t, conn, pConn.conn)
+	assert.Equal(t, conn, pConn.transactableConn)
 }
 
 func BenchmarkPoolAcquireRelease(b *testing.B) {
 	p := mockPool(Options{MaxConns: 2, MinConns: 2})
 
 	for i := 0; i < p.maxConns; i++ {
-		p.freeConns <- &reconnectingConn{}
+		p.freeConns <- transactableConn{}
 	}
 
-	var conn *reconnectingConn
+	var conn transactableConn
 	ctx := context.Background()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		conn, _ = p.acquire(ctx)
-		_ = p.release(conn, nil)
+		_ = p.release(&conn, nil)
 	}
 }
 
@@ -212,7 +212,7 @@ func TestAcquirePotentialConnFromPool(t *testing.T) {
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
 	p := mockPool(Options{MaxConns: 1, MinConns: 1})
-	p.freeConns <- &reconnectingConn{}
+	p.freeConns <- transactableConn{}
 	p.potentialConns <- struct{}{}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
