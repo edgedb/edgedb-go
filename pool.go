@@ -44,7 +44,7 @@ func max(a, b int) int {
 
 // Pool is a connection pool and is safe for concurrent use.
 type Pool struct {
-	isClosed bool
+	isClosed *bool
 	mu       *sync.RWMutex // locks isClosed
 
 	// A buffered channel of connections ready for use.
@@ -103,7 +103,9 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 		return nil, err
 	}
 
+	False := false
 	p := &Pool{
+		isClosed: &False,
 		mu:       &sync.RWMutex{},
 		maxConns: maxConns,
 		minConns: minConns,
@@ -173,7 +175,7 @@ func (p *Pool) acquire(ctx context.Context) (*reconnectingConn, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	if p.isClosed {
+	if *p.isClosed {
 		return nil, &interfaceError{msg: "pool closed"}
 	}
 
@@ -259,10 +261,10 @@ func (p *Pool) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.isClosed {
+	if *p.isClosed {
 		return &interfaceError{msg: "pool closed"}
 	}
-	p.isClosed = true
+	*p.isClosed = true
 
 	wg := sync.WaitGroup{}
 	errs := make([]error, p.maxConns)

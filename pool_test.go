@@ -37,8 +37,14 @@ func TestConnectPool(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "hello", result)
 
+	p2 := p.WithTxOptions(NewTxOptions())
+
 	err = p.Close()
 	assert.Nil(t, err)
+
+	// Copied pools should be closed if a different copy is closed.
+	err = p2.Close()
+	assert.EqualError(t, err, "edgedb.InterfaceError: pool closed")
 }
 
 func TestPoolRejectsTransaction(t *testing.T) {
@@ -124,13 +130,23 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 	)
 }
 
-func TestAcquireFromClosedPool(t *testing.T) {
-	p := &Pool{
+func mockPool(opts Options) *Pool { // nolint:gocritic
+	False := false
+
+	return &Pool{
+		isClosed:       &False,
 		mu:             &sync.RWMutex{},
-		isClosed:       true,
-		freeConns:      make(chan *reconnectingConn),
-		potentialConns: make(chan struct{}),
+		maxConns:       int(opts.MaxConns),
+		minConns:       int(opts.MinConns),
+		freeConns:      make(chan *reconnectingConn, opts.MinConns),
+		potentialConns: make(chan struct{}, opts.MaxConns),
 	}
+}
+
+func TestAcquireFromClosedPool(t *testing.T) {
+	p := mockPool(Options{})
+	err := p.Close()
+	require.Nil(t, err)
 
 	conn, err := p.Acquire(context.TODO())
 	var edbErr Error
@@ -140,11 +156,8 @@ func TestAcquireFromClosedPool(t *testing.T) {
 }
 
 func TestAcquireFreeConnFromPool(t *testing.T) {
+	p := mockPool(Options{MinConns: 1})
 	conn := &reconnectingConn{}
-	p := &Pool{
-		mu:        &sync.RWMutex{},
-		freeConns: make(chan *reconnectingConn, 1),
-	}
 	p.freeConns <- conn
 
 	pConn, err := p.Acquire(context.Background())
@@ -153,13 +166,7 @@ func TestAcquireFreeConnFromPool(t *testing.T) {
 }
 
 func BenchmarkPoolAcquireRelease(b *testing.B) {
-	p := &Pool{
-		mu:             &sync.RWMutex{},
-		maxConns:       2,
-		minConns:       2,
-		freeConns:      make(chan *reconnectingConn, 2),
-		potentialConns: make(chan struct{}, 2),
-	}
+	p := mockPool(Options{MaxConns: 2, MinConns: 2})
 
 	for i := 0; i < p.maxConns; i++ {
 		p.freeConns <- &reconnectingConn{}
@@ -195,11 +202,7 @@ func TestAcquirePotentialConnFromPool(t *testing.T) {
 }
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
-	p := &Pool{
-		mu:             &sync.RWMutex{},
-		freeConns:      make(chan *reconnectingConn, 1),
-		potentialConns: make(chan struct{}, 1),
-	}
+	p := mockPool(Options{MaxConns: 1, MinConns: 1})
 	p.freeConns <- &reconnectingConn{}
 	p.potentialConns <- struct{}{}
 
@@ -212,7 +215,7 @@ func TestPoolAcquireExpiredContext(t *testing.T) {
 }
 
 func TestPoolAcquireThenContextExpires(t *testing.T) {
-	p := &Pool{mu: &sync.RWMutex{}}
+	p := mockPool(Options{})
 
 	deadline := time.Now().Add(10 * time.Millisecond)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
@@ -223,13 +226,7 @@ func TestPoolAcquireThenContextExpires(t *testing.T) {
 }
 
 func TestClosePool(t *testing.T) {
-	p := &Pool{
-		mu:             &sync.RWMutex{},
-		maxConns:       0,
-		minConns:       0,
-		freeConns:      make(chan *reconnectingConn),
-		potentialConns: make(chan struct{}),
-	}
+	p := mockPool(Options{})
 
 	err := p.Close()
 	assert.Nil(t, err)
