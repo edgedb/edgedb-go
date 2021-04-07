@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -117,13 +118,9 @@ type RetryCondition int
 // The following conditions can be configured with a custom RetryRule.
 // See RetryOptions.
 const (
-	// SerializationError indicates that the transaction could not complete
-	// because of a serialization failure.
-	SerializationError RetryCondition = iota
-
-	// DeadLock indicates that the server could not complete a transaction
-	// because it encountered a deadlock.
-	DeadLock
+	// TxConflict indicates that the server could not complete a transaction
+	// because it encountered a deadlock or serialization error.
+	TxConflict = iota
 
 	// NetworkError indicates that the transaction was interupted
 	// by a network error.
@@ -183,16 +180,18 @@ func (r RetryRule) WithBackoff(fn RetryBackoff) RetryRule {
 // Use NewRetryOptions to get a default RetryOptions value
 // instead of creating one yourself.
 type RetryOptions struct {
-	fromFactory   bool
-	serialization RetryRule
-	deadlock      RetryRule
-	network       RetryRule
+	fromFactory bool
+	txConflict  RetryRule
+	network     RetryRule
 }
 
 // WithDefault sets the rule for all conditions to rule.
 func (o RetryOptions) WithDefault(rule RetryRule) RetryOptions { // nolint:gocritic,lll
-	o.serialization = rule
-	o.deadlock = rule
+	if !rule.fromFactory {
+		panic("RetryRule not created with NewRetryRule() is not valid")
+	}
+
+	o.txConflict = rule
 	o.network = rule
 	return o
 }
@@ -202,11 +201,13 @@ func (o RetryOptions) WithCondition( // nolint:gocritic
 	condition RetryCondition,
 	rule RetryRule,
 ) RetryOptions {
+	if !rule.fromFactory {
+		panic("RetryRule not created with NewRetryRule() is not valid")
+	}
+
 	switch condition {
-	case SerializationError:
-		o.serialization = rule
-	case DeadLock:
-		o.deadlock = rule
+	case TxConflict:
+		o.txConflict = rule
 	case NetworkError:
 		o.network = rule
 	default:
@@ -217,12 +218,15 @@ func (o RetryOptions) WithCondition( // nolint:gocritic
 }
 
 func (o RetryOptions) ruleForException(err Error) RetryRule { // nolint:gocritic,lll
-	switch err.(type) {
-	case *transactionSerializationError:
-		return o.serialization
-	case *transactionDeadlockError:
-		return o.deadlock
-	case *clientError:
+	var edbErr Error
+	if !errors.As(err, &edbErr) {
+		panic(fmt.Sprintf("unexpected error type: %T", err))
+	}
+
+	switch {
+	case edbErr.Category(TransactionConflictError):
+		return o.txConflict
+	case edbErr.Category(ClientError):
 		return o.network
 	default:
 		panic(fmt.Sprintf("unexpected error type: %T", err))
