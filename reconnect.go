@@ -133,6 +133,7 @@ func (b *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
 	return b.conn.ScriptFlow(ctx, q)
 }
 
+// Execute an EdgeQL command (or commands).
 func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
 	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
 	return b.scriptFlow(ctx, sfQuery{cmd: cmd, headers: hdrs})
@@ -153,6 +154,7 @@ func (b *reconnectingConn) granularFlow(
 	return b.conn.GranularFlow(ctx, q)
 }
 
+// Query runs a query and returns the results.
 func (b *reconnectingConn) Query(
 	ctx context.Context,
 	cmd string,
@@ -168,6 +170,9 @@ func (b *reconnectingConn) Query(
 	return b.granularFlow(ctx, q)
 }
 
+// QueryOne runs a singleton-returning query and returns its element.
+// If the query executes successfully but doesn't return a result
+// a NoDataError is returned.
 func (b *reconnectingConn) QueryOne(
 	ctx context.Context,
 	cmd string,
@@ -183,6 +188,7 @@ func (b *reconnectingConn) QueryOne(
 	return b.granularFlow(ctx, q)
 }
 
+// QueryJSON runs a query and return the results as JSON.
 func (b *reconnectingConn) QueryJSON(
 	ctx context.Context,
 	cmd string,
@@ -198,6 +204,9 @@ func (b *reconnectingConn) QueryJSON(
 	return b.granularFlow(ctx, q)
 }
 
+// QueryOneJSON runs a singleton-returning query.
+// If the query executes successfully but doesn't have a result
+// a NoDataError is returned.
 func (b *reconnectingConn) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
@@ -213,7 +222,11 @@ func (b *reconnectingConn) QueryOneJSON(
 	return b.granularFlow(ctx, q)
 }
 
-func (b *reconnectingConn) RawTx(ctx context.Context, action Action) error {
+func (b *reconnectingConn) rawTx(
+	ctx context.Context,
+	action Action,
+	options TxOptions, // nolint:gocritic
+) error {
 	if e := b.borrow("transaction"); e != nil {
 		return e
 	}
@@ -223,7 +236,7 @@ func (b *reconnectingConn) RawTx(ctx context.Context, action Action) error {
 		return e
 	}
 
-	tx := &transaction{conn: b.conn, isolation: repeatableRead}
+	tx := &Tx{conn: b.conn, options: options}
 	if e := tx.start(ctx); e != nil {
 		return e
 	}
@@ -235,9 +248,11 @@ func (b *reconnectingConn) RawTx(ctx context.Context, action Action) error {
 	return tx.commit(ctx)
 }
 
-func (b *reconnectingConn) RetryingTx(
+func (b *reconnectingConn) retryingTx(
 	ctx context.Context,
 	action Action,
+	txOpts TxOptions,
+	retryOpts RetryOptions, // nolint:gocritic
 ) error {
 	if e := b.borrow("transaction"); e != nil {
 		return e
@@ -246,12 +261,12 @@ func (b *reconnectingConn) RetryingTx(
 
 	var edbErr Error
 
-	for i := 0; i < defaultMaxTxRetries; i++ {
+	for i := 1; true; i++ {
 		if e := b.ensureConnection(ctx); e != nil {
 			return e
 		}
 
-		tx := &transaction{conn: b.conn, isolation: repeatableRead}
+		tx := &Tx{conn: b.conn, options: txOpts}
 		if e := tx.start(ctx); e != nil {
 			return e
 		}
@@ -265,10 +280,14 @@ func (b *reconnectingConn) RetryingTx(
 			return e
 		}
 
-		if errors.As(err, &edbErr) &&
-			edbErr.HasTag(ShouldRetry) &&
-			(i+1 < defaultMaxTxRetries) {
-			time.Sleep(defaultBackoff(i))
+		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldRetry) {
+			rule := retryOpts.ruleForException(edbErr)
+
+			if i >= rule.attempts {
+				break
+			}
+
+			time.Sleep(rule.backoff(i))
 			continue
 		}
 

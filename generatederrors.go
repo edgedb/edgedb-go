@@ -89,6 +89,7 @@ const (
 	CardinalityViolationError              ErrorCategory = "errors::CardinalityViolationError"
 	MissingRequiredError                   ErrorCategory = "errors::MissingRequiredError"
 	TransactionError                       ErrorCategory = "errors::TransactionError"
+	TransactionConflictError               ErrorCategory = "errors::TransactionConflictError"
 	TransactionSerializationError          ErrorCategory = "errors::TransactionSerializationError"
 	TransactionDeadlockError               ErrorCategory = "errors::TransactionDeadlockError"
 	ConfigurationError                     ErrorCategory = "errors::ConfigurationError"
@@ -2584,6 +2585,48 @@ func (e *transactionError) HasTag(tag ErrorTag) bool {
 	}
 }
 
+type transactionConflictError struct {
+	msg string
+	err error
+}
+
+func (e *transactionConflictError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.TransactionConflictError: " + msg
+}
+
+func (e *transactionConflictError) Unwrap() error { return e.err }
+
+func (e *transactionConflictError) Category(c ErrorCategory) bool {
+	switch c {
+	case TransactionConflictError:
+		return true
+	case TransactionError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *transactionConflictError) isEdgeDBTransactionError() {}
+
+func (e *transactionConflictError) isEdgeDBExecutionError() {}
+
+func (e *transactionConflictError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldRetry:
+		return true
+	default:
+		return false
+	}
+}
+
 type transactionSerializationError struct {
 	msg string
 	err error
@@ -2604,6 +2647,8 @@ func (e *transactionSerializationError) Category(c ErrorCategory) bool {
 	switch c {
 	case TransactionSerializationError:
 		return true
+	case TransactionConflictError:
+		return true
 	case TransactionError:
 		return true
 	case ExecutionError:
@@ -2612,6 +2657,8 @@ func (e *transactionSerializationError) Category(c ErrorCategory) bool {
 		return false
 	}
 }
+
+func (e *transactionSerializationError) isEdgeDBTransactionConflictError() {}
 
 func (e *transactionSerializationError) isEdgeDBTransactionError() {}
 
@@ -2646,6 +2693,8 @@ func (e *transactionDeadlockError) Category(c ErrorCategory) bool {
 	switch c {
 	case TransactionDeadlockError:
 		return true
+	case TransactionConflictError:
+		return true
 	case TransactionError:
 		return true
 	case ExecutionError:
@@ -2654,6 +2703,8 @@ func (e *transactionDeadlockError) Category(c ErrorCategory) bool {
 		return false
 	}
 }
+
+func (e *transactionDeadlockError) isEdgeDBTransactionConflictError() {}
 
 func (e *transactionDeadlockError) isEdgeDBTransactionError() {}
 
@@ -2915,9 +2966,9 @@ func (e *clientConnectionFailedTemporarilyError) isEdgeDBClientError() {}
 
 func (e *clientConnectionFailedTemporarilyError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldRetry:
-		return true
 	case ShouldReconnect:
+		return true
+	case ShouldRetry:
 		return true
 	default:
 		return false
@@ -2959,9 +3010,9 @@ func (e *clientConnectionTimeoutError) isEdgeDBClientError() {}
 
 func (e *clientConnectionTimeoutError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldRetry:
-		return true
 	case ShouldReconnect:
+		return true
+	case ShouldRetry:
 		return true
 	default:
 		return false
@@ -3003,9 +3054,9 @@ func (e *clientConnectionClosedError) isEdgeDBClientError() {}
 
 func (e *clientConnectionClosedError) HasTag(tag ErrorTag) bool {
 	switch tag {
-	case ShouldRetry:
-		return true
 	case ShouldReconnect:
+		return true
+	case ShouldRetry:
 		return true
 	default:
 		return false
@@ -3382,9 +3433,11 @@ func errorFromCode(code uint32, msg string) error {
 		return &missingRequiredError{msg: msg}
 	case 0x05_03_00_00:
 		return &transactionError{msg: msg}
-	case 0x05_03_00_01:
+	case 0x05_03_01_00:
+		return &transactionConflictError{msg: msg}
+	case 0x05_03_01_01:
 		return &transactionSerializationError{msg: msg}
-	case 0x05_03_00_02:
+	case 0x05_03_01_02:
 		return &transactionDeadlockError{msg: msg}
 	case 0x06_00_00_00:
 		return &configurationError{msg: msg}

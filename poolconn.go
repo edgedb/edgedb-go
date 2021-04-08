@@ -24,29 +24,29 @@ import (
 )
 
 // PoolConn is a pooled connection.
-type PoolConn interface {
-	Executor
-	Trier
-
-	// Release the connection back to its pool.
-	// Release returns an error if called more than once.
-	// A PoolConn is not usable after Release has been called.
-	Release() error
+type PoolConn struct {
+	pool      *Pool
+	err       *error
+	conn      *reconnectingConn
+	txOpts    TxOptions
+	retryOpts RetryOptions
 }
 
-type poolConn struct {
-	pool *pool
-	err  error
-	conn *reconnectingConn
-}
-
-func (c *poolConn) Release() error {
+// Release the connection back to its pool.
+// Release returns an error if called more than once.
+// A PoolConn is not usable after Release has been called.
+func (c *PoolConn) Release() error {
 	if c.pool == nil {
 		msg := "connection released more than once"
 		return &interfaceError{msg: msg}
 	}
 
-	err := c.pool.release(c.conn, c.err)
+	var err error = nil
+	if c.err != nil {
+		err = *c.err
+	}
+
+	err = c.pool.release(c.conn, err)
 	c.pool = nil
 	c.conn = nil
 	c.err = nil
@@ -56,25 +56,27 @@ func (c *poolConn) Release() error {
 
 // checkErr records errors that indicate the connection should be closed
 // so that this connection can be recycled when it is released.
-func (c *poolConn) checkErr(err error) {
+func (c *PoolConn) checkErr(err error) {
 	if soc.IsPermanentNetErr(err) {
-		c.err = err
+		c.err = &err
 		return
 	}
 
 	var edbErr Error
 	if errors.As(err, &edbErr) && edbErr.Category(UnexpectedMessageError) {
-		c.err = err
+		c.err = &err
 	}
 }
 
-func (c *poolConn) Execute(ctx context.Context, cmd string) error {
+// Execute an EdgeQL command (or commands).
+func (c *PoolConn) Execute(ctx context.Context, cmd string) error {
 	err := c.conn.Execute(ctx, cmd)
 	c.checkErr(err)
 	return err
 }
 
-func (c *poolConn) Query(
+// Query runs a query and returns the results.
+func (c *PoolConn) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -85,7 +87,10 @@ func (c *poolConn) Query(
 	return err
 }
 
-func (c *poolConn) QueryOne(
+// QueryOne runs a singleton-returning query and returns its element.
+// If the query executes successfully but doesn't return a result
+// a NoDataError is returned.
+func (c *PoolConn) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -96,7 +101,8 @@ func (c *poolConn) QueryOne(
 	return err
 }
 
-func (c *poolConn) QueryJSON(
+// QueryJSON runs a query and return the results as JSON.
+func (c *PoolConn) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -107,7 +113,10 @@ func (c *poolConn) QueryJSON(
 	return err
 }
 
-func (c *poolConn) QueryOneJSON(
+// QueryOneJSON runs a singleton-returning query.
+// If the query executes successfully but doesn't have a result
+// a NoDataError is returned.
+func (c *PoolConn) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -118,14 +127,19 @@ func (c *poolConn) QueryOneJSON(
 	return err
 }
 
-func (c *poolConn) RawTx(ctx context.Context, action Action) error {
-	err := c.conn.RawTx(ctx, action)
+// RawTx runs an action in a transaction.
+// If the action returns an error the transaction is rolled back,
+// otherwise it is committed.
+func (c *PoolConn) RawTx(ctx context.Context, action Action) error {
+	err := c.conn.rawTx(ctx, action, c.txOpts)
 	c.checkErr(err)
 	return err
 }
 
-func (c *poolConn) RetryingTx(ctx context.Context, action Action) error {
-	err := c.conn.RetryingTx(ctx, action)
+// RetryingTx does the same as RawTx but retries failed actions
+// if they might succeed on a subsequent attempt.
+func (c *PoolConn) RetryingTx(ctx context.Context, action Action) error {
+	err := c.conn.retryingTx(ctx, action, c.txOpts, c.retryOpts)
 	c.checkErr(err)
 	return err
 }

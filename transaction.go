@@ -34,27 +34,14 @@ const (
 	failedTx
 )
 
-type isolationLevel string
-
-const (
-	serializable   isolationLevel = "serializable"
-	repeatableRead isolationLevel = "repeatable_read"
-)
-
-// Tx is a transaction.
-type Tx interface {
-	Executor
+// Tx is a transaction. Use RetryingTx() or RawTx() to get a transaction.
+type Tx struct {
+	conn    *baseConn
+	state   transactionState
+	options TxOptions
 }
 
-type transaction struct {
-	conn       *baseConn
-	state      transactionState
-	isolation  isolationLevel
-	readOnly   bool
-	deferrable bool
-}
-
-func (t *transaction) execute(
+func (t *Tx) execute(
 	ctx context.Context,
 	cmd string,
 	sucessState transactionState,
@@ -72,7 +59,7 @@ func (t *transaction) execute(
 }
 
 // assertNotDone returns an error if the transaction is in a done state.
-func (t *transaction) assertNotDone(opName string) error {
+func (t *Tx) assertNotDone(opName string) error {
 	switch t.state {
 	case committedTx:
 		return &interfaceError{msg: fmt.Sprintf(
@@ -92,7 +79,7 @@ func (t *transaction) assertNotDone(opName string) error {
 }
 
 // assertStarted returns an error if the transaction is not in Started state.
-func (t *transaction) assertStarted(opName string) error {
+func (t *Tx) assertStarted(opName string) error {
 	switch t.state {
 	case startedTx:
 		return nil
@@ -105,7 +92,7 @@ func (t *transaction) assertStarted(opName string) error {
 	}
 }
 
-func (t *transaction) start(ctx context.Context) error {
+func (t *Tx) start(ctx context.Context) error {
 	if e := t.assertNotDone("start"); e != nil {
 		return e
 	}
@@ -116,37 +103,11 @@ func (t *transaction) start(ctx context.Context) error {
 		}
 	}
 
-	query := "START TRANSACTION"
-
-	switch t.isolation {
-	case repeatableRead:
-		query += " ISOLATION REPEATABLE READ"
-	case serializable:
-		query += " ISOLATION SERIALIZABLE"
-	default:
-		return &configurationError{
-			msg: fmt.Sprintf("unknown isolation level: %q", t.isolation),
-		}
-	}
-
-	if t.readOnly {
-		query += ", READ ONLY"
-	} else {
-		query += ", READ WRITE"
-	}
-
-	if t.deferrable {
-		query += ", DEFERRABLE"
-	} else {
-		query += ", NOT DEFERRABLE"
-	}
-
-	query += ";"
-
+	query := t.options.startTxQuery()
 	return t.execute(ctx, query, startedTx)
 }
 
-func (t *transaction) commit(ctx context.Context) error {
+func (t *Tx) commit(ctx context.Context) error {
 	if e := t.assertStarted("commit"); e != nil {
 		return e
 	}
@@ -154,7 +115,7 @@ func (t *transaction) commit(ctx context.Context) error {
 	return t.execute(ctx, "COMMIT;", committedTx)
 }
 
-func (t *transaction) rollback(ctx context.Context) error {
+func (t *Tx) rollback(ctx context.Context) error {
 	if e := t.assertStarted("rollback"); e != nil {
 		return e
 	}
@@ -162,7 +123,8 @@ func (t *transaction) rollback(ctx context.Context) error {
 	return t.execute(ctx, "ROLLBACK;", rolledBackTx)
 }
 
-func (t *transaction) Execute(ctx context.Context, cmd string) error {
+// Execute an EdgeQL command (or commands).
+func (t *Tx) Execute(ctx context.Context, cmd string) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
 	}
@@ -170,7 +132,8 @@ func (t *transaction) Execute(ctx context.Context, cmd string) error {
 	return t.conn.ScriptFlow(ctx, sfQuery{cmd: cmd})
 }
 
-func (t *transaction) Query(
+// Query runs a query and returns the results.
+func (t *Tx) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -188,7 +151,10 @@ func (t *transaction) Query(
 	return t.conn.GranularFlow(ctx, q)
 }
 
-func (t *transaction) QueryOne(
+// QueryOne runs a singleton-returning query and returns its element.
+// If the query executes successfully but doesn't return a result
+// a NoDataError is returned.
+func (t *Tx) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -206,7 +172,8 @@ func (t *transaction) QueryOne(
 	return t.conn.GranularFlow(ctx, q)
 }
 
-func (t *transaction) QueryJSON(
+// QueryJSON runs a query and return the results as JSON.
+func (t *Tx) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -224,7 +191,10 @@ func (t *transaction) QueryJSON(
 	return t.conn.GranularFlow(ctx, q)
 }
 
-func (t *transaction) QueryOneJSON(
+// QueryOneJSON runs a singleton-returning query.
+// If the query executes successfully but doesn't have a result
+// a NoDataError is returned.
+func (t *Tx) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,

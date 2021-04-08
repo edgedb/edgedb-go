@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -36,8 +37,14 @@ func TestConnectPool(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "hello", result)
 
+	p2 := p.WithTxOptions(NewTxOptions())
+
 	err = p.Close()
 	assert.Nil(t, err)
+
+	// Copied pools should be closed if a different copy is closed.
+	err = p2.Close()
+	assert.EqualError(t, err, "edgedb.InterfaceError: pool closed")
 }
 
 func TestPoolRejectsTransaction(t *testing.T) {
@@ -75,8 +82,8 @@ func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {
 	p, err := Connect(ctx, o)
 	require.Nil(t, err)
 
-	require.Equal(t, defaultMinConns, p.(*pool).minConns)
-	require.Equal(t, defaultMaxConns, p.(*pool).maxConns)
+	require.Equal(t, defaultMinConns, p.minConns)
+	require.Equal(t, defaultMaxConns, p.maxConns)
 
 	var result string
 	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
@@ -123,12 +130,23 @@ func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
 	)
 }
 
-func TestAcquireFromClosedPool(t *testing.T) {
-	p := &pool{
-		isClosed:       true,
-		freeConns:      make(chan *reconnectingConn),
-		potentialConns: make(chan struct{}),
+func mockPool(opts Options) *Pool { // nolint:gocritic
+	False := false
+
+	return &Pool{
+		isClosed:       &False,
+		mu:             &sync.RWMutex{},
+		maxConns:       int(opts.MaxConns),
+		minConns:       int(opts.MinConns),
+		freeConns:      make(chan *reconnectingConn, opts.MinConns),
+		potentialConns: make(chan struct{}, opts.MaxConns),
 	}
+}
+
+func TestAcquireFromClosedPool(t *testing.T) {
+	p := mockPool(Options{})
+	err := p.Close()
+	require.Nil(t, err)
 
 	conn, err := p.Acquire(context.TODO())
 	var edbErr Error
@@ -138,25 +156,17 @@ func TestAcquireFromClosedPool(t *testing.T) {
 }
 
 func TestAcquireFreeConnFromPool(t *testing.T) {
+	p := mockPool(Options{MinConns: 1})
 	conn := &reconnectingConn{}
-	p := &pool{freeConns: make(chan *reconnectingConn, 1)}
 	p.freeConns <- conn
 
-	result, err := p.Acquire(context.Background())
+	pConn, err := p.Acquire(context.Background())
 	assert.Nil(t, err)
-
-	pConn, ok := result.(*poolConn)
-	require.True(t, ok, "unexpected return type: %T", result)
 	assert.Equal(t, conn, pConn.conn)
 }
 
 func BenchmarkPoolAcquireRelease(b *testing.B) {
-	p := &pool{
-		maxConns:       2,
-		minConns:       2,
-		freeConns:      make(chan *reconnectingConn, 2),
-		potentialConns: make(chan struct{}, 2),
-	}
+	p := mockPool(Options{MaxConns: 2, MinConns: 2})
 
 	for i := 0; i < p.maxConns; i++ {
 		p.freeConns <- &reconnectingConn{}
@@ -175,28 +185,24 @@ func BenchmarkPoolAcquireRelease(b *testing.B) {
 func TestAcquirePotentialConnFromPool(t *testing.T) {
 	p, err := Connect(context.Background(), opts)
 	require.Nil(t, err)
-	defer func() {
-		assert.Nil(t, p.Close())
-	}()
 
 	// free connection
 	a, err := p.Acquire(context.Background())
 	require.Nil(t, err)
 	require.NotNil(t, a)
-	defer func() { assert.Nil(t, a.Release()) }()
 
 	// potential connection
 	b, err := p.Acquire(context.Background())
 	require.Nil(t, err)
 	require.NotNil(t, b)
-	defer func() { assert.Nil(t, b.Release()) }()
+
+	require.Nil(t, b.Release())
+	require.Nil(t, a.Release())
+	require.Nil(t, p.Close())
 }
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
-	p := &pool{
-		freeConns:      make(chan *reconnectingConn, 1),
-		potentialConns: make(chan struct{}, 1),
-	}
+	p := mockPool(Options{MaxConns: 1, MinConns: 1})
 	p.freeConns <- &reconnectingConn{}
 	p.potentialConns <- struct{}{}
 
@@ -209,7 +215,7 @@ func TestPoolAcquireExpiredContext(t *testing.T) {
 }
 
 func TestPoolAcquireThenContextExpires(t *testing.T) {
-	p := &pool{}
+	p := mockPool(Options{})
 
 	deadline := time.Now().Add(10 * time.Millisecond)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
@@ -220,12 +226,7 @@ func TestPoolAcquireThenContextExpires(t *testing.T) {
 }
 
 func TestClosePool(t *testing.T) {
-	p := &pool{
-		maxConns:       0,
-		minConns:       0,
-		freeConns:      make(chan *reconnectingConn),
-		potentialConns: make(chan struct{}),
-	}
+	p := mockPool(Options{})
 
 	err := p.Close()
 	assert.Nil(t, err)
@@ -244,7 +245,7 @@ func TestPoolRetryingTx(t *testing.T) {
 	defer p.Close() // nolint:errcheck
 
 	var result int64
-	err = p.RetryingTx(ctx, func(ctx context.Context, tx Tx) error {
+	err = p.RetryingTx(ctx, func(ctx context.Context, tx *Tx) error {
 		return tx.QueryOne(ctx, "SELECT 33*21", &result)
 	})
 

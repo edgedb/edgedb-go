@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"syscall"
@@ -31,52 +30,10 @@ import (
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
-const defaultMaxTxRetries = 3
-
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func defaultBackoff(attempt int) time.Duration {
-	backoff := math.Pow(2.0, float64(attempt)) * 100.0
-	jitter := rnd.Float64() * 100.0
-	return time.Duration(backoff+jitter) * time.Millisecond
-}
-
 // Action is work to be done in a transaction.
-type Action func(context.Context, Tx) error
-
-// Trier allows trying actions in a transaction.
-type Trier interface {
-	// RawTx runs an action in a transaction.
-	// If the action returns an error the transaction is rolled back,
-	// otherwise it is committed.
-	RawTx(context.Context, Action) error
-
-	// RetryingTx does the same as RawTx but retries failed actions
-	// if they might succeed on a subsequent attempt.
-	RetryingTx(context.Context, Action) error
-}
-
-// Executor allows querying the database.
-type Executor interface {
-	// Execute an EdgeQL command (or commands).
-	Execute(context.Context, string) error
-
-	// Query runs a query and returns the results.
-	Query(context.Context, string, interface{}, ...interface{}) error
-
-	// QueryOne runs a singleton-returning query and returns its element.
-	// If the query executes successfully but doesn't return a result
-	// a NoDataError is returned.
-	QueryOne(context.Context, string, interface{}, ...interface{}) error
-
-	// QueryJSON runs a query and return the results as JSON.
-	QueryJSON(context.Context, string, *[]byte, ...interface{}) error
-
-	// QueryOneJSON runs a singleton-returning query.
-	// If the query executes successfully but doesn't have a result
-	// a NoDataError is returned.
-	QueryOneJSON(context.Context, string, *[]byte, ...interface{}) error
-}
+type Action func(context.Context, *Tx) error
 
 type baseConn struct {
 	conn             net.Conn

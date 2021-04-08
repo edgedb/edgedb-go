@@ -26,9 +26,9 @@ import (
 )
 
 func TestReleasePoolConn(t *testing.T) {
-	p := &pool{freeConns: make(chan *reconnectingConn, 1)}
+	p := &Pool{freeConns: make(chan *reconnectingConn, 1)}
 	conn := &reconnectingConn{}
-	pConn := &poolConn{pool: p, conn: conn}
+	pConn := &PoolConn{pool: p, conn: conn}
 
 	err := pConn.Release()
 	require.Nil(t, err)

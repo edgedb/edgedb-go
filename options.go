@@ -17,6 +17,9 @@
 package edgedb
 
 import (
+	"errors"
+	"fmt"
+	"math"
 	"time"
 )
 
@@ -96,4 +99,286 @@ type Options struct {
 
 	// ServerSettings is currently unused.
 	ServerSettings map[string]string
+}
+
+// RetryBackoff returns the duration to wait after the nth attempt
+// before making the next attempt when retrying a transaction.
+type RetryBackoff func(n int) time.Duration
+
+func defaultBackoff(attempt int) time.Duration {
+	backoff := math.Pow(2.0, float64(attempt)) * 100.0
+	jitter := rnd.Float64() * 100.0
+	return time.Duration(backoff+jitter) * time.Millisecond
+}
+
+// RetryCondition represents scenarios that can caused a transaction
+// run in RetryingTx() methods to be retried.
+type RetryCondition int
+
+// The following conditions can be configured with a custom RetryRule.
+// See RetryOptions.
+const (
+	// TxConflict indicates that the server could not complete a transaction
+	// because it encountered a deadlock or serialization error.
+	TxConflict = iota
+
+	// NetworkError indicates that the transaction was interupted
+	// by a network error.
+	NetworkError
+)
+
+// NewRetryRule returns the default RetryRule value.
+func NewRetryRule() RetryRule {
+	return RetryRule{
+		fromFactory: true,
+		attempts:    3,
+		backoff:     defaultBackoff,
+	}
+}
+
+// RetryRule determines how transactions should be retried
+// when run in RetryingTx() methods. See Pool.RetryingTx() for details.
+type RetryRule struct {
+	// fromFactory indicates that a RetryOptions value was created using
+	// NewRetryOptions() and not created directly. Requiring users to use the
+	// factory function allows for nonzero default values.
+	fromFactory bool
+
+	// Total number of times to attempt a transaction.
+	// attempts <= 0 indicate that a default value should be used.
+	attempts int
+
+	// backoff determines how long to wait between transaction attempts.
+	// nil indicates that a default function should be used.
+	backoff RetryBackoff
+}
+
+// WithAttempts sets the rule's attempts. attempts must be greater than zero.
+func (r RetryRule) WithAttempts(attempts int) RetryRule {
+	if attempts < 1 {
+		panic(fmt.Sprintf(
+			"RetryRule attempts must be greater than 0, got %v",
+			attempts,
+		))
+	}
+
+	r.attempts = attempts
+	return r
+}
+
+// WithBackoff returns a copy of the RetryRule with backoff set to fn.
+func (r RetryRule) WithBackoff(fn RetryBackoff) RetryRule {
+	if fn == nil {
+		panic("the backoff function must not be nil")
+	}
+
+	r.backoff = fn
+	return r
+}
+
+// RetryOptions configures how RetryingTx() retries failed transactions.
+// Use NewRetryOptions to get a default RetryOptions value
+// instead of creating one yourself.
+type RetryOptions struct {
+	fromFactory bool
+	txConflict  RetryRule
+	network     RetryRule
+}
+
+// WithDefault sets the rule for all conditions to rule.
+func (o RetryOptions) WithDefault(rule RetryRule) RetryOptions { // nolint:gocritic,lll
+	if !rule.fromFactory {
+		panic("RetryRule not created with NewRetryRule() is not valid")
+	}
+
+	o.txConflict = rule
+	o.network = rule
+	return o
+}
+
+// WithCondition sets the retry rule for the specified condition.
+func (o RetryOptions) WithCondition( // nolint:gocritic
+	condition RetryCondition,
+	rule RetryRule,
+) RetryOptions {
+	if !rule.fromFactory {
+		panic("RetryRule not created with NewRetryRule() is not valid")
+	}
+
+	switch condition {
+	case TxConflict:
+		o.txConflict = rule
+	case NetworkError:
+		o.network = rule
+	default:
+		panic(fmt.Sprintf("unexpected condition: %v", condition))
+	}
+
+	return o
+}
+
+func (o RetryOptions) ruleForException(err Error) RetryRule { // nolint:gocritic,lll
+	var edbErr Error
+	if !errors.As(err, &edbErr) {
+		panic(fmt.Sprintf("unexpected error type: %T", err))
+	}
+
+	switch {
+	case edbErr.Category(TransactionConflictError):
+		return o.txConflict
+	case edbErr.Category(ClientError):
+		return o.network
+	default:
+		panic(fmt.Sprintf("unexpected error type: %T", err))
+	}
+}
+
+// IsolationLevel documentation can be found here
+// https://www.edgedb.com/docs/edgeql/statements/tx_start#parameters
+type IsolationLevel string
+
+// The available levels are:
+const (
+	Serializable   IsolationLevel = "serializable"
+	RepeatableRead IsolationLevel = "repeatable_read"
+)
+
+// NewTxOptions returns the default TxOptions value.
+func NewTxOptions() TxOptions {
+	return TxOptions{
+		fromFactory: true,
+		isolation:   RepeatableRead,
+	}
+}
+
+// TxOptions configures how transactions behave.
+type TxOptions struct {
+	// fromFactory indicates that a TxOptions value was created using
+	// NewTxOptions() and not created directly with TxOptions{}.
+	// Requiring users to use the factory function allows for nonzero
+	// default values.
+	fromFactory bool
+
+	readOnly   bool
+	deferrable bool
+	isolation  IsolationLevel
+}
+
+// WithIsolation returns a copy of the TxOptions
+// with the isolation level set to i.
+func (o TxOptions) WithIsolation(i IsolationLevel) TxOptions {
+	if i != Serializable && i != RepeatableRead {
+		panic(fmt.Sprintf("unknown isolation level: %q", i))
+	}
+
+	o.isolation = i
+	return o
+}
+
+// WithReadOnly returns a shallow copy of the pool
+// with the transaction read only access mode set to r.
+func (o TxOptions) WithReadOnly(r bool) TxOptions {
+	o.readOnly = r
+	return o
+}
+
+// WithDeferrable returns a shallow copy of the pool
+// with the transaction deferrable mode set to d.
+func (o TxOptions) WithDeferrable(d bool) TxOptions {
+	o.deferrable = d
+	return o
+}
+
+func (o TxOptions) startTxQuery() string { // nolint:gocritic
+	query := "START TRANSACTION"
+
+	switch o.isolation {
+	case RepeatableRead:
+		query += " ISOLATION REPEATABLE READ"
+	case Serializable:
+		query += " ISOLATION SERIALIZABLE"
+	default:
+		panic(fmt.Sprintf("unknown isolation level: %q", o.isolation))
+	}
+
+	if o.readOnly {
+		query += ", READ ONLY"
+	} else {
+		query += ", READ WRITE"
+	}
+
+	if o.deferrable {
+		query += ", DEFERRABLE"
+	} else {
+		query += ", NOT DEFERRABLE"
+	}
+
+	query += ";"
+	return query
+}
+
+// WithTxOptions returns a shallow copy of the pool
+// with the TxOptions set to opts.
+func (p Pool) WithTxOptions(opts TxOptions) *Pool { // nolint:gocritic
+	if !opts.fromFactory {
+		panic("TxOptions not created with NewTxOptions() are not valid")
+	}
+
+	p.txOpts = opts
+	return &p
+}
+
+// WithRetryOptions returns a shallow copy of the pool
+// with the RetryOptions set to opts.
+func (p Pool) WithRetryOptions(opts RetryOptions) *Pool { // nolint:gocritic
+	if !opts.fromFactory {
+		panic("RetryOptions not created with NewRetryOptions() are not valid")
+	}
+
+	p.retryOpts = opts
+	return &p
+}
+
+// WithTxOptions returns a shallow copy of the connection
+// with the TxOptions set to opts.
+func (c PoolConn) WithTxOptions(opts TxOptions) *PoolConn { // nolint:gocritic
+	if !opts.fromFactory {
+		panic("TxOptions not created with NewTxOptions() are not valid")
+	}
+
+	c.txOpts = opts
+	return &c
+}
+
+// WithRetryOptions returns a shallow copy of the connection
+// with the RetryOptions set to opts.
+func (c PoolConn) WithRetryOptions(opts RetryOptions) *PoolConn { // nolint:gocritic,lll
+	if !opts.fromFactory {
+		panic("RetryOptions not created with NewRetryOptions() are not valid")
+	}
+
+	c.retryOpts = opts
+	return &c
+}
+
+// WithTxOptions returns a shallow copy of the connection
+// with the TxOptions set to opts.
+func (c Conn) WithTxOptions(opts TxOptions) *Conn { // nolint:gocritic
+	if !opts.fromFactory {
+		panic("TxOptions not created with NewTxOptions() are not valid")
+	}
+
+	c.txOpts = opts
+	return &c
+}
+
+// WithRetryOptions returns a shallow copy of the connection
+// with the RetryOptions set to opts.
+func (c Conn) WithRetryOptions(opts RetryOptions) *Conn { // nolint:gocritic
+	if !opts.fromFactory {
+		panic("RetryOptions not created with NewRetryOptions() are not valid")
+	}
+
+	c.retryOpts = opts
+	return &c
 }
