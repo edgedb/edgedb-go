@@ -36,7 +36,7 @@ func (c *baseConn) fallThrough(r *buff.Reader) error {
 	case message.ParameterStatus:
 		name := r.PopString()
 		value := r.PopString()
-		c.serverSettings[name] = value
+		c.cfg.serverSettings[name] = value
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()
