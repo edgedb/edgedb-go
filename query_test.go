@@ -27,6 +27,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestObjectWithoutID(t *testing.T) {
+	ctx := context.Background()
+
+	type Database struct {
+		Name string `edgedb:"name"`
+	}
+
+	var result Database
+	err := conn.QueryOne(
+		ctx, `
+		SELECT sys::Database{ name }
+		FILTER .name = 'edgedb'
+		LIMIT 1`,
+		&result,
+	)
+	assert.Nil(t, err)
+	assert.Equal(t, "edgedb", result.Name)
+}
+
 func TestWrongNumberOfArguments(t *testing.T) {
 	var result string
 	ctx := context.Background()

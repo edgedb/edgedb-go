@@ -27,7 +27,7 @@ import (
 
 const (
 	protocolVersionMajor uint16 = 0
-	protocolVersionMinor uint16 = 9
+	protocolVersionMinor uint16 = 10
 )
 
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {

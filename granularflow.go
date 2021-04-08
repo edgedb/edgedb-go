@@ -27,6 +27,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/format"
+	"github.com/edgedb/edgedb-go/internal/header"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
@@ -110,9 +111,12 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 }
 
 func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) (idPair, error) {
+	headers := copyHeaders(q.headers)
+	headers[header.ExplicitObjectIDs] = []byte("true")
+
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Prepare)
-	writeHeaders(w, q.headers)
+	writeHeaders(w, headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushUint32(0) // no statement name
@@ -190,9 +194,15 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 			// input descriptor
 			descs.in = descriptor.Pop(r.PopSlice(r.PopUint32()))
 
-			// output descriptor
-			r.Discard(16) // descriptor ID
-			descs.out = descriptor.Pop(r.PopSlice(r.PopUint32()))
+			// output descriptor ID
+			outID := r.PopUUID()
+
+			if outID == descriptor.NilID {
+				r.Discard(4) // data length is always 0 for nil descriptor
+				descs.out = descriptor.Descriptor{ID: descriptor.NilID}
+			} else {
+				descs.out = descriptor.Pop(r.PopSlice(r.PopUint32()))
+			}
 
 			if q.expCard == cardinality.One && card == cardinality.Many {
 				err = &resultCardinalityMismatchError{msg: fmt.Sprintf(
@@ -311,9 +321,12 @@ func (c *baseConn) optimistic(
 	q *gfQuery,
 	cdcs codecPair,
 ) error {
+	headers := copyHeaders(q.headers)
+	headers[header.ExplicitObjectIDs] = []byte("true")
+
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.OptimisticExecute)
-	writeHeaders(w, q.headers)
+	writeHeaders(w, headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
