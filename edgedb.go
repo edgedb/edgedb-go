@@ -49,8 +49,6 @@ type baseConn struct {
 	inCodecCache  *cache.Cache
 	outCodecCache *cache.Cache
 
-	serverSettings map[string]string
-
 	cfg *connConfig
 }
 
