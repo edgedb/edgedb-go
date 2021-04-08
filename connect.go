@@ -43,7 +43,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	w.PushUint16(0) // no extensions
 	w.EndMessage()
 
-	if err := w.Send(c.conn); err != nil {
+	if err := w.Send(c.netConn); err != nil {
 		return &clientConnectionError{err: err}
 	}
 
@@ -65,7 +65,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			minor := r.PopUint16()
 
 			if major != protocolVersionMajor || minor != protocolVersionMinor {
-				_ = c.conn.Close()
+				_ = c.netConn.Close()
 				msg := fmt.Sprintf(
 					"unsupported protocol version: %v.%v", major, minor)
 				return &unsupportedProtocolVersionError{msg: msg}
@@ -128,7 +128,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(scramMsg)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -177,7 +177,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(scramMsg)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 
@@ -231,7 +231,7 @@ func (c *baseConn) terminate() error {
 	w.BeginMessage(message.Terminate)
 	w.EndMessage()
 
-	if e := w.Send(c.conn); e != nil {
+	if e := w.Send(c.netConn); e != nil {
 		return &clientConnectionError{err: e}
 	}
 

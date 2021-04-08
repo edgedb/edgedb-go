@@ -25,20 +25,18 @@ import (
 
 // PoolConn is a pooled connection.
 type PoolConn struct {
-	pool      *Pool
-	err       *error
-	conn      *reconnectingConn
-	txOpts    TxOptions
-	retryOpts RetryOptions
+	transactableConn
+	isClosed *bool
+	pool     *Pool
+	err      *error
 }
 
 // Release the connection back to its pool.
 // Release returns an error if called more than once.
 // A PoolConn is not usable after Release has been called.
 func (c *PoolConn) Release() error {
-	if c.pool == nil {
-		msg := "connection released more than once"
-		return &interfaceError{msg: msg}
+	if *c.isClosed {
+		return &interfaceError{msg: "connection released more than once"}
 	}
 
 	var err error = nil
@@ -46,10 +44,11 @@ func (c *PoolConn) Release() error {
 		err = *c.err
 	}
 
-	err = c.pool.release(c.conn, err)
+	err = c.pool.release(&c.transactableConn, err)
 	c.pool = nil
-	c.conn = nil
+	c.transactableConn = transactableConn{}
 	c.err = nil
+	*c.isClosed = true
 
 	return err
 }
@@ -70,7 +69,7 @@ func (c *PoolConn) checkErr(err error) {
 
 // Execute an EdgeQL command (or commands).
 func (c *PoolConn) Execute(ctx context.Context, cmd string) error {
-	err := c.conn.Execute(ctx, cmd)
+	err := c.transactableConn.Execute(ctx, cmd)
 	c.checkErr(err)
 	return err
 }
@@ -82,7 +81,7 @@ func (c *PoolConn) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	err := c.conn.Query(ctx, cmd, out, args...)
+	err := c.transactableConn.Query(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -96,7 +95,7 @@ func (c *PoolConn) QueryOne(
 	out interface{},
 	args ...interface{},
 ) error {
-	err := c.conn.QueryOne(ctx, cmd, out, args...)
+	err := c.transactableConn.QueryOne(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -108,7 +107,7 @@ func (c *PoolConn) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	err := c.conn.QueryJSON(ctx, cmd, out, args...)
+	err := c.transactableConn.QueryJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -122,7 +121,7 @@ func (c *PoolConn) QueryOneJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	err := c.conn.QueryOneJSON(ctx, cmd, out, args...)
+	err := c.transactableConn.QueryOneJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -130,16 +129,16 @@ func (c *PoolConn) QueryOneJSON(
 // RawTx runs an action in a transaction.
 // If the action returns an error the transaction is rolled back,
 // otherwise it is committed.
-func (c *PoolConn) RawTx(ctx context.Context, action Action) error {
-	err := c.conn.rawTx(ctx, action, c.txOpts)
+func (c *PoolConn) RawTx(ctx context.Context, action TxBlock) error {
+	err := c.transactableConn.RawTx(ctx, action)
 	c.checkErr(err)
 	return err
 }
 
 // RetryingTx does the same as RawTx but retries failed actions
 // if they might succeed on a subsequent attempt.
-func (c *PoolConn) RetryingTx(ctx context.Context, action Action) error {
-	err := c.conn.retryingTx(ctx, action, c.txOpts, c.retryOpts)
+func (c *PoolConn) RetryingTx(ctx context.Context, action TxBlock) error {
+	err := c.transactableConn.RetryingTx(ctx, action)
 	c.checkErr(err)
 	return err
 }

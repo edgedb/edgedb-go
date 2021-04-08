@@ -24,9 +24,6 @@ import (
 	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
-	"github.com/edgedb/edgedb-go/internal/header"
 )
 
 var (
@@ -48,7 +45,7 @@ type Pool struct {
 	mu       *sync.RWMutex // locks isClosed
 
 	// A buffered channel of connections ready for use.
-	freeConns chan *reconnectingConn
+	freeConns chan transactableConn
 
 	// A buffered channel of structs representing unconnected capacity.
 	potentialConns chan struct{}
@@ -110,18 +107,14 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 		maxConns: maxConns,
 		minConns: minConns,
 		cfg:      cfg,
-		txOpts: TxOptions{
-			isolation:  RepeatableRead,
-			readOnly:   false,
-			deferrable: false,
-		},
+		txOpts:   NewTxOptions(),
 
-		freeConns:      make(chan *reconnectingConn, minConns),
+		freeConns:      make(chan transactableConn, minConns),
 		potentialConns: make(chan struct{}, maxConns),
-
-		typeIDCache:   cache.New(1_000),
-		inCodecCache:  cache.New(1_000),
-		outCodecCache: cache.New(1_000),
+		retryOpts:      RetryOptions{},
+		typeIDCache:    cache.New(1_000),
+		inCodecCache:   cache.New(1_000),
+		outCodecCache:  cache.New(1_000),
 	}
 
 	for i := 0; i < maxConns-minConns; i++ {
@@ -154,35 +147,42 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 	return p, nil
 }
 
-func (p *Pool) newConn(ctx context.Context) (*reconnectingConn, error) {
-	conn := &reconnectingConn{
-		conn: &baseConn{
-			cfg:           p.cfg,
-			typeIDCache:   p.typeIDCache,
-			inCodecCache:  p.inCodecCache,
-			outCodecCache: p.outCodecCache,
-		},
+func (p *Pool) newConn(ctx context.Context) (transactableConn, error) {
+	base := &baseConn{
+		cfg:           p.cfg,
+		typeIDCache:   p.typeIDCache,
+		inCodecCache:  p.inCodecCache,
+		outCodecCache: p.outCodecCache,
+	}
+
+	borrowable := borrowableConn{baseConn: base}
+	reconnecting := &reconnectingConn{borrowableConn: borrowable}
+
+	conn := transactableConn{
+		reconnectingConn: reconnecting,
+		txOpts:           p.txOpts,
+		retryOpts:        p.retryOpts,
 	}
 
 	if err := conn.reconnect(ctx); err != nil {
-		return nil, err
+		return transactableConn{}, err
 	}
 
 	return conn, nil
 }
 
-func (p *Pool) acquire(ctx context.Context) (*reconnectingConn, error) {
+func (p *Pool) acquire(ctx context.Context) (transactableConn, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	if *p.isClosed {
-		return nil, &interfaceError{msg: "pool closed"}
+		return transactableConn{}, &interfaceError{msg: "pool closed"}
 	}
 
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
+		return transactableConn{}, fmt.Errorf("edgedb: %w", ctx.Err())
 	default:
 	}
 
@@ -200,11 +200,11 @@ func (p *Pool) acquire(ctx context.Context) (*reconnectingConn, error) {
 		conn, err := p.newConn(ctx)
 		if err != nil {
 			p.potentialConns <- struct{}{}
-			return nil, err
+			return transactableConn{}, err
 		}
 		return conn, nil
 	case <-ctx.Done():
-		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
+		return transactableConn{}, fmt.Errorf("edgedb: %w", ctx.Err())
 	}
 }
 
@@ -217,10 +217,11 @@ func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
 		return nil, err
 	}
 
+	False := false
 	return &PoolConn{
-		pool:   p,
-		conn:   conn,
-		txOpts: p.txOpts,
+		transactableConn: conn,
+		pool:             p,
+		isClosed:         &False,
 	}, nil
 }
 
@@ -237,14 +238,14 @@ func unrecoverable(err error) bool {
 	return true
 }
 
-func (p *Pool) release(conn *reconnectingConn, err error) error {
+func (p *Pool) release(conn *transactableConn, err error) error {
 	if unrecoverable(err) {
 		p.potentialConns <- struct{}{}
 		return conn.close()
 	}
 
 	select {
-	case p.freeConns <- conn:
+	case p.freeConns <- *conn:
 	default:
 		// we have MinConns idle so no need to keep this connection.
 		p.potentialConns <- struct{}{}
@@ -291,10 +292,13 @@ func (p *Pool) Execute(ctx context.Context, cmd string) error {
 		return err
 	}
 
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q := sfQuery{cmd: cmd, headers: hdrs}
+	q := sfQuery{
+		cmd:     cmd,
+		headers: conn.headers(),
+	}
+
 	err = conn.scriptFlow(ctx, q)
-	return firstError(err, p.release(conn, err))
+	return firstError(err, p.release(&conn, err))
 }
 
 // Query runs a query and returns the results.
@@ -309,14 +313,8 @@ func (p *Pool) Query(
 		return err
 	}
 
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.Binary, cardinality.Many, args, hdrs, out)
-	if err != nil {
-		return err
-	}
-
-	err = conn.granularFlow(ctx, q)
-	return firstError(err, p.release(conn, err))
+	err = runQuery(ctx, conn, "Query", cmd, out, args)
+	return firstError(err, p.release(&conn, err))
 }
 
 // QueryOne runs a singleton-returning query and returns its element.
@@ -333,14 +331,8 @@ func (p *Pool) QueryOne(
 		return err
 	}
 
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.Binary, cardinality.One, args, hdrs, out)
-	if err != nil {
-		return err
-	}
-
-	err = conn.granularFlow(ctx, q)
-	return firstError(err, p.release(conn, err))
+	err = runQuery(ctx, conn, "QueryOne", cmd, out, args)
+	return firstError(err, p.release(&conn, err))
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -355,14 +347,8 @@ func (p *Pool) QueryJSON(
 		return err
 	}
 
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.JSON, cardinality.Many, args, hdrs, out)
-	if err != nil {
-		return err
-	}
-
-	err = conn.granularFlow(ctx, q)
-	return firstError(err, p.release(conn, err))
+	err = runQuery(ctx, conn, "QueryJSON", cmd, out, args)
+	return firstError(err, p.release(&conn, err))
 }
 
 // QueryOneJSON runs a singleton-returning query.
@@ -379,29 +365,21 @@ func (p *Pool) QueryOneJSON(
 		return err
 	}
 
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.JSON, cardinality.One, args, hdrs, out)
-	if err != nil {
-		return err
-	}
-
-	err = conn.granularFlow(ctx, q)
-	return firstError(err, p.release(conn, err))
+	err = runQuery(ctx, conn, "QueryOneJSON", cmd, out, args)
+	return firstError(err, p.release(&conn, err))
 }
 
 // RawTx runs an action in a transaction.
 // If the action returns an error the transaction is rolled back,
 // otherwise it is committed.
-func (p *Pool) RawTx(ctx context.Context, action Action) error {
+func (p *Pool) RawTx(ctx context.Context, action TxBlock) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
-	return firstError(
-		conn.rawTx(ctx, action, p.txOpts),
-		p.release(conn, err),
-	)
+	err = conn.RawTx(ctx, action)
+	return firstError(err, p.release(&conn, err))
 }
 
 // RetryingTx does the same as RawTx but retries failed actions
@@ -418,14 +396,12 @@ func (p *Pool) RawTx(ctx context.Context, action Action) error {
 // If either field is unset (see RetryRule) then the default rule is used.
 // If the object's default is unset the fall back is 3 attempts
 // and exponential backoff.
-func (p *Pool) RetryingTx(ctx context.Context, action Action) error {
+func (p *Pool) RetryingTx(ctx context.Context, action TxBlock) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
-	return firstError(
-		conn.retryingTx(ctx, action, p.txOpts, p.retryOpts),
-		p.release(conn, err),
-	)
+	err = conn.RetryingTx(ctx, action)
+	return firstError(err, p.release(&conn, err))
 }

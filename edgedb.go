@@ -32,11 +32,8 @@ import (
 
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-// Action is work to be done in a transaction.
-type Action func(context.Context, *Tx) error
-
 type baseConn struct {
-	conn             net.Conn
+	netConn          net.Conn
 	errUnrecoverable error
 
 	// writeMemory is preallocated memory for payloads to be sent to the server
@@ -74,30 +71,30 @@ func connectWithTimeout(
 	toBeDeserialized := make(chan *soc.Data, 2)
 	r := buff.NewReader(toBeDeserialized)
 
-	conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
+	conn.netConn, err = d.DialContext(ctx, addr.network, addr.address)
 	if err != nil {
 		goto handleError
 	}
 
 	conn.acquireReaderSignal = make(chan struct{}, 1)
 	conn.readerChan = make(chan *buff.Reader, 1)
-	go soc.Read(conn.conn, soc.NewMemPool(4, 256*1024), toBeDeserialized)
+	go soc.Read(conn.netConn, soc.NewMemPool(4, 256*1024), toBeDeserialized)
 
 	err = conn.setDeadline(ctx)
 	if err != nil {
-		_ = conn.conn.Close()
+		_ = conn.netConn.Close()
 		goto handleError
 	}
 
 	err = conn.connect(r, conn.cfg)
 	if err != nil {
-		_ = conn.conn.Close()
+		_ = conn.netConn.Close()
 		goto handleError
 	}
 
 	err = conn.setDeadline(context.Background())
 	if err != nil {
-		_ = conn.conn.Close()
+		_ = conn.netConn.Close()
 		goto handleError
 	}
 
@@ -108,7 +105,7 @@ func connectWithTimeout(
 	return nil
 
 handleError:
-	conn.conn = nil
+	conn.netConn = nil
 
 	var errEDB Error
 	var errNetOp *net.OpError
@@ -139,7 +136,7 @@ handleError:
 
 func (c *baseConn) setDeadline(ctx context.Context) error {
 	deadline, _ := ctx.Deadline()
-	err := c.conn.SetDeadline(deadline)
+	err := c.netConn.SetDeadline(deadline)
 	if err != nil {
 		return &clientConnectionError{err: err}
 	}
@@ -168,14 +165,14 @@ func (c *baseConn) acquireReader(ctx context.Context) (*buff.Reader, error) {
 
 func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
 	if soc.IsPermanentNetErr(err) {
-		_ = c.conn.Close()
-		c.conn = nil
+		_ = c.netConn.Close()
+		c.netConn = nil
 		return err
 	}
 
 	if e := c.setDeadline(context.Background()); e != nil {
-		_ = c.conn.Close()
-		c.conn = nil
+		_ = c.netConn.Close()
+		c.netConn = nil
 		return e
 	}
 
@@ -183,7 +180,7 @@ func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
 		for r.Next(c.acquireReaderSignal) {
 			if e := c.fallThrough(r); e != nil {
 				c.errUnrecoverable = e
-				_ = c.conn.Close()
+				_ = c.netConn.Close()
 				return
 			}
 		}
@@ -196,22 +193,26 @@ func (c *baseConn) releaseReader(r *buff.Reader, err error) error {
 
 // Close the db connection
 func (c *baseConn) close() error {
+	if c.netConn == nil {
+		return &interfaceError{msg: "connection released more than once"}
+	}
+
 	_, err := c.acquireReader(context.Background())
 	if err != nil {
-		_ = c.conn.Close()
-		c.conn = nil
+		_ = c.netConn.Close()
+		c.netConn = nil
 		return err
 	}
 
 	err = c.terminate()
 	if err != nil {
-		_ = c.conn.Close()
-		c.conn = nil
+		_ = c.netConn.Close()
+		c.netConn = nil
 		return err
 	}
 
-	err = c.conn.Close()
-	c.conn = nil
+	err = c.netConn.Close()
+	c.netConn = nil
 	if err != nil {
 		return &clientConnectionError{err: err}
 	}
@@ -219,7 +220,7 @@ func (c *baseConn) close() error {
 	return nil
 }
 
-func (c *baseConn) ScriptFlow(ctx context.Context, q sfQuery) error {
+func (c *baseConn) scriptFlow(ctx context.Context, q sfQuery) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -229,10 +230,10 @@ func (c *baseConn) ScriptFlow(ctx context.Context, q sfQuery) error {
 		return e
 	}
 
-	return c.releaseReader(r, c.scriptFlow(r, q))
+	return c.releaseReader(r, c.execScriptFlow(r, q))
 }
 
-func (c *baseConn) GranularFlow(ctx context.Context, q *gfQuery) error {
+func (c *baseConn) granularFlow(ctx context.Context, q *gfQuery) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -242,5 +243,5 @@ func (c *baseConn) GranularFlow(ctx context.Context, q *gfQuery) error {
 		return e
 	}
 
-	return c.releaseReader(r, c.granularFlow(r, q))
+	return c.releaseReader(r, c.execGranularFlow(r, q))
 }
