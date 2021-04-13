@@ -25,16 +25,51 @@ import (
 	"github.com/xdg/scram"
 )
 
-const (
-	protocolVersionMajor uint16 = 0
-	protocolVersionMinor uint16 = 10
+var (
+	protocolVersionMin = version{0, 9}
+	protocolVersionMax = version{0, 10}
 )
+
+type version struct {
+	major uint16
+	minor uint16
+}
+
+func (v version) gt(other version) bool {
+	switch {
+	case v.major > other.major:
+		return true
+	case v.major < other.minor:
+		return false
+	default:
+		return v.minor > other.minor
+	}
+}
+
+func (v version) gte(other version) bool {
+	if v == other {
+		return true
+	}
+
+	return v.gt(other)
+}
+
+func (v version) lt(other version) bool {
+	switch {
+	case v.major < other.major:
+		return true
+	case v.major > other.minor:
+		return false
+	default:
+		return v.minor < other.minor
+	}
+}
 
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ClientHandshake)
-	w.PushUint16(protocolVersionMajor)
-	w.PushUint16(protocolVersionMinor)
+	w.PushUint16(protocolVersionMax.major)
+	w.PushUint16(protocolVersionMax.minor)
 	w.PushUint16(2) // number of parameters
 	w.PushString("database")
 	w.PushString(cfg.database)
@@ -61,14 +96,25 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			// The client _MUST_ close the connection
 			// if the protocol version can't be supported.
 			// https://edgedb.com/docs/internals/protocol/overview
-			major := r.PopUint16()
-			minor := r.PopUint16()
+			protocolVersion := version{r.PopUint16(), r.PopUint16()}
 
-			if major != protocolVersionMajor || minor != protocolVersionMinor {
+			if protocolVersion.lt(protocolVersionMin) ||
+				protocolVersion.gt(protocolVersionMax) {
 				_ = c.conn.Close()
 				msg := fmt.Sprintf(
-					"unsupported protocol version: %v.%v", major, minor)
+					"unsupported protocol version: %v.%v",
+					protocolVersion.major,
+					protocolVersion.minor,
+				)
 				return &unsupportedProtocolVersionError{msg: msg}
+			}
+
+			c.protocolVersion = protocolVersion
+
+			n := r.PopUint16()
+			for i := uint16(0); i < n; i++ {
+				r.PopBytes() // extension name
+				ignoreHeaders(r)
 			}
 		case message.ServerKeyData:
 			r.DiscardMessage() // key data

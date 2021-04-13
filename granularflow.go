@@ -112,7 +112,10 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 
 func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) (idPair, error) {
 	headers := copyHeaders(q.headers)
-	headers[header.ExplicitObjectIDs] = []byte("true")
+
+	if c.protocolVersion.gte(version{0, 10}) {
+		headers[header.ExplicitObjectIDs] = []byte("true")
+	}
 
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Prepare)
@@ -322,7 +325,10 @@ func (c *baseConn) optimistic(
 	cdcs codecPair,
 ) error {
 	headers := copyHeaders(q.headers)
-	headers[header.ExplicitObjectIDs] = []byte("true")
+
+	if c.protocolVersion.gte(version{0, 10}) {
+		headers[header.ExplicitObjectIDs] = []byte("true")
+	}
 
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.OptimisticExecute)

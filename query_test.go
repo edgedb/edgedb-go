@@ -28,6 +28,10 @@ import (
 )
 
 func TestObjectWithoutID(t *testing.T) {
+	if conn.conn.protocolVersion.lt(version{0, 10}) {
+		t.Skip("not expected to pass on protocol versions below 0.10")
+	}
+
 	ctx := context.Background()
 
 	type Database struct {
