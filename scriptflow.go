@@ -30,6 +30,16 @@ func ignoreHeaders(r *buff.Reader) {
 	}
 }
 
+func copyHeaders(h msgHeaders) msgHeaders {
+	cpy := make(msgHeaders, len(h))
+
+	for key, val := range cpy {
+		cpy[key] = val
+	}
+
+	return cpy
+}
+
 func writeHeaders(w *buff.Writer, headers msgHeaders) {
 	w.PushUint16(uint16(len(headers)))
 

@@ -51,7 +51,6 @@ func TestPoolRejectsTransaction(t *testing.T) {
 	ctx := context.Background()
 	p, err := Connect(ctx, opts)
 	require.Nil(t, err)
-	defer p.Close() // nolint:errcheck
 
 	expected := "edgedb.DisabledCapabilityError: " +
 		"cannot execute transaction control commands"
@@ -71,6 +70,9 @@ func TestPoolRejectsTransaction(t *testing.T) {
 
 	err = p.QueryOneJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
+
+	err = p.Close()
+	assert.Nil(t, err)
 }
 
 func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {

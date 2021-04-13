@@ -23,6 +23,9 @@ const (
 	AllowCapabilities        = 0xFF04
 	allCapabilities   uint64 = 0xffffffffffffffff
 
+	// ExplicitObjectIDs tells the server not to inject object ids.
+	ExplicitObjectIDs = 0xFF05
+
 	// AllowCapabilitieTransaction represents the transaction capability
 	// in the AllowCapabilities header.
 	AllowCapabilitieTransaction uint64 = 0b100

@@ -95,6 +95,10 @@ func BuildDecoder(
 	typ reflect.Type,
 	path Path,
 ) (Decoder, error) {
+	if desc.ID == descriptor.IDZero {
+		return noOpDecoder{}, nil
+	}
+
 	switch desc.Type {
 	case descriptor.Set:
 		return buildSetDecoder(desc, typ, path)

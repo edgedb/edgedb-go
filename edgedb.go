@@ -49,6 +49,12 @@ type baseConn struct {
 	inCodecCache  *cache.Cache
 	outCodecCache *cache.Cache
 
+	protocolVersion version
+
+	// indicates whether the protocol version supports
+	// the EXPLICIT_OBJECTIDS header.
+	explicitIDs bool
+
 	cfg *connConfig
 }
 

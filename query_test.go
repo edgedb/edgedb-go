@@ -27,6 +27,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestObjectWithoutID(t *testing.T) {
+	if conn.conn.protocolVersion.lt(version{0, 10}) {
+		t.Skip("not expected to pass on protocol versions below 0.10")
+	}
+
+	ctx := context.Background()
+
+	type Database struct {
+		Name string `edgedb:"name"`
+	}
+
+	var result Database
+	err := conn.QueryOne(
+		ctx, `
+		SELECT sys::Database{ name }
+		FILTER .name = 'edgedb'
+		LIMIT 1`,
+		&result,
+	)
+	assert.Nil(t, err)
+	assert.Equal(t, "edgedb", result.Name)
+}
+
 func TestWrongNumberOfArguments(t *testing.T) {
 	var result string
 	ctx := context.Background()
