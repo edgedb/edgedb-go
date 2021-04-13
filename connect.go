@@ -110,6 +110,9 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			}
 
 			c.protocolVersion = protocolVersion
+			if protocolVersion.gte(version{0, 10}) {
+				c.explicitIDs = true
+			}
 
 			n := r.PopUint16()
 			for i := uint16(0); i < n; i++ {

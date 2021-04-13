@@ -24,8 +24,17 @@ import (
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-type nilDecoder struct{}
+// noOpDecoder decodes empty blocks i.e. does nothing.
+//
+//   There is one special type with type id of zero:
+//   00000000-0000-0000-0000-000000000000.
+//   The describe result of this type contains zero blocks.
+//   It’s used when a statement returns no meaningful results,
+//   e.g. the CREATE DATABASE example statement.
+//
+// https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
+type noOpDecoder struct{}
 
-func (c nilDecoder) DescriptorID() types.UUID { return descriptor.NilID }
+func (c noOpDecoder) DescriptorID() types.UUID { return descriptor.IDZero }
 
-func (c nilDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {}
+func (c noOpDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {}

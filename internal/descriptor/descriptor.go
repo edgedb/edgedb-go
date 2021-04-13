@@ -24,8 +24,9 @@ import (
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-// NilID is the nil descriptor's ID
-var NilID = types.UUID{}
+// IDZero is descriptor ID 00000000-0000-0000-0000-000000000000
+// https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
+var IDZero = types.UUID{}
 
 // Type represents a descriptor type.
 type Type uint8

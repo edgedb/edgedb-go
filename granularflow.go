@@ -113,7 +113,7 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) (idPair, error) {
 	headers := copyHeaders(q.headers)
 
-	if c.protocolVersion.gte(version{0, 10}) {
+	if c.explicitIDs {
 		headers[header.ExplicitObjectIDs] = []byte("true")
 	}
 
@@ -200,9 +200,9 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 			// output descriptor ID
 			outID := r.PopUUID()
 
-			if outID == descriptor.NilID {
+			if outID == descriptor.IDZero {
 				r.Discard(4) // data length is always 0 for nil descriptor
-				descs.out = descriptor.Descriptor{ID: descriptor.NilID}
+				descs.out = descriptor.Descriptor{ID: descriptor.IDZero}
 			} else {
 				descs.out = descriptor.Pop(r.PopSlice(r.PopUint32()))
 			}
@@ -326,7 +326,7 @@ func (c *baseConn) optimistic(
 ) error {
 	headers := copyHeaders(q.headers)
 
-	if c.protocolVersion.gte(version{0, 10}) {
+	if c.explicitIDs {
 		headers[header.ExplicitObjectIDs] = []byte("true")
 	}
 

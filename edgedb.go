@@ -45,10 +45,15 @@ type baseConn struct {
 	acquireReaderSignal chan struct{}
 	readerChan          chan *buff.Reader
 
-	typeIDCache     *cache.Cache
-	inCodecCache    *cache.Cache
-	outCodecCache   *cache.Cache
+	typeIDCache   *cache.Cache
+	inCodecCache  *cache.Cache
+	outCodecCache *cache.Cache
+
 	protocolVersion version
+
+	// indicates whether the protocol version supports
+	// the EXPLICIT_OBJECTIDS header.
+	explicitIDs bool
 
 	cfg *connConfig
 }
