@@ -22,7 +22,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"syscall"
 	"testing"
 	"time"
 
@@ -477,10 +476,9 @@ func TestConnectRefused(t *testing.T) {
 	require.True(t, errors.As(err, &edbErr), msg)
 	assert.True(
 		t,
-		edbErr.Category(ClientConnectionFailedTemporarilyError),
+		edbErr.Category(ClientConnectionFailedError),
 		msg,
 	)
-	assert.True(t, errors.Is(err, syscall.ECONNREFUSED), msg)
 }
 
 func TestConnectInvalidName(t *testing.T) {
@@ -533,9 +531,8 @@ func TestConnectRefusedUnixSocket(t *testing.T) {
 	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
 	assert.True(
 		t,
-		edbErr.Category(ClientConnectionFailedTemporarilyError),
+		edbErr.Category(ClientConnectionFailedError),
 		"wrong error: %v",
 		err,
 	)
-	assert.True(t, errors.Is(err, syscall.ENOENT), "wrong error: %v", err)
 }
