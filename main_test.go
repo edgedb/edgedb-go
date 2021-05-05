@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"testing"
@@ -48,8 +49,8 @@ func executeOrPanic(command string) {
 func startServer() (err error) {
 	log.Print("starting new server")
 
-	cmdName := os.Getenv("EDGEDB_SERVER_BIN")
-	if cmdName == "" {
+	serverBin := os.Getenv("EDGEDB_SERVER_BIN")
+	if serverBin == "" {
 		log.Fatal("EDGEDB_SERVER_BIN not set")
 	}
 
@@ -63,10 +64,19 @@ func startServer() (err error) {
 			`CREATE SUPERUSER ROLE test { SET password := "shhh"  }`,
 	}
 
+	var cmdName string
+	if runtime.GOOS == "windows" {
+		cmdName = "wsl"
+		cmdArgs = append([]string{
+			"sudo", "-u", "nobody", serverBin,
+		}, cmdArgs...)
+	} else {
+		cmdName = serverBin
+	}
+
 	log.Println(cmdName, strings.Join(cmdArgs, " "))
 
 	cmd := exec.Command(cmdName, cmdArgs...)
-	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -88,8 +98,7 @@ func startServer() (err error) {
 	}
 
 	type serverData struct {
-		Port int    `json:"port"`
-		Host string `json:"runstate_dir"`
+		Port int `json:"port"`
 	}
 
 	var data serverData
@@ -103,7 +112,7 @@ func startServer() (err error) {
 	}
 
 	opts = Options{
-		Hosts:    []string{data.Host},
+		Hosts:    []string{"127.0.0.1"},
 		Ports:    []int{data.Port},
 		User:     "test",
 		Password: "shhh",

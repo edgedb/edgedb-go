@@ -16,8 +16,7 @@ jobs:
       matrix:
         go-version: ["1.15", "1.16"]
         edgedb-version: [stable, nightly]
-        os: [ubuntu-latest, macos-latest]
-
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
 
@@ -35,6 +34,14 @@ jobs:
         run: |
           go build .
 
+      - name: Setup WSL
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: vampire/setup-wsl@v1
+        with:
+          additional-packages:
+            ca-certificates
+            curl
+
       - name: Install EdgeDB
         uses: edgedb/setup-edgedb@v1
         with:
@@ -45,5 +52,10 @@ jobs:
           EDGEDB_SERVER_BIN: edgedb-server
         run: |
           make test
+
+      - name: Exercise Benchmarks
+        env:
+          EDGEDB_SERVER_BIN: edgedb-server
+        run: |
           # run micro benchmarks to be sure they still work
           make bench
