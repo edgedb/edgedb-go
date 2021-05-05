@@ -17,11 +17,14 @@
 package edgedb
 
 import (
+	"crypto/sha1"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	usr "os/user"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -164,6 +167,24 @@ func pop(m map[string]string, key string) string {
 	return v
 }
 
+func stashPath(p string) (string, error) {
+	p, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return "", err
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	hash := fmt.Sprintf("%x", sha1.Sum([]byte(p)))
+	baseName := filepath.Base(p)
+	dirName := baseName + "-" + hash
+
+	return path.Join(home, ".edgedb", "projects", dirName), nil
+}
+
 func parseConnectDSNAndArgs(
 	dsn string,
 	opts *Options,
@@ -178,6 +199,49 @@ func parseConnectDSNAndArgs(
 	serverSettings := make(map[string]string, len(opts.ServerSettings))
 	for k, v := range opts.ServerSettings {
 		serverSettings[k] = v
+	}
+
+	if dsn == "" && len(hosts) == 0 && len(ports) == 0 &&
+		os.Getenv("EDGEDB_HOST") == "" && os.Getenv("EDGEDB_PORT") == "" {
+		if instanceName := os.Getenv("EDGEDB_INSTANCE"); instanceName != "" {
+			dsn = instanceName
+		} else {
+			dir, err := os.Getwd()
+			if err != nil {
+				return nil, &clientConnectionError{err: err}
+			}
+
+			tomlPath := path.Join(dir, "edgedb.toml")
+			if _, e := os.Stat(tomlPath); os.IsNotExist(e) {
+				return nil, &clientConnectionError{
+					msg: "no `edgedb.toml` found " +
+						"and no connection options specified" +
+						" either via arguments to connect API " +
+						"or via environment variables " +
+						"EDGEDB_HOST/EDGEDB_PORT or EDGEDB_INSTANCE",
+				}
+			}
+
+			stashDir, err := stashPath(dir)
+			if err != nil {
+				return nil, &clientConnectionError{err: err}
+			}
+
+			if _, e := os.Stat(stashDir); os.IsNotExist(e) {
+				return nil, &clientConnectionError{
+					msg: "Found `edgedb.toml` " +
+						"but the project is not initialized. " +
+						"Run `edgedb project init`.",
+				}
+			}
+
+			data, err := ioutil.ReadFile(path.Join(stashDir, "instance-name"))
+			if err != nil {
+				return nil, &clientConnectionError{err: err}
+			}
+
+			dsn = strings.TrimSpace(string(data))
+		}
 	}
 
 	if dsn != "" && strings.HasPrefix(dsn, "edgedb://") {
