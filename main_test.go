@@ -20,11 +20,14 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -46,7 +49,46 @@ func executeOrPanic(command string) {
 	}
 }
 
-func startServer() (err error) {
+type serverInfo struct {
+	Port int `json:"port"`
+}
+
+func getServerInfo(fileName string) (*serverInfo, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close() // nolint:errcheck
+
+	var line string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.HasPrefix(line, "READY=") {
+			break
+		}
+	}
+
+	err = scanner.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	if line == "" {
+		return nil, errors.New("no data found in " + fileName)
+	}
+
+	var info serverInfo
+	line = strings.TrimPrefix(line, "READY=")
+	err = json.Unmarshal([]byte(line), &info)
+	if err != nil {
+		return nil, err
+	}
+
+	return &info, nil
+}
+
+func startServer() {
 	log.Print("starting new server")
 
 	serverBin := os.Getenv("EDGEDB_SERVER_BIN")
@@ -54,73 +96,66 @@ func startServer() (err error) {
 		log.Fatal("EDGEDB_SERVER_BIN not set")
 	}
 
-	cmdArgs := []string{
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	statusFile := path.Join(dir, "status-file")
+	log.Println("status file:", dir)
+
+	statusFileUnix := strings.ReplaceAll(statusFile, "C:", "/mnt/c")
+	statusFileUnix = strings.ReplaceAll(statusFileUnix, `\`, "/")
+	statusFileUnix = strings.ToLower(statusFileUnix)
+
+	args := []string{
+		serverBin,
 		"--temp-dir",
 		"--testmode",
-		"--echo-runtime-info",
+		"--emit-server-status=" + statusFileUnix,
 		"--port=auto",
 		"--auto-shutdown",
 		`--bootstrap-command=` +
 			`CREATE SUPERUSER ROLE test { SET password := "shhh"  }`,
 	}
 
-	var cmdName string
 	if runtime.GOOS == "windows" {
-		cmdName = "wsl"
-		cmdArgs = append([]string{
-			"sudo", "-u", "nobody", serverBin,
-		}, cmdArgs...)
-	} else {
-		cmdName = serverBin
+		args = append([]string{"wsl", "-u", "edgedb"}, args...)
 	}
 
-	log.Println(cmdName, strings.Join(cmdArgs, " "))
+	log.Println("starting server with:", strings.Join(args, " "))
 
-	cmd := exec.Command(cmdName, cmdArgs...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 	err = cmd.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var text string
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		text = scanner.Text()
-		fmt.Println(text)
-		if strings.HasPrefix(text, "EDGEDB_SERVER_DATA:") {
+	var info *serverInfo
+	for i := 0; i < 250; i++ {
+		info, err = getServerInfo(statusFile)
+		if err == nil && info != nil {
 			break
 		}
+		time.Sleep(time.Second)
 	}
 
-	type serverData struct {
-		Port int `json:"port"`
-	}
-
-	var data serverData
-	encoded := strings.TrimPrefix(text, "EDGEDB_SERVER_DATA:")
-	err = json.Unmarshal([]byte(encoded), &data)
 	if err != nil {
-		if e := cmd.Process.Kill(); e != nil {
-			err = fmt.Errorf("%v AND %v", err, e)
-		}
+		cmd.Process.Kill() // nolint:errcheck
 		log.Fatal(err)
 	}
 
 	opts = Options{
 		Hosts:    []string{"127.0.0.1"},
-		Ports:    []int{data.Port},
+		Ports:    []int{info.Port},
 		User:     "test",
 		Password: "shhh",
 		Database: "edgedb",
 	}
 
 	log.Print("server started")
-	return nil
 }
 
 func TestMain(m *testing.M) {
@@ -138,10 +173,7 @@ func TestMain(m *testing.M) {
 		os.Exit(code)
 	}()
 
-	err = startServer()
-	if err != nil {
-		panic(err)
-	}
+	startServer()
 
 	ctx := context.Background()
 	log.Println("connecting")
