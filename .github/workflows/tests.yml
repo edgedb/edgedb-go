@@ -38,6 +38,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         uses: vampire/setup-wsl@v1
         with:
+          wsl-shell-user: edgedb
           additional-packages:
             ca-certificates
             curl
