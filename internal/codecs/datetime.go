@@ -27,19 +27,27 @@ import (
 )
 
 var (
-	dateTimeType      = reflect.TypeOf(time.Time{})
-	localDateTimeType = reflect.TypeOf(types.LocalDateTime{})
-	localDateType     = reflect.TypeOf(types.LocalDate{})
-	localTimeType     = reflect.TypeOf(types.LocalTime{})
-	durationType      = reflect.TypeOf(types.Duration(0))
+	dateTimeType         = reflect.TypeOf(time.Time{})
+	localDateTimeType    = reflect.TypeOf(types.LocalDateTime{})
+	localDateType        = reflect.TypeOf(types.LocalDate{})
+	localTimeType        = reflect.TypeOf(types.LocalTime{})
+	durationType         = reflect.TypeOf(types.Duration(0))
+	relativeDurationType = reflect.TypeOf(types.RelativeDuration{})
 )
 
 var (
-	dateTimeID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xa}
-	localDTID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xb}
-	localDateID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xc}
-	localTimeID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xd}
-	durationID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xe}
+	dateTimeID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0a}
+	localDTID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0b}
+	localDateID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0c}
+	localTimeID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0d}
+	durationID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0e}
+	relativeDurationID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x11}
 )
 
 // DateTimeMarshaler is the interface implemented by an object
@@ -352,6 +360,84 @@ func (c *durationCodec) Encode(
 	default:
 		return fmt.Errorf(
 			"expected %v to be edgedb.Duration got %T", path, val,
+		)
+	}
+
+	return nil
+}
+
+// RelativeDurationMarshaler is the interface implemented by an object that can
+// marshal itself into the cal::relative_duration wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats
+//
+// MarshalEdgeDBRelativeDuration encodes the receiver into a binary form and
+// returns the result.
+type RelativeDurationMarshaler interface {
+	MarshalEdgeDBRelativeDuration() ([]byte, error)
+}
+
+// RelativeDurationUnmarshaler is the interface implemented by an object that
+// can unmarshal the cal::relative_duration wire format representation of
+// itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-duration
+//
+// UnmarshalEdgeDBRelativeDuration must be able to decode the
+// cal::relative_duration wire format.  UnmarshalEdgeDBRelativeDuration must
+// copy the data if it wishes to retain the data after returning.
+type RelativeDurationUnmarshaler interface {
+	UnmarshalEdgeDBRelativeDuration(data []byte) error
+}
+
+type relativeDurationCodec struct{}
+
+func (c *relativeDurationCodec) Type() reflect.Type {
+	return relativeDurationType
+}
+
+func (c *relativeDurationCodec) DescriptorID() types.UUID {
+	return relativeDurationID
+}
+
+type relativeDurationLayout struct {
+	microseconds uint64
+	days         uint32
+	months       uint32
+}
+
+func (c *relativeDurationCodec) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) {
+	rd := (*relativeDurationLayout)(out)
+	rd.microseconds = r.PopUint64()
+	rd.days = r.PopUint32()
+	rd.months = r.PopUint32()
+}
+
+func (c *relativeDurationCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+) error {
+	switch in := val.(type) {
+	case types.RelativeDuration:
+		data := (*relativeDurationLayout)(unsafe.Pointer(&in))
+		w.PushUint32(16) // data length
+		w.PushUint64(data.microseconds)
+		w.PushUint32(data.days)
+		w.PushUint32(data.months)
+	case RelativeDurationMarshaler:
+		data, err := in.MarshalEdgeDBRelativeDuration()
+		if err != nil {
+			return err
+		}
+
+		w.BeginBytes()
+		w.PushBytes(data)
+		w.EndBytes()
+	default:
+		return fmt.Errorf(
+			"expected %v to be edgedb.RelativeDuration got %T", path, val,
 		)
 	}
 

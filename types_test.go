@@ -964,19 +964,15 @@ func TestSendAndReceiveDuration(t *testing.T) {
 		Duration(3074457345618258432),
 	}
 
-	strings := []string{
-		"00:00:00",
-		"-00:00:00.000001",
-		"24:00:00",
-		"00:00:01",
-		"854015929:20:18.258432",
-	}
-
 	var maxDuration int64 = 3_154_000_000_000_000
 	for i := 0; i < 1000; i++ {
 		d := Duration(rand.Int63n(2*maxDuration) - maxDuration)
 		durations = append(durations, d)
-		strings = append(strings, d.String())
+	}
+
+	strings := make([]string, len(durations))
+	for i := 0; i < len(strings); i++ {
+		strings[i] = durations[i].String()
 	}
 
 	type Result struct {
@@ -1061,6 +1057,118 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 		Result{
 			Encoded: Duration(0x28dd117280),
 			Decoded: CustomDuration{data},
+		},
+		result,
+	)
+}
+
+func TestSendAndReceiveRelativeDuration(t *testing.T) {
+	ctx := context.Background()
+
+	var duration RelativeDuration
+	err := conn.QueryOne(ctx, "SELECT <cal::relative_duration>'1y'", &duration)
+	if err != nil {
+		t.Skip("server version is too old for this feature")
+	}
+
+	rds := []RelativeDuration{
+		NewRelativeDuration(0, 0, 0),
+		NewRelativeDuration(0, 0, 1),
+		NewRelativeDuration(0, 0, -1),
+		NewRelativeDuration(0, 1, 0),
+		NewRelativeDuration(0, -1, 0),
+		NewRelativeDuration(1, 0, 0),
+		NewRelativeDuration(-1, 0, 0),
+		NewRelativeDuration(1, 1, 1),
+		NewRelativeDuration(-1, -1, -1),
+	}
+
+	for i := 0; i < 5_000; i++ {
+		rds = append(rds, NewRelativeDuration(
+			rand.Int31n(101)-int32(50),
+			rand.Int31n(1_001)-int32(500),
+			rand.Int63n(2_000_000_000)-int64(1_000_000_000),
+		))
+	}
+
+	type Result struct {
+		RoundTrip RelativeDuration `edgedb:"round_trip"`
+		Str       string           `edgedb:"str"`
+	}
+
+	query := `
+		WITH args := array_unpack(<array<cal::relative_duration>>$0)
+		SELECT (
+			round_trip := args,
+			str := <str>args,
+		)
+	`
+
+	var results []Result
+	err = conn.Query(ctx, query, &results, rds)
+	require.Nil(t, err, "unexpected error: %v", err)
+	require.Equal(t, len(rds), len(results), "wrong number of results")
+
+	for i, rd := range rds {
+		t.Run(rd.String(), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, rd, result.RoundTrip, "round trip failed")
+			assert.Equal(t, rd.String(), result.Str, "incorrect String() val")
+		})
+	}
+}
+
+type CustomRelativeDuration struct {
+	data [16]byte
+}
+
+func (m CustomRelativeDuration) MarshalEdgeDBRelativeDuration() (
+	[]byte, error) {
+	return m.data[:], nil
+}
+
+func (m *CustomRelativeDuration) UnmarshalEdgeDBRelativeDuration(
+	data []byte,
+) error {
+	copy(m.data[:], data)
+	return nil
+}
+
+func TestSendAndReceiveRelativeDurationMarshaler(t *testing.T) {
+	ctx := context.Background()
+
+	var duration RelativeDuration
+	err := conn.QueryOne(ctx, "SELECT <cal::relative_duration>'1y'", &duration)
+	if err != nil {
+		t.Skip("server version is too old for this feature")
+	}
+
+	query := `SELECT (
+		encoded := <cal::relative_duration>$0,
+		decoded := <cal::relative_duration>
+			'8 months 5 days 48 hours 45 minutes 7.6 seconds',
+	)`
+
+	type Result struct {
+		Encoded RelativeDuration       `edgedb:"encoded"`
+		Decoded CustomRelativeDuration `edgedb:"decoded"`
+	}
+
+	data := [16]byte{
+		0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+		0x00, 0x00, 0x00, 0x05, // days
+		0x00, 0x00, 0x00, 0x08, // months
+	}
+	arg := &CustomRelativeDuration{}
+	copy(arg.data[:], data[:])
+
+	var result Result
+	err = conn.QueryOne(ctx, query, &result, arg)
+	require.Nil(t, err, "unexpected error: %v", err)
+	assert.Equal(t,
+		Result{
+			Encoded: NewRelativeDuration(8, 5, 0x28dd117280),
+			Decoded: CustomRelativeDuration{data},
 		},
 		result,
 	)

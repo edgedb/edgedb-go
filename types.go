@@ -33,8 +33,11 @@ type (
 	// LocalTime is a time without a time zone.
 	LocalTime = edgedbtypes.LocalTime
 
-	// Duration representing a span of time.
+	// Duration represents a span of time.
 	Duration = edgedbtypes.Duration
+
+	// RelativeDuration represents a fuzzy/human span of time.
+	RelativeDuration = edgedbtypes.RelativeDuration
 )
 
 var (
@@ -49,4 +52,7 @@ var (
 
 	// NewLocalTime returns a new LocalTime
 	NewLocalTime = edgedbtypes.NewLocalTime
+
+	// NewRelativeDuration returns a new RelativeDuration
+	NewRelativeDuration = edgedbtypes.NewRelativeDuration
 )

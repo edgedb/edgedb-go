@@ -18,11 +18,19 @@ package edgedbtypes
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
 
+var zeroRelativeDuration = RelativeDuration{}
+
 const (
+	monthsPerYear  int32 = 12
+	usecsPerHour   int64 = 3_600_000_000
+	usecsPerMinute int64 = 60_000_000
+	usecsPerSecond int64 = 1_000_000
+
 	// timeShift is the number of seconds
 	// between 0001-01-01T00:00 and 1970-01-01T00:00
 	timeShift = 62135596800
@@ -114,43 +122,139 @@ type Duration int64
 
 func (d Duration) String() string {
 	if d == 0 {
-		return "0s"
+		return "PT0S"
 	}
 
-	x := int64(d)
-	neg := ""
-	if x < 0 {
-		x = -x
-		neg = "-"
+	usecs := int64(d)
+	hours := usecs / usecsPerHour
+	usecs -= hours * usecsPerHour
+	minutes := usecs / usecsPerMinute
+	usecs -= minutes * usecsPerMinute
+	seconds := usecs / usecsPerSecond
+	usecs -= seconds * usecsPerSecond
+
+	buf := []string{"PT"}
+
+	if hours != 0 {
+		buf = append(buf, strconv.FormatInt(hours, 10), "H")
 	}
 
-	if x < 1_000 {
-		return fmt.Sprintf("%v%vus", neg, x)
+	if minutes != 0 {
+		buf = append(buf, strconv.FormatInt(minutes, 10), "M")
 	}
 
-	us := x % 1_000
-	ms := (x % 1_000_000) / 1_000
-	if x < 1_000_000 {
-		return fmt.Sprintf("%v%vms", neg, fmtFloat(ms, us*1_000))
+	if seconds != 0 || usecs != 0 {
+		if seconds < 0 || usecs < 0 {
+			buf = append(buf, "-")
+		}
+
+		if seconds < 0 {
+			seconds = -seconds
+		}
+
+		buf = append(buf, strconv.FormatInt(seconds, 10))
+
+		if usecs != 0 {
+			if usecs < 0 {
+				usecs = -usecs
+			}
+
+			str := fmt.Sprintf(".%0.6d", usecs)
+			str = strings.TrimRight(str, "0")
+			buf = append(buf, str)
+		}
+
+		buf = append(buf, "S")
 	}
 
-	ms = x % 1_000_000
-	sec := (x % 60000000) / 1_000_000
-	str := fmt.Sprintf("%vs", fmtFloat(sec, ms))
-	str = strings.TrimPrefix(str, "0s")
-
-	min := (x % 3600000000) / 60000000
-	str = fmt.Sprintf("%vm%v", min, str)
-	str = strings.TrimPrefix(str, "0m")
-
-	hrs := x / 3600000000
-	str = fmt.Sprintf("%vh%v", hrs, str)
-	str = strings.TrimPrefix(str, "0h")
-
-	return neg + str
+	return strings.Join(buf, "")
 }
 
-func fmtFloat(x int64, y int64) string {
-	decimal := strings.TrimRight(fmt.Sprintf(".%06d", y), ".0")
-	return fmt.Sprintf("%v%v", x, decimal)
+// NewRelativeDuration returns a new RelativeDuration
+func NewRelativeDuration(
+	months, days int32,
+	microseconds int64,
+) RelativeDuration {
+	return RelativeDuration{microseconds, days, months}
+}
+
+// RelativeDuration represents the elapsed time between two instants in a fuzzy
+// human way.
+type RelativeDuration struct {
+	microseconds int64
+	days         int32
+	months       int32
+}
+
+func (rd RelativeDuration) String() string {
+	if rd == zeroRelativeDuration {
+		return "PT0S"
+	}
+
+	buf := []string{"P"}
+
+	if rd.months != 0 {
+		years := rd.months / monthsPerYear
+		months := rd.months % monthsPerYear
+
+		if years != 0 {
+			buf = append(buf, strconv.FormatInt(int64(years), 10), "Y")
+		}
+
+		if months != 0 {
+			buf = append(buf, strconv.FormatInt(int64(months), 10), "M")
+		}
+	}
+
+	if rd.days != 0 {
+		buf = append(buf, strconv.FormatInt(int64(rd.days), 10), "D")
+	}
+
+	if rd.microseconds == 0 {
+		return strings.Join(buf, "")
+	}
+
+	buf = append(buf, "T")
+
+	usecs := rd.microseconds
+	hours := usecs / usecsPerHour
+	usecs -= hours * usecsPerHour
+	minutes := usecs / usecsPerMinute
+	usecs -= minutes * usecsPerMinute
+	seconds := usecs / usecsPerSecond
+	usecs -= seconds * usecsPerSecond
+
+	if hours != 0 {
+		buf = append(buf, strconv.FormatInt(hours, 10), "H")
+	}
+
+	if minutes != 0 {
+		buf = append(buf, strconv.FormatInt(minutes, 10), "M")
+	}
+
+	if seconds != 0 || usecs != 0 {
+		if seconds < 0 || usecs < 0 {
+			buf = append(buf, "-")
+		}
+
+		if seconds < 0 {
+			seconds = -seconds
+		}
+
+		buf = append(buf, strconv.FormatInt(seconds, 10))
+
+		if usecs != 0 {
+			if usecs < 0 {
+				usecs = -usecs
+			}
+
+			str := fmt.Sprintf(".%0.6d", usecs)
+			str = strings.TrimRight(str, "0")
+			buf = append(buf, str)
+		}
+
+		buf = append(buf, "S")
+	}
+
+	return strings.Join(buf, "")
 }

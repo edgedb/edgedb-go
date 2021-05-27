@@ -183,6 +183,8 @@ func buildScalarCodec(desc descriptor.Descriptor) (Codec, error) {
 		return &jsonCodec{}, nil
 	case bigIntID:
 		return &bigIntCodec{}, nil
+	case relativeDurationID:
+		return &relativeDurationCodec{}, nil
 	default:
 		s := fmt.Sprintf("%#v\n", desc)
 		return nil, fmt.Errorf("unknown scalar type id %v %v", desc.ID, s)
