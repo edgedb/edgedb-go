@@ -116,7 +116,7 @@ func startServer() {
 		"--port=auto",
 		"--auto-shutdown",
 		`--bootstrap-command=` +
-			`CREATE SUPERUSER ROLE test { SET password := "shhh"  }`,
+			`CREATE SUPERUSER ROLE test { SET password := "shhh" }`,
 	}
 
 	if runtime.GOOS == "windows" {
