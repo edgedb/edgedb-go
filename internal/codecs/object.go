@@ -24,8 +24,14 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/edgedb/edgedb-go/internal/introspect"
 )
+
+// OptionalDecoder is used when decoding optional shape fields.
+type OptionalDecoder interface {
+	DecodeMissing(unsafe.Pointer)
+	DecodePresent(unsafe.Pointer)
+}
 
 func buildObjectDecoder(
 	desc descriptor.Descriptor,
@@ -41,7 +47,7 @@ func buildObjectDecoder(
 	fields := make([]*DecoderField, len(desc.Fields))
 
 	for i, field := range desc.Fields {
-		sf, ok := marshal.StructField(typ, field.Name)
+		sf, ok := introspect.StructField(typ, field.Name)
 		if !ok {
 			return nil, fmt.Errorf(
 				"expected %v to have a field named %q", path, field.Name,
@@ -53,9 +59,17 @@ func buildObjectDecoder(
 			sf.Type,
 			path.AddField(field.Name),
 		)
-
 		if err != nil {
 			return nil, err
+		}
+
+		if !field.Required {
+			if _, isOptional := child.(OptionalDecoder); !isOptional {
+				return nil, fmt.Errorf(
+					"expected %v at %v.%v to implement OptionalUnmarshaler "+
+						"because the field is not required",
+					sf.Type, path, field.Name)
+			}
 		}
 
 		fields[i] = &DecoderField{
@@ -65,7 +79,13 @@ func buildObjectDecoder(
 		}
 	}
 
-	return &objectDecoder{desc.ID, fields}, nil
+	decoder := objectDecoder{desc.ID, fields}
+
+	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+		return &optionalObjectDecoder{decoder, typ}, nil
+	}
+
+	return &decoder, nil
 }
 
 type objectDecoder struct {
@@ -88,13 +108,48 @@ func (c *objectDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	for _, field := range c.fields {
 		r.Discard(4) // reserved
 
+		p := pAdd(out, field.offset)
 		elmLen := r.PopUint32()
 		if elmLen == 0xffffffff {
 			// element length -1 means missing field
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
-			continue
+			field.decoder.DecodeMissing(p)
+		} else {
+			field.decoder.Decode(r.PopSlice(elmLen), p)
 		}
-
-		field.decoder.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
 	}
+}
+
+func (c *objectDecoder) DecodeMissing(out unsafe.Pointer) {
+	panic("unreachable")
+}
+
+type optionalObjectDecoder struct {
+	objectDecoder
+	typ reflect.Type
+}
+
+var (
+	trueValue  = reflect.ValueOf(true)
+	falseValue = reflect.ValueOf(false)
+)
+
+func (c *optionalObjectDecoder) DecodeMissing(out unsafe.Pointer) {
+	val := reflect.NewAt(c.typ, out)
+	method := val.MethodByName("SetMissing")
+	method.Call([]reflect.Value{trueValue})
+}
+
+func (c *optionalObjectDecoder) DecodePresent(out unsafe.Pointer) {
+	val := reflect.NewAt(c.typ, out)
+	method := val.MethodByName("SetMissing")
+	method.Call([]reflect.Value{falseValue})
+}
+
+func (c *optionalObjectDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) {
+	c.DecodePresent(out)
+	c.objectDecoder.Decode(r, out)
 }

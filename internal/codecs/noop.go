@@ -38,3 +38,5 @@ type noOpDecoder struct{}
 func (c noOpDecoder) DescriptorID() types.UUID { return descriptor.IDZero }
 
 func (c noOpDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {}
+
+func (c noOpDecoder) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
