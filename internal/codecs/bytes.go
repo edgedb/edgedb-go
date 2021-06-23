@@ -23,11 +23,14 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
-	bytesID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
-	bytesType = reflect.TypeOf([]byte{})
+	bytesID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
+	bytesType         = reflect.TypeOf([]byte{})
+	optionalBytesType = reflect.TypeOf(types.OptionalBytes{})
 
 	// JSONBytes is a special case codec for json queries.
 	// In go query json should return bytes not str.
@@ -35,27 +38,6 @@ var (
 	// should still be str.
 	JSONBytes = &bytesCodec{strID}
 )
-
-// BytesMarshaler is the interface implemented by an object
-// that can marshal itself into the bytes wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-bytes
-//
-// MarshalEdgeDBBytes encodes the receiver
-// into a binary form and returns the result.
-type BytesMarshaler interface {
-	MarshalEdgeDBBytes() ([]byte, error)
-}
-
-// BytesUnmarshaler is the interface implemented by an object
-// that can unmarshal the bytes wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-bytes
-//
-// UnmarshalEdgeDBBytes must be able to decode the bytes wire format.
-// UnmarshalEdgeDBBytes must copy the data if it wishes to retain the data
-// after returning.
-type BytesUnmarshaler interface {
-	UnmarshalEdgeDBBytes(data []byte) error
-}
 
 type bytesCodec struct {
 	id types.UUID
@@ -79,12 +61,24 @@ func (c *bytesCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(len(r.Buf))
 }
 
+func (c *bytesCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *bytesCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case []byte:
 		w.PushUint32(uint32(len(in)))
 		w.PushBytes(in)
-	case BytesMarshaler:
+	case types.OptionalBytes:
+		i, ok := in.Get()
+		if !ok {
+			return fmt.Errorf(
+				"cannot encode edgedb.OptionalBytes at %v "+
+					"because its value is missing", path)
+		}
+
+		w.PushUint32(uint32(len(i)))
+		w.PushBytes(i)
+	case marshal.BytesMarshaler:
 		data, err := in.MarshalEdgeDBBytes()
 		if err != nil {
 			return err
@@ -93,8 +87,41 @@ func (c *bytesCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushUint32(uint32(len(data)))
 		w.PushBytes(data)
 	default:
-		return fmt.Errorf("expected %v to be []byte got %T", path, val)
+		return fmt.Errorf("expected %v to be []byte, edgedb.OptionalBytes or "+
+			"BytesMarshaler got %T", path, val)
 	}
 
 	return nil
 }
+
+type optionalBytesLayout struct {
+	val []byte
+	set bool
+}
+
+type optionalBytesDecoder struct {
+	id types.UUID
+}
+
+func (c *optionalBytesDecoder) DescriptorID() types.UUID { return c.id }
+
+func (c *optionalBytesDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opbytes := (*optionalBytesLayout)(out)
+	n := len(r.Buf)
+
+	if cap(opbytes.val) >= n {
+		opbytes.val = (opbytes.val)[:n]
+	} else {
+		opbytes.val = make([]byte, n)
+	}
+
+	copy(opbytes.val, r.Buf)
+	opbytes.set = true
+	r.Discard(len(r.Buf))
+}
+
+func (c *optionalBytesDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalBytes)(out).Unset()
+}
+
+func (c *optionalBytesDecoder) DecodePresent(out unsafe.Pointer) {}

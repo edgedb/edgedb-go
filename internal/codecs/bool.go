@@ -23,33 +23,15 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
-	boolID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
-	boolType = reflect.TypeOf(false)
+	boolID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
+	boolType         = reflect.TypeOf(false)
+	optionalBoolType = reflect.TypeOf(types.OptionalBool{})
 )
-
-// BoolMarshaler is the interface implemented by an object
-// that can marshal itself into the bool wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-bool
-//
-// MarshalEdgeDBBool encodes the receiver
-// into a binary form and returns the result.
-type BoolMarshaler interface {
-	MarshalEdgeDBBool() ([]byte, error)
-}
-
-// BoolUnmarshaler is the interface implemented by an object
-// that can unmarshal the bool wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-bool
-//
-// UnmarshalEdgeDBBool must be able to decode the bool wire format.
-// UnmarshalEdgeDBBool must copy the data if it wishes to retain the data
-// after returning.
-type BoolUnmarshaler interface {
-	UnmarshalEdgeDBBool(data []byte) error
-}
 
 type boolCodec struct{}
 
@@ -60,6 +42,8 @@ func (c *boolCodec) DescriptorID() types.UUID { return boolID }
 func (c *boolCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint8)(out) = r.PopUint8()
 }
+
+func (c *boolCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
 
 func (c *boolCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
@@ -73,7 +57,24 @@ func (c *boolCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		}
 
 		w.PushUint8(out)
-	case BoolMarshaler:
+	case types.OptionalBool:
+		b, ok := in.Get()
+		if !ok {
+			return fmt.Errorf(
+				"cannot encode edgedb.OptionalBool at %v "+
+					"because its value is missing", path)
+		}
+
+		w.PushUint32(1) // data length
+
+		// convert bool to uint8
+		var out uint8
+		if b {
+			out = 1
+		}
+
+		w.PushUint8(out)
+	case marshal.BoolMarshaler:
 		data, err := in.MarshalEdgeDBBool()
 		if err != nil {
 			return err
@@ -83,8 +84,30 @@ func (c *boolCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be bool got %T", path, val)
+		return fmt.Errorf("expected %v to be bool, edgedb.OptionalBool or "+
+			"BoolMarshaler got %T", path, val)
 	}
 
 	return nil
 }
+
+type optionalBoolLayout struct {
+	val uint8
+	set bool
+}
+
+type optionalBoolDecoder struct{}
+
+func (c *optionalBoolDecoder) DescriptorID() types.UUID { return boolID }
+
+func (c *optionalBoolDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opbool := (*optionalBoolLayout)(out)
+	opbool.val = r.PopUint8()
+	opbool.set = true
+}
+
+func (c *optionalBoolDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalBool)(out).Unset()
+}
+
+func (c *optionalBoolDecoder) DecodePresent(out unsafe.Pointer) {}

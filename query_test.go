@@ -28,7 +28,7 @@ import (
 )
 
 func TestObjectWithoutID(t *testing.T) {
-	if conn.conn.protocolVersion.lt(version{0, 10}) {
+	if conn.conn.protocolVersion.LT(protocolVersion0p10) {
 		t.Skip("not expected to pass on protocol versions below 0.10")
 	}
 
@@ -110,9 +110,9 @@ func TestMissmatchedResultType(t *testing.T) {
 	ctx := context.Background()
 	err := conn.QuerySingle(ctx, "SELECT (x := (y := (z := 7)))", &result)
 
-	expected := "edgedb.UnsupportedFeatureError: " +
+	expected := "edgedb.InvalidArgumentError: " +
 		"the \"out\" argument does not match query schema: " +
-		"expected edgedb.A.x.y.z to be int64 got int"
+		"expected edgedb.A.x.y.z to be int64 or edgedb.OptionalInt64 got int"
 	assert.EqualError(t, err, expected)
 }
 
@@ -156,7 +156,8 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 
 	require.NotNil(t, err)
 	assert.EqualError(t, err,
-		"edgedb.InvalidArgumentError: expected args[0] to be int16 got int")
+		"edgedb.InvalidArgumentError: expected args[0] to be int16, "+
+			"edgedb.OptionalInt16 or Int16Marshaler got int")
 }
 
 func TestNamedQueryArguments(t *testing.T) {

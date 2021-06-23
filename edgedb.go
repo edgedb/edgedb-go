@@ -29,6 +29,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/soc"
@@ -54,7 +55,7 @@ type baseConn struct {
 	outCodecCache *cache.Cache
 
 	cfg             *connConfig
-	protocolVersion version
+	protocolVersion internal.ProtocolVersion
 
 	// writeMemory is preallocated memory for payloads to be sent to the server
 	writeMemory [1024]byte

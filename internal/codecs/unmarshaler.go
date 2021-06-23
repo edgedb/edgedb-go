@@ -23,6 +23,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 func getType(val interface{}) reflect.Type {
@@ -30,36 +31,51 @@ func getType(val interface{}) reflect.Type {
 }
 
 var unmarshalers = map[reflect.Type]string{
-	getType((*BoolUnmarshaler)(nil)):          "UnmarshalEdgeDBBool",
-	getType((*BytesUnmarshaler)(nil)):         "UnmarshalEdgeDBBytes",
-	getType((*DateTimeUnmarshaler)(nil)):      "UnmarshalEdgeDBDateTime",
-	getType((*LocalDateTimeUnmarshaler)(nil)): "UnmarshalEdgeDBLocalDateTime",
-	getType((*LocalDateUnmarshaler)(nil)):     "UnmarshalEdgeDBLocalDate",
-	getType((*LocalTimeUnmarshaler)(nil)):     "UnmarshalEdgeDBLocalTime",
-	getType((*DurationUnmarshaler)(nil)):      "UnmarshalEdgeDBDuration",
+	getType((*marshal.BoolUnmarshaler)(nil)):  "UnmarshalEdgeDBBool",
+	getType((*marshal.BytesUnmarshaler)(nil)): "UnmarshalEdgeDBBytes",
 	getType(
-		(*RelativeDurationUnmarshaler)(nil),
+		(*marshal.DateTimeUnmarshaler)(nil),
+	): "UnmarshalEdgeDBDateTime",
+	getType(
+		(*marshal.LocalDateTimeUnmarshaler)(nil),
+	): "UnmarshalEdgeDBLocalDateTime",
+	getType((*marshal.LocalDateUnmarshaler)(nil)): "UnmarshalEdgeDBLocalDate",
+	getType((*marshal.LocalTimeUnmarshaler)(nil)): "UnmarshalEdgeDBLocalTime",
+	getType((*marshal.DurationUnmarshaler)(nil)):  "UnmarshalEdgeDBDuration",
+	getType(
+		(*marshal.RelativeDurationUnmarshaler)(nil),
 	): "UnmarshalEdgeDBRelativeDuration",
-	getType((*JSONUnmarshaler)(nil)):    "UnmarshalEdgeDBJSON",
-	getType((*Int16Unmarshaler)(nil)):   "UnmarshalEdgeDBInt16",
-	getType((*Int32Unmarshaler)(nil)):   "UnmarshalEdgeDBInt32",
-	getType((*Int64Unmarshaler)(nil)):   "UnmarshalEdgeDBInt64",
-	getType((*Float32Unmarshaler)(nil)): "UnmarshalEdgeDBFloat32",
-	getType((*Float64Unmarshaler)(nil)): "UnmarshalEdgeDBFloat64",
-	getType((*BigIntUnmarshaler)(nil)):  "UnmarshalEdgeDBBigInt",
-	getType((*DecimalUnmarshaler)(nil)): "UnmarshalEdgeDBDecimal",
-	getType((*StrUnmarshaler)(nil)):     "UnmarshalEdgeDBStr",
-	getType((*UUIDUnmarshaler)(nil)):    "UnmarshalEdgeDBUUID",
+	getType((*marshal.JSONUnmarshaler)(nil)):    "UnmarshalEdgeDBJSON",
+	getType((*marshal.Int16Unmarshaler)(nil)):   "UnmarshalEdgeDBInt16",
+	getType((*marshal.Int32Unmarshaler)(nil)):   "UnmarshalEdgeDBInt32",
+	getType((*marshal.Int64Unmarshaler)(nil)):   "UnmarshalEdgeDBInt64",
+	getType((*marshal.Float32Unmarshaler)(nil)): "UnmarshalEdgeDBFloat32",
+	getType((*marshal.Float64Unmarshaler)(nil)): "UnmarshalEdgeDBFloat64",
+	getType((*marshal.BigIntUnmarshaler)(nil)):  "UnmarshalEdgeDBBigInt",
+	getType((*marshal.DecimalUnmarshaler)(nil)): "UnmarshalEdgeDBDecimal",
+	getType((*marshal.StrUnmarshaler)(nil)):     "UnmarshalEdgeDBStr",
+	getType((*marshal.UUIDUnmarshaler)(nil)):    "UnmarshalEdgeDBUUID",
 }
+
+var optionalUnmarshalerType = getType((*marshal.OptionalUnmarshaler)(nil))
 
 func buildUnmarshaler(
 	desc descriptor.Descriptor,
 	typ reflect.Type,
 ) (Decoder, bool) {
 	for unmarshalerType, methodName := range unmarshalers {
-		if reflect.PtrTo(typ).Implements(unmarshalerType) {
-			return &unmarshalerDecoder{desc.ID, typ, methodName}, true
+		ptr := reflect.PtrTo(typ)
+		if !ptr.Implements(unmarshalerType) {
+			continue
 		}
+
+		decoder := unmarshalerDecoder{desc.ID, typ, methodName}
+
+		if ptr.Implements(optionalUnmarshalerType) {
+			return &optionalUnmarshalerDecoder{decoder}, true
+		}
+
+		return &decoder, true
 	}
 
 	return nil, false
@@ -77,4 +93,32 @@ func (c *unmarshalerDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	val := reflect.NewAt(c.typ, out)
 	method := val.MethodByName(c.methodName)
 	method.Call([]reflect.Value{reflect.ValueOf(r.Buf)})
+}
+
+func (c *unmarshalerDecoder) DecodeMissing(out unsafe.Pointer) {
+	panic("unreachable")
+}
+
+type optionalUnmarshalerDecoder struct {
+	unmarshalerDecoder
+}
+
+func (c *optionalUnmarshalerDecoder) DecodeMissing(out unsafe.Pointer) {
+	val := reflect.NewAt(c.typ, out)
+	method := val.MethodByName("SetMissing")
+	method.Call([]reflect.Value{trueValue})
+}
+
+func (c *optionalUnmarshalerDecoder) DecodePresent(out unsafe.Pointer) {
+	val := reflect.NewAt(c.typ, out)
+	method := val.MethodByName("SetMissing")
+	method.Call([]reflect.Value{falseValue})
+}
+
+func (c *optionalUnmarshalerDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) {
+	c.DecodePresent(out)
+	c.unmarshalerDecoder.Decode(r, out)
 }

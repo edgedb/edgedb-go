@@ -21,7 +21,7 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/format"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
 // sfQuery is a script flow query
@@ -62,9 +62,9 @@ func newQuery(
 	var err error
 
 	if fmt == format.JSON || expCard == cardinality.AtMostOne {
-		q.out, err = marshal.ValueOf(out)
+		q.out, err = introspect.ValueOf(out)
 	} else {
-		q.out, err = marshal.ValueOfSlice(out)
+		q.out, err = introspect.ValueOfSlice(out)
 		if err == nil {
 			q.out.SetLen(0)
 		}

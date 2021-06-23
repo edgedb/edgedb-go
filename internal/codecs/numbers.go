@@ -24,6 +24,7 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
@@ -33,33 +34,17 @@ var (
 	float32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}
 	float64ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}
 
-	int16Type   = reflect.TypeOf(int16(0))
-	int32Type   = reflect.TypeOf(int32(0))
-	int64Type   = reflect.TypeOf(int64(0))
-	float32Type = reflect.TypeOf(float32(0))
-	float64Type = reflect.TypeOf(float64(0))
+	int16Type           = reflect.TypeOf(int16(0))
+	int32Type           = reflect.TypeOf(int32(0))
+	int64Type           = reflect.TypeOf(int64(0))
+	float32Type         = reflect.TypeOf(float32(0))
+	float64Type         = reflect.TypeOf(float64(0))
+	optionalInt16Type   = reflect.TypeOf(types.OptionalInt16{})
+	optionalInt32Type   = reflect.TypeOf(types.OptionalInt32{})
+	optionalInt64Type   = reflect.TypeOf(types.OptionalInt64{})
+	optionalFloat32Type = reflect.TypeOf(types.OptionalFloat32{})
+	optionalFloat64Type = reflect.TypeOf(types.OptionalFloat64{})
 )
-
-// Int16Marshaler is the interface implemented by an object
-// that can marshal itself into the int16 wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-int16
-//
-// MarshalEdgeDBInt16 encodes the receiver
-// into a binary form and returns the result.
-type Int16Marshaler interface {
-	MarshalEdgeDBInt16() ([]byte, error)
-}
-
-// Int16Unmarshaler is the interface implemented by an object
-// that can unmarshal the int16 wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-int16
-//
-// UnmarshalEdgeDBInt16 must be able to decode the int16 wire format.
-// UnmarshalEdgeDBInt16 must copy the data if it wishes to retain the data
-// after returning.
-type Int16Unmarshaler interface {
-	UnmarshalEdgeDBInt16(data []byte) error
-}
 
 type int16Codec struct{}
 
@@ -71,12 +56,23 @@ func (c *int16Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint16)(out) = r.PopUint16()
 }
 
+func (c *int16Codec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *int16Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case int16:
 		w.PushUint32(2) // data length
 		w.PushUint16(uint16(in))
-	case Int16Marshaler:
+	case types.OptionalInt16:
+		i, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalInt16 at %v "+
+				"because its value is missing", path)
+		}
+
+		w.PushUint32(2) // data length
+		w.PushUint16(uint16(i))
+	case marshal.Int16Marshaler:
 		data, err := in.MarshalEdgeDBInt16()
 		if err != nil {
 			return err
@@ -86,32 +82,33 @@ func (c *int16Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be int16 got %T", path, val)
+		return fmt.Errorf("expected %v to be int16, edgedb.OptionalInt16 or "+
+			"Int16Marshaler got %T", path, val)
 	}
 
 	return nil
 }
 
-// Int32Marshaler is the interface implemented by an object
-// that can marshal itself into the int32 wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-int32
-//
-// MarshalEdgeDBInt32 encodes the receiver
-// into a binary form and returns the result.
-type Int32Marshaler interface {
-	MarshalEdgeDBInt32() ([]byte, error)
+type optionalInt16 struct {
+	val uint16
+	set bool
 }
 
-// Int32Unmarshaler is the interface implemented by an object
-// that can unmarshal the int32 wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-int32
-//
-// UnmarshalEdgeDBInt32 must be able to decode the int32 wire format.
-// UnmarshalEdgeDBInt32 must copy the data if it wishes to retain the data
-// after returning.
-type Int32Unmarshaler interface {
-	UnmarshalEdgeDBInt32(data []byte) error
+type optionalInt16Decoder struct{}
+
+func (c *optionalInt16Decoder) DescriptorID() types.UUID { return int16ID }
+
+func (c *optionalInt16Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opint16 := (*optionalInt16)(out)
+	opint16.val = r.PopUint16()
+	opint16.set = true
 }
+
+func (c *optionalInt16Decoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalInt16)(out).Unset()
+}
+
+func (c *optionalInt16Decoder) DecodePresent(out unsafe.Pointer) {}
 
 type int32Codec struct{}
 
@@ -123,12 +120,23 @@ func (c *int32Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = r.PopUint32()
 }
 
+func (c *int32Codec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *int32Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case int32:
 		w.PushUint32(4) // data length
 		w.PushUint32(uint32(in))
-	case Int32Marshaler:
+	case types.OptionalInt32:
+		i, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalInt32 at %v "+
+				"because its value is missing", path)
+		}
+
+		w.PushUint32(4) // data length
+		w.PushUint32(uint32(i))
+	case marshal.Int32Marshaler:
 		data, err := in.MarshalEdgeDBInt32()
 		if err != nil {
 			return err
@@ -138,32 +146,33 @@ func (c *int32Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be int32 got %T", path, val)
+		return fmt.Errorf("expected %v to be int32, edgedb.OptionalInt32 "+
+			"or Int32Marshaler got %T", path, val)
 	}
 
 	return nil
 }
 
-// Int64Marshaler is the interface implemented by an object
-// that can marshal itself into the int64 wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-int64
-//
-// MarshalEdgeDBInt64 encodes the receiver
-// into a binary form and returns the result.
-type Int64Marshaler interface {
-	MarshalEdgeDBInt64() ([]byte, error)
+type optionalInt32 struct {
+	val uint32
+	set bool
 }
 
-// Int64Unmarshaler is the interface implemented by an object
-// that can unmarshal the int64 wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-int64
-//
-// UnmarshalEdgeDBInt64 must be able to decode the int64 wire format.
-// UnmarshalEdgeDBInt64 must copy the data if it wishes to retain the data
-// after returning.
-type Int64Unmarshaler interface {
-	UnmarshalEdgeDBInt64(data []byte) error
+type optionalInt32Decoder struct{}
+
+func (c *optionalInt32Decoder) DescriptorID() types.UUID { return int32ID }
+
+func (c *optionalInt32Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opint32 := (*optionalInt32)(out)
+	opint32.val = r.PopUint32()
+	opint32.set = true
 }
+
+func (c *optionalInt32Decoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalInt32)(out).Unset()
+}
+
+func (c *optionalInt32Decoder) DecodePresent(out unsafe.Pointer) {}
 
 type int64Codec struct{}
 
@@ -175,12 +184,23 @@ func (c *int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 }
 
+func (c *int64Codec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *int64Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case int64:
 		w.PushUint32(8) // data length
 		w.PushUint64(uint64(in))
-	case Int64Marshaler:
+	case types.OptionalInt64:
+		i, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalInt64 at %v "+
+				"because its value is missing", path)
+		}
+
+		w.PushUint32(8) // data length
+		w.PushUint64(uint64(i))
+	case marshal.Int64Marshaler:
 		data, err := in.MarshalEdgeDBInt64()
 		if err != nil {
 			return err
@@ -190,32 +210,33 @@ func (c *int64Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be int64 got %T", path, val)
+		return fmt.Errorf("expected %v to be int64, edgedb.OptionalInt64 or "+
+			"Int64Marshaler got %T", path, val)
 	}
 
 	return nil
 }
 
-// Float32Marshaler is the interface implemented by an object
-// that can marshal itself into the float32 wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-float32
-//
-// MarshalEdgeDBFloat32 encodes the receiver
-// into a binary form and returns the result.
-type Float32Marshaler interface {
-	MarshalEdgeDBFloat32() ([]byte, error)
+type optionalInt64 struct {
+	val uint64
+	set bool
 }
 
-// Float32Unmarshaler is the interface implemented by an object
-// that can unmarshal the float32 wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-float32
-//
-// UnmarshalEdgeDBFloat32 must be able to decode the float32 wire format.
-// UnmarshalEdgeDBFloat32 must copy the data if it wishes to retain the data
-// after returning.
-type Float32Unmarshaler interface {
-	UnmarshalEdgeDBFloat32(data []byte) error
+type optionalInt64Decoder struct{}
+
+func (c *optionalInt64Decoder) DescriptorID() types.UUID { return int64ID }
+
+func (c *optionalInt64Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opint64 := (*optionalInt64)(out)
+	opint64.val = r.PopUint64()
+	opint64.set = true
 }
+
+func (c *optionalInt64Decoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalInt64)(out).Unset()
+}
+
+func (c *optionalInt64Decoder) DecodePresent(out unsafe.Pointer) {}
 
 type float32Codec struct{}
 
@@ -227,6 +248,10 @@ func (c *float32Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = r.PopUint32()
 }
 
+func (c *float32Codec) DecodeMissing(out unsafe.Pointer) {
+	panic("unreachable")
+}
+
 func (c *float32Codec) Encode(
 	w *buff.Writer,
 	val interface{},
@@ -236,7 +261,16 @@ func (c *float32Codec) Encode(
 	case float32:
 		w.PushUint32(4)
 		w.PushUint32(math.Float32bits(in))
-	case Float32Marshaler:
+	case types.OptionalFloat32:
+		f, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalFloat32 at %v "+
+				"because its value is missing", path)
+		}
+
+		w.PushUint32(4)
+		w.PushUint32(math.Float32bits(f))
+	case marshal.Float32Marshaler:
 		data, err := in.MarshalEdgeDBFloat32()
 		if err != nil {
 			return err
@@ -246,32 +280,33 @@ func (c *float32Codec) Encode(
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be float32 got %T", path, val)
+		return fmt.Errorf("expected %v to be float32, edgedb.OptionalFloat32 "+
+			"or Float32Marshaler got %T", path, val)
 	}
 
 	return nil
 }
 
-// Float64Marshaler is the interface implemented by an object
-// that can marshal itself into the float64 wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-float64
-//
-// MarshalEdgeDBFloat64 encodes the receiver
-// into a binary form and returns the result.
-type Float64Marshaler interface {
-	MarshalEdgeDBFloat64() ([]byte, error)
+type optionalFloat32 struct {
+	val uint32
+	set bool
 }
 
-// Float64Unmarshaler is the interface implemented by an object
-// that can unmarshal the float64 wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-float64
-//
-// UnmarshalEdgeDBFloat64 must be able to decode the float64 wire format.
-// UnmarshalEdgeDBFloat64 must copy the data if it wishes to retain the data
-// after returning.
-type Float64Unmarshaler interface {
-	UnmarshalEdgeDBFloat64(data []byte) error
+type optionalFloat32Decoder struct{}
+
+func (c *optionalFloat32Decoder) DescriptorID() types.UUID { return float32ID }
+
+func (c *optionalFloat32Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opint32 := (*optionalFloat32)(out)
+	opint32.val = r.PopUint32()
+	opint32.set = true
 }
+
+func (c *optionalFloat32Decoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalFloat32)(out).Unset()
+}
+
+func (c *optionalFloat32Decoder) DecodePresent(out unsafe.Pointer) {}
 
 type float64Codec struct{}
 
@@ -283,6 +318,10 @@ func (c *float64Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 }
 
+func (c *float64Codec) DecodeMissing(out unsafe.Pointer) {
+	panic("unreachable")
+}
+
 func (c *float64Codec) Encode(
 	w *buff.Writer,
 	val interface{},
@@ -292,7 +331,15 @@ func (c *float64Codec) Encode(
 	case float64:
 		w.PushUint32(8)
 		w.PushUint64(math.Float64bits(in))
-	case Float64Marshaler:
+	case types.OptionalFloat64:
+		f, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalFloat64 at %v "+
+				"because its value is missing", path)
+		}
+		w.PushUint32(8)
+		w.PushUint64(math.Float64bits(f))
+	case marshal.Float64Marshaler:
 		data, err := in.MarshalEdgeDBFloat64()
 		if err != nil {
 			return err
@@ -302,8 +349,30 @@ func (c *float64Codec) Encode(
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be float64 got %T", path, val)
+		return fmt.Errorf("expected %v to be float64, edgedb.OptionalFloat64 "+
+			"or Float64Marshaler got %T", path, val)
 	}
 
 	return nil
 }
+
+type optionalFloat64 struct {
+	val uint64
+	set bool
+}
+
+type optionalFloat64Decoder struct{}
+
+func (c *optionalFloat64Decoder) DescriptorID() types.UUID { return float64ID }
+
+func (c *optionalFloat64Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opint64 := (*optionalFloat64)(out)
+	opint64.val = r.PopUint64()
+	opint64.set = true
+}
+
+func (c *optionalFloat64Decoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalFloat64)(out).Unset()
+}
+
+func (c *optionalFloat64Decoder) DecodePresent(out unsafe.Pointer) {}

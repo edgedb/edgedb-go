@@ -20,56 +20,24 @@ import (
 	"crypto/tls"
 	"fmt"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/message"
 	"github.com/xdg/scram"
 )
 
 var (
-	protocolVersionMin = version{0, 9}
-	protocolVersionMax = version{0, 10}
+	protocolVersionMin  = internal.ProtocolVersion{Major: 0, Minor: 9}
+	protocolVersionMax  = internal.ProtocolVersion{Major: 0, Minor: 11}
+	protocolVersion0p10 = internal.ProtocolVersion{Major: 0, Minor: 10}
+	protocolVersion0p11 = internal.ProtocolVersion{Major: 0, Minor: 11}
 )
-
-type version struct {
-	major uint16
-	minor uint16
-}
-
-func (v version) gt(other version) bool {
-	switch {
-	case v.major > other.major:
-		return true
-	case v.major < other.minor:
-		return false
-	default:
-		return v.minor > other.minor
-	}
-}
-
-func (v version) gte(other version) bool {
-	if v == other {
-		return true
-	}
-
-	return v.gt(other)
-}
-
-func (v version) lt(other version) bool {
-	switch {
-	case v.major < other.major:
-		return true
-	case v.major > other.minor:
-		return false
-	default:
-		return v.minor < other.minor
-	}
-}
 
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ClientHandshake)
-	w.PushUint16(protocolVersionMax.major)
-	w.PushUint16(protocolVersionMax.minor)
+	w.PushUint16(protocolVersionMax.Major)
+	w.PushUint16(protocolVersionMax.Minor)
 	w.PushUint16(2) // number of parameters
 	w.PushString("database")
 	w.PushString(cfg.database)
@@ -77,6 +45,8 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(cfg.user)
 	w.PushUint16(0) // no extensions
 	w.EndMessage()
+
+	c.protocolVersion = protocolVersionMax
 
 	if err := w.Send(c.conn); err != nil {
 		return &clientConnectionError{err: err}
@@ -91,23 +61,23 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 			// The client _MUST_ close the connection
 			// if the protocol version can't be supported.
 			// https://edgedb.com/docs/internals/protocol/overview
-			protocolVersion := version{r.PopUint16(), r.PopUint16()}
+			protocolVersion := internal.ProtocolVersion{
+				Major: r.PopUint16(),
+				Minor: r.PopUint16(),
+			}
 
-			if protocolVersion.lt(protocolVersionMin) ||
-				protocolVersion.gt(protocolVersionMax) {
+			if protocolVersion.LT(protocolVersionMin) ||
+				protocolVersion.GT(protocolVersionMax) {
 				_ = c.conn.Close()
 				msg := fmt.Sprintf(
 					"unsupported protocol version: %v.%v",
-					protocolVersion.major,
-					protocolVersion.minor,
+					protocolVersion.Major,
+					protocolVersion.Minor,
 				)
 				return &unsupportedProtocolVersionError{msg: msg}
 			}
 
 			c.protocolVersion = protocolVersion
-			if protocolVersion.gte(version{0, 10}) {
-				c.explicitIDs = true
-			}
 
 			n := r.PopUint16()
 			for i := uint16(0); i < n; i++ {
@@ -148,11 +118,14 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	_, isTLS := c.conn.(*tls.Conn)
-	if !isTLS && c.protocolVersion.gte(version{0, 11}) {
+	if !isTLS && c.protocolVersion.GTE(protocolVersion0p11) {
 		_ = c.close()
 		return &clientConnectionError{msg: fmt.Sprintf(
 			"server claims to use protocol version %v.%v without using TLS",
-			c.protocolVersion.major, c.protocolVersion.minor)}
+			c.protocolVersion.Major, c.protocolVersion.Minor)}
+	}
+	if c.protocolVersion.GTE(protocolVersion0p10) {
+		c.explicitIDs = true
 	}
 
 	if r.Err != nil {

@@ -36,6 +36,30 @@ const (
 	timeShift = 62135596800
 )
 
+// OptionalDateTime is an optional time.Time.  Optional types must be used for
+// out parameters when a shape field is not required.
+type OptionalDateTime struct {
+	val   time.Time
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalDateTime) Get() (time.Time, bool) {
+	return o.val, o.isSet
+}
+
+// Set sets the value.
+func (o *OptionalDateTime) Set(val time.Time) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalDateTime) Unset() {
+	o.val = time.Time{}
+	o.isSet = false
+}
+
 // NewLocalDateTime returns a new LocalDateTime
 func NewLocalDateTime(
 	year int, month time.Month, day, hour, minute, second, microsecond int,
@@ -60,6 +84,30 @@ func (dt LocalDateTime) String() string {
 	return time.Unix(sec, nsec).UTC().Format("2006-01-02T15:04:05.999999")
 }
 
+// OptionalLocalDateTime is an optional LocalDateTime. Optional types must be
+// used for out parameters when a shape field is not required.
+type OptionalLocalDateTime struct {
+	val   LocalDateTime
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalLocalDateTime) Get() (LocalDateTime, bool) {
+	return o.val, o.isSet
+}
+
+// Set sets the value.
+func (o *OptionalLocalDateTime) Set(val LocalDateTime) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalLocalDateTime) Unset() {
+	o.val = LocalDateTime{}
+	o.isSet = false
+}
+
 // NewLocalDate returns a new LocalDate
 func NewLocalDate(year int, month time.Month, day int) LocalDate {
 	t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
@@ -77,6 +125,28 @@ func (d LocalDate) String() string {
 		int64(d.days)*86400-timeShift,
 		0,
 	).UTC().Format("2006-01-02")
+}
+
+// OptionalLocalDate is an optional LocalDate. Optional types must be used for
+// out parameters when a shape field is not required.
+type OptionalLocalDate struct {
+	val   LocalDate
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalLocalDate) Get() (LocalDate, bool) { return o.val, o.isSet }
+
+// Set sets the value.
+func (o *OptionalLocalDate) Set(val LocalDate) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalLocalDate) Unset() {
+	o.val = LocalDate{}
+	o.isSet = false
 }
 
 // NewLocalTime returns a new LocalTime
@@ -114,6 +184,28 @@ func (t LocalTime) String() string {
 		t.usec/1_000_000,
 		(t.usec%1_000_000)*1_000,
 	).UTC().Format("15:04:05.999999")
+}
+
+// OptionalLocalTime is an optional LocalTime. Optional types must be used for
+// out parameters when a shape field is not required.
+type OptionalLocalTime struct {
+	val   LocalTime
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalLocalTime) Get() (LocalTime, bool) { return o.val, o.isSet }
+
+// Set sets the value.
+func (o *OptionalLocalTime) Set(val LocalTime) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalLocalTime) Unset() {
+	o.val = LocalTime{}
+	o.isSet = false
 }
 
 // Duration represents the elapsed time between two instants
@@ -168,6 +260,28 @@ func (d Duration) String() string {
 	}
 
 	return strings.Join(buf, "")
+}
+
+// OptionalDuration is an optional Duration. Optional types must be used for
+// out parameters when a shape field is not required.
+type OptionalDuration struct {
+	val   Duration
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalDuration) Get() (Duration, bool) { return o.val, o.isSet }
+
+// Set sets the value.
+func (o *OptionalDuration) Set(val Duration) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalDuration) Unset() {
+	o.val = 0
+	o.isSet = false
 }
 
 // NewRelativeDuration returns a new RelativeDuration
@@ -257,4 +371,28 @@ func (rd RelativeDuration) String() string {
 	}
 
 	return strings.Join(buf, "")
+}
+
+// OptionalRelativeDuration is an optional RelativeDuration. Optional types
+// must be used for out parameters when a shape field is not required.
+type OptionalRelativeDuration struct {
+	val   RelativeDuration
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalRelativeDuration) Get() (RelativeDuration, bool) {
+	return o.val, o.isSet
+}
+
+// Set sets the value.
+func (o *OptionalRelativeDuration) Set(val RelativeDuration) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalRelativeDuration) Unset() {
+	o.val = RelativeDuration{}
+	o.isSet = false
 }

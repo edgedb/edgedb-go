@@ -33,11 +33,11 @@ type Person struct {
 }
 
 type Movie struct {
-	ID       UUID     `edgedb:"id"`
-	Title    string   `edgedb:"title"`
-	Year     int64    `edgedb:"year"`
-	Director Person   `edgedb:"director"`
-	Actors   []Person `edgedb:"actors"`
+	ID       UUID          `edgedb:"id"`
+	Title    string        `edgedb:"title"`
+	Year     OptionalInt64 `edgedb:"year"`
+	Director Person        `edgedb:"director"`
+	Actors   []Person      `edgedb:"actors"`
 }
 
 func TestTutorial(t *testing.T) {
@@ -59,8 +59,6 @@ func TestTutorial(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	defer edb.Close() // nolint:errcheck
 
 	err = edb.Execute(ctx, `
 		START MIGRATION TO {
@@ -161,7 +159,6 @@ func TestTutorial(t *testing.T) {
 	expected := []Movie{
 		{
 			Title: "Blade Runner 2049",
-			Year:  int64(2017),
 			Director: Person{
 				FirstName: "Denis",
 				LastName:  "Villeneuve",
@@ -187,9 +184,11 @@ func TestTutorial(t *testing.T) {
 				FirstName: "Denis",
 				LastName:  "Villeneuve",
 			},
-			Actors: []Person(nil),
+			Actors: []Person{},
 		},
 	}
+	expected[0].Year.Set(2017)
 
 	assert.Equal(t, expected, out)
+	assert.Nil(t, edb.Close())
 }

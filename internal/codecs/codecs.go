@@ -44,6 +44,7 @@ type EncoderField struct {
 type Decoder interface {
 	DescriptorID() types.UUID
 	Decode(*buff.Reader, unsafe.Pointer)
+	DecodeMissing(unsafe.Pointer)
 }
 
 // DecoderField is a link to a child decoder
@@ -86,62 +87,6 @@ func buildScalarEncoder(desc descriptor.Descriptor) (Encoder, error) {
 		return &decimalEncoder{}, nil
 	}
 
-	return buildScalarCodec(desc)
-}
-
-// BuildDecoder builds a Decoder from a Descriptor.
-func BuildDecoder(
-	desc descriptor.Descriptor,
-	typ reflect.Type,
-	path Path,
-) (Decoder, error) {
-	if desc.ID == descriptor.IDZero {
-		return noOpDecoder{}, nil
-	}
-
-	switch desc.Type {
-	case descriptor.Set:
-		return buildSetDecoder(desc, typ, path)
-	case descriptor.Object:
-		return buildObjectDecoder(desc, typ, path)
-	case descriptor.BaseScalar, descriptor.Enum:
-		return buildScalarDecoder(desc, typ, path)
-	case descriptor.Tuple:
-		return buildTupleDecoder(desc, typ, path)
-	case descriptor.NamedTuple:
-		return buildNamedTupleDecoder(desc, typ, path)
-	case descriptor.Array:
-		return buildArrayDecoder(desc, typ, path)
-	default:
-		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
-	}
-}
-
-func buildScalarDecoder(
-	desc descriptor.Descriptor,
-	typ reflect.Type,
-	path Path,
-) (Decoder, error) {
-	decoder, ok := buildUnmarshaler(desc, typ)
-	if ok {
-		return decoder, nil
-	}
-
-	codec, err := buildScalarCodec(desc)
-	if err != nil {
-		return nil, err
-	}
-
-	if codec.Type() != typ {
-		return nil, fmt.Errorf(
-			"expected %v to be %v got %v", path, codec.Type(), typ,
-		)
-	}
-
-	return codec, nil
-}
-
-func buildScalarCodec(desc descriptor.Descriptor) (Codec, error) {
 	if desc.Type == descriptor.Enum {
 		return &strCodec{desc.ID}, nil
 	}
@@ -189,6 +134,229 @@ func buildScalarCodec(desc descriptor.Descriptor) (Codec, error) {
 		s := fmt.Sprintf("%#v\n", desc)
 		return nil, fmt.Errorf("unknown scalar type id %v %v", desc.ID, s)
 	}
+}
+
+// BuildDecoder builds a Decoder from a Descriptor.
+func BuildDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if desc.ID == descriptor.IDZero {
+		return noOpDecoder{}, nil
+	}
+
+	switch desc.Type {
+	case descriptor.Set:
+		return buildSetDecoder(desc, typ, path)
+	case descriptor.Object:
+		return buildObjectDecoder(desc, typ, path)
+	case descriptor.BaseScalar, descriptor.Enum:
+		return buildScalarDecoder(desc, typ, path)
+	case descriptor.Tuple:
+		return buildTupleDecoder(desc, typ, path)
+	case descriptor.NamedTuple:
+		return buildNamedTupleDecoder(desc, typ, path)
+	case descriptor.Array:
+		return buildArrayDecoder(desc, typ, path)
+	default:
+		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
+	}
+}
+
+func buildScalarDecoder(
+	desc descriptor.Descriptor,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	decoder, ok := buildUnmarshaler(desc, typ)
+	if ok {
+		return decoder, nil
+	}
+
+	var expectedType string
+
+	if desc.Type == descriptor.Enum {
+		switch typ {
+		case strType:
+			return &strCodec{desc.ID}, nil
+		case optionalStrType:
+			return &optionalStrDecoder{strID}, nil
+		default:
+			expectedType = "string or edgedb.OptionalStr"
+			goto TypeMissmatch
+		}
+	}
+
+	switch desc.ID {
+	case uuidID:
+		switch typ {
+		case uuidType:
+			return &uuidCodec{}, nil
+		case optionalUUIDType:
+			return &optionalUUIDDecoder{}, nil
+		default:
+			expectedType = "uuid or edgedb.OptionalUUID"
+		}
+	case strID:
+		switch typ {
+		case strType:
+			return &strCodec{strID}, nil
+		case optionalStrType:
+			return &optionalStrDecoder{strID}, nil
+		default:
+			expectedType = "string or edgedb.OptionalStr"
+		}
+	case bytesID:
+		switch typ {
+		case bytesType:
+			return &bytesCodec{bytesID}, nil
+		case optionalBytesType:
+			return &optionalBytesDecoder{bytesID}, nil
+		default:
+			expectedType = "[]byte or edgedb.OptionalBytes"
+		}
+	case int16ID:
+		switch typ {
+		case int16Type:
+			return &int16Codec{}, nil
+		case optionalInt16Type:
+			return &optionalInt16Decoder{}, nil
+		default:
+			expectedType = "int16 or edgedb.OptionalInt16"
+		}
+	case int32ID:
+		switch typ {
+		case int32Type:
+			return &int32Codec{}, nil
+		case optionalInt32Type:
+			return &optionalInt32Decoder{}, nil
+		default:
+			expectedType = "int32 or edgedb.OptionalInt32"
+		}
+	case int64ID:
+		switch typ {
+		case int64Type:
+			return &int64Codec{}, nil
+		case optionalInt64Type:
+			return &optionalInt64Decoder{}, nil
+		default:
+			expectedType = "int64 or edgedb.OptionalInt64"
+		}
+	case float32ID:
+		switch typ {
+		case float32Type:
+			return &float32Codec{}, nil
+		case optionalFloat32Type:
+			return &optionalFloat32Decoder{}, nil
+		default:
+			expectedType = "float32 or edgedb.OptionalFloat32"
+		}
+	case float64ID:
+		switch typ {
+		case float64Type:
+			return &float64Codec{}, nil
+		case optionalFloat64Type:
+			return &optionalFloat64Decoder{}, nil
+		default:
+			expectedType = "float64 or edgedb.OptionalFloat64"
+		}
+	case decimalID:
+		return nil, errors.New("decimal codec not implemented. " +
+			"Consider implementing your own edgedb.DecimalMarshaler " +
+			"and edgedb.DecimalUnmarshaler.")
+	case boolID:
+		switch typ {
+		case boolType:
+			return &boolCodec{}, nil
+		case optionalBoolType:
+			return &optionalBoolDecoder{}, nil
+		default:
+			expectedType = "bool or edgedb.OptionalBool"
+		}
+	case dateTimeID:
+		switch typ {
+		case dateTimeType:
+			return &dateTimeCodec{}, nil
+		case optionalDateTimeType:
+			return &optionalDateTimeDecoder{}, nil
+		default:
+			expectedType = "edgedb.DateTime or edgedb.OptionalDateTime"
+		}
+	case localDTID:
+		switch typ {
+		case localDateTimeType:
+			return &localDateTimeCodec{}, nil
+		case optionalLocalDateTimeType:
+			return &optionalLocalDateTimeDecoder{}, nil
+		default:
+			expectedType = "edgedb.LocalDateTime or " +
+				"edgedb.OptionalLocalDateTime"
+		}
+	case localDateID:
+		switch typ {
+		case localDateType:
+			return &localDateCodec{}, nil
+		case optionalLocalDateType:
+			return &optionalLocalDateDecoder{}, nil
+		default:
+			expectedType = "edgedb.LocalDate or edgedb.OptionalLocalDate"
+		}
+	case localTimeID:
+		switch typ {
+		case localTimeType:
+			return &localTimeCodec{}, nil
+		case optionalLocalTimeType:
+			return &optionalLocalTimeDecoder{}, nil
+		default:
+			expectedType = "edgedb.LocalTime or edgedb.OptionalLocalTime"
+		}
+	case durationID:
+		switch typ {
+		case durationType:
+			return &durationCodec{}, nil
+		case optionalDurationType:
+			return &optionalDurationDecoder{}, nil
+		default:
+			expectedType = "edgedb.Duration or edgedb.OptionalDuration"
+		}
+	case jsonID:
+		switch typ {
+		case bytesType:
+			return &jsonCodec{}, nil
+		case optionalBytesType:
+			return &optionalJSONDecoder{}, nil
+		default:
+			expectedType = "[]byte or edgedb.OptionalBytes"
+		}
+	case bigIntID:
+		switch typ {
+		case bigIntType:
+			return &bigIntCodec{}, nil
+		case optionalBigIntType:
+			return &optionalBigIntDecoder{}, nil
+		default:
+			expectedType = "*big.Int or edgedb.OptionalBigInt"
+		}
+	case relativeDurationID:
+		switch typ {
+		case relativeDurationType:
+			return &relativeDurationCodec{}, nil
+		case optionalRelativeDurationType:
+			return &optionalRelativeDurationDecoder{}, nil
+		default:
+			expectedType = "edgedb.RealtiveDuration or " +
+				"edgedb.OptionalRelativeDuration"
+		}
+	default:
+		s := fmt.Sprintf("%#v\n", desc)
+		return nil, fmt.Errorf("unknown scalar type id %v %v", desc.ID, s)
+	}
+
+TypeMissmatch:
+	return nil, fmt.Errorf(
+		"expected %v to be %v got %v", path, expectedType, typ,
+	)
 }
 
 func pAdd(p unsafe.Pointer, i uintptr) unsafe.Pointer {

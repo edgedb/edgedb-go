@@ -56,10 +56,38 @@ type setDecoder struct {
 
 func (c *setDecoder) DescriptorID() types.UUID { return c.id }
 
+func nilUnsafePointer() unsafe.Pointer {
+	var a []byte
+	slice := (*sliceHeader)(unsafe.Pointer(&a))
+	return slice.Data
+}
+
+var nilPointer = nilUnsafePointer()
+
+func setSliceLen(slice *sliceHeader, typ reflect.Type, n int) {
+	switch {
+	case uintptr(slice.Data) == uintptr(0):
+		// slice == nil
+		val := reflect.New(typ)
+		val.Elem().Set(reflect.MakeSlice(typ, n, n))
+		p := unsafe.Pointer(val.Pointer())
+		*slice = *(*sliceHeader)(p)
+	case slice.Cap < n:
+		val := reflect.New(typ)
+		val.Elem().Set(reflect.MakeSlice(typ, n, n))
+		p := unsafe.Pointer(val.Pointer())
+		*slice = *(*sliceHeader)(p)
+	default:
+		slice.Len = n
+	}
+}
+
 func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	// number of dimensions, either 0 or 1
 	if r.PopUint32() == 0 {
 		r.Discard(8) // skip 2 reserved fields
+		slice := (*sliceHeader)(out)
+		setSliceLen(slice, c.typ, 0)
 		return
 	}
 
@@ -70,14 +98,7 @@ func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	n := int(upper - lower + 1)
 
 	slice := (*sliceHeader)(out)
-	if slice.Cap < n {
-		val := reflect.New(c.typ)
-		val.Elem().Set(reflect.MakeSlice(c.typ, n, n))
-		p := unsafe.Pointer(val.Pointer())
-		*slice = *(*sliceHeader)(p)
-	} else {
-		slice.Len = n
-	}
+	setSliceLen(slice, c.typ, n)
 
 	_, isSetOfArrays := c.child.(*arrayDecoder)
 
@@ -93,3 +114,12 @@ func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 		)
 	}
 }
+
+func (c *setDecoder) DecodeMissing(out unsafe.Pointer) {
+	slice := (*sliceHeader)(out)
+	slice.Data = nilPointer
+	slice.Len = 0
+	slice.Cap = 0
+}
+
+func (c *setDecoder) DecodePresent(out unsafe.Pointer) {}

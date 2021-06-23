@@ -97,36 +97,42 @@
 // The following list shows the marshal/unmarshal
 // mapping between EdgeDB types and go types:
 //
-//   EdgeDB                Go
-//   ---------             ---------
-//   Set                   []anytype
-//   array<anytype>        []anytype
-//   tuple                 struct
-//   named tuple           struct
-//   Object                struct
-//   bool                  bool
-//   bytes                 []byte
-//   str                   string
-//   anyenum               string
-//   datetime              time.Time
-//   cal::local_datetime   edgedb.LocalDateTime
-//   cal::local_date       edgedb.LocalDate
-//   cal::local_time       edgedb.LocalTime
-//   duration              time.Duration
-//   float32               float32
-//   float64               float64
-//   int16                 int16
-//   int32                 int32
-//   int64                 int64
-//   uuid                  edgedb.UUID
-//   json                  []byte
-//   bigint                *big.Int
+//   EdgeDB                   Go
+//   ---------                ---------
+//   Set                      []anytype
+//   array<anytype>           []anytype
+//   tuple                    struct
+//   named tuple              struct
+//   Object                   struct
+//   bool                     bool, edgedb.OptionalBool
+//   bytes                    []byte, edgedb.OptionalBytes
+//   str                      string, edgedb.OptionalStr
+//   anyenum                  string, edgedb.OptionalStr
+//   datetime                 time.Time, edgedb.OptionalDateTime
+//   cal::local_datetime      edgedb.LocalDateTime,
+//                            edgedb.OptionalLocalDateTime
+//   cal::local_date          edgedb.LocalDate, edgedb.OptionalLocalDate
+//   cal::local_time          edgedb.LocalTime, edgedb.OptionalLocalTime
+//   duration                 time.Duration, edgedb.OptionalDuration
+//   cal::relative_duraation  edgedb.RelativeDuration,
+//                            edgedb.OptionalRelativeDuration
+//   float32                  float32, edgedb.OptionalFloat32
+//   float64                  float64, edgedb.OptionalFloat64
+//   int16                    int16, edgedb.OptionalFloat16
+//   int32                    int32, edgedb.OptionalInt16
+//   int64                    int64, edgedb.OptionalInt64
+//   uuid                     edgedb.UUID, edgedb.OptionalUUID
+//   json                     []byte, edgedb.OptionalBytes
+//   bigint                   *big.Int, edgedb.OptionalBigInt
 //
-//   decimal               user defined (see Custom Codecs)
+//   decimal                  user defined (see Custom Marshalers)
 //
-// Custom Codecs
+// Shape fileds that are not required must use optional types for receiving
+// query results. The edgedb.Optional struct can be embedded to make structs
+// optional.
 //
-// User defined marshaler/unmarshalers can be defined for any scalar EdgeDB
-// type except arrays. The marshaler interfaces are documented in the
-// internal/codecs package.
+// Custom Marshalers
+//
+// Interfaces for user defined marshaler/unmarshalers  are documented in the
+// internal/marshal package.
 package edgedb

@@ -76,3 +76,25 @@ func (id *UUID) UnmarshalText(b []byte) error {
 	*id = tmp
 	return nil
 }
+
+// OptionalUUID is an optional UUID. Optional types must be used for out
+// parameters when a shape field is not required.
+type OptionalUUID struct {
+	val   UUID
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalUUID) Get() (UUID, bool) { return o.val, o.isSet }
+
+// Set sets the value.
+func (o *OptionalUUID) Set(val UUID) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalUUID) Unset() {
+	o.val = UUID{}
+	o.isSet = false
+}
