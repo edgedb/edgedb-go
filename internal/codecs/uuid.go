@@ -23,33 +23,15 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
-	uuidType = reflect.TypeOf(uuidID)
-	uuidID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
+	uuidType         = reflect.TypeOf(uuidID)
+	optionalUUIDType = reflect.TypeOf(types.OptionalUUID{})
+	uuidID           = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
 )
-
-// UUIDMarshaler is the interface implemented by an object
-// that can marshal itself into the uuid wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-uuid
-//
-// MarshalEdgeDBUUID encodes the receiver
-// into a binary form and returns the result.
-type UUIDMarshaler interface {
-	MarshalEdgeDBUUID() ([]byte, error)
-}
-
-// UUIDUnmarshaler is the interface implemented by an object
-// that can unmarshal the uuid wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-uuid
-//
-// UnmarshalEdgeDBUUID must be able to decode the uuid wire format.
-// UnmarshalEdgeDBUUID must copy the data if it wishes to retain the data
-// after returning.
-type UUIDUnmarshaler interface {
-	UnmarshalEdgeDBUUID(data []byte) error
-}
 
 type uuidCodec struct{}
 
@@ -63,12 +45,23 @@ func (c *uuidCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(16)
 }
 
+func (c *uuidCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *uuidCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case types.UUID:
 		w.PushUint32(16)
 		w.PushBytes(in[:])
-	case UUIDMarshaler:
+	case types.OptionalUUID:
+		id, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalUUID at %v "+
+				"because its value is missing", path)
+		}
+
+		w.PushUint32(16)
+		w.PushBytes(id[:])
+	case marshal.UUIDMarshaler:
 		data, err := in.MarshalEdgeDBUUID()
 		if err != nil {
 			return err
@@ -78,8 +71,31 @@ func (c *uuidCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be edgedb.UUID got %T", path, val)
+		return fmt.Errorf("expected %v to be edgedb.UUID, "+
+			"edgedb.OptionalUUID or UUIDMarshaler got %T", path, val)
 	}
 
 	return nil
 }
+
+type optionalUUID struct {
+	val types.UUID
+	set bool
+}
+
+type optionalUUIDDecoder struct{}
+
+func (c *optionalUUIDDecoder) DescriptorID() types.UUID { return uuidID }
+
+func (c *optionalUUIDDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opuuid := (*optionalUUID)(out)
+	opuuid.set = true
+	copy(opuuid.val[:], r.Buf[:16])
+	r.Discard(16)
+}
+
+func (c *optionalUUIDDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalUUID)(out).Unset()
+}
+
+func (c *optionalUUIDDecoder) DecodePresent(out unsafe.Pointer) {}

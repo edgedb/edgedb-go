@@ -23,33 +23,15 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
-	strID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
-	strType = reflect.TypeOf("")
+	strID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+	strType         = reflect.TypeOf("")
+	optionalStrType = reflect.TypeOf(types.OptionalStr{})
 )
-
-// StrMarshaler is the interface implemented by an object
-// that can marshal itself into the str wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-str
-//
-// MarshalEdgeDBStr encodes the receiver
-// into a binary form and returns the result.
-type StrMarshaler interface {
-	MarshalEdgeDBStr() ([]byte, error)
-}
-
-// StrUnmarshaler is the interface implemented by an object
-// that can unmarshal the str wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-str
-//
-// UnmarshalEdgeDBStr must be able to decode the str wire format.
-// UnmarshalEdgeDBStr must copy the data if it wishes to retain the data
-// after returning.
-type StrUnmarshaler interface {
-	UnmarshalEdgeDBStr(data []byte) error
-}
 
 type strCodec struct {
 	id types.UUID
@@ -64,11 +46,21 @@ func (c *strCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(len(r.Buf))
 }
 
+func (c *strCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *strCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case string:
 		w.PushString(in)
-	case StrMarshaler:
+	case types.OptionalStr:
+		str, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalStr at %v "+
+				"because its value is missing", path)
+		}
+
+		w.PushString(str)
+	case marshal.StrMarshaler:
 		data, err := in.MarshalEdgeDBStr()
 		if err != nil {
 			return err
@@ -78,8 +70,33 @@ func (c *strCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be edgedb.UUID got %T", path, val)
+		return fmt.Errorf("expected %v to be string, edgedb.OptionalStr "+
+			"or StrMarshaler got %T", path, val)
 	}
 
 	return nil
 }
+
+type optionalStr struct {
+	val string
+	set bool
+}
+
+type optionalStrDecoder struct {
+	id types.UUID
+}
+
+func (c *optionalStrDecoder) DescriptorID() types.UUID { return c.id }
+
+func (c *optionalStrDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opstr := (*optionalStr)(out)
+	opstr.val = string(r.Buf)
+	opstr.set = true
+	r.Discard(len(r.Buf))
+}
+
+func (c *optionalStrDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalStr)(out).Unset()
+}
+
+func (c *optionalStrDecoder) DecodePresent(out unsafe.Pointer) {}

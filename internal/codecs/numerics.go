@@ -24,39 +24,20 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
 	decimalID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}
 	bigIntID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}
 
-	bigIntType = reflect.TypeOf(&big.Int{})
+	bigIntType         = reflect.TypeOf(&big.Int{})
+	optionalBigIntType = reflect.TypeOf(types.OptionalBigInt{})
 
 	big10k  = big.NewInt(10_000)
 	bigOne  = big.NewInt(1)
 	bigZero = big.NewInt(0)
 )
-
-// BigIntMarshaler is the interface implemented by an object
-// that can marshal itself into the bigint wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-bigint
-//
-// MarshalEdgeDBBigInt encodes the receiver
-// into a binary form and returns the result.
-type BigIntMarshaler interface {
-	MarshalEdgeDBBigInt() ([]byte, error)
-}
-
-// BigIntUnmarshaler is the interface implemented by an object
-// that can unmarshal the bigint wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-bigint
-//
-// UnmarshalEdgeDBBigInt must be able to decode the bigint wire format.
-// UnmarshalEdgeDBBigInt must copy the data if it wishes to retain the data
-// after returning.
-type BigIntUnmarshaler interface {
-	UnmarshalEdgeDBBigInt(data []byte) error
-}
 
 type bigIntCodec struct{}
 
@@ -92,6 +73,46 @@ func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	}
 }
 
+func (c *bigIntCodec) DecodeMissing(out unsafe.Pointer) {
+	panic("unreachable")
+}
+
+func (c *bigIntCodec) encode(w *buff.Writer, val *big.Int) {
+	// copy to prevent mutating the user's value
+	cpy := &big.Int{}
+	cpy.Set(val)
+
+	var sign uint16
+	if val.Sign() == -1 {
+		sign = 0x4000
+		cpy = cpy.Neg(cpy)
+	}
+
+	digits := []byte{}
+	rem := &big.Int{}
+
+	for cpy.CmpAbs(bigZero) != 0 {
+		rem.Mod(cpy, big10k)
+
+		// pad bytes
+		bts := rem.Bytes()
+		for len(bts) < 2 {
+			bts = append([]byte{0}, bts...)
+		}
+
+		digits = append(bts, digits...)
+		cpy = cpy.Div(cpy, big10k)
+	}
+
+	w.BeginBytes()
+	w.PushUint16(uint16(len(digits) / 2))
+	w.PushUint16(uint16(len(digits)/2 - 1))
+	w.PushUint16(sign)
+	w.PushUint16(0) // reserved
+	w.PushBytes(digits)
+	w.EndBytes()
+}
+
 func (c *bigIntCodec) Encode(
 	w *buff.Writer,
 	val interface{},
@@ -99,40 +120,15 @@ func (c *bigIntCodec) Encode(
 ) error {
 	switch in := val.(type) {
 	case *big.Int:
-		// copy to prevent mutating the user's value
-		cpy := &big.Int{}
-		cpy.Set(in)
-
-		var sign uint16
-		if in.Sign() == -1 {
-			sign = 0x4000
-			cpy = cpy.Neg(cpy)
+		c.encode(w, in)
+	case types.OptionalBigInt:
+		bigint, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalBigInt at %v "+
+				"because its value is missing", path)
 		}
-
-		digits := []byte{}
-		rem := &big.Int{}
-
-		for cpy.CmpAbs(bigZero) != 0 {
-			rem.Mod(cpy, big10k)
-
-			// pad bytes
-			bts := rem.Bytes()
-			for len(bts) < 2 {
-				bts = append([]byte{0}, bts...)
-			}
-
-			digits = append(bts, digits...)
-			cpy = cpy.Div(cpy, big10k)
-		}
-
-		w.BeginBytes()
-		w.PushUint16(uint16(len(digits) / 2))
-		w.PushUint16(uint16(len(digits)/2 - 1))
-		w.PushUint16(sign)
-		w.PushUint16(0) // reserved
-		w.PushBytes(digits)
-		w.EndBytes()
-	case BigIntMarshaler:
+		c.encode(w, bigint)
+	case marshal.BigIntMarshaler:
 		data, err := in.MarshalEdgeDBBigInt()
 		if err != nil {
 			return err
@@ -142,32 +138,60 @@ func (c *bigIntCodec) Encode(
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be *big.Int got %T", path, val)
+		return fmt.Errorf("expected %v to be *big.Int, edgedb.OptionalBitInt "+
+			"or BigIntMarshaler got %T", path, val)
 	}
 
 	return nil
 }
 
-// DecimalMarshaler is the interface implemented by an object
-// that can marshal itself into the decimal wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-decimal
-//
-// MarshalEdgeDBDecimal encodes the receiver
-// into a binary form and returns the result.
-type DecimalMarshaler interface {
-	MarshalEdgeDBDecimal() ([]byte, error)
+type optionalBigInt struct {
+	val *big.Int
+	set bool
 }
 
-// DecimalUnmarshaler is the interface implemented by an object
-// that can unmarshal the decimal wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-decimal
-//
-// UnmarshalEdgeDBDecimal must be able to decode the decimal wire format.
-// UnmarshalEdgeDBDecimal must copy the data if it wishes to retain the data
-// after returning.
-type DecimalUnmarshaler interface {
-	UnmarshalEdgeDBDecimal(data []byte) error
+type optionalBigIntDecoder struct {
+	id types.UUID
 }
+
+func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return c.id }
+
+func (c *optionalBigIntDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	opint := (*optionalBigInt)(out)
+	opint.set = true
+
+	n := int(r.PopUint16())
+	weight := big.NewInt(int64(r.PopUint16()))
+	sign := r.PopUint16()
+	r.Discard(2) // reserved
+
+	if opint.val == nil {
+		opint.val = &big.Int{}
+	}
+
+	digit := &big.Int{}
+	shift := &big.Int{}
+
+	for i := 0; i < n; i++ {
+		shift.Exp(big10k, weight, nil)
+		digit.SetBytes(r.Buf[:2])
+		digit.Mul(digit, shift)
+		opint.val.Add(opint.val, digit)
+		weight.Sub(weight, bigOne)
+		r.Discard(2)
+	}
+
+	if sign == 0x4000 {
+		opint.val.Neg(opint.val)
+	}
+	r.Discard(len(r.Buf))
+}
+
+func (c *optionalBigIntDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalBigInt)(out).Unset()
+}
+
+func (c *optionalBigIntDecoder) DecodePresent(out unsafe.Pointer) {}
 
 type decimalEncoder struct{}
 
@@ -179,7 +203,7 @@ func (c *decimalEncoder) Encode(
 	path Path,
 ) error {
 	switch in := val.(type) {
-	case DecimalMarshaler:
+	case marshal.DecimalMarshaler:
 		data, err := in.MarshalEdgeDBDecimal()
 		if err != nil {
 			return err
@@ -189,7 +213,8 @@ func (c *decimalEncoder) Encode(
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be *big.Int got %T", path, val)
+		return fmt.Errorf("expected %v to be DecimalMarshaler got %T",
+			path, val)
 	}
 
 	return nil

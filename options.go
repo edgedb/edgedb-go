@@ -31,27 +31,6 @@ func NewOptionalBool(v bool) OptionalBool {
 	return o
 }
 
-// OptionalBool is an optional bool.
-type OptionalBool struct {
-	val   bool
-	isSet bool
-}
-
-// Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalBool) Get() (bool, bool) { return o.val, o.isSet }
-
-// Set sets the value.
-func (o *OptionalBool) Set(val bool) {
-	o.val = val
-	o.isSet = true
-}
-
-// Unset marks the value as missing.
-func (o *OptionalBool) Unset() {
-	o.val = false
-	o.isSet = false
-}
-
 // Options for connecting to an EdgeDB server
 type Options struct {
 	// Hosts is a slice of database host addresses as one of the following

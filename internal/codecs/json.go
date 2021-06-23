@@ -23,32 +23,12 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
 var (
 	jsonID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}
 )
-
-// JSONMarshaler is the interface implemented by an object
-// that can marshal itself into the json wire format.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
-//
-// MarshalEdgeDBJSON encodes the receiver
-// into a binary form and returns the result.
-type JSONMarshaler interface {
-	MarshalEdgeDBJSON() ([]byte, error)
-}
-
-// JSONUnmarshaler is the interface implemented by an object
-// that can unmarshal the json wire format representation of itself.
-// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
-//
-// UnmarshalEdgeDBJSON must be able to decode the json wire format.
-// UnmarshalEdgeDBJSON must copy the data if it wishes to retain the data
-// after returning.
-type JSONUnmarshaler interface {
-	UnmarshalEdgeDBJSON(data []byte) error
-}
 
 type jsonCodec struct{}
 
@@ -76,6 +56,8 @@ func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(n)
 }
 
+func (c *jsonCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+
 func (c *jsonCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 	switch in := val.(type) {
 	case []byte:
@@ -87,7 +69,22 @@ func (c *jsonCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushUint8(1)
 
 		w.PushBytes(in)
-	case JSONMarshaler:
+	case types.OptionalBytes:
+		bts, ok := in.Get()
+		if !ok {
+			return fmt.Errorf("cannot encode edgedb.OptionalBytes at %v "+
+				"because its value is missing", path)
+		}
+
+		// data length
+		w.PushUint32(uint32(1 + len(bts)))
+
+		// json format is always 1
+		// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
+		w.PushUint8(1)
+
+		w.PushBytes(bts)
+	case marshal.JSONMarshaler:
 		data, err := in.MarshalEdgeDBJSON()
 		if err != nil {
 			return err
@@ -97,8 +94,42 @@ func (c *jsonCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushBytes(data)
 		w.EndBytes()
 	default:
-		return fmt.Errorf("expected %v to be []byte, got %T", path, val)
+		return fmt.Errorf("expected %v to be []byte, edgedb.OptionalBytes or "+
+			"JSONMarshaler got %T", path, val)
 	}
 
 	return nil
 }
+
+type optionalJSONDecoder struct {
+	id types.UUID
+}
+
+func (c *optionalJSONDecoder) DescriptorID() types.UUID { return c.id }
+
+func (c *optionalJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+	format := r.PopUint8()
+	if format != 1 {
+		panic(fmt.Sprintf(
+			"unexpected json format: expected 1, got %v", format))
+	}
+
+	opbytes := (*optionalBytesLayout)(out)
+	opbytes.set = true
+
+	n := len(r.Buf)
+	if cap(opbytes.val) >= n {
+		opbytes.val = (opbytes.val)[:n]
+	} else {
+		opbytes.val = make([]byte, n)
+	}
+
+	copy(opbytes.val, r.Buf)
+	r.Discard(n)
+}
+
+func (c *optionalJSONDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalBytes)(out).Unset()
+}
+
+func (c *optionalJSONDecoder) DecodePresent(out unsafe.Pointer) {}

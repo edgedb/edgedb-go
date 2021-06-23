@@ -42,7 +42,7 @@ func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
 		if desc, OK := descCache.Get(ids.in); OK {
 			in, err = codecs.BuildEncoder(desc.(descriptor.Descriptor))
 			if err != nil {
-				return &unsupportedFeatureError{msg: err.Error()}
+				return &invalidArgumentError{msg: err.Error()}
 			}
 		} else {
 			return c.pesimistic(r, q)
@@ -60,7 +60,7 @@ func (c *baseConn) granularFlow(r *buff.Reader, q *gfQuery) (err error) {
 					"the \"out\" argument does not match query schema: %v",
 					err,
 				)
-				return &unsupportedFeatureError{msg: err.Error()}
+				return &invalidArgumentError{msg: err.Error()}
 			}
 		} else {
 			return c.pesimistic(r, q)
@@ -88,7 +88,7 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 	var cdcs codecPair
 	cdcs.in, err = codecs.BuildEncoder(descs.in)
 	if err != nil {
-		return &unsupportedFeatureError{msg: err.Error()}
+		return &invalidArgumentError{msg: err.Error()}
 	}
 
 	if q.fmt == format.JSON {
@@ -101,7 +101,7 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 				"the \"out\" argument does not match query schema: %v",
 				err,
 			)
-			return &unsupportedFeatureError{msg: err.Error()}
+			return &invalidArgumentError{msg: err.Error()}
 		}
 	}
 
@@ -195,7 +195,10 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 			r.Discard(16)
 
 			// input descriptor
-			descs.in = descriptor.Pop(r.PopSlice(r.PopUint32()))
+			descs.in = descriptor.Pop(
+				r.PopSlice(r.PopUint32()),
+				c.protocolVersion,
+			)
 
 			// output descriptor ID
 			outID := r.PopUUID()
@@ -204,7 +207,10 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 				r.Discard(4) // data length is always 0 for nil descriptor
 				descs.out = descriptor.Descriptor{ID: descriptor.IDZero}
 			} else {
-				descs.out = descriptor.Pop(r.PopSlice(r.PopUint32()))
+				descs.out = descriptor.Pop(
+					r.PopSlice(r.PopUint32()),
+					c.protocolVersion,
+				)
 			}
 
 			if q.expCard == cardinality.AtMostOne && card == cardinality.Many {

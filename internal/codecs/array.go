@@ -110,6 +110,8 @@ func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	// number of dimensions is 1 or 0
 	if r.PopUint32() == 0 {
 		r.Discard(8) // reserved
+		slice := (*sliceHeader)(out)
+		setSliceLen(slice, c.typ, 0)
 		return
 	}
 
@@ -120,13 +122,7 @@ func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	n := int(upper - lower + 1)
 
 	slice := (*sliceHeader)(out)
-	if slice.Cap < n {
-		val := reflect.New(c.typ)
-		val.Elem().Set(reflect.MakeSlice(c.typ, n, n))
-		*slice = *(*sliceHeader)(unsafe.Pointer(val.Pointer()))
-	} else {
-		slice.Len = n
-	}
+	setSliceLen(slice, c.typ, n)
 
 	for i := 0; i < n; i++ {
 		elmLen := r.PopUint32()
@@ -140,3 +136,12 @@ func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 		)
 	}
 }
+
+func (c *arrayDecoder) DecodeMissing(out unsafe.Pointer) {
+	slice := (*sliceHeader)(out)
+	slice.Data = nilPointer
+	slice.Len = 0
+	slice.Cap = 0
+}
+
+func (c *arrayDecoder) DecodePresent(out unsafe.Pointer) {}

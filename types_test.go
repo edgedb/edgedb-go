@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -156,6 +157,58 @@ func TestSendAndReceiveInt64Marshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalInt64(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE Int64FieldHolder {
+				CREATE PROPERTY int64 -> int64;
+			};
+
+			INSERT Int64FieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Int64 OptionalInt64 `edgedb:"int64"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT Int64FieldHolder { int64 } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Int64.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalInt64{}
+		arg.Set(64)
+		e = tx.QueryOne(ctx, `
+			SELECT Int64FieldHolder { int64 := <int64>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Int64.Set(64)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveInt32(t *testing.T) {
 	ctx := context.Background()
 
@@ -257,6 +310,58 @@ func TestSendAndReceiveInt32Marshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalInt32(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE Int32FieldHolder {
+				CREATE PROPERTY int32 -> int32;
+			};
+
+			INSERT Int32FieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Int32 OptionalInt32 `edgedb:"int32"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT Int32FieldHolder { int32 } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Int32.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalInt32{}
+		arg.Set(32)
+		e = tx.QueryOne(ctx, `
+			SELECT Int32FieldHolder { int32 := <int32>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Int32.Set(32)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveInt16(t *testing.T) {
@@ -362,6 +467,58 @@ func TestSendAndReceiveInt16Marshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalInt16(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE Int16FieldHolder {
+				CREATE PROPERTY int16 -> int16;
+			};
+
+			INSERT Int16FieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Int16 OptionalInt16 `edgedb:"int16"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT Int16FieldHolder { int16 } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Int16.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalInt16{}
+		arg.Set(16)
+		e = tx.QueryOne(ctx, `
+			SELECT Int16FieldHolder { int16 := <int16>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Int16.Set(16)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveBool(t *testing.T) {
 	ctx := context.Background()
 
@@ -444,6 +601,58 @@ func TestSendAndReceiveBoolMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalBool(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE BoolFieldHolder {
+				CREATE PROPERTY bool -> bool;
+			};
+
+			INSERT BoolFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Bool OptionalBool `edgedb:"bool"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT BoolFieldHolder { bool } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Bool.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalBool{}
+		arg.Set(true)
+		e = tx.QueryOne(ctx, `
+			SELECT BoolFieldHolder { bool := <bool>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Bool.Set(true)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveFloat64(t *testing.T) {
@@ -554,6 +763,58 @@ func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalFloat64(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE Float64FieldHolder {
+				CREATE PROPERTY float64 -> float64;
+			};
+
+			INSERT Float64FieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Float64 OptionalFloat64 `edgedb:"float64"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT Float64FieldHolder { float64 } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Float64.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalFloat64{}
+		arg.Set(64)
+		e = tx.QueryOne(ctx, `
+			SELECT Float64FieldHolder { float64 := <float64>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Float64.Set(64)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveFloat32(t *testing.T) {
 	ctx := context.Background()
 
@@ -662,6 +923,58 @@ func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalFloat32(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE Float32FieldHolder {
+				CREATE PROPERTY float32 -> float32;
+			};
+
+			INSERT Float32FieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Float32 OptionalFloat32 `edgedb:"float32"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT Float32FieldHolder { float32 } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Float32.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalFloat32{}
+		arg.Set(32)
+		e = tx.QueryOne(ctx, `
+			SELECT Float32FieldHolder { float32 := <float32>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Float32.Set(32)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveBytes(t *testing.T) {
 	ctx := context.Background()
 
@@ -736,6 +1049,58 @@ func TestSendAndReceiveBytesMarshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalBytes(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE BytesFieldHolder {
+				CREATE PROPERTY bytes -> bytes;
+			};
+
+			INSERT BytesFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Bytes OptionalBytes `edgedb:"bytes"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT BytesFieldHolder { bytes } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Bytes.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalBytes{}
+		arg.Set([]byte("hello"))
+		e = tx.QueryOne(ctx, `
+			SELECT BytesFieldHolder { bytes := <bytes>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Bytes.Set([]byte("hello"))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveStr(t *testing.T) {
 	ctx := context.Background()
 
@@ -798,6 +1163,58 @@ func TestSendAndReceiveStrMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalStr(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE StrFieldHolder {
+				CREATE PROPERTY string -> str;
+			};
+
+			INSERT StrFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			String OptionalStr `edgedb:"string"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT StrFieldHolder { string } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.String.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalStr{}
+		arg.Set("hello")
+		e = tx.QueryOne(ctx, `
+			SELECT StrFieldHolder { string := <str>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.String.Set("hello")
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveJSON(t *testing.T) {
@@ -864,6 +1281,58 @@ func TestSendAndReceiveJSONMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalJSON(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE JSONFieldHolder {
+				CREATE PROPERTY json -> json;
+			};
+
+			INSERT JSONFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			JSON OptionalBytes `edgedb:"json"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT JSONFieldHolder { json } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.JSON.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalBytes{}
+		arg.Set([]byte(`"hello"`))
+		e = tx.QueryOne(ctx, `
+			SELECT JSONFieldHolder { json := <json>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.JSON.Set([]byte(`"hello"`))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveEnum(t *testing.T) {
@@ -1059,6 +1528,61 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalDuration(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE DurationFieldHolder {
+				CREATE PROPERTY duration -> duration;
+			};
+
+			INSERT DurationFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			Duration OptionalDuration `edgedb:"duration"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT DurationFieldHolder { duration } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.Duration.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalDuration{}
+		arg.Set(123)
+		e = tx.QueryOne(ctx, `
+			SELECT DurationFieldHolder {
+				duration := <duration>$0
+			}
+			LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.Duration.Set(123)
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveRelativeDuration(t *testing.T) {
 	ctx := context.Background()
 
@@ -1171,6 +1695,67 @@ func TestSendAndReceiveRelativeDurationMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalRelativeDuration(t *testing.T) {
+	ctx := context.Background()
+
+	var duration RelativeDuration
+	err := conn.QueryOne(ctx, "SELECT <cal::relative_duration>'1y'", &duration)
+	if err != nil {
+		t.Skip("server version is too old for this feature")
+	}
+
+	err = conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE RelativeDurationFieldHolder {
+				CREATE PROPERTY duration -> cal::relative_duration;
+			};
+
+			INSERT RelativeDurationFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			RelativeDuration OptionalRelativeDuration `edgedb:"duration"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT RelativeDurationFieldHolder { duration } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.RelativeDuration.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalRelativeDuration{}
+		arg.Set(NewRelativeDuration(1, 2, 3))
+		e = tx.QueryOne(ctx, `
+			SELECT RelativeDurationFieldHolder {
+				duration := <cal::relative_duration>$0
+			}
+			LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.RelativeDuration.Set(NewRelativeDuration(1, 2, 3))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveLocalTime(t *testing.T) {
@@ -1296,6 +1881,61 @@ func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalLocalTime(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE LocalTimeFieldHolder {
+				CREATE PROPERTY local_time -> cal::local_time;
+			};
+
+			INSERT LocalTimeFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			LocalTime OptionalLocalTime `edgedb:"local_time"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT LocalTimeFieldHolder { local_time } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.LocalTime.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalLocalTime{}
+		arg.Set(NewLocalTime(11, 53, 27, 4))
+		e = tx.QueryOne(ctx, `
+			SELECT LocalTimeFieldHolder {
+				local_time := <cal::local_time>$0
+			}
+			LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.LocalTime.Set(NewLocalTime(11, 53, 27, 4))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveLocalDate(t *testing.T) {
 	ctx := context.Background()
 
@@ -1408,6 +2048,61 @@ func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalLocalDate(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE LocalDateFieldHolder {
+				CREATE PROPERTY local_date -> cal::local_date;
+			};
+
+			INSERT LocalDateFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			LocalDate OptionalLocalDate `edgedb:"local_date"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT LocalDateFieldHolder { local_date } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.LocalDate.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalLocalDate{}
+		arg.Set(NewLocalDate(2020, 1, 1))
+		e = tx.QueryOne(ctx, `
+			SELECT LocalDateFieldHolder {
+				local_date := <cal::local_date>$0
+			}
+			LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.LocalDate.Set(NewLocalDate(2020, 1, 1))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveLocalDateTime(t *testing.T) {
@@ -1531,6 +2226,61 @@ func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalLocalDateTime(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE LocalDateTimeFieldHolder {
+				CREATE PROPERTY local_datetime -> cal::local_datetime;
+			};
+
+			INSERT LocalDateTimeFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			LocalDateTime OptionalLocalDateTime `edgedb:"local_datetime"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT LocalDateTimeFieldHolder { local_datetime } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.LocalDateTime.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalLocalDateTime{}
+		arg.Set(NewLocalDateTime(2020, 1, 1, 0, 0, 0, 0))
+		e = tx.QueryOne(ctx, `
+			SELECT LocalDateTimeFieldHolder {
+				local_datetime := <cal::local_datetime>$0
+			}
+			LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.LocalDateTime.Set(NewLocalDateTime(2020, 1, 1, 0, 0, 0, 0))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 func TestSendAndReceiveDateTime(t *testing.T) {
 	ctx := context.Background()
 	format := "2006-01-02T15:04:05.999999-07:00"
@@ -1651,6 +2401,61 @@ func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalDateTime(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE DateTimeFieldHolder {
+				CREATE PROPERTY datetime -> datetime;
+			};
+
+			INSERT DateTimeFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			DateTime OptionalDateTime `edgedb:"datetime"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT DateTimeFieldHolder { datetime } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.DateTime.Unset()
+		assert.Equal(t, expected, result)
+
+		val := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		arg := OptionalDateTime{}
+		arg.Set(val)
+		e = tx.QueryOne(ctx, `
+			SELECT DateTimeFieldHolder { datetime := <datetime>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		actual, ok := result.DateTime.Get()
+		assert.True(t, ok)
+		assert.True(t, val.Equal(actual),
+			"%v != %v", val.String(), actual.String())
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveBigInt(t *testing.T) {
@@ -1862,6 +2667,58 @@ func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
 	)
 }
 
+func TestSendAndReceiveOptionalBigInt(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE BigIntFieldHolder {
+				CREATE PROPERTY bigint -> bigint;
+			};
+
+			INSERT BigIntFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			BigInt OptionalBigInt `edgedb:"bigint"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT BigIntFieldHolder { bigint } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.BigInt.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalBigInt{}
+		arg.Set(big.NewInt(123))
+		e = tx.QueryOne(ctx, `
+			SELECT BigIntFieldHolder { bigint := <bigint>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.BigInt.Set(big.NewInt(123))
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
+}
+
 type CustomDecimal struct {
 	data []byte
 }
@@ -2008,6 +2865,58 @@ func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSendAndReceiveOptionalUUID(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE UUIDFieldHolder {
+				CREATE PROPERTY uuid -> uuid;
+			};
+
+			INSERT UUIDFieldHolder;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Result struct {
+			UUID OptionalUUID `edgedb:"uuid"`
+		}
+
+		var result Result
+		e = tx.QueryOne(ctx, `
+			SELECT UUIDFieldHolder { uuid } LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Result{}
+		expected.UUID.Unset()
+		assert.Equal(t, expected, result)
+
+		arg := OptionalUUID{}
+		arg.Set(UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})
+		e = tx.QueryOne(ctx, `
+			SELECT UUIDFieldHolder { uuid := <uuid>$0 } LIMIT 1`,
+			&result,
+			arg,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected.UUID.Set(UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})
+		assert.Equal(t, expected, result)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveCustomScalars(t *testing.T) {
@@ -2186,7 +3095,7 @@ func TestReceiveTuple(t *testing.T) {
 
 	var wrongType string
 	err := conn.QuerySingle(ctx, `SELECT ()`, &wrongType)
-	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
+	require.EqualError(t, err, "edgedb.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected string to be a struct got string")
 
@@ -2196,7 +3105,7 @@ func TestReceiveTuple(t *testing.T) {
 
 	var missingTag struct{ first int64 }
 	err = conn.QuerySingle(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
-	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
+	require.EqualError(t, err, "edgedb.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected struct { first int64 } to have a field "+
 		"with the tag `edgedb:\"0\"`")
@@ -2266,7 +3175,7 @@ func TestSendAndReceiveArray(t *testing.T) {
 	err = conn.QuerySingle(ctx,
 		"SELECT <array<int64>>$0", &result, []int64(nil))
 	require.NoError(t, err)
-	assert.Equal(t, []int64(nil), result)
+	assert.Equal(t, []int64{}, result)
 
 	err = conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
 	require.NoError(t, err)
@@ -2337,4 +3246,180 @@ func TestReceiveSet(t *testing.T) {
 			result.Sets,
 		)
 	}
+}
+
+type CustomOptionalInt16 struct {
+	value int64
+	isSet bool
+}
+
+func (i *CustomOptionalInt16) UnmarshalEdgeDBInt64(data []byte) error {
+	i.value = int64(binary.BigEndian.Uint64(data[:8]))
+	return nil
+}
+
+func (i *CustomOptionalInt16) SetMissing(missing bool) {
+	i.isSet = !missing
+}
+
+type OptionalTuple struct {
+	Zero int64 `edgedb:"0"`
+	One  int64 `edgedb:"1"`
+	Optional
+}
+
+type OptionalNamedTuple struct {
+	A     int64 `edgedb:"a"`
+	B     int64 `edgedb:"b"`
+	isSet bool
+}
+
+func (t *OptionalNamedTuple) SetMissing(missing bool) {
+	t.isSet = !missing
+}
+
+type OtherSample struct {
+	SimpleScalar CustomOptionalInt16 `edgedb:"simple_scalar"`
+	Optional
+}
+
+func TestMissingObjectFields(t *testing.T) {
+	if conn.conn.protocolVersion.LT(protocolVersion0p11) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, `
+			CREATE TYPE Sample {
+				CREATE PROPERTY simple_scalar -> int64;
+				CREATE PROPERTY array -> array<int64>;
+				CREATE PROPERTY tuple -> tuple<int64, int64>;
+				CREATE PROPERTY named_tuple -> tuple<a: int64, b: int64>;
+				CREATE LINK object -> Sample;
+				CREATE MULTI LINK set_ -> Sample;
+			};
+
+			# all fields are missing
+			INSERT Sample;
+		`)
+		if e != nil {
+			return e
+		}
+
+		type Sample struct {
+			SimpleScalar CustomOptionalInt16 `edgedb:"simple_scalar"`
+			Array        []int64             `edgedb:"array"`
+			Tuple        OptionalTuple       `edgedb:"tuple"`
+			NamedTuple   OptionalNamedTuple  `edgedb:"named_tuple"`
+			Object       OtherSample         `edgedb:"object"`
+			Set          []Sample            `edgedb:"set_"`
+		}
+
+		var result Sample
+		e = tx.QueryOne(ctx, `
+			SELECT Sample {
+				simple_scalar,
+				array,
+				tuple,
+				named_tuple,
+				object: { simple_scalar },
+				set_: { simple_scalar },
+			}
+			LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected := Sample{
+			SimpleScalar: CustomOptionalInt16{},
+			Array:        nil,
+			Tuple:        OptionalTuple{},
+			NamedTuple:   OptionalNamedTuple{},
+			Object:       OtherSample{},
+			Set:          []Sample{},
+		}
+		assert.Equal(t, expected, result)
+
+		e = tx.QueryOne(ctx, `
+			WITH
+				object := (INSERT Sample { simple_scalar := 2 }),
+				set_ := (INSERT Sample { simple_scalar := 3 }),
+				inserted := (INSERT Sample {
+					simple_scalar := 1,
+					array := [1],
+					tuple := (1, 2),
+					named_tuple := (a := 1, b := 2),
+					object := object,
+					set_ := set_,
+				})
+			SELECT inserted {
+				simple_scalar,
+				array,
+				tuple,
+				named_tuple,
+				object: { simple_scalar },
+				set_: { simple_scalar },
+			}
+			LIMIT 1`,
+			&result,
+		)
+		if e != nil {
+			return e
+		}
+
+		expected = Sample{
+			SimpleScalar: CustomOptionalInt16{
+				value: 1,
+				isSet: true,
+			},
+			Array: []int64{1},
+			Tuple: OptionalTuple{
+				Zero: int64(1),
+				One:  int64(2),
+			},
+			NamedTuple: OptionalNamedTuple{
+				A:     int64(1),
+				B:     int64(2),
+				isSet: true,
+			},
+			Object: OtherSample{
+				SimpleScalar: CustomOptionalInt16{
+					value: 2,
+					isSet: true,
+				},
+			},
+			Set: []Sample{{
+				SimpleScalar: CustomOptionalInt16{
+					value: 3,
+					isSet: true,
+				},
+			}},
+		}
+		expected.Tuple.SetMissing(false)
+		expected.Object.SetMissing(false)
+
+		assert.Equal(t, expected, result)
+
+		type WrongType struct {
+			SimpleScalar int64 `edgedb:"simple_scalar"`
+		}
+
+		var result2 WrongType
+		e = tx.QueryOne(ctx, `
+			SELECT Sample { simple_scalar } LIMIT 1`,
+			&result2,
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			`the "out" argument does not match query schema: `+
+			`expected int64 at edgedb.WrongType.simple_scalar to implement `+
+			`OptionalUnmarshaler because the field is not required`)
+
+		return errors.New("rollback")
+	})
+
+	assert.EqualError(t, err, "rollback")
 }
