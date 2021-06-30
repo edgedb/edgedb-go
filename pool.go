@@ -129,7 +129,7 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 	}
 
 	wg := &sync.WaitGroup{}
-	errs := make([]error, opts.MinConns)
+	errs := make([]error, minConns)
 	for i := 0; i < minConns; i++ {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {

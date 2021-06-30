@@ -30,6 +30,9 @@ type credentials struct {
 	user     string
 	database string
 	password string
+	certData []byte
+
+	verifyHostname OptionalBool
 }
 
 func readCredentials(path string) (*credentials, error) {
@@ -101,6 +104,23 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		if !ok {
 			return nil, errors.New("`password` must be a string")
 		}
+	}
+
+	if certData, ok := data["tls_cert_data"]; ok {
+		str, ok := certData.(string)
+		if !ok {
+			return nil, errors.New("`tls_cert_data` must be a string")
+		}
+		result.certData = []byte(str)
+	}
+
+	if verifyHostname, ok := data["tls_verify_hostname"]; ok {
+		val, ok := verifyHostname.(bool)
+		if !ok {
+			return nil, errors.New("`tls_verify_hostname` must be a boolean")
+		}
+
+		result.verifyHostname.Set(val)
 	}
 
 	return result, nil
