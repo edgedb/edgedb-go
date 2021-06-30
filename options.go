@@ -23,6 +23,35 @@ import (
 	"time"
 )
 
+// NewOptionalBool is a convenience function for creating an OptionalBool with
+// its value set to v.
+func NewOptionalBool(v bool) OptionalBool {
+	o := OptionalBool{}
+	o.Set(v)
+	return o
+}
+
+// OptionalBool is an optional bool.
+type OptionalBool struct {
+	val   bool
+	isSet bool
+}
+
+// Get returns the value and a boolean indicating if the value is present.
+func (o *OptionalBool) Get() (bool, bool) { return o.val, o.isSet }
+
+// Set sets the value.
+func (o *OptionalBool) Set(val bool) {
+	o.val = val
+	o.isSet = true
+}
+
+// Unset marks the value as missing.
+func (o *OptionalBool) Unset() {
+	o.val = false
+	o.isSet = false
+}
+
 // Options for connecting to an EdgeDB server
 type Options struct {
 	// Hosts is a slice of database host addresses as one of the following
@@ -96,6 +125,12 @@ type Options struct {
 	// If MaxConns is zero, max(4, runtime.NumCPU()) will be used.
 	// Has no effect for single connections.
 	MaxConns uint
+
+	// Read the TLS certificate from this file
+	TLSCAFile string
+
+	// If false don't verify the server's hostname when using TLS.
+	TLSVerifyHostname OptionalBool
 
 	// ServerSettings is currently unused.
 	ServerSettings map[string]string

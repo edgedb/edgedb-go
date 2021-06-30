@@ -49,11 +49,13 @@ func TestTutorial(t *testing.T) {
 	edb, err := ConnectOne(
 		ctx,
 		Options{
-			Hosts:    opts.Hosts,
-			Ports:    opts.Ports,
-			User:     opts.User,
-			Password: opts.Password,
-			Database: dbName,
+			Hosts:             opts.Hosts,
+			Ports:             opts.Ports,
+			User:              opts.User,
+			Password:          opts.Password,
+			Database:          dbName,
+			TLSCAFile:         opts.TLSCAFile,
+			TLSVerifyHostname: opts.TLSVerifyHostname,
 		},
 	)
 	require.Nil(t, err)

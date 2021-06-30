@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"fmt"
-	"net"
 	"runtime"
 	"sync"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/format"
 	"github.com/edgedb/edgedb-go/internal/header"
+	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
 var (
@@ -129,7 +129,7 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 	}
 
 	wg := &sync.WaitGroup{}
-	errs := make([]error, opts.MinConns)
+	errs := make([]error, minConns)
 	for i := 0; i < minConns; i++ {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {
@@ -224,21 +224,8 @@ func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
 	}, nil
 }
 
-func unrecoverable(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	e, ok := err.(*net.OpError)
-	if ok && e.Temporary() {
-		return false
-	}
-
-	return true
-}
-
 func (p *Pool) release(conn *reconnectingConn, err error) error {
-	if unrecoverable(err) {
+	if soc.IsPermanentNetErr(err) {
 		p.potentialConns <- struct{}{}
 		return conn.close()
 	}

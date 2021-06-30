@@ -28,19 +28,21 @@ import (
 func TestAuth(t *testing.T) {
 	ctx := context.Background()
 	conn, err := ConnectOne(ctx, Options{
-		Hosts:    opts.Hosts,
-		Ports:    opts.Ports,
-		User:     "user_with_password",
-		Password: "secret",
-		Database: opts.Database,
+		Hosts:             opts.Hosts,
+		Ports:             opts.Ports,
+		User:              "user_with_password",
+		Password:          "secret",
+		Database:          opts.Database,
+		TLSCAFile:         opts.TLSCAFile,
+		TLSVerifyHostname: opts.TLSVerifyHostname,
 	})
-	assert.Nil(t, err)
+	require.Nil(t, err, "unexpected error: %v", err)
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	var result string
 	err = conn.QueryOne(ctx, "SELECT 'It worked!';", &result)
 	cancel()
 
-	require.Nil(t, err)
+	require.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, "It worked!", result)
 }
