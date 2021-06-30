@@ -75,7 +75,6 @@ func (c *baseConn) scriptFlow(r *buff.Reader, q sfQuery) error {
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r, q.cmd))
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x

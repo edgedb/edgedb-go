@@ -18,4 +18,16 @@
 
 package edgedb
 
+import (
+	"crypto/x509"
+
+	"github.com/certifi/gocertifi"
+)
+
 var defaultHosts = []string{"localhost"}
+
+func getSystemCertPool() (*x509.CertPool, error) {
+	// x509.SystemCertPool() doesn't work on Windows.
+	// https://github.com/golang/go/issues/16736
+	return gocertifi.CACerts()
+}

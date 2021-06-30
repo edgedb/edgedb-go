@@ -50,7 +50,8 @@ func executeOrPanic(command string) {
 }
 
 type serverInfo struct {
-	Port int `json:"port"`
+	TLSCertFile string `json:"tls_cert_file"`
+	Port        int    `json:"port"`
 }
 
 func getServerInfo(fileName string) (*serverInfo, error) {
@@ -88,6 +89,15 @@ func getServerInfo(fileName string) (*serverInfo, error) {
 	return &info, nil
 }
 
+// convert a windows path to a unix path for systems with WSL.
+func getWSLPath(path string) string {
+	path = strings.ReplaceAll(path, "C:", "/mnt/c")
+	path = strings.ReplaceAll(path, `\`, "/")
+	path = strings.ToLower(path)
+
+	return path
+}
+
 func startServer() {
 	log.Print("starting new server")
 
@@ -104,30 +114,49 @@ func startServer() {
 	statusFile := path.Join(dir, "status-file")
 	log.Println("status file:", dir)
 
-	statusFileUnix := strings.ReplaceAll(statusFile, "C:", "/mnt/c")
-	statusFileUnix = strings.ReplaceAll(statusFileUnix, `\`, "/")
-	statusFileUnix = strings.ToLower(statusFileUnix)
+	statusFileUnix := getWSLPath(statusFile)
 
-	args := []string{
-		serverBin,
-		"--temp-dir",
-		"--testmode",
-		"--emit-server-status=" + statusFileUnix,
-		"--port=auto",
-		"--auto-shutdown",
-		`--bootstrap-command=` +
-			`CREATE SUPERUSER ROLE test { SET password := "shhh" }`,
-	}
-
+	args := []string{serverBin}
 	if runtime.GOOS == "windows" {
 		args = append([]string{"wsl", "-u", "edgedb"}, args...)
 	}
 
+	helpArgs := args
+	helpArgs = append(helpArgs, "--help")
+	out, err := exec.Command(helpArgs[0], helpArgs[1:]...).Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if strings.Contains(string(out), "--generate-self-signed-cert") {
+		args = append(args, "--generate-self-signed-cert")
+	}
+
+	if strings.Contains(string(out), "--auto-shutdown-after") {
+		args = append(args, "--auto-shutdown-after=0")
+	} else {
+		args = append(args, "--auto-shutdown")
+	}
+
+	args = append(
+		args,
+		"--temp-dir",
+		"--testmode",
+		"--emit-server-status="+statusFileUnix,
+		"--port=auto",
+		`--bootstrap-command=`+
+			`CREATE SUPERUSER ROLE test { SET password := "shhh" }`,
+	)
+
 	log.Println("starting server with:", strings.Join(args, " "))
 
 	cmd := exec.Command(args[0], args[1:]...)
+
 	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
+	if os.Getenv("EDGEDB_DEBUG_SERVER") != "" {
+		cmd.Stdout = os.Stdout
+	}
+
 	err = cmd.Start()
 	if err != nil {
 		log.Fatal(err)
@@ -147,12 +176,25 @@ func startServer() {
 		log.Fatal(err)
 	}
 
+	if len(info.TLSCertFile) != 0 && runtime.GOOS == "windows" {
+		tmpFile := path.Join(dir, "edbtlscert.pem")
+		_, err = exec.Command(
+			"wsl", "-u", "edgedb", "cp", info.TLSCertFile, getWSLPath(tmpFile),
+		).Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		info.TLSCertFile = tmpFile
+	}
+
 	opts = Options{
-		Hosts:    []string{"127.0.0.1"},
-		Ports:    []int{info.Port},
-		User:     "test",
-		Password: "shhh",
-		Database: "edgedb",
+		Hosts:             []string{"127.0.0.1"},
+		Ports:             []int{info.Port},
+		User:              "test",
+		Password:          "shhh",
+		Database:          "edgedb",
+		TLSCAFile:         info.TLSCertFile,
+		TLSVerifyHostname: NewOptionalBool(false),
 	}
 
 	log.Print("server started")
@@ -164,7 +206,7 @@ func TestMain(m *testing.M) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println(e)
-			fmt.Println(debug.Stack())
+			fmt.Println(string(debug.Stack()))
 		}
 
 		if err != nil {

@@ -421,7 +421,9 @@ func TestConUtils(t *testing.T) {
 				require.True(t, errors.As(err, &c.expected.err))
 				assert.Nil(t, config)
 			} else {
-				require.Nil(t, err, "encountered err")
+				require.Nil(t, err, "encountered an err")
+				// tlsConfigs cannot be compared reliably
+				config.tlsConfig = nil
 				assert.Equal(t, c.expected.cfg, *config)
 			}
 		})

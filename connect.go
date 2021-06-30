@@ -17,8 +17,8 @@
 package edgedb
 
 import (
+	"crypto/tls"
 	"fmt"
-	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/message"
@@ -82,15 +82,10 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 		return &clientConnectionError{err: err}
 	}
 
-	var (
-		err  error
-		once sync.Once
-	)
+	var err error
+	done := buff.NewSignal()
 
-	doneReadingSignal := make(chan struct{}, 1)
-	done := func() { doneReadingSignal <- struct{}{} }
-
-	for r.Next(doneReadingSignal) {
+	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.ServerHandshake:
 			// The client _MUST_ close the connection
@@ -124,7 +119,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 		case message.ReadyForCommand:
 			ignoreHeaders(r)
 			r.Discard(1) // transaction state
-			once.Do(done)
+			done.Signal()
 		case message.Authentication:
 			if r.PopUint32() == 0 { // auth status
 				continue
@@ -140,16 +135,24 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 				return e
 			}
 
-			once.Do(done)
+			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeError(r, ""))
-			once.Do(done)
+			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
 				return e
 			}
 		}
+	}
+
+	_, isTLS := c.conn.(*tls.Conn)
+	if !isTLS && c.protocolVersion.gte(version{0, 11}) {
+		_ = c.close()
+		return &clientConnectionError{msg: fmt.Sprintf(
+			"server claims to use protocol version %v.%v without using TLS",
+			c.protocolVersion.major, c.protocolVersion.minor)}
 	}
 
 	if r.Err != nil {
@@ -204,7 +207,6 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			done.Signal()
 		case message.ErrorResponse:
 			err = decodeError(r, "")
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -259,7 +261,6 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			done.Signal()
 		case message.ErrorResponse:
 			err = wrapAll(decodeError(r, ""))
-			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
