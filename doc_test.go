@@ -59,10 +59,10 @@ func Example() {
 	var inserted struct{ id edgedb.UUID }
 	err = db.QueryOne(ctx, `
 		INSERT User {
-			name := <str>$1,
-			dob := <datetime>$2
+			name := <str>$0,
+			dob := <datetime>$1
 		}
-	`, inserted, "Bob", time.Date(1984, 3, 1, 0, 0, 0, 0, time.UTC))
+	`, &inserted, "Bob", time.Date(1984, 3, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		log.Fatal(err)
 	}
