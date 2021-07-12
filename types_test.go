@@ -753,10 +753,6 @@ func TestFetchLargeStr(t *testing.T) {
 	err := conn.QueryOne(ctx, "SELECT str_repeat('a', <int64>(10^6))", &result)
 	require.Nil(t, err, "unexpected error: %v", err)
 	assert.Equal(t, strings.Repeat("a", 1_000_000), result)
-
-	err = conn.QueryOne(ctx, "SELECT str_repeat('aa', <int64>(10^8))", &result)
-	require.Nil(t, err, "unexpected error: %v", err)
-	assert.Equal(t, strings.Repeat("aa", 100_000_000), result)
 }
 
 type CustomStr struct {
