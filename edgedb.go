@@ -25,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/soc"
@@ -49,7 +50,7 @@ type baseConn struct {
 	inCodecCache  *cache.Cache
 	outCodecCache *cache.Cache
 
-	protocolVersion version
+	protocolVersion internal.ProtocolVersion
 
 	// indicates whether the protocol version supports
 	// the EXPLICIT_OBJECTIDS header.

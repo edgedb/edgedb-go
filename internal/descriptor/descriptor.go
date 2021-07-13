@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
@@ -67,12 +68,13 @@ type Descriptor struct {
 
 // Field represents the child of a descriptor
 type Field struct {
-	Name string
-	Desc Descriptor
+	Name     string
+	Desc     Descriptor
+	Required bool
 }
 
 // Pop builds a descriptor tree from a describe statement type description.
-func Pop(r *buff.Reader) Descriptor {
+func Pop(r *buff.Reader, version internal.ProtocolVersion) Descriptor {
 	descriptors := []Descriptor{}
 
 	for len(r.Buf) > 0 {
@@ -82,10 +84,12 @@ func Pop(r *buff.Reader) Descriptor {
 
 		switch typ {
 		case Set:
-			fields := []*Field{{"", descriptors[r.PopUint16()]}}
+			fields := []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}
 			desc = Descriptor{Set, id, fields}
 		case Object:
-			fields := objectFields(r, descriptors)
+			fields := objectFields(r, descriptors, version)
 			desc = Descriptor{Object, id, fields}
 		case BaseScalar:
 			desc = Descriptor{BaseScalar, id, nil}
@@ -98,7 +102,9 @@ func Pop(r *buff.Reader) Descriptor {
 			fields := namedTupleFields(r, descriptors)
 			desc = Descriptor{typ, id, fields}
 		case Array:
-			fields := []*Field{{"", descriptors[r.PopUint16()]}}
+			fields := []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}
 			assertArrayDimensions(r)
 			desc = Descriptor{typ, id, fields}
 		case Enum:
@@ -120,15 +126,38 @@ func Pop(r *buff.Reader) Descriptor {
 	return descriptors[len(descriptors)-1]
 }
 
-func objectFields(r *buff.Reader, descriptors []Descriptor) []*Field {
+func objectFields(
+	r *buff.Reader,
+	descriptors []Descriptor,
+	version internal.ProtocolVersion,
+) []*Field {
 	n := int(r.PopUint16())
 	fields := make([]*Field, n)
 
 	for i := 0; i < n; i++ {
-		r.Discard(1) // flags
+		// Preserve backward compatibility with old behavior. If the protocol
+		// version does not support the cardinality flag assume all fields are
+		// required.
+		required := true
+
+		if version.GTE(internal.ProtocolVersion{Major: 0, Minor: 11}) {
+			r.Discard(4) // flags
+			card := r.PopUint8()
+			switch card {
+			case 0x6f, 0x6d:
+				required = false
+			case 0x41, 0x4d:
+			default:
+				panic(fmt.Errorf("unexpected cardinality: %v", card))
+			}
+		} else {
+			r.Discard(1) // flags
+		}
+
 		fields[i] = &Field{
-			Name: r.PopString(),
-			Desc: descriptors[r.PopUint16()],
+			Name:     r.PopString(),
+			Desc:     descriptors[r.PopUint16()],
+			Required: required,
 		}
 	}
 
