@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"crypto/tls"
 	"fmt"
 	"sync"
 
@@ -150,6 +151,14 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 				return e
 			}
 		}
+	}
+
+	_, isTLS := c.conn.(*tls.Conn)
+	if !isTLS && c.protocolVersion.gte(version{0, 11}) {
+		_ = c.close()
+		return &clientConnectionError{msg: fmt.Sprintf(
+			"server claims to use protocol version %v.%v without using TLS",
+			c.protocolVersion.major, c.protocolVersion.minor)}
 	}
 
 	if r.Err != nil {

@@ -18,6 +18,8 @@ package edgedb
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -58,6 +60,17 @@ type baseConn struct {
 	cfg *connConfig
 }
 
+func isTLSError(err error) bool {
+	switch err.(type) {
+	case x509.HostnameError, x509.CertificateInvalidError,
+		x509.UnknownAuthorityError, x509.ConstraintViolationError,
+		x509.InsecureAlgorithmError, x509.UnhandledCriticalExtension:
+		return true
+	default:
+		return false
+	}
+}
+
 // connectWithTimeout makes a single attempt to connect to `addr`.
 func connectWithTimeout(
 	ctx context.Context,
@@ -65,9 +78,10 @@ func connectWithTimeout(
 	addr *dialArgs,
 ) error {
 	var (
-		cancel context.CancelFunc
-		d      net.Dialer
-		err    error
+		cancel    context.CancelFunc
+		tlsDialer = tls.Dialer{Config: conn.cfg.tlsConfig}
+		netDialer net.Dialer
+		err       error
 	)
 
 	if conn.cfg.connectTimeout > 0 {
@@ -78,9 +92,25 @@ func connectWithTimeout(
 	toBeDeserialized := make(chan *soc.Data, 2)
 	r := buff.NewReader(toBeDeserialized)
 
-	conn.conn, err = d.DialContext(ctx, addr.network, addr.address)
+	conn.conn, err = tlsDialer.DialContext(ctx, addr.network, addr.address)
 	if err != nil {
-		goto handleError
+		if isTLSError(err) {
+			goto handleError
+		}
+
+		// don't clobber the TLS error in the case that both dialers fail.
+		var e error
+		conn.conn, e = netDialer.DialContext(ctx, addr.network, addr.address)
+		if e != nil {
+			goto handleError
+		}
+	} else {
+		protocol := conn.conn.(*tls.Conn).ConnectionState().NegotiatedProtocol
+		if protocol != "edgedb-binary" {
+			return &clientConnectionFailedError{
+				msg: "The server doesn't support the edgedb-binary protocol.",
+			}
+		}
 	}
 
 	conn.acquireReaderSignal = make(chan struct{}, 1)
@@ -121,6 +151,8 @@ handleError:
 	switch {
 	case errors.As(err, &errNetOp) && errNetOp.Timeout():
 		return &clientConnectionTimeoutError{err: errNetOp}
+	case errors.Is(err, context.DeadlineExceeded):
+		return &clientConnectionTimeoutError{err: err}
 
 	case errors.As(err, &errEDB):
 		return err
