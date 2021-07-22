@@ -234,7 +234,7 @@ func TestOnlySendsWhatWasPushed(t *testing.T) {
 	w.PushString("hello")
 
 	f := &writerFixture{}
-	assert.Nil(t, w.Send(f))
+	assert.NoError(t, w.Send(f))
 
 	expected := []byte{0, 0, 0, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f}
 	assert.Equal(t, expected, f.written)
@@ -247,7 +247,7 @@ func TestSendsAllChuncks(t *testing.T) {
 	w.PushUint32(3)
 
 	f := &writerFixture{}
-	assert.Nil(t, w.Send(f))
+	assert.NoError(t, w.Send(f))
 
 	expected := []uint8{
 		0x0, 0x0, 0x0, 0x1,

@@ -36,13 +36,13 @@ func TestAuth(t *testing.T) {
 		TLSCAFile:         opts.TLSCAFile,
 		TLSVerifyHostname: opts.TLSVerifyHostname,
 	})
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	var result string
 	err = conn.QueryOne(ctx, "SELECT 'It worked!';", &result)
 	cancel()
 
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, "It worked!", result)
 }
