@@ -30,17 +30,17 @@ import (
 func TestConnectPool(t *testing.T) {
 	ctx := context.Background()
 	p, err := Connect(ctx, opts)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	var result string
 	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "hello", result)
 
 	p2 := p.WithTxOptions(NewTxOptions())
 
 	err = p.Close()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Copied pools should be closed if a different copy is closed.
 	err = p2.Close()
@@ -50,7 +50,7 @@ func TestConnectPool(t *testing.T) {
 func TestPoolRejectsTransaction(t *testing.T) {
 	ctx := context.Background()
 	p, err := Connect(ctx, opts)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	expected := "edgedb.DisabledCapabilityError: " +
 		"cannot execute transaction control commands"
@@ -72,7 +72,7 @@ func TestPoolRejectsTransaction(t *testing.T) {
 	assert.EqualError(t, err, expected)
 
 	err = p.Close()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {
@@ -82,30 +82,30 @@ func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {
 
 	ctx := context.Background()
 	p, err := Connect(ctx, o)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	require.Equal(t, defaultMinConns, p.minConns)
 	require.Equal(t, defaultMaxConns, p.maxConns)
 
 	var result string
 	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "hello", result)
 
 	err = p.Close()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestClosePoolConcurently(t *testing.T) {
 	ctx := context.Background()
 	p, err := Connect(ctx, opts)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	errs := make(chan error)
 	go func() { errs <- p.Close() }()
 	go func() { errs <- p.Close() }()
 
-	assert.Nil(t, <-errs)
+	assert.NoError(t, <-errs)
 	var edbErr Error
 	require.True(t, errors.As(<-errs, &edbErr), "wrong error: %v", err)
 	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
@@ -148,7 +148,7 @@ func mockPool(opts Options) *Pool { // nolint:gocritic
 func TestAcquireFromClosedPool(t *testing.T) {
 	p := mockPool(Options{})
 	err := p.Close()
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	conn, err := p.Acquire(context.TODO())
 	var edbErr Error
@@ -163,7 +163,7 @@ func TestAcquireFreeConnFromPool(t *testing.T) {
 	p.freeConns <- conn
 
 	pConn, err := p.Acquire(context.Background())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, conn, pConn.conn)
 }
 
@@ -186,21 +186,21 @@ func BenchmarkPoolAcquireRelease(b *testing.B) {
 
 func TestAcquirePotentialConnFromPool(t *testing.T) {
 	p, err := Connect(context.Background(), opts)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// free connection
 	a, err := p.Acquire(context.Background())
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, a)
 
 	// potential connection
 	b, err := p.Acquire(context.Background())
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, b)
 
-	require.Nil(t, b.Release())
-	require.Nil(t, a.Release())
-	require.Nil(t, p.Close())
+	require.NoError(t, b.Release())
+	require.NoError(t, a.Release())
+	require.NoError(t, p.Close())
 }
 
 func TestPoolAcquireExpiredContext(t *testing.T) {
@@ -231,7 +231,7 @@ func TestClosePool(t *testing.T) {
 	p := mockPool(Options{})
 
 	err := p.Close()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = p.Close()
 	var edbErr Error
@@ -243,7 +243,7 @@ func TestPoolRetryingTx(t *testing.T) {
 	ctx := context.Background()
 
 	p, err := Connect(ctx, opts)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	defer p.Close() // nolint:errcheck
 
 	var result int64
@@ -251,6 +251,6 @@ func TestPoolRetryingTx(t *testing.T) {
 		return tx.QueryOne(ctx, "SELECT 33*21", &result)
 	})
 
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, int64(693), result, "Pool.RetryingTx() failed")
 }

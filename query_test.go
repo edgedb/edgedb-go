@@ -46,7 +46,7 @@ func TestObjectWithoutID(t *testing.T) {
 		LIMIT 1`,
 		&result,
 	)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "edgedb", result.Name)
 }
 
@@ -137,7 +137,7 @@ SELECT 1 / $0
 
 	// cache query so that it is run optimistically next time
 	err = conn.QueryOne(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// cause error during optimistic execute
 	err = conn.QueryOne(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
@@ -171,7 +171,7 @@ func TestNamedQueryArguments(t *testing.T) {
 		},
 	)
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, [][]int64{{5, 8}}, result)
 }
 
@@ -186,7 +186,7 @@ func TestNumberedQueryArguments(t *testing.T) {
 		int64(8),
 	)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, [][]int64{{5, 8}}, result)
 }
 
@@ -205,7 +205,7 @@ func TestQueryJSON(t *testing.T) {
 	// when this test fails
 	actual := string(result)
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(
 		t,
 		"[{\"a\" : 0, \"b\" : 1}, {\"a\" : 42, \"b\" : 2}]",
@@ -227,7 +227,7 @@ func TestQueryOneJSON(t *testing.T) {
 	// when this test fails
 	actual := string(result)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "{\"a\" : 0, \"b\" : 42}", actual)
 }
 
@@ -245,7 +245,7 @@ func TestQueryOne(t *testing.T) {
 	var result int64
 	err := conn.QueryOne(ctx, "SELECT 42", &result)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, int64(42), result)
 }
 
@@ -289,7 +289,7 @@ func TestQueryTimesOut(t *testing.T) {
 	require.Equal(t, int64(0), r)
 
 	err = conn.QueryOne(context.Background(), "SELECT 2;", &r)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int64(2), r)
 }
 

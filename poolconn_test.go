@@ -31,7 +31,7 @@ func TestReleasePoolConn(t *testing.T) {
 	pConn := &PoolConn{pool: p, conn: conn}
 
 	err := pConn.Release()
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	result := <-p.freeConns
 	assert.Equal(t, conn, result)
@@ -51,11 +51,11 @@ func TestReleasePoolConn(t *testing.T) {
 func TestPoolConnectionRejectsTransaction(t *testing.T) {
 	ctx := context.Background()
 	p, err := Connect(ctx, opts)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer p.Close() // nolint:errcheck
 
 	con, err := p.Acquire(ctx)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer con.Release() // nolint:errcheck
 
 	expected := "edgedb.DisabledCapabilityError: " +

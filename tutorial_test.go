@@ -44,7 +44,7 @@ func TestTutorial(t *testing.T) {
 	ctx := context.Background()
 	dbName := fmt.Sprintf("test%v", rand.Intn(10_000))
 	err := conn.Execute(ctx, "CREATE DATABASE "+dbName)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	edb, err := ConnectOne(
 		ctx,
@@ -58,7 +58,7 @@ func TestTutorial(t *testing.T) {
 			TLSVerifyHostname: opts.TLSVerifyHostname,
 		},
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	defer edb.Close() // nolint:errcheck
 
@@ -83,7 +83,7 @@ func TestTutorial(t *testing.T) {
 
 		COMMIT MIGRATION;
 	`)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	err = edb.Execute(ctx, `
 		INSERT Movie {
@@ -111,7 +111,7 @@ func TestTutorial(t *testing.T) {
 			}
 		}`,
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	err = edb.Execute(ctx, `
 		INSERT Movie {
@@ -128,7 +128,7 @@ func TestTutorial(t *testing.T) {
 				)
 		};`,
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	var out []Movie
 	err = edb.Query(ctx, `
@@ -146,7 +146,7 @@ func TestTutorial(t *testing.T) {
 		}`,
 		&out,
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// clobber IDs with zero value since they are not deterministic
 	zeroID := make([]byte, 16)

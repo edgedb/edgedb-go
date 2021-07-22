@@ -97,7 +97,7 @@ func TestSendAndReceiveInt64(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, numbers, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "unexpected result count")
 
 	for i, s := range strings {
@@ -146,7 +146,7 @@ func TestSendAndReceiveInt64Marshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: 123_456_789_987_654_321,
@@ -200,7 +200,7 @@ func TestSendAndReceiveInt32(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, numbers, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -249,7 +249,7 @@ func TestSendAndReceiveInt32Marshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: 655_665,
@@ -303,7 +303,7 @@ func TestSendAndReceiveInt16(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, numbers, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -352,7 +352,7 @@ func TestSendAndReceiveInt16Marshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: 6556,
@@ -393,7 +393,7 @@ func TestSendAndReceiveBool(t *testing.T) {
 		t.Run(s, func(t *testing.T) {
 			var result Result
 			err := conn.QueryOne(ctx, query, &result, i, s)
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
 			assert.Equal(t, s, result.Encoded, "encoding failed")
@@ -436,7 +436,7 @@ func TestSendAndReceiveBoolMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: true,
@@ -493,7 +493,7 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, numbers, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -502,7 +502,7 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 			r := results[i]
 
 			encoded, err := strconv.ParseFloat(r.Encoded, 64)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			assert.True(t, r.IsEqual, "equality check faild")
 			assert.Equal(t, n, encoded, "encoding failed")
@@ -544,7 +544,7 @@ func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: -15.625,
@@ -601,7 +601,7 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, numbers, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -610,7 +610,7 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 			r := results[i]
 
 			encoded, err := strconv.ParseFloat(r.Encoded, 32)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			assert.True(t, r.IsEqual, "equality check faild")
 			assert.Equal(t, n, float32(encoded), "encoding failed")
@@ -652,7 +652,7 @@ func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: -15.625,
@@ -684,7 +684,7 @@ func TestSendAndReceiveBytes(t *testing.T) {
 
 	var results [][]byte
 	err := conn.Query(ctx, query, &results, samples)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
 	for i, b := range samples {
@@ -726,7 +726,7 @@ func TestSendAndReceiveBytesMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: data,
@@ -741,7 +741,7 @@ func TestSendAndReceiveStr(t *testing.T) {
 
 	var result string
 	err := conn.QueryOne(ctx, `SELECT <str>$0`, &result, "abcdef")
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, "abcdef", result, "round trip failed")
 }
 
@@ -751,7 +751,7 @@ func TestFetchLargeStr(t *testing.T) {
 
 	var result string
 	err := conn.QueryOne(ctx, "SELECT str_repeat('a', <int64>(10^6))", &result)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, strings.Repeat("a", 1_000_000), result)
 }
 
@@ -789,7 +789,7 @@ func TestSendAndReceiveStrMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "Hello! 🙂",
@@ -813,7 +813,7 @@ func TestSendAndReceiveJSON(t *testing.T) {
 
 	var results [][]byte
 	err := conn.Query(ctx, query, &results, samples)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -855,7 +855,7 @@ func TestSendAndReceiveJSONMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: `{"hello": "world"}`,
@@ -892,7 +892,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	var result Result
 	color := "Red"
 	err := conn.QueryOne(ctx, query, &result, color, color)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	assert.Equal(t, color, result.Encoded, "encoding failed")
 	assert.Equal(t, color, result.Decoded, "decoding failed")
@@ -939,7 +939,7 @@ func TestSendAndReceiveEnumMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "Red",
@@ -998,7 +998,7 @@ func TestSendAndReceiveDuration(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, durations, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(durations), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -1048,7 +1048,7 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: Duration(0x28dd117280),
@@ -1102,7 +1102,7 @@ func TestSendAndReceiveRelativeDuration(t *testing.T) {
 
 	var results []Result
 	err = conn.Query(ctx, query, &results, rds)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(rds), len(results), "wrong number of results")
 
 	for i, rd := range rds {
@@ -1160,7 +1160,7 @@ func TestSendAndReceiveRelativeDurationMarshaler(t *testing.T) {
 
 	var result Result
 	err = conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: NewRelativeDuration(8, 5, 0x28dd117280),
@@ -1235,7 +1235,7 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, times, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	for i, s := range strings {
 		t.Run(s, func(t *testing.T) {
@@ -1283,7 +1283,7 @@ func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "12:10:00",
@@ -1348,7 +1348,7 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, dates, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(dates), len(results))
 
 	for i, s := range strings {
@@ -1397,7 +1397,7 @@ func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "2019-05-06",
@@ -1469,7 +1469,7 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, datetimes, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(datetimes), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -1518,7 +1518,7 @@ func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "2019-05-06T12:00:00",
@@ -1585,7 +1585,7 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 
 	var results []Result
 	err := conn.Query(ctx, query, &results, samples, strings)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
 	for i, s := range strings {
@@ -1640,7 +1640,7 @@ func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "2019-05-06T12:00:00+00:00",
@@ -1799,7 +1799,7 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 
 			var result Result
 			err := conn.QueryOne(ctx, query, &result, i, s)
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
 			assert.Equal(t, s, result.Encoded, "encoding failed")
@@ -1849,7 +1849,7 @@ func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: `-15000`,
@@ -1898,7 +1898,7 @@ func TestSendAndReceiveDecimalMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	expected := CustomDecimal{make([]byte, len(data))}
 	copy(expected.data, data)
@@ -1946,11 +1946,11 @@ func TestSendAndReceiveUUID(t *testing.T) {
 		t.Run(s, func(t *testing.T) {
 			var id UUID
 			err := id.UnmarshalText([]byte(s))
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			var result Result
 			err = conn.QueryOne(ctx, query, &result, id, s)
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
 			assert.Equal(t, s, result.Encoded, "encoding failed")
@@ -1997,7 +1997,7 @@ func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: "b9545c35-1fe7-485f-a6ea-f8ead251abd3",
@@ -2041,7 +2041,7 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 			var result Result
 			err := conn.QueryOne(ctx, query, &result, i, s)
 
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 			assert.Equal(t, s, result.Encoded)
 			assert.Equal(t, i, result.Decoded)
 			assert.Equal(t, i, result.Decoded)
@@ -2082,7 +2082,7 @@ func TestSendAndReceiveCustomScalarMarshaler(t *testing.T) {
 
 	var result Result
 	err := conn.QueryOne(ctx, query, &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
 			Encoded: 123_456_789_987_654_321,
@@ -2113,7 +2113,7 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 
 	var result ParentTuple
 	err := conn.QueryOne(ctx, query, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	expected := ParentTuple{
 		first: []Tuple{
@@ -2158,7 +2158,7 @@ func TestReceiveObject(t *testing.T) {
 
 	var result Function
 	err := conn.QueryOne(ctx, query, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, "std::str_repeat", result.Name)
 	assert.Equal(t, 2, len(result.Params))
 	assert.Equal(t, "PositionalParam", result.Params[0].Kind)
@@ -2174,7 +2174,7 @@ func TestReceiveNamedTuple(t *testing.T) {
 
 	var result NamedTuple
 	err := conn.QueryOne(ctx, "SELECT (a := 1,)", &result)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, NamedTuple{A: 1}, result)
 }
 
@@ -2189,7 +2189,7 @@ func TestReceiveTuple(t *testing.T) {
 
 	var emptyStruct struct{}
 	err = conn.QueryOne(ctx, `SELECT ()`, &emptyStruct)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	var missingTag struct{ first int64 }
 	err = conn.QueryOne(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
@@ -2211,12 +2211,12 @@ func TestReceiveTuple(t *testing.T) {
 
 	result := []Tuple{}
 	err = conn.Query(ctx, `SELECT (<int64>$0,)`, &result, int64(1))
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, []Tuple{{first: 1}}, result)
 
 	result = []Tuple{}
 	err = conn.Query(ctx, `SELECT {(1, "abc"), (2, "def")}`, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t,
 		[]Tuple{
 			{first: 1, second: "abc"},
@@ -2227,7 +2227,7 @@ func TestReceiveTuple(t *testing.T) {
 
 	result = []Tuple{}
 	err = conn.Query(ctx, `SELECT (1, "abc", (2.3, true))`, &result)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t,
 		[]Tuple{{
 			1,
@@ -2256,20 +2256,20 @@ func TestSendAndReceiveArray(t *testing.T) {
 
 	var nested Tuple
 	err = conn.QueryOne(ctx, "SELECT (<array<int64>>$0,)", &nested, []int64{1})
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, Tuple{[]int64{1}}, nested)
 
 	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64(nil))
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, []int64(nil), result)
 
 	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, []int64{1}, result)
 
 	arg := []int64{1, 2, 3}
 	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, arg)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result)
 }
 
@@ -2293,7 +2293,7 @@ func TestReceiveSet(t *testing.T) {
 
 		var result Function
 		err := conn.QueryOne(ctx, query, &result)
-		require.Nil(t, err, "unexpected error: %v", err)
+		require.NoError(t, err)
 		assert.Equal(t, [][]int64{{1, 2}, {1}}, result.Sets)
 	}
 
@@ -2323,7 +2323,7 @@ func TestReceiveSet(t *testing.T) {
 
 		var result Function
 		err := conn.QueryOne(ctx, query, &result)
-		require.Nil(t, err, "unexpected error: %v", err)
+		require.NoError(t, err)
 		assert.Equal(t,
 			[][]Tuple{
 				{{1, NestedTuple{2}}},

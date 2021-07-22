@@ -25,7 +25,7 @@ import (
 
 func TestCredentialsRead(t *testing.T) {
 	creds, err := readCredentials("credentials1.json")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	expected := &credentials{
 		database: "test3n",

@@ -72,7 +72,7 @@ func TestValueOfPointerToNil(t *testing.T) {
 func TestValueOfPointer(t *testing.T) {
 	var thing string
 	val, err := ValueOf(&thing)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	val.SetString("hello")
 	assert.Equal(t, "hello", thing)
 }
@@ -98,7 +98,7 @@ func TestValueOfSliceNonSlice(t *testing.T) {
 func TestValueOfSlice(t *testing.T) {
 	var thing []byte
 	val, err := ValueOfSlice(&thing)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	val.SetBytes([]byte{1, 2, 3})
 	assert.Equal(t, []byte{1, 2, 3}, thing)
 }

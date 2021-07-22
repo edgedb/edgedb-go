@@ -25,10 +25,10 @@ import (
 func TestRecconnectingConnBorrow(t *testing.T) {
 	b := reconnectingConn{}
 	err := b.assertUnborrowed()
-	require.Nil(t, err, "unexpected err: %v", err)
+	require.NoError(t, err)
 
 	err = b.borrow("transaction")
-	require.Nil(t, err, "unexpected err: %v", err)
+	require.NoError(t, err)
 
 	err = b.borrow("something else")
 	expected := "edgedb.InterfaceError: " +
@@ -43,5 +43,5 @@ func TestRecconnectingConnBorrow(t *testing.T) {
 
 	b.unborrow()
 	err = b.assertUnborrowed()
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 }

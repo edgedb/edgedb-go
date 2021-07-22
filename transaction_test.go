@@ -56,7 +56,7 @@ func TestTxRollesBack(t *testing.T) {
 	var testNames []string
 	err = conn.Query(ctx, query, &testNames)
 
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, 0, len(testNames), "The transaction wasn't rolled back")
 }
 
@@ -84,7 +84,7 @@ func TestTxRollesBackOnUserError(t *testing.T) {
 	var testNames []string
 	err = conn.Query(ctx, query, &testNames)
 
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(t, 0, len(testNames), "The transaction wasn't rolled back")
 }
 
@@ -93,7 +93,7 @@ func TestTxCommits(t *testing.T) {
 	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		return tx.Execute(ctx, "INSERT TxTest {name := 'Test Commit'};")
 	})
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 
 	query := `
 		SELECT (
@@ -106,7 +106,7 @@ func TestTxCommits(t *testing.T) {
 	var testNames []string
 	err = conn.Query(ctx, query, &testNames)
 
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 	require.Equal(
 		t,
 		[]string{"Test Commit"},
@@ -178,8 +178,8 @@ func TestTxKinds(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			c := conn.WithTxOptions(opts)
-			require.Nil(t, c.RawTx(ctx, noOp))
-			require.Nil(t, c.RetryingTx(ctx, noOp))
+			require.NoError(t, c.RawTx(ctx, noOp))
+			require.NoError(t, c.RetryingTx(ctx, noOp))
 		})
 	}
 }
