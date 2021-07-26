@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	usr "os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -176,16 +175,11 @@ func stashPath(p string) (string, error) {
 		return "", err
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
 	hash := fmt.Sprintf("%x", sha1.Sum([]byte(p)))
 	baseName := filepath.Base(p)
 	dirName := baseName + "-" + hash
 
-	return path.Join(home, ".edgedb", "projects", dirName), nil
+	return findConfigPath("projects", dirName)
 }
 
 func parseVerifyHostname(s string) (bool, error) {
@@ -198,6 +192,49 @@ func parseVerifyHostname(s string) (bool, error) {
 		return false, fmt.Errorf(
 			"tls_verify_hostname can only be one of yes/no, got %q", s)
 	}
+}
+
+func oldConfigDir() (string, error) {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return path.Join(dir, ".edgedb"), nil
+}
+
+func exists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func findConfigPath(suffix ...string) (string, error) {
+	dir, err := configDir()
+	if err != nil {
+		return "", err
+	}
+
+	parts := append([]string{dir}, suffix...)
+	dir = path.Join(parts...)
+	if exists(dir) {
+		return dir, nil
+	}
+
+	fallback, err := oldConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	parts = append([]string{fallback}, suffix...)
+	fallback = path.Join(parts...)
+
+	if exists(fallback) {
+		return fallback, nil
+	}
+
+	return dir, nil
 }
 
 func parseConnectDSNAndArgs(
@@ -365,12 +402,11 @@ func parseConnectDSNAndArgs(
 
 		usingCredentials = true
 
-		u, err := usr.Current()
+		file, err := findConfigPath("credentials", dsn+".json")
 		if err != nil {
 			return nil, &configurationError{msg: err.Error()}
 		}
 
-		file := path.Join(u.HomeDir, ".edgedb", "credentials", dsn+".json")
 		creds, err := readCredentials(file)
 		if err != nil {
 			return nil, &configurationError{msg: fmt.Sprintf(
