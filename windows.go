@@ -20,8 +20,10 @@ package edgedb
 
 import (
 	"crypto/x509"
+	"path"
 
 	"github.com/certifi/gocertifi"
+	"golang.org/x/sys/windows"
 )
 
 var defaultHosts = []string{"localhost"}
@@ -30,4 +32,14 @@ func getSystemCertPool() (*x509.CertPool, error) {
 	// x509.SystemCertPool() doesn't work on Windows.
 	// https://github.com/golang/go/issues/16736
 	return gocertifi.CACerts()
+}
+
+func configDir() (string, error) {
+	dir, err := windows.KnownFolderPath(
+		windows.FOLDERID_LocalAppData, windows.KF_FLAG_DEFAULT)
+	if err != nil {
+		return "", err
+	}
+
+	return path.Join(dir, "EdgeDB"), nil
 }

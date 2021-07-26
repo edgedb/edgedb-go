@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !windows,!darwin
+// +build darwin
 
 package edgedb
 
@@ -31,19 +31,10 @@ func getSystemCertPool() (*x509.CertPool, error) {
 }
 
 func configDir() (string, error) {
-	dir, ok := os.LookupEnv("XDG_CONFIG_HOME")
-	if !ok {
-		dir = "."
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
 	}
 
-	if !path.IsAbs(dir) {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-
-		dir = path.Join(homeDir, ".config")
-	}
-
-	return path.Join(dir, "edgedb"), nil
+	return path.Join(dir, "Library", "Application Support", "edgedb"), nil
 }
