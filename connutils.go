@@ -458,7 +458,7 @@ func parseConnectDSNAndArgs(
 		if !usingCredentials {
 			hosts = append(hosts, defaultHosts...)
 		}
-		hosts = append(hosts, "localhost")
+		hosts = append(hosts, "127.0.0.1")
 	}
 
 	if len(ports) == 0 {
