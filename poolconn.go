@@ -24,6 +24,8 @@ import (
 )
 
 // PoolConn is a pooled connection.
+//
+// Deprecated: use Pool.RetryingTx() or Pool.RawTx()
 type PoolConn struct {
 	pool      *Pool
 	err       *error

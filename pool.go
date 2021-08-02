@@ -211,6 +211,8 @@ func (p *Pool) acquire(ctx context.Context) (*reconnectingConn, error) {
 // Acquire returns a connection from the pool
 // blocking until a connection is available.
 // Acquired connections must be released to the pool when no longer needed.
+//
+// Deprecated: use RetryingTx() or RawTx()
 func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
 	conn, err := p.acquire(ctx)
 	if err != nil {

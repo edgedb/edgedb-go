@@ -25,6 +25,8 @@ import (
 // Conn is a single Conn to a server.
 // Conn is not safe for concurrent use.
 // Pool should be preferred over Conn for most use cases.
+//
+// Deprecated: use a Pool from Connect() or ConnectDSN()
 type Conn struct {
 	*reconnectingConn
 	txOpts    TxOptions
@@ -56,6 +58,8 @@ func (c *Conn) RetryingTx(ctx context.Context, action Action) error {
 }
 
 // ConnectOne establishes a connection to an EdgeDB server.
+//
+// Deprecated: use Connect() instead
 func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:gocritic,lll
 	return ConnectOneDSN(ctx, "", opts)
 }
@@ -69,6 +73,8 @@ func ConnectOne(ctx context.Context, opts Options) (*Conn, error) { // nolint:go
 //     edgedb://user:password@host:port/database?option=value.
 //
 // The following options are recognized: host, port, user, database, password.
+//
+// Deprecated: use ConnectDSN() instead
 func ConnectOneDSN(
 	ctx context.Context,
 	dsn string,
