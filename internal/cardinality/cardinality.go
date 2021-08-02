@@ -19,13 +19,13 @@ package cardinality
 // Cardinalities
 const (
 	NoResult = 0x6e
-	One      = 0x6f
+	Single   = 0x6f
 	Many     = 0x6d
 )
 
 // ToStr maps cardinality values to their string representation.
 var ToStr = map[uint8]string{
 	NoResult: "NO_RESULT",
-	One:      "ONE",
+	Single:   "SINGLE",
 	Many:     "MANY",
 }

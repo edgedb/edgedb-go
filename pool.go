@@ -309,7 +309,21 @@ func (p *Pool) Query(
 // QueryOne runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // a NoDataError is returned.
+//
+// Deprecated: use QuerySingle()
 func (p *Pool) QueryOne(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	return p.QuerySingle(ctx, cmd, out, args...)
+}
+
+// QuerySingle runs a singleton-returning query and returns its element.
+// If the query executes successfully but doesn't return a result
+// a NoDataError is returned.
+func (p *Pool) QuerySingle(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -321,7 +335,7 @@ func (p *Pool) QueryOne(
 	}
 
 	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.Binary, cardinality.One, args, hdrs, out)
+	q, err := newQuery(cmd, format.Binary, cardinality.Single, args, hdrs, out)
 	if err != nil {
 		return err
 	}
@@ -355,7 +369,21 @@ func (p *Pool) QueryJSON(
 // QueryOneJSON runs a singleton-returning query.
 // If the query executes successfully but doesn't have a result
 // a NoDataError is returned.
+//
+// Deprecated: use QuerySingleJSON()
 func (p *Pool) QueryOneJSON(
+	ctx context.Context,
+	cmd string,
+	out *[]byte,
+	args ...interface{},
+) error {
+	return p.QuerySingleJSON(ctx, cmd, out, args...)
+}
+
+// QuerySingleJSON runs a singleton-returning query.
+// If the query executes successfully but doesn't have a result
+// a NoDataError is returned.
+func (p *Pool) QuerySingleJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -367,7 +395,7 @@ func (p *Pool) QueryOneJSON(
 	}
 
 	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.JSON, cardinality.One, args, hdrs, out)
+	q, err := newQuery(cmd, format.JSON, cardinality.Single, args, hdrs, out)
 	if err != nil {
 		return err
 	}

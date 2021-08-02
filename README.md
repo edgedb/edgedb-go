@@ -36,7 +36,7 @@ func main() {
 	defer pool.Close()
 
 	var result string
-	err = pool.QueryOne(ctx, "SELECT 'hello EdgeDB!'", &result)
+	err = pool.QuerySingle(ctx, "SELECT 'hello EdgeDB!'", &result)
 	if err != nil {
 		log.Fatal(err)
 	}

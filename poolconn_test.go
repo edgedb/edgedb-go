@@ -71,9 +71,9 @@ func TestPoolConnectionRejectsTransaction(t *testing.T) {
 	err = con.QueryJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = con.QueryOne(ctx, "START TRANSACTION", &result)
+	err = con.QuerySingle(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = con.QueryOneJSON(ctx, "START TRANSACTION", &result)
+	err = con.QuerySingleJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 }

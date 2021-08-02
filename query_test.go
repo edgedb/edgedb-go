@@ -39,7 +39,7 @@ func TestObjectWithoutID(t *testing.T) {
 	}
 
 	var result Database
-	err := conn.QueryOne(
+	err := conn.QuerySingle(
 		ctx, `
 		SELECT sys::Database{ name }
 		FILTER .name = 'edgedb'
@@ -53,7 +53,7 @@ func TestObjectWithoutID(t *testing.T) {
 func TestWrongNumberOfArguments(t *testing.T) {
 	var result string
 	ctx := context.Background()
-	err := conn.QueryOne(ctx, `SELECT <str>$0`, &result)
+	err := conn.QuerySingle(ctx, `SELECT <str>$0`, &result)
 	assert.EqualError(t, err,
 		"edgedb.InvalidArgumentError: expected 1 arguments got 0")
 }
@@ -73,10 +73,10 @@ func TestConnRejectsTransactions(t *testing.T) {
 	err = conn.QueryJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = conn.QueryOne(ctx, "START TRANSACTION", &result)
+	err = conn.QuerySingle(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = conn.QueryOneJSON(ctx, "START TRANSACTION", &result)
+	err = conn.QuerySingleJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 }
 
@@ -84,7 +84,7 @@ func TestMissmatchedCardinality(t *testing.T) {
 	ctx := context.Background()
 
 	var result []int64
-	err := conn.QueryOne(ctx, "SELECT {1, 2, 3}", &result)
+	err := conn.QuerySingle(ctx, "SELECT {1, 2, 3}", &result)
 
 	expected := "edgedb.ResultCardinalityMismatchError: " +
 		"the query has cardinality MANY " +
@@ -108,7 +108,7 @@ func TestMissmatchedResultType(t *testing.T) {
 	var result A
 
 	ctx := context.Background()
-	err := conn.QueryOne(ctx, "SELECT (x := (y := (z := 7)))", &result)
+	err := conn.QuerySingle(ctx, "SELECT (x := (y := (z := 7)))", &result)
 
 	expected := "edgedb.UnsupportedFeatureError: " +
 		"the \"out\" argument does not match query schema: " +
@@ -123,7 +123,7 @@ func TestParseAllMessagesAfterError(t *testing.T) {
 
 	// cause error during prepare
 	var number float64
-	err := conn.QueryOne(ctx, "SELECT 1 / $0", &number, int64(5))
+	err := conn.QuerySingle(ctx, "SELECT 1 / $0", &number, int64(5))
 	expected := `edgedb.QueryError: missing a type cast before the parameter
 query:1:12
 
@@ -132,15 +132,15 @@ SELECT 1 / $0
 	assert.EqualError(t, err, expected)
 
 	// cause erroy during execute
-	err = conn.QueryOne(ctx, "SELECT 1 / 0", &number)
+	err = conn.QuerySingle(ctx, "SELECT 1 / 0", &number)
 	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
 
 	// cache query so that it is run optimistically next time
-	err = conn.QueryOne(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
+	err = conn.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
 	assert.NoError(t, err)
 
 	// cause error during optimistic execute
-	err = conn.QueryOne(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
+	err = conn.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
 	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
 }
 
@@ -151,7 +151,8 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 
 	var res Tuple
 	ctx := context.Background()
-	err := conn.QueryOne(ctx, "SELECT (<int16>$0 + <int16>$1,)", &res, 1, 1111)
+	err := conn.QuerySingle(ctx,
+		"SELECT (<int16>$0 + <int16>$1,)", &res, 1, 1111)
 
 	require.NotNil(t, err)
 	assert.EqualError(t, err,
@@ -213,10 +214,10 @@ func TestQueryJSON(t *testing.T) {
 	)
 }
 
-func TestQueryOneJSON(t *testing.T) {
+func TestQuerySingleJSON(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := conn.QueryOneJSON(
+	err := conn.QuerySingleJSON(
 		ctx,
 		"SELECT (a := 0, b := <int64>$0)",
 		&result,
@@ -231,28 +232,28 @@ func TestQueryOneJSON(t *testing.T) {
 	assert.Equal(t, "{\"a\" : 0, \"b\" : 42}", actual)
 }
 
-func TestQueryOneJSONZeroResults(t *testing.T) {
+func TestQuerySingleJSONZeroResults(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := conn.QueryOneJSON(ctx, "SELECT <int64>{}", &result)
+	err := conn.QuerySingleJSON(ctx, "SELECT <int64>{}", &result)
 
 	require.Equal(t, err, errZeroResults)
 	assert.Equal(t, []byte(nil), result)
 }
 
-func TestQueryOne(t *testing.T) {
+func TestQuerySingle(t *testing.T) {
 	ctx := context.Background()
 	var result int64
-	err := conn.QueryOne(ctx, "SELECT 42", &result)
+	err := conn.QuerySingle(ctx, "SELECT 42", &result)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(42), result)
 }
 
-func TestQueryOneZeroResults(t *testing.T) {
+func TestQuerySingleZeroResults(t *testing.T) {
 	ctx := context.Background()
 	var result int64
-	err := conn.QueryOne(ctx, "SELECT <int64>{}", &result)
+	err := conn.QuerySingle(ctx, "SELECT <int64>{}", &result)
 
 	assert.Equal(t, errZeroResults, err)
 }
@@ -279,7 +280,7 @@ func TestQueryTimesOut(t *testing.T) {
 	defer cancel()
 
 	var r int64
-	err := conn.QueryOne(ctx, "SELECT 1;", &r)
+	err := conn.QuerySingle(ctx, "SELECT 1;", &r)
 	require.True(
 		t,
 		errors.Is(err, context.DeadlineExceeded) ||
@@ -288,7 +289,7 @@ func TestQueryTimesOut(t *testing.T) {
 	)
 	require.Equal(t, int64(0), r)
 
-	err = conn.QueryOne(context.Background(), "SELECT 2;", &r)
+	err = conn.QuerySingle(context.Background(), "SELECT 2;", &r)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), r)
 }

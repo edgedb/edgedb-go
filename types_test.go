@@ -145,7 +145,7 @@ func TestSendAndReceiveInt64Marshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -248,7 +248,7 @@ func TestSendAndReceiveInt32Marshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -351,7 +351,7 @@ func TestSendAndReceiveInt16Marshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -392,7 +392,7 @@ func TestSendAndReceiveBool(t *testing.T) {
 		s := fmt.Sprint(i)
 		t.Run(s, func(t *testing.T) {
 			var result Result
-			err := conn.QueryOne(ctx, query, &result, i, s)
+			err := conn.QuerySingle(ctx, query, &result, i, s)
 			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
@@ -435,7 +435,7 @@ func TestSendAndReceiveBoolMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -543,7 +543,7 @@ func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -651,7 +651,7 @@ func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -725,7 +725,7 @@ func TestSendAndReceiveBytesMarshaler(t *testing.T) {
 	copy(arg.data, data)
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -740,7 +740,7 @@ func TestSendAndReceiveStr(t *testing.T) {
 	ctx := context.Background()
 
 	var result string
-	err := conn.QueryOne(ctx, `SELECT <str>$0`, &result, "abcdef")
+	err := conn.QuerySingle(ctx, `SELECT <str>$0`, &result, "abcdef")
 	require.NoError(t, err)
 	assert.Equal(t, "abcdef", result, "round trip failed")
 }
@@ -750,7 +750,8 @@ func TestFetchLargeStr(t *testing.T) {
 	ctx := context.Background()
 
 	var result string
-	err := conn.QueryOne(ctx, "SELECT str_repeat('a', <int64>(10^6))", &result)
+	err := conn.QuerySingle(ctx,
+		"SELECT str_repeat('a', <int64>(10^6))", &result)
 	require.NoError(t, err)
 	assert.Equal(t, strings.Repeat("a", 1_000_000), result)
 }
@@ -788,7 +789,7 @@ func TestSendAndReceiveStrMarshaler(t *testing.T) {
 	copy(arg.data, data)
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -854,7 +855,7 @@ func TestSendAndReceiveJSONMarshaler(t *testing.T) {
 	copy(arg.data, data)
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -891,7 +892,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 
 	var result Result
 	color := "Red"
-	err := conn.QueryOne(ctx, query, &result, color, color)
+	err := conn.QuerySingle(ctx, query, &result, color, color)
 	require.NoError(t, err)
 
 	assert.Equal(t, color, result.Encoded, "encoding failed")
@@ -901,7 +902,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	assert.Equal(t, color, result.String)
 
 	query = "SELECT (decoded := <ColorEnum><str>$0)"
-	err = conn.QueryOne(ctx, query, &result, "invalid")
+	err = conn.QuerySingle(ctx, query, &result, "invalid")
 
 	expected := "edgedb.InvalidValueError: " +
 		"invalid input value for enum 'default::ColorEnum': \"invalid\""
@@ -938,7 +939,7 @@ func TestSendAndReceiveEnumMarshaler(t *testing.T) {
 	copy(arg.data, data)
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1047,7 +1048,7 @@ func TestSendAndReceiveDurationMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1062,7 +1063,8 @@ func TestSendAndReceiveRelativeDuration(t *testing.T) {
 	ctx := context.Background()
 
 	var duration RelativeDuration
-	err := conn.QueryOne(ctx, "SELECT <cal::relative_duration>'1y'", &duration)
+	err := conn.QuerySingle(ctx,
+		"SELECT <cal::relative_duration>'1y'", &duration)
 	if err != nil {
 		t.Skip("server version is too old for this feature")
 	}
@@ -1134,7 +1136,8 @@ func TestSendAndReceiveRelativeDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
 
 	var duration RelativeDuration
-	err := conn.QueryOne(ctx, "SELECT <cal::relative_duration>'1y'", &duration)
+	err := conn.QuerySingle(ctx,
+		"SELECT <cal::relative_duration>'1y'", &duration)
 	if err != nil {
 		t.Skip("server version is too old for this feature")
 	}
@@ -1159,7 +1162,7 @@ func TestSendAndReceiveRelativeDurationMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err = conn.QueryOne(ctx, query, &result, arg)
+	err = conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1282,7 +1285,7 @@ func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1396,7 +1399,7 @@ func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1517,7 +1520,7 @@ func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1639,7 +1642,7 @@ func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1798,7 +1801,7 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 			require.Equal(t, s, i.String())
 
 			var result Result
-			err := conn.QueryOne(ctx, query, &result, i, s)
+			err := conn.QuerySingle(ctx, query, &result, i, s)
 			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
@@ -1848,7 +1851,7 @@ func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
 	copy(arg.data, data)
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -1897,7 +1900,7 @@ func TestSendAndReceiveDecimalMarshaler(t *testing.T) {
 	)`
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 
 	expected := CustomDecimal{make([]byte, len(data))}
@@ -1949,7 +1952,7 @@ func TestSendAndReceiveUUID(t *testing.T) {
 			require.NoError(t, err)
 
 			var result Result
-			err = conn.QueryOne(ctx, query, &result, id, s)
+			err = conn.QuerySingle(ctx, query, &result, id, s)
 			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
@@ -1996,7 +1999,7 @@ func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -2039,7 +2042,7 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 		s := fmt.Sprint(i)
 		t.Run(s, func(t *testing.T) {
 			var result Result
-			err := conn.QueryOne(ctx, query, &result, i, s)
+			err := conn.QuerySingle(ctx, query, &result, i, s)
 
 			assert.NoError(t, err)
 			assert.Equal(t, s, result.Encoded)
@@ -2081,7 +2084,7 @@ func TestSendAndReceiveCustomScalarMarshaler(t *testing.T) {
 	copy(arg.data[:], data[:])
 
 	var result Result
-	err := conn.QueryOne(ctx, query, &result, arg)
+	err := conn.QuerySingle(ctx, query, &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t,
 		Result{
@@ -2112,7 +2115,7 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 	}
 
 	var result ParentTuple
-	err := conn.QueryOne(ctx, query, &result)
+	err := conn.QuerySingle(ctx, query, &result)
 	require.NoError(t, err)
 
 	expected := ParentTuple{
@@ -2157,7 +2160,7 @@ func TestReceiveObject(t *testing.T) {
 	}
 
 	var result Function
-	err := conn.QueryOne(ctx, query, &result)
+	err := conn.QuerySingle(ctx, query, &result)
 	require.NoError(t, err)
 	assert.Equal(t, "std::str_repeat", result.Name)
 	assert.Equal(t, 2, len(result.Params))
@@ -2173,7 +2176,7 @@ func TestReceiveNamedTuple(t *testing.T) {
 	}
 
 	var result NamedTuple
-	err := conn.QueryOne(ctx, "SELECT (a := 1,)", &result)
+	err := conn.QuerySingle(ctx, "SELECT (a := 1,)", &result)
 	require.NoError(t, err)
 	assert.Equal(t, NamedTuple{A: 1}, result)
 }
@@ -2182,17 +2185,17 @@ func TestReceiveTuple(t *testing.T) {
 	ctx := context.Background()
 
 	var wrongType string
-	err := conn.QueryOne(ctx, `SELECT ()`, &wrongType)
+	err := conn.QuerySingle(ctx, `SELECT ()`, &wrongType)
 	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected string to be a struct got string")
 
 	var emptyStruct struct{}
-	err = conn.QueryOne(ctx, `SELECT ()`, &emptyStruct)
+	err = conn.QuerySingle(ctx, `SELECT ()`, &emptyStruct)
 	require.NoError(t, err)
 
 	var missingTag struct{ first int64 }
-	err = conn.QueryOne(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
+	err = conn.QuerySingle(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
 	require.EqualError(t, err, "edgedb.UnsupportedFeatureError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected struct { first int64 } to have a field "+
@@ -2245,7 +2248,7 @@ func TestSendAndReceiveArray(t *testing.T) {
 	ctx := context.Background()
 
 	var result []int64
-	err := conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, "hello")
+	err := conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, "hello")
 	assert.EqualError(t, err,
 		"edgedb.InvalidArgumentError: "+
 			"expected args[0] to be a slice got: string")
@@ -2255,20 +2258,22 @@ func TestSendAndReceiveArray(t *testing.T) {
 	}
 
 	var nested Tuple
-	err = conn.QueryOne(ctx, "SELECT (<array<int64>>$0,)", &nested, []int64{1})
+	err = conn.QuerySingle(ctx,
+		"SELECT (<array<int64>>$0,)", &nested, []int64{1})
 	require.NoError(t, err)
 	assert.Equal(t, Tuple{[]int64{1}}, nested)
 
-	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64(nil))
+	err = conn.QuerySingle(ctx,
+		"SELECT <array<int64>>$0", &result, []int64(nil))
 	require.NoError(t, err)
 	assert.Equal(t, []int64(nil), result)
 
-	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
+	err = conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1}, result)
 
 	arg := []int64{1, 2, 3}
-	err = conn.QueryOne(ctx, "SELECT <array<int64>>$0", &result, arg)
+	err = conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result)
 }
@@ -2292,7 +2297,7 @@ func TestReceiveSet(t *testing.T) {
 		`
 
 		var result Function
-		err := conn.QueryOne(ctx, query, &result)
+		err := conn.QuerySingle(ctx, query, &result)
 		require.NoError(t, err)
 		assert.Equal(t, [][]int64{{1, 2}, {1}}, result.Sets)
 	}
@@ -2322,7 +2327,7 @@ func TestReceiveSet(t *testing.T) {
 		`
 
 		var result Function
-		err := conn.QueryOne(ctx, query, &result)
+		err := conn.QuerySingle(ctx, query, &result)
 		require.NoError(t, err)
 		assert.Equal(t,
 			[][]Tuple{

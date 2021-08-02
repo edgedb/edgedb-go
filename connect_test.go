@@ -40,7 +40,7 @@ func TestAuth(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	var result string
-	err = conn.QueryOne(ctx, "SELECT 'It worked!';", &result)
+	err = conn.QuerySingle(ctx, "SELECT 'It worked!';", &result)
 	cancel()
 
 	require.NoError(t, err)

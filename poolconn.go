@@ -90,13 +90,27 @@ func (c *PoolConn) Query(
 // QueryOne runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // a NoDataError is returned.
+//
+// Deprecated: use QuerySingle()
 func (c *PoolConn) QueryOne(
 	ctx context.Context,
 	cmd string,
 	out interface{},
 	args ...interface{},
 ) error {
-	err := c.conn.QueryOne(ctx, cmd, out, args...)
+	return c.QuerySingle(ctx, cmd, out, args...)
+}
+
+// QuerySingle runs a singleton-returning query and returns its element.
+// If the query executes successfully but doesn't return a result
+// a NoDataError is returned.
+func (c *PoolConn) QuerySingle(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	err := c.conn.QuerySingle(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }
@@ -116,13 +130,27 @@ func (c *PoolConn) QueryJSON(
 // QueryOneJSON runs a singleton-returning query.
 // If the query executes successfully but doesn't have a result
 // a NoDataError is returned.
+//
+// Deprecated: use QuerySingleJSON()
 func (c *PoolConn) QueryOneJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
 	args ...interface{},
 ) error {
-	err := c.conn.QueryOneJSON(ctx, cmd, out, args...)
+	return c.QuerySingleJSON(ctx, cmd, out, args...)
+}
+
+// QuerySingleJSON runs a singleton-returning query.
+// If the query executes successfully but doesn't have a result
+// a NoDataError is returned.
+func (c *PoolConn) QuerySingleJSON(
+	ctx context.Context,
+	cmd string,
+	out *[]byte,
+	args ...interface{},
+) error {
+	err := c.conn.QuerySingleJSON(ctx, cmd, out, args...)
 	c.checkErr(err)
 	return err
 }

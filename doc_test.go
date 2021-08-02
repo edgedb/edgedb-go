@@ -57,7 +57,7 @@ func Example() {
 
 	// Insert a new user.
 	var inserted struct{ id edgedb.UUID }
-	err = db.QueryOne(ctx, `
+	err = db.QuerySingle(ctx, `
 		INSERT User {
 			name := <str>$0,
 			dob := <datetime>$1
