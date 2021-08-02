@@ -70,8 +70,8 @@
 // Pooling
 //
 // Most use cases will benefit from the concurrency safe pool implementation
-// returned from Connect() and ConnectDSN(). Pool.Acquire(), ConnectOne() and
-// ConnectOneDSN() will give you access to a single connection.
+// returned from Connect() and ConnectDSN(). Pool.RetryingTx() or Pool.RawTx()
+// will give you access to a single connection.
 //
 // Errors
 //
