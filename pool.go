@@ -335,7 +335,14 @@ func (p *Pool) QuerySingle(
 	}
 
 	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.Binary, cardinality.Single, args, hdrs, out)
+	q, err := newQuery(
+		cmd,
+		format.Binary,
+		cardinality.AtMostOne,
+		args,
+		hdrs,
+		out,
+	)
 	if err != nil {
 		return err
 	}
@@ -395,7 +402,14 @@ func (p *Pool) QuerySingleJSON(
 	}
 
 	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.JSON, cardinality.Single, args, hdrs, out)
+	q, err := newQuery(
+		cmd,
+		format.JSON,
+		cardinality.AtMostOne,
+		args,
+		hdrs,
+		out,
+	)
 	if err != nil {
 		return err
 	}

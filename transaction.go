@@ -178,7 +178,14 @@ func (t *Tx) QuerySingle(
 		return e
 	}
 
-	q, err := newQuery(cmd, format.Binary, cardinality.Single, args, nil, out)
+	q, err := newQuery(
+		cmd,
+		format.Binary,
+		cardinality.AtMostOne,
+		args,
+		nil,
+		out,
+	)
 	if err != nil {
 		return err
 	}
@@ -232,7 +239,7 @@ func (t *Tx) QuerySingleJSON(
 		return e
 	}
 
-	q, err := newQuery(cmd, format.JSON, cardinality.Single, args, nil, out)
+	q, err := newQuery(cmd, format.JSON, cardinality.AtMostOne, args, nil, out)
 	if err != nil {
 		return err
 	}

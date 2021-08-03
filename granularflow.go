@@ -207,7 +207,7 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (descPair, error) {
 				descs.out = descriptor.Pop(r.PopSlice(r.PopUint32()))
 			}
 
-			if q.expCard == cardinality.Single && card == cardinality.Many {
+			if q.expCard == cardinality.AtMostOne && card == cardinality.Many {
 				err = &resultCardinalityMismatchError{msg: fmt.Sprintf(
 					"the query has cardinality %v "+
 						"which does not match the expected cardinality %v",
@@ -255,7 +255,7 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs codecPair) error {
 
 	tmp := q.out
 	err := error(nil)
-	if q.expCard == cardinality.Single {
+	if q.expCard == cardinality.AtMostOne {
 		err = errZeroResults
 	}
 	done := buff.NewSignal()
@@ -352,7 +352,7 @@ func (c *baseConn) optimistic(
 
 	tmp := q.out
 	err := error(nil)
-	if q.expCard == cardinality.Single {
+	if q.expCard == cardinality.AtMostOne {
 		err = errZeroResults
 	}
 	done := buff.NewSignal()

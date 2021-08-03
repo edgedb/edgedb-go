@@ -61,7 +61,7 @@ func newQuery(
 
 	var err error
 
-	if fmt == format.JSON || expCard == cardinality.Single {
+	if fmt == format.JSON || expCard == cardinality.AtMostOne {
 		q.out, err = marshal.ValueOf(out)
 	} else {
 		q.out, err = marshal.ValueOfSlice(out)
