@@ -103,7 +103,7 @@ func (c *bigIntCodec) Encode(
 		cpy := &big.Int{}
 		cpy.Set(in)
 
-		var sign uint16 = 0
+		var sign uint16
 		if in.Sign() == -1 {
 			sign = 0x4000
 			cpy = cpy.Neg(cpy)
