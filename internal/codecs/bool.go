@@ -67,7 +67,7 @@ func (c *boolCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
 		w.PushUint32(1) // data length
 
 		// convert bool to uint8
-		var out uint8 = 0
+		var out uint8
 		if in {
 			out = 1
 		}

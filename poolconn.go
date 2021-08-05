@@ -43,7 +43,7 @@ func (c *PoolConn) Release() error {
 		return &interfaceError{msg: msg}
 	}
 
-	var err error = nil
+	var err error
 	if c.err != nil {
 		err = *c.err
 	}

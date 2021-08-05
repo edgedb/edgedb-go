@@ -201,7 +201,7 @@ func startServer() {
 }
 
 func TestMain(m *testing.M) {
-	var err error = nil
+	var err error
 	code := 1
 	defer func() {
 		if e := recover(); e != nil {

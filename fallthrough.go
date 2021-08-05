@@ -24,7 +24,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
-var logMsgSeverityLookup map[uint8]string = map[uint8]string{
+var logMsgSeverityLookup = map[uint8]string{
 	0x14: "DEBUG",
 	0x28: "INFO",
 	0x3c: "NOTICE",
