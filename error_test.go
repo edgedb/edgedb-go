@@ -63,7 +63,7 @@ query:3:5
 		t.Run(s.query, func(t *testing.T) {
 			var result int64
 			ctx := context.Background()
-			err := conn.QueryOne(ctx, s.query, &result)
+			err := conn.QuerySingle(ctx, s.query, &result)
 			assert.EqualError(t, err, s.err)
 		})
 	}

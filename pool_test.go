@@ -33,7 +33,7 @@ func TestConnectPool(t *testing.T) {
 	require.NoError(t, err)
 
 	var result string
-	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
+	err = p.QuerySingle(ctx, "SELECT 'hello';", &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", result)
 
@@ -65,10 +65,10 @@ func TestPoolRejectsTransaction(t *testing.T) {
 	err = p.QueryJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = p.QueryOne(ctx, "START TRANSACTION", &result)
+	err = p.QuerySingle(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = p.QueryOneJSON(ctx, "START TRANSACTION", &result)
+	err = p.QuerySingleJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
 	err = p.Close()
@@ -88,7 +88,7 @@ func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {
 	require.Equal(t, defaultMaxConns, p.maxConns)
 
 	var result string
-	err = p.QueryOne(ctx, "SELECT 'hello';", &result)
+	err = p.QuerySingle(ctx, "SELECT 'hello';", &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", result)
 
@@ -248,7 +248,7 @@ func TestPoolRetryingTx(t *testing.T) {
 
 	var result int64
 	err = p.RetryingTx(ctx, func(ctx context.Context, tx *Tx) error {
-		return tx.QueryOne(ctx, "SELECT 33*21", &result)
+		return tx.QuerySingle(ctx, "SELECT 33*21", &result)
 	})
 
 	require.NoError(t, err)
