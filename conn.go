@@ -28,33 +28,13 @@ import (
 //
 // Deprecated: use a Pool from Connect() or ConnectDSN()
 type Conn struct {
-	*reconnectingConn
-	txOpts    TxOptions
-	retryOpts RetryOptions
+	transactableConn
 }
 
 // Close closes the connection.
 // Connections are not usable after they are closed.
 func (c *Conn) Close() error {
-	return c.reconnectingConn.close()
-}
-
-// RawTx runs an action in a transaction.
-// If the action returns an error the transaction is rolled back,
-// otherwise it is committed.
-func (c *Conn) RawTx(ctx context.Context, action Action) error {
-	return c.reconnectingConn.rawTx(ctx, action, c.txOpts)
-}
-
-// RetryingTx does the same as RawTx but retries failed actions
-// if they might succeed on a subsequent attempt.
-func (c *Conn) RetryingTx(ctx context.Context, action Action) error {
-	return c.reconnectingConn.retryingTx(
-		ctx,
-		action,
-		c.txOpts,
-		c.retryOpts,
-	)
+	return c.close()
 }
 
 // ConnectOne establishes a connection to an EdgeDB server.
@@ -85,24 +65,26 @@ func ConnectOneDSN(
 		return nil, err
 	}
 
-	conn := &reconnectingConn{
-		conn: &baseConn{
-			typeIDCache:   cache.New(1_000),
-			inCodecCache:  cache.New(1_000),
-			outCodecCache: cache.New(1_000),
-			cfg:           config,
-		}}
+	base := &baseConn{
+		typeIDCache:   cache.New(1_000),
+		inCodecCache:  cache.New(1_000),
+		outCodecCache: cache.New(1_000),
+		cfg:           config,
+	}
+
+	borrowable := borrowableConn{baseConn: base}
+	reconnecting := &reconnectingConn{borrowableConn: borrowable}
+
+	transactable := transactableConn{
+		reconnectingConn: reconnecting,
+		txOpts:           NewTxOptions(),
+	}
+
+	conn := &Conn{transactable}
 
 	if err := conn.reconnect(ctx); err != nil {
 		return nil, err
 	}
 
-	return &Conn{
-		reconnectingConn: conn,
-		txOpts: TxOptions{
-			isolation:  RepeatableRead,
-			readOnly:   false,
-			deferrable: false,
-		},
-	}, nil
+	return conn, nil
 }

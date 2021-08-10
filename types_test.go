@@ -3284,7 +3284,7 @@ type OtherSample struct {
 }
 
 func TestMissingObjectFields(t *testing.T) {
-	if conn.conn.protocolVersion.LT(protocolVersion0p11) {
+	if conn.transactableConn.protocolVersion.LT(protocolVersion0p11) {
 		t.Skip()
 	}
 

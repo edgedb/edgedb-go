@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,11 +37,22 @@ func TestAuth(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	var result string
 	err = conn.QuerySingle(ctx, "SELECT 'It worked!';", &result)
-	cancel()
-
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "It worked!", result)
+
+	connCopy := conn.WithTxOptions(NewTxOptions())
+
+	err = conn.Close()
+	assert.Nil(t, err, "unexpected error: %v", err)
+
+	// A connection should not be closeable more than once.
+	err = conn.Close()
+	msg := "edgedb.InterfaceError: connection released more than once"
+	assert.EqualError(t, err, msg)
+
+	// Copied connections should not be closeable after another copy is closed.
+	err = connCopy.Close()
+	assert.EqualError(t, err, msg)
 }

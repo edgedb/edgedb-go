@@ -19,11 +19,8 @@ package edgedb
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/cardinality"
-	"github.com/edgedb/edgedb-go/internal/format"
 	"github.com/edgedb/edgedb-go/internal/header"
 )
 
@@ -34,58 +31,21 @@ var (
 )
 
 type reconnectingConn struct {
-	borrowReason string
+	borrowableConn
 
 	// isClosed is true when the connection has been closed by a user.
 	isClosed bool
-	conn     *baseConn
-}
-
-func (b *reconnectingConn) assertUnborrowed() error {
-	switch b.borrowReason {
-	case "transaction":
-		return &interfaceError{
-			msg: "Connection is borrowed for a transaction. " +
-				"Use the methods on transaction object instead.",
-		}
-	case "":
-		return nil
-	default:
-		panic(fmt.Sprintf("unexpected reason: %q", b.borrowReason))
-	}
-}
-
-func (b *reconnectingConn) borrow(reason string) error {
-	if b.borrowReason != "" {
-		msg := "connection is already borrowed for " + b.borrowReason
-		return &interfaceError{msg: msg}
-	}
-
-	if reason != "transaction" {
-		panic(fmt.Sprintf("unexpected reason: %q", reason))
-	}
-
-	b.borrowReason = reason
-	return nil
-}
-
-func (b *reconnectingConn) unborrow() {
-	if b.borrowReason == "" {
-		panic("not currently borrowed, can not unborrow")
-	}
-
-	b.borrowReason = ""
 }
 
 // reconnect establishes a new connection with the server
 // retrying the connection on failure.
 // An error is returned if the `baseConn` was closed.
-func (b *reconnectingConn) reconnect(ctx context.Context) (err error) {
-	if b.isClosed {
+func (c *reconnectingConn) reconnect(ctx context.Context) (err error) {
+	if c.isClosed {
 		return &interfaceError{msg: "Connection is closed"}
 	}
 
-	maxTime := time.Now().Add(b.conn.cfg.waitUntilAvailable)
+	maxTime := time.Now().Add(c.cfg.waitUntilAvailable)
 	if deadline, ok := ctx.Deadline(); ok && deadline.Before(maxTime) {
 		maxTime = deadline
 	}
@@ -93,8 +53,8 @@ func (b *reconnectingConn) reconnect(ctx context.Context) (err error) {
 	var edbErr Error
 
 	for i := 1; true; i++ {
-		for _, addr := range b.conn.cfg.addrs {
-			err = connectWithTimeout(ctx, b.conn, addr)
+		for _, addr := range c.cfg.addrs {
+			err = connectWithTimeout(ctx, c.borrowableConn.baseConn, addr)
 			if err == nil ||
 				errors.Is(err, context.Canceled) ||
 				errors.Is(err, context.DeadlineExceeded) ||
@@ -113,233 +73,34 @@ func (b *reconnectingConn) reconnect(ctx context.Context) (err error) {
 }
 
 // ensureConnection reconnects to the server if not connected.
-func (b *reconnectingConn) ensureConnection(ctx context.Context) error {
-	if b.conn != nil && !b.isClosed {
+func (c *reconnectingConn) ensureConnection(ctx context.Context) error {
+	if c.netConn != nil && !c.isClosed {
 		return nil
 	}
 
-	return b.reconnect(ctx)
+	return c.reconnect(ctx)
 }
 
-func (b *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
-	if e := b.assertUnborrowed(); e != nil {
+func (c *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
+	if e := c.ensureConnection(ctx); e != nil {
 		return e
 	}
 
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.ScriptFlow(ctx, q)
+	return c.borrowableConn.scriptFlow(ctx, q)
 }
 
-// Execute an EdgeQL command (or commands).
-func (b *reconnectingConn) Execute(ctx context.Context, cmd string) error {
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	return b.scriptFlow(ctx, sfQuery{cmd: cmd, headers: hdrs})
-}
-
-func (b *reconnectingConn) granularFlow(
+func (c *reconnectingConn) granularFlow(
 	ctx context.Context,
 	q *gfQuery,
 ) error {
-	if e := b.assertUnborrowed(); e != nil {
+	if e := c.ensureConnection(ctx); e != nil {
 		return e
 	}
 
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	return b.conn.GranularFlow(ctx, q)
+	return c.borrowableConn.granularFlow(ctx, q)
 }
 
-// Query runs a query and returns the results.
-func (b *reconnectingConn) Query(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.Binary, cardinality.Many, args, hdrs, out)
-	if err != nil {
-		return err
-	}
-
-	return b.granularFlow(ctx, q)
-}
-
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingle()
-func (b *reconnectingConn) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return b.QuerySingle(ctx, cmd, out, args...)
-}
-
-// QuerySingle runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
-func (b *reconnectingConn) QuerySingle(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(
-		cmd,
-		format.Binary,
-		cardinality.AtMostOne,
-		args,
-		hdrs,
-		out,
-	)
-	if err != nil {
-		return err
-	}
-
-	return b.granularFlow(ctx, q)
-}
-
-// QueryJSON runs a query and return the results as JSON.
-func (b *reconnectingConn) QueryJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(cmd, format.JSON, cardinality.Many, args, hdrs, out)
-	if err != nil {
-		return err
-	}
-
-	return b.granularFlow(ctx, q)
-}
-
-// QueryOneJSON runs a singleton-returning query.
-// If the query executes successfully but doesn't have a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingleJSON()
-func (b *reconnectingConn) QueryOneJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	return b.QuerySingleJSON(ctx, cmd, out, args...)
-}
-
-// QuerySingleJSON runs a singleton-returning query.
-// If the query executes successfully but doesn't have a result
-// a NoDataError is returned.
-func (b *reconnectingConn) QuerySingleJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	hdrs := msgHeaders{header.AllowCapabilities: noTxCapabilities}
-	q, err := newQuery(
-		cmd,
-		format.JSON,
-		cardinality.AtMostOne,
-		args,
-		hdrs,
-		out,
-	)
-	if err != nil {
-		return err
-	}
-
-	return b.granularFlow(ctx, q)
-}
-
-func (b *reconnectingConn) rawTx(
-	ctx context.Context,
-	action Action,
-	options TxOptions, // nolint:gocritic
-) error {
-	if e := b.borrow("transaction"); e != nil {
-		return e
-	}
-	defer b.unborrow()
-
-	if e := b.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	tx := &Tx{conn: b.conn, options: options}
-	if e := tx.start(ctx); e != nil {
-		return e
-	}
-
-	if e := action(ctx, tx); e != nil {
-		return firstError(e, tx.rollback(ctx))
-	}
-
-	return tx.commit(ctx)
-}
-
-func (b *reconnectingConn) retryingTx(
-	ctx context.Context,
-	action Action,
-	txOpts TxOptions,
-	retryOpts RetryOptions, // nolint:gocritic
-) error {
-	if e := b.borrow("transaction"); e != nil {
-		return e
-	}
-	defer b.unborrow()
-
-	var edbErr Error
-
-	for i := 1; true; i++ {
-		if e := b.ensureConnection(ctx); e != nil {
-			return e
-		}
-
-		tx := &Tx{conn: b.conn, options: txOpts}
-		if e := tx.start(ctx); e != nil {
-			return e
-		}
-
-		err := action(ctx, tx)
-		if err == nil {
-			return tx.commit(ctx)
-		}
-
-		if e := tx.rollback(ctx); e != nil && !errors.As(e, &edbErr) {
-			return e
-		}
-
-		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldRetry) {
-			rule := retryOpts.ruleForException(edbErr)
-
-			if i >= rule.attempts {
-				break
-			}
-
-			time.Sleep(rule.backoff(i))
-			continue
-		}
-
-		return err
-	}
-
-	panic("unreachable")
-}
-
-func (b *reconnectingConn) close() error {
-	b.isClosed = true
-	return b.conn.close()
+func (c *reconnectingConn) close() error {
+	c.isClosed = true
+	return c.borrowableConn.close()
 }

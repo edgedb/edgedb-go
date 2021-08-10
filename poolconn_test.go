@@ -18,37 +18,13 @@ package edgedb
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestReleasePoolConn(t *testing.T) {
-	p := &Pool{freeConns: make(chan *reconnectingConn, 1)}
-	conn := &reconnectingConn{}
-	pConn := &PoolConn{pool: p, conn: conn}
-
-	err := pConn.Release()
-	require.NoError(t, err)
-
-	result := <-p.freeConns
-	assert.Equal(t, conn, result)
-
-	err = pConn.Release()
-	assert.EqualError(
-		t,
-		err,
-		"edgedb.InterfaceError: connection released more than once",
-	)
-
-	var edbErr Error
-	require.True(t, errors.As(err, &edbErr))
-	assert.True(t, edbErr.Category(InterfaceError))
-}
-
-func TestPoolConnectionRejectsTransaction(t *testing.T) {
+func TestPoolConnection(t *testing.T) {
 	ctx := context.Background()
 	p, err := Connect(ctx, opts)
 	require.NoError(t, err)
@@ -76,4 +52,17 @@ func TestPoolConnectionRejectsTransaction(t *testing.T) {
 
 	err = con.QuerySingleJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
+
+	conCopy := con.WithTxOptions(NewTxOptions())
+
+	err = con.Release()
+	assert.NoError(t, err)
+
+	err = con.Release()
+	msg := "edgedb.InterfaceError: connection released more than once"
+	assert.EqualError(t, err, msg)
+
+	// Copied connections should not be releasable a second time.
+	err = conCopy.Release()
+	assert.EqualError(t, err, msg)
 }
