@@ -6,7 +6,7 @@
 $ go get https://github.com/edgedb/edgedb-go
 
 ## Basic Usage
-Follow the [EdgeDB tutorial](https://edgedb.com/docs/tutorial/index)
+Follow the [EdgeDB tutorial](https://edgedb.com/docs/quickstart)
 to get EdgeDB installed and minimally configured.
 
 ```go
