@@ -3,7 +3,7 @@
 [![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
 ## Installation
-$ go get https://github.com/edgedb/edgedb-go
+$ go get github.com/edgedb/edgedb-go
 
 ## Basic Usage
 Follow the [EdgeDB tutorial](https://edgedb.com/docs/quickstart)
