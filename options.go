@@ -23,14 +23,6 @@ import (
 	"time"
 )
 
-// NewOptionalBool is a convenience function for creating an OptionalBool with
-// its value set to v.
-func NewOptionalBool(v bool) OptionalBool {
-	o := OptionalBool{}
-	o.Set(v)
-	return o
-}
-
 // Options for connecting to an EdgeDB server
 type Options struct {
 	// Hosts is a slice of database host addresses as one of the following

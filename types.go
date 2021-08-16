@@ -17,6 +17,9 @@
 package edgedb
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
@@ -107,3 +110,131 @@ var (
 	// NewRelativeDuration returns a new RelativeDuration
 	NewRelativeDuration = edgedbtypes.NewRelativeDuration
 )
+
+// NewOptionalBool is a convenience function for creating an OptionalBool with
+// its value set to v.
+func NewOptionalBool(v bool) OptionalBool {
+	o := OptionalBool{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalBytes is a convenience function for creating an OptionalBytes
+// with its value set to v.
+func NewOptionalBytes(v []byte) OptionalBytes {
+	o := OptionalBytes{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalStr is a convenience function for creating an OptionalStr with
+// its value set to v.
+func NewOptionalStr(v string) OptionalStr {
+	o := OptionalStr{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalInt16 is a convenience function for creating an OptionalInt16
+// with its value set to v.
+func NewOptionalInt16(v int16) OptionalInt16 {
+	o := OptionalInt16{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalInt32 is a convenience function for creating an OptionalInt32
+// with its value set to v.
+func NewOptionalInt32(v int32) OptionalInt32 {
+	o := OptionalInt32{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalInt64 is a convenience function for creating an OptionalInt64
+// with its value set to v.
+func NewOptionalInt64(v int64) OptionalInt64 {
+	o := OptionalInt64{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalFloat32 is a convenience function for creating an OptionalFloat32
+// with its value set to v.
+func NewOptionalFloat32(v float32) OptionalFloat32 {
+	o := OptionalFloat32{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalFloat64 is a convenience function for creating an OptionalFloat64
+// with its value set to v.
+func NewOptionalFloat64(v float64) OptionalFloat64 {
+	o := OptionalFloat64{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalBigInt is a convenience function for creating an OptionalBigInt
+// with its value set to v.
+func NewOptionalBigInt(v *big.Int) OptionalBigInt {
+	o := OptionalBigInt{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalUUID is a convenience function for creating an OptionalUUID with
+// its value set to v.
+func NewOptionalUUID(v UUID) OptionalUUID {
+	o := OptionalUUID{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalDateTime is a convenience function for creating an
+// OptionalDateTime with its value set to v.
+func NewOptionalDateTime(v time.Time) OptionalDateTime {
+	o := OptionalDateTime{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalLocalDateTime is a convenience function for creating an
+// OptionalLocalDateTime with its value set to v.
+func NewOptionalLocalDateTime(v LocalDateTime) OptionalLocalDateTime {
+	o := OptionalLocalDateTime{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalLocalTime is a convenience function for creating an
+// OptionalLocalTime with its value set to v.
+func NewOptionalLocalTime(v LocalTime) OptionalLocalTime {
+	o := OptionalLocalTime{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalLocalDate is a convenience function for creating an
+// OptionalLocalDate with its value set to v.
+func NewOptionalLocalDate(v LocalDate) OptionalLocalDate {
+	o := OptionalLocalDate{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalDuration is a convenience function for creating an
+// OptionalDuration with its value set to v.
+func NewOptionalDuration(v Duration) OptionalDuration {
+	o := OptionalDuration{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRelativeDuration is a convenience function for creating an
+// OptionalRelativeDuration with its value set to v.
+func NewOptionalRelativeDuration(v RelativeDuration) OptionalRelativeDuration {
+	o := OptionalRelativeDuration{}
+	o.Set(v)
+	return o
+}
