@@ -3415,8 +3415,8 @@ func TestMissingObjectFields(t *testing.T) {
 		)
 		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
 			`the "out" argument does not match query schema: `+
-			`expected int64 at edgedb.WrongType.simple_scalar to implement `+
-			`OptionalUnmarshaler because the field is not required`)
+			`expected int64 at edgedb.WrongType.simple_scalar to be `+
+			`edgedb.OptionalInt64 because the field is not required`)
 
 		return errors.New("rollback")
 	})
