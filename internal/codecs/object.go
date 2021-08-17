@@ -27,6 +27,30 @@ import (
 	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
+var optionalTypeNameLookup = map[reflect.Type]string{
+	reflect.TypeOf(&boolCodec{}):          "edgedb.OptionalBool",
+	reflect.TypeOf(&bytesCodec{}):         "edgedb.OptionalBytes",
+	reflect.TypeOf(&dateTimeCodec{}):      "edgedb.OptionalDateTime",
+	reflect.TypeOf(&localDateTimeCodec{}): "edgedb.OptionalLocalDateTime",
+	reflect.TypeOf(&localDateCodec{}):     "edgedb.OptionalLocalDate",
+	reflect.TypeOf(&localTimeCodec{}):     "edgedb.OptionalLocalTime",
+	reflect.TypeOf(&durationCodec{}):      "edgedb.OptionalDuration",
+	reflect.TypeOf(
+		&relativeDurationCodec{}): "edgedb.OptionalRelativeDuration",
+	reflect.TypeOf(&namedTupleDecoder{}):  "edgedb.Optional",
+	reflect.TypeOf(&int16Codec{}):         "edgedb.OptionalInt16",
+	reflect.TypeOf(&int32Codec{}):         "edgedb.OptionalInt32",
+	reflect.TypeOf(&int64Codec{}):         "edgedb.OptionalInt64",
+	reflect.TypeOf(&float32Codec{}):       "edgedb.OptionalFloat32",
+	reflect.TypeOf(&float64Codec{}):       "edgedb.OptionalFloat64",
+	reflect.TypeOf(&bigIntCodec{}):        "edgedb.OptionalBigInt",
+	reflect.TypeOf(&objectDecoder{}):      "edgedb.Optional",
+	reflect.TypeOf(&strCodec{}):           "edgedb.OptionalStr",
+	reflect.TypeOf(&tupleDecoder{}):       "edgedb.Optional",
+	reflect.TypeOf(&unmarshalerDecoder{}): "OptionalUnmarshaler interface",
+	reflect.TypeOf(&uuidCodec{}):          "edgedb.OptionalUUID",
+}
+
 // OptionalDecoder is used when decoding optional shape fields.
 type OptionalDecoder interface {
 	DecodeMissing(unsafe.Pointer)
@@ -65,10 +89,11 @@ func buildObjectDecoder(
 
 		if !field.Required {
 			if _, isOptional := child.(OptionalDecoder); !isOptional {
+				typeName := optionalTypeNameLookup[reflect.TypeOf(child)]
 				return nil, fmt.Errorf(
-					"expected %v at %v.%v to implement OptionalUnmarshaler "+
+					"expected %v at %v.%v to be %v "+
 						"because the field is not required",
-					sf.Type, path, field.Name)
+					sf.Type, path, field.Name, typeName)
 			}
 		}
 
