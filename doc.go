@@ -127,7 +127,7 @@
 //
 //   decimal                  user defined (see Custom Marshalers)
 //
-// Shape fileds that are not required must use optional types for receiving
+// Shape fields that are not required must use optional types for receiving
 // query results. The edgedb.Optional struct can be embedded to make structs
 // optional.
 //
