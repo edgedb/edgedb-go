@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"unsafe"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
@@ -30,20 +31,26 @@ import (
 // Encoder can encode objects into the data wire format.
 type Encoder interface {
 	DescriptorID() types.UUID
-	Encode(*buff.Writer, interface{}, Path) error
+	Encode(*buff.Writer, interface{}, Path, bool) error
 }
 
 // EncoderField is a link to a child encoder
 // used by objects, named tuples and tuples.
 type EncoderField struct {
-	name    string
-	encoder Encoder
+	name     string
+	encoder  Encoder
+	required bool
 }
 
 // Decoder can decode the data wire format into objects.
 type Decoder interface {
 	DescriptorID() types.UUID
 	Decode(*buff.Reader, unsafe.Pointer)
+}
+
+// OptionalDecoder is used when decoding optional shape fields.
+type OptionalDecoder interface {
+	Decoder
 	DecodeMissing(unsafe.Pointer)
 }
 
@@ -63,20 +70,36 @@ type Codec interface {
 }
 
 // BuildEncoder builds and Encoder from a Descriptor.
-func BuildEncoder(desc descriptor.Descriptor) (Encoder, error) {
+func BuildEncoder(
+	desc descriptor.Descriptor,
+	version internal.ProtocolVersion,
+) (Encoder, error) {
+	if desc.ID == descriptor.IDZero {
+		return noOpEncoder{}, nil
+	}
+
 	switch desc.Type {
 	case descriptor.Set:
 		return nil, fmt.Errorf("sets can not be encoded")
 	case descriptor.Object:
-		return nil, fmt.Errorf("objects can not be encoded")
+		if version.GTE(internal.ProtocolVersion{Major: 0, Minor: 12}) {
+			return buildArgEncoder(desc, version)
+		}
+		return nil, errors.New("objects can not be encoded")
 	case descriptor.BaseScalar, descriptor.Enum:
 		return buildScalarEncoder(desc)
 	case descriptor.Tuple:
-		return buildTupleEncoder(desc)
+		if version.GTE(internal.ProtocolVersion{Major: 0, Minor: 12}) {
+			return nil, errors.New("tuples can not be encoded")
+		}
+		return buildTupleEncoder(desc, version)
 	case descriptor.NamedTuple:
-		return buildNamedTupleEncoder(desc)
+		if version.GTE(internal.ProtocolVersion{Major: 0, Minor: 12}) {
+			return nil, errors.New("tuples can not be encoded")
+		}
+		return buildNamedTupleEncoder(desc, version)
 	case descriptor.Array:
-		return buildArrayEncoder(desc)
+		return buildArrayEncoder(desc, version)
 	default:
 		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
 	}

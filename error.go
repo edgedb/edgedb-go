@@ -92,9 +92,9 @@ func positionFromHeaders(headers map[uint16]string) (position, bool) {
 	}, true
 }
 
-// decodeError decodes an error response
+// decodeErrorResponseMsg decodes an error response
 // https://www.edgedb.com/docs/internals/protocol/messages#errorresponse
-func decodeError(r *buff.Reader, query string) error {
+func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 	r.Discard(1) // severity
 	code := r.PopUint32()
 	msg := r.PopString()

@@ -76,49 +76,54 @@ func (c *dateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	).UTC()
 }
 
-func (c *dateTimeCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
+type optionalDateTimeMarshaler interface {
+	marshal.DateTimeMarshaler
+	marshal.OptionalMarshaler
 }
 
 func (c *dateTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
-	switch date := val.(type) {
+	switch in := val.(type) {
 	case time.Time:
-		seconds := date.Unix() - 946_684_800
-		nanoseconds := int64(date.Sub(time.Unix(date.Unix(), 0)))
-		microseconds := seconds*1_000_000 + nanoseconds/1_000
-		w.PushUint32(8) // data length
-		w.PushUint64(uint64(microseconds))
+		return c.encodeData(w, in)
 	case types.OptionalDateTime:
-		val, ok := date.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalDateTime at %v "+
-				"because its value is missing", path)
-		}
-
-		seconds := val.Unix() - 946_684_800
-		nanoseconds := int64(val.Sub(time.Unix(val.Unix(), 0)))
-		microseconds := seconds*1_000_000 + nanoseconds/1_000
-		w.PushUint32(8) // data length
-		w.PushUint64(uint64(microseconds))
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalDateTime", path)
+			})
+	case optionalDateTimeMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.DateTimeMarshaler:
-		data, err := date.MarshalEdgeDBDateTime()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be time.Time, "+
 			"edgedb.OptionalDateTime or DateTimeMarshaler got %T", path, val)
 	}
+}
 
+func (c *dateTimeCodec) encodeData(w *buff.Writer, data time.Time) error {
+	seconds := data.Unix() - 946_684_800
+	nanoseconds := int64(data.Sub(time.Unix(data.Unix(), 0)))
+	microseconds := seconds*1_000_000 + nanoseconds/1_000
+	w.PushUint32(8) // data length
+	w.PushUint64(uint64(microseconds))
 	return nil
+}
+
+func (c *dateTimeCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.DateTimeMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBDateTime, 8, path)
 }
 
 type optionalDateTime struct {
@@ -162,50 +167,60 @@ type localDateTimeLayout struct {
 	usec uint64
 }
 
+type optionalLocalDateTimeMarshaler interface {
+	marshal.LocalDateTimeMarshaler
+	marshal.OptionalMarshaler
+}
+
 func (c *localDateTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case types.LocalDateTime:
-		val := (*localDateTimeLayout)(unsafe.Pointer(&in))
-		w.PushUint32(8)
-		w.PushUint64(val.usec - 63_082_281_600_000_000)
+		return c.encodeData(w, in)
 	case types.OptionalLocalDateTime:
-		val, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalLocalDateTime "+
-				"at %v because its value is missing", path)
-		}
-
-		v := (*localDateTimeLayout)(unsafe.Pointer(&val))
-		w.PushUint32(8)
-		w.PushUint64(v.usec - 63_082_281_600_000_000)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalLocalDateTime", path)
+			})
+	case optionalLocalDateTimeMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.LocalDateTimeMarshaler:
-		data, err := in.MarshalEdgeDBLocalDateTime()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be edgedb.LocalDateTime, "+
 			"edgedb.OptionalLocalDateTime or LocalDateTimeMarshaler got %T",
 			path, val)
 	}
+}
 
+func (c *localDateTimeCodec) encodeData(
+	w *buff.Writer,
+	data types.LocalDateTime,
+) error {
+	v := (*localDateTimeLayout)(unsafe.Pointer(&data))
+	w.PushUint32(8)
+	w.PushUint64(v.usec - 63_082_281_600_000_000)
 	return nil
+}
+
+func (c *localDateTimeCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.LocalDateTimeMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalDateTime, 8, path)
 }
 
 func (c *localDateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
-}
-
-func (c *localDateTimeCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
 }
 
 type optionalLocalDateTime struct {
@@ -247,47 +262,58 @@ type localDateLayout struct {
 	days uint32
 }
 
+type optionalLocalDateMarshaler interface {
+	marshal.LocalDateMarshaler
+	marshal.OptionalMarshaler
+}
+
 func (c *localDateCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case types.LocalDate:
-		w.PushUint32(4)
-		w.PushUint32((*localDateLayout)(unsafe.Pointer(&in)).days - 730119)
+		return c.encodeData(w, in)
 	case types.OptionalLocalDate:
-		val, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalLocalDate at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(4)
-		w.PushUint32((*localDateLayout)(unsafe.Pointer(&val)).days - 730119)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalLocalDate", path)
+			})
+	case optionalLocalDateMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.LocalDateMarshaler:
-		data, err := in.MarshalEdgeDBLocalDate()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be edgedb.LocalDate, "+
 			"edgedb.OptionalLocalDate or LocalDateMarshaler got %T", path, val)
 	}
+}
 
+func (c *localDateCodec) encodeData(
+	w *buff.Writer,
+	data types.LocalDate,
+) error {
+	w.PushUint32(4)
+	w.PushUint32((*localDateLayout)(unsafe.Pointer(&data)).days - 730119)
 	return nil
+}
+
+func (c *localDateCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.LocalDateMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalDate, 4, path)
 }
 
 func (c *localDateCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localDateLayout)(out).days = r.PopUint32() + 730119
-}
-
-func (c *localDateCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
 }
 
 type optionalLocalDate struct {
@@ -324,47 +350,58 @@ type localTimeLayout struct {
 	usec uint64
 }
 
+type optionalLocalTimeMarshaler interface {
+	marshal.LocalTimeMarshaler
+	marshal.OptionalMarshaler
+}
+
 func (c *localTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case types.LocalTime:
-		w.PushUint32(8)
-		w.PushUint64((*localTimeLayout)(unsafe.Pointer(&in)).usec)
+		return c.encodeData(w, in)
 	case types.OptionalLocalTime:
-		val, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalLocalTime at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(8)
-		w.PushUint64((*localTimeLayout)(unsafe.Pointer(&val)).usec)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalLocalTime", path)
+			})
+	case optionalLocalTimeMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(val, path) })
 	case marshal.LocalTimeMarshaler:
-		data, err := in.MarshalEdgeDBLocalTime()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be edgedb.LocalTime, "+
 			"edgedb.OptionalLocalTime or LocalTimeMarshaler got %T", path, val)
 	}
+}
 
+func (c *localTimeCodec) encodeData(
+	w *buff.Writer,
+	data types.LocalTime,
+) error {
+	w.PushUint32(8)
+	w.PushUint64((*localTimeLayout)(unsafe.Pointer(&data)).usec)
 	return nil
+}
+
+func (c *localTimeCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.LocalTimeMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalTime, 8, path)
 }
 
 func (c *localTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	(*localTimeLayout)(out).usec = r.PopUint64()
-}
-
-func (c *localTimeCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
 }
 
 type optionalLocalTime struct {
@@ -401,49 +438,55 @@ func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(8) // reserved
 }
 
-func (c *durationCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
-}
-
 func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
+
+type optionalDurationMarshaler interface {
+	marshal.DurationMarshaler
+	marshal.OptionalMarshaler
+}
 
 func (c *durationCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case types.Duration:
-		w.PushUint32(16) // data length
-		w.PushUint64(uint64(in))
-		w.PushUint32(0) // reserved
-		w.PushUint32(0) // reserved
+		return c.encodeData(w, in)
 	case types.OptionalDuration:
-		val, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalDuration at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(16) // data length
-		w.PushUint64(uint64(val))
-		w.PushUint32(0) // reserved
-		w.PushUint32(0) // reserved
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalDuration", path)
+			})
+	case optionalDurationMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.DurationMarshaler:
-		data, err := in.MarshalEdgeDBDuration()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be edgedb.Duration, "+
 			"edgedb.OptionalDuration or DurationMarshaler got %T", path, val)
 	}
+}
 
+func (c *durationCodec) encodeData(w *buff.Writer, data types.Duration) error {
+	w.PushUint32(16) // data length
+	w.PushUint64(uint64(data))
+	w.PushUint32(0) // reserved
+	w.PushUint32(0) // reserved
 	return nil
+}
+
+func (c *durationCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.DurationMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBDuration, 16, path)
 }
 
 type optionalDuration struct {
@@ -494,50 +537,61 @@ func (c *relativeDurationCodec) Decode(
 	rd.months = r.PopUint32()
 }
 
-func (c *relativeDurationCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
+type optionalRelativeDurationMarshaler interface {
+	marshal.RelativeDurationMarshaler
+	marshal.OptionalMarshaler
 }
 
 func (c *relativeDurationCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case types.RelativeDuration:
-		data := (*relativeDurationLayout)(unsafe.Pointer(&in))
-		w.PushUint32(16) // data length
-		w.PushUint64(data.microseconds)
-		w.PushUint32(data.days)
-		w.PushUint32(data.months)
+		return c.encodeData(w, in)
 	case types.OptionalRelativeDuration:
-		val, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalRelativeDuration "+
-				"at %v because its value is missing", path)
-		}
-
-		data := (*relativeDurationLayout)(unsafe.Pointer(&val))
-		w.PushUint32(16) // data length
-		w.PushUint64(data.microseconds)
-		w.PushUint32(data.days)
-		w.PushUint32(data.months)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError(
+					"edgedb.OptionalRelativeDuration",
+					path,
+				)
+			})
+	case optionalRelativeDurationMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(val, path) })
 	case marshal.RelativeDurationMarshaler:
-		data, err := in.MarshalEdgeDBRelativeDuration()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be edgedb.RelativeDuration, "+
 			"edgedb.OptionalRelativeDuration or "+
 			"RelativeDurationMarshaler got %T", path, val)
 	}
+}
 
+func (c *relativeDurationCodec) encodeData(
+	w *buff.Writer,
+	data types.RelativeDuration,
+) error {
+	d := (*relativeDurationLayout)(unsafe.Pointer(&data))
+	w.PushUint32(16) // data length
+	w.PushUint64(d.microseconds)
+	w.PushUint32(d.days)
+	w.PushUint32(d.months)
 	return nil
+}
+
+func (c *relativeDurationCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.RelativeDurationMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBRelativeDuration, 16, path)
 }
 
 type optionalRelativeDuration struct {

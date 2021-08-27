@@ -75,8 +75,11 @@ type Field struct {
 
 // Pop builds a descriptor tree from a describe statement type description.
 func Pop(r *buff.Reader, version internal.ProtocolVersion) Descriptor {
-	descriptors := []Descriptor{}
+	if len(r.Buf) == 0 {
+		return Descriptor{Type: Tuple, ID: IDZero}
+	}
 
+	descriptors := []Descriptor{}
 	for len(r.Buf) > 0 {
 		typ := Type(r.PopUint8())
 		id := r.PopUUID()
@@ -135,11 +138,7 @@ func objectFields(
 	fields := make([]*Field, n)
 
 	for i := 0; i < n; i++ {
-		// Preserve backward compatibility with old behavior. If the protocol
-		// version does not support the cardinality flag assume all fields are
-		// required.
-		required := true
-
+		var required bool
 		if version.GTE(internal.ProtocolVersion{Major: 0, Minor: 11}) {
 			r.Discard(4) // flags
 			card := r.PopUint8()
@@ -147,11 +146,17 @@ func objectFields(
 			case 0x6f, 0x6d:
 				required = false
 			case 0x41, 0x4d:
+				required = true
 			default:
 				panic(fmt.Errorf("unexpected cardinality: %v", card))
 			}
 		} else {
 			r.Discard(1) // flags
+
+			// Preserve backward compatibility with old behavior. If the
+			// protocol version does not support the cardinality flag assume
+			// all fields are required.
+			required = true
 		}
 
 		fields[i] = &Field{

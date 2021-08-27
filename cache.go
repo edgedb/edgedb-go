@@ -74,20 +74,23 @@ type queryKey struct {
 	cmd     string
 	fmt     uint8
 	expCard uint8
+	outType reflect.Type
 }
 
-func (c *baseConn) getTypeIDs(q *gfQuery) (idPair, bool) {
+func (c *baseConn) getTypeIDs(q *gfQuery) (*idPair, bool) {
 	key := queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
 		expCard: q.expCard,
+		outType: q.outType,
 	}
 
 	if val, ok := c.typeIDCache.Get(key); ok {
-		return val.(idPair), true
+		x := val.(idPair)
+		return &x, true
 	}
 
-	return idPair{}, false
+	return nil, false
 }
 
 func (c *baseConn) putTypeIDs(q *gfQuery, ids idPair) {

@@ -53,7 +53,11 @@ func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 
 	result := (**big.Int)(out)
 	if *result == nil {
+		// allocate new memory
 		*result = &big.Int{}
+	} else {
+		// zero allocated memory
+		**result = big.Int{}
 	}
 
 	digit := &big.Int{}
@@ -62,10 +66,10 @@ func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	for i := 0; i < n; i++ {
 		shift.Exp(big10k, weight, nil)
 		digit.SetBytes(r.Buf[:2])
+		r.Discard(2)
 		digit.Mul(digit, shift)
 		(*result).Add(*result, digit)
 		weight.Sub(weight, bigOne)
-		r.Discard(2)
 	}
 
 	if sign == 0x4000 {
@@ -73,11 +77,40 @@ func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	}
 }
 
-func (c *bigIntCodec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
+type optionalBigIntMarshaler interface {
+	marshal.BigIntMarshaler
+	marshal.OptionalMarshaler
 }
 
-func (c *bigIntCodec) encode(w *buff.Writer, val *big.Int) {
+func (c *bigIntCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
+	switch in := val.(type) {
+	case *big.Int:
+		return c.encodeData(w, in)
+	case types.OptionalBigInt:
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalBigInt", path)
+			})
+	case optionalBigIntMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
+	case marshal.BigIntMarshaler:
+		return c.encodeMarshaler(w, in, path)
+	default:
+		return fmt.Errorf("expected %v to be *big.Int, edgedb.OptionalBitInt "+
+			"or BigIntMarshaler got %T", path, val)
+	}
+}
+
+func (c *bigIntCodec) encodeData(w *buff.Writer, val *big.Int) error {
 	// copy to prevent mutating the user's value
 	cpy := &big.Int{}
 	cpy.Set(val)
@@ -111,43 +144,30 @@ func (c *bigIntCodec) encode(w *buff.Writer, val *big.Int) {
 	w.PushUint16(0) // reserved
 	w.PushBytes(digits)
 	w.EndBytes()
+	return nil
 }
 
-func (c *bigIntCodec) Encode(
+func (c *bigIntCodec) encodeMarshaler(
 	w *buff.Writer,
-	val interface{},
+	val marshal.BigIntMarshaler,
 	path Path,
 ) error {
-	switch in := val.(type) {
-	case *big.Int:
-		c.encode(w, in)
-	case types.OptionalBigInt:
-		bigint, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalBigInt at %v "+
-				"because its value is missing", path)
-		}
-		c.encode(w, bigint)
-	case marshal.BigIntMarshaler:
-		data, err := in.MarshalEdgeDBBigInt()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
-	default:
-		return fmt.Errorf("expected %v to be *big.Int, edgedb.OptionalBitInt "+
-			"or BigIntMarshaler got %T", path, val)
+	data, err := val.MarshalEdgeDBBigInt()
+	if err != nil {
+		return err
 	}
-
+	if len(data) < 8 {
+		return wrongNumberOfBytesError(val, path, "at least 8", len(data))
+	}
+	w.BeginBytes()
+	w.PushBytes(data)
+	w.EndBytes()
 	return nil
 }
 
 type optionalBigInt struct {
-	val *big.Int
-	set bool
+	val   *big.Int
+	isSet bool
 }
 
 type optionalBigIntDecoder struct {
@@ -158,7 +178,7 @@ func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return c.id }
 
 func (c *optionalBigIntDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	opint := (*optionalBigInt)(out)
-	opint.set = true
+	opint.isSet = true
 
 	n := int(r.PopUint16())
 	weight := big.NewInt(int64(r.PopUint16()))
@@ -166,7 +186,11 @@ func (c *optionalBigIntDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(2) // reserved
 
 	if opint.val == nil {
+		// allocate new memory
 		opint.val = &big.Int{}
+	} else {
+		// zero allocated memory
+		*opint.val = big.Int{}
 	}
 
 	digit := &big.Int{}
@@ -175,16 +199,15 @@ func (c *optionalBigIntDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	for i := 0; i < n; i++ {
 		shift.Exp(big10k, weight, nil)
 		digit.SetBytes(r.Buf[:2])
+		r.Discard(2)
 		digit.Mul(digit, shift)
 		opint.val.Add(opint.val, digit)
 		weight.Sub(weight, bigOne)
-		r.Discard(2)
 	}
 
 	if sign == 0x4000 {
 		opint.val.Neg(opint.val)
 	}
-	r.Discard(len(r.Buf))
 }
 
 func (c *optionalBigIntDecoder) DecodeMissing(out unsafe.Pointer) {
@@ -197,25 +220,44 @@ type decimalEncoder struct{}
 
 func (c *decimalEncoder) DescriptorID() types.UUID { return decimalID }
 
+type optionalDecimalMarshaler interface {
+	marshal.DecimalMarshaler
+	marshal.OptionalMarshaler
+}
+
 func (c *decimalEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
+	case optionalDecimalMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.DecimalMarshaler:
-		data, err := in.MarshalEdgeDBDecimal()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be DecimalMarshaler got %T",
 			path, val)
 	}
+}
 
+func (c *decimalEncoder) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.DecimalMarshaler,
+	path Path,
+) error {
+	data, err := val.MarshalEdgeDBDecimal()
+	if err != nil {
+		return err
+	}
+	if len(data) < 8 {
+		return wrongNumberOfBytesError(val, path, "at least 8", len(data))
+	}
+	w.BeginBytes()
+	w.PushBytes(data)
+	w.EndBytes()
 	return nil
 }

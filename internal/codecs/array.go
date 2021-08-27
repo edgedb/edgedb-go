@@ -21,13 +21,17 @@ import (
 	"reflect"
 	"unsafe"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func buildArrayEncoder(desc descriptor.Descriptor) (Encoder, error) {
-	child, err := BuildEncoder(desc.Fields[0].Desc)
+func buildArrayEncoder(
+	desc descriptor.Descriptor,
+	version internal.ProtocolVersion,
+) (Encoder, error) {
+	child, err := BuildEncoder(desc.Fields[0].Desc, version)
 
 	if err != nil {
 		return nil, err
@@ -47,12 +51,22 @@ func (c *arrayEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	in := reflect.ValueOf(val)
 	if in.Kind() != reflect.Slice {
 		return fmt.Errorf(
 			"expected %v to be a slice got: %T", path, val,
 		)
+	}
+
+	if in.IsNil() && required {
+		return missingValueError(val, path)
+	}
+
+	if in.IsNil() {
+		w.PushUint32(0xffffffff)
+		return nil
 	}
 
 	elmCount := in.Len()
@@ -66,7 +80,12 @@ func (c *arrayEncoder) Encode(
 
 	var err error
 	for i := 0; i < elmCount; i++ {
-		err = c.child.Encode(w, in.Index(i).Interface(), path.AddIndex(i))
+		err = c.child.Encode(
+			w,
+			in.Index(i).Interface(),
+			path.AddIndex(i),
+			true,
+		)
 		if err != nil {
 			return err
 		}
@@ -143,5 +162,3 @@ func (c *arrayDecoder) DecodeMissing(out unsafe.Pointer) {
 	slice.Len = 0
 	slice.Cap = 0
 }
-
-func (c *arrayDecoder) DecodePresent(out unsafe.Pointer) {}

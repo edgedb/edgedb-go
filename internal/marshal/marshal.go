@@ -36,6 +36,12 @@ type OptionalUnmarshaler interface {
 	SetMissing(bool)
 }
 
+// OptionalMarshaler is used for optional (not required) shape field values.
+type OptionalMarshaler interface {
+	// Missing returns true when the value is missing.
+	Missing() bool
+}
+
 // StrMarshaler is the interface implemented by an object
 // that can marshal itself into the str wire format.
 // https://www.edgedb.com/docs/internals/protocol/dataformats#std-str

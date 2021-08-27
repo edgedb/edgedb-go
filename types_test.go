@@ -33,6 +33,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMissmatchedUnmarshalerType(t *testing.T) {
+	ctx := context.Background()
+
+	// Decode into wrong Unmarshaler type
+	var wrongType struct {
+		Val CustomInt32 `edgedb:"val"`
+	}
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := 123_456_789_987_654_321 }`,
+		&wrongType,
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: expected "+
+		"struct { Val edgedb.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be int64 or edgedb.OptionalInt64 got edgedb.CustomInt32")
+	assert.Equal(t, []byte(nil), wrongType.Val.data)
+}
+
 func TestSendAndReceiveInt64(t *testing.T) {
 	ctx := context.Background()
 
@@ -116,97 +134,213 @@ func TestSendAndReceiveInt64(t *testing.T) {
 }
 
 type CustomInt64 struct {
-	data [8]byte
+	data []byte
 }
 
 func (m CustomInt64) MarshalEdgeDBInt64() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomInt64) UnmarshalEdgeDBInt64(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveInt64Marshaler(t *testing.T) {
+func TestReceiveInt64Unmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <int64>$0,
-		decoded := 123_456_789_987_654_321,
-	)`
-
-	type Result struct {
-		Encoded int64       `edgedb:"encoded"`
-		Decoded CustomInt64 `edgedb:"decoded"`
+	var result struct {
+		Val CustomInt64 `edgedb:"val"`
 	}
 
-	data := [8]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}
-	arg := &CustomInt64{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: 123_456_789_987_654_321,
-			Decoded: CustomInt64{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := 123_456_789_987_654_321 }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int64>$0 }`,
+		&result,
+		OptionalInt64{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomInt64 at "+
+		"struct { Val edgedb.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalInt64(t *testing.T) {
+func TestSendInt64Marshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalInt64 `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE Int64FieldHolder {
-				CREATE PROPERTY int64 -> int64;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <int64>$0 }`,
+		&result,
+		CustomInt64{
+			data: []byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+		},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-			INSERT Int64FieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int64>$0 }`,
+		&result,
+		CustomInt64{
+			data: []byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+		},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int64>$0 }`,
+		&result,
+		CustomInt64{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomInt64 "+
+		"at args[0] expected 8, got 1")
+}
+
+type CustomOptionalInt64 struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalInt64) MarshalEdgeDBInt64() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalInt64) UnmarshalEdgeDBInt64(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalInt64) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalInt64) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalInt64Unmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> int64; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalInt64 `edgedb:"val"`
 		}
 
-		type Result struct {
-			Int64 OptionalInt64 `edgedb:"int64"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT Int64FieldHolder { int64 } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := 123_456_789_987_654_321 }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.Int64.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalInt64{}
-		arg.Set(64)
-		e = tx.QueryOne(ctx, `
-			SELECT Int64FieldHolder { int64 := <int64>$0 } LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.Int64.Set(64)
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalInt64{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalInt64Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalInt64 `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalInt64 {
+		return CustomOptionalInt64{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <int64>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int64>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL int64>$0 }`,
+			&result,
+			CustomOptionalInt64{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalInt64{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int64>$0 }`,
+		&result,
+		CustomOptionalInt64{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalInt64 at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int64>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+		"at args[0] expected 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int64>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+		"at args[0] expected 8, got 1")
 }
 
 func TestSendAndReceiveInt32(t *testing.T) {
@@ -271,45 +405,200 @@ func TestSendAndReceiveInt32(t *testing.T) {
 }
 
 type CustomInt32 struct {
-	data [4]byte
+	data []byte
 }
 
 func (m CustomInt32) MarshalEdgeDBInt32() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomInt32) UnmarshalEdgeDBInt32(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveInt32Marshaler(t *testing.T) {
+func TestReceiveInt32Unmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <int32>$0,
-		decoded := <int32>655_665,
-	)`
-
-	type Result struct {
-		Encoded int32       `edgedb:"encoded"`
-		Decoded CustomInt32 `edgedb:"decoded"`
+	var result struct {
+		Val CustomInt32 `edgedb:"val"`
 	}
 
-	data := [4]byte{0x00, 0x0a, 0x01, 0x31}
-	arg := &CustomInt32{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := <int32>655_665 }`, &result)
+	assert.NoError(t, err)
 	assert.Equal(t,
-		Result{
-			Encoded: 655_665,
-			Decoded: CustomInt32{data},
-		},
-		result,
+		[]byte{0x00, 0x0a, 0x01, 0x31},
+		result.Val.data,
 	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int32>$0 }`,
+		&result,
+		OptionalInt32{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomInt32 at "+
+		"struct { Val edgedb.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendInt32Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalInt32 `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <int32>$0 }`,
+		&result,
+		CustomInt32{data: []byte{0x00, 0x0a, 0x01, 0x31}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int32>$0 }`,
+		&result,
+		CustomInt32{data: []byte{0x00, 0x0a, 0x01, 0x31}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int32>$0 }`,
+		&result,
+		CustomInt32{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomInt32 "+
+		"at args[0] expected 4, got 1")
+}
+
+type CustomOptionalInt32 struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalInt32) MarshalEdgeDBInt32() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalInt32) UnmarshalEdgeDBInt32(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalInt32) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalInt32) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalInt32Unmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> int32; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalInt32 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := <int32>655_665 }`, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{0x00, 0x0a, 0x01, 0x31}, result.Val.data)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalInt32{}, result.Val)
+	})
+}
+
+func TestSendOptionalInt32Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalInt32 `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalInt32 {
+		return CustomOptionalInt32{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <int32>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x0a, 0x01, 0x31}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int32>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x0a, 0x01, 0x31}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL int32>$0 }`,
+			&result,
+			CustomOptionalInt32{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalInt32{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int32>$0 }`,
+		&result,
+		CustomOptionalInt32{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalInt32 at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int32>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalInt32 "+
+		"at args[0] expected 4, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int32>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalInt32 "+
+		"at args[0] expected 4, got 1")
 }
 
 func TestSendAndReceiveOptionalInt32(t *testing.T) {
@@ -333,30 +622,61 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 
 		var result Result
 		e = tx.QueryOne(ctx, `
+			# decode missing optional
 			SELECT Int32FieldHolder { int32 } LIMIT 1`,
 			&result,
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{}, result)
 
-		expected := Result{}
-		expected.Int32.Unset()
-		assert.Equal(t, expected, result)
+		if conn.protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QueryOne(ctx, `
+				# encode unset optional
+				SELECT Int32FieldHolder {
+					int32 := <OPTIONAL int32>$0
+				} LIMIT 1`,
+				&result,
+				OptionalInt32{},
+			)
+			if e != nil {
+				return e
+			}
+			assert.Equal(t, Result{}, result)
+		}
 
-		arg := OptionalInt32{}
-		arg.Set(32)
 		e = tx.QueryOne(ctx, `
-			SELECT Int32FieldHolder { int32 := <int32>$0 } LIMIT 1`,
+			# encode set optional
+			SELECT Int32FieldHolder { int32 := <OPTIONAL int32>$0 } LIMIT 1`,
 			&result,
-			arg,
+			NewOptionalInt32(32),
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{Int32: NewOptionalInt32(32)}, result)
 
-		expected.Int32.Set(32)
-		assert.Equal(t, expected, result)
+		e = tx.QueryOne(ctx, `
+			# encode set optional into required argument
+			SELECT Int32FieldHolder { int32 := <int32>$0 } LIMIT 1`,
+			&result,
+			NewOptionalInt32(32),
+		)
+		if e != nil {
+			return e
+		}
+		assert.Equal(t, Result{Int32: NewOptionalInt32(32)}, result)
+
+		e = tx.QueryOne(ctx, `
+			# encode unset optional into required argument
+			SELECT Int32FieldHolder { int32 := <int32>$0 } LIMIT 1`,
+			&result,
+			OptionalInt32{},
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			"cannot encode edgedb.OptionalInt32 at args[0] "+
+			"because its value is missing")
 
 		return errors.New("rollback")
 	})
@@ -426,45 +746,197 @@ func TestSendAndReceiveInt16(t *testing.T) {
 }
 
 type CustomInt16 struct {
-	data [2]byte
+	data []byte
 }
 
 func (m CustomInt16) MarshalEdgeDBInt16() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomInt16) UnmarshalEdgeDBInt16(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveInt16Marshaler(t *testing.T) {
+func TestReceiveInt16Unmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <int16>$0,
-		decoded := <int16>6556,
-	)`
-
-	type Result struct {
-		Encoded int16       `edgedb:"encoded"`
-		Decoded CustomInt16 `edgedb:"decoded"`
+	var result struct {
+		Val CustomInt16 `edgedb:"val"`
 	}
 
-	data := [2]byte{0x19, 0x9c}
-	arg := &CustomInt16{}
-	copy(arg.data[:], data[:])
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := <int16>6_556 }`, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x19, 0x9c}, result.Val.data)
 
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: 6556,
-			Decoded: CustomInt16{data},
-		},
-		result,
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int16>$0 }`,
+		&result,
+		OptionalInt16{},
 	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomInt16 at "+
+		"struct { Val edgedb.CustomInt16 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendInt16Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalInt16 `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <int16>$0 }`,
+		&result,
+		CustomInt16{data: []byte{0x19, 0x9c}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int16>$0 }`,
+		&result,
+		CustomInt16{data: []byte{0x19, 0x9c}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int16>$0 }`,
+		&result,
+		CustomInt16{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomInt16 "+
+		"at args[0] expected 2, got 1")
+}
+
+type CustomOptionalInt16 struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalInt16) MarshalEdgeDBInt16() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalInt16) UnmarshalEdgeDBInt16(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalInt16) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalInt16) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalInt16Unmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> int16; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalInt16 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := <int16>6_556 }`, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{0x19, 0x9c}, result.Val.data)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalInt16{}, result.Val)
+	})
+}
+
+func TestSendOptionalInt16Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalInt16 `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalInt16 {
+		return CustomOptionalInt16{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <int16>$0 }`,
+		&result,
+		newValue([]byte{0x19, 0x9c}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int16>$0 }`,
+		&result,
+		newValue([]byte{0x19, 0x9c}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL int16>$0 }`,
+			&result,
+			CustomOptionalInt16{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalInt16{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int16>$0 }`,
+		&result,
+		CustomOptionalInt16{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalInt16 at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <int16>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalInt16 "+
+		"at args[0] expected 2, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int16>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalInt16 "+
+		"at args[0] expected 2, got 1")
 }
 
 func TestSendAndReceiveOptionalInt16(t *testing.T) {
@@ -488,30 +960,61 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 
 		var result Result
 		e = tx.QueryOne(ctx, `
+			# decode missing optional
 			SELECT Int16FieldHolder { int16 } LIMIT 1`,
 			&result,
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{}, result)
 
-		expected := Result{}
-		expected.Int16.Unset()
-		assert.Equal(t, expected, result)
+		if conn.protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QueryOne(ctx, `
+				# encode unset optional
+				SELECT Int16FieldHolder {
+					int16 := <OPTIONAL int16>$0
+				} LIMIT 1`,
+				&result,
+				OptionalInt16{},
+			)
+			if e != nil {
+				return e
+			}
+			assert.Equal(t, Result{}, result)
+		}
 
-		arg := OptionalInt16{}
-		arg.Set(16)
 		e = tx.QueryOne(ctx, `
-			SELECT Int16FieldHolder { int16 := <int16>$0 } LIMIT 1`,
+			# encode set optional
+			SELECT Int16FieldHolder { int16 := <OPTIONAL int16>$0 } LIMIT 1`,
 			&result,
-			arg,
+			NewOptionalInt16(16),
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{Int16: NewOptionalInt16(16)}, result)
 
-		expected.Int16.Set(16)
-		assert.Equal(t, expected, result)
+		e = tx.QueryOne(ctx, `
+			# encode set optional into required argument
+			SELECT Int16FieldHolder { int16 := <int16>$0 } LIMIT 1`,
+			&result,
+			NewOptionalInt16(16),
+		)
+		if e != nil {
+			return e
+		}
+		assert.Equal(t, Result{Int16: NewOptionalInt16(16)}, result)
+
+		e = tx.QueryOne(ctx, `
+			# encode unset optional into required argument
+			SELECT Int16FieldHolder { int16 := <int16>$0 } LIMIT 1`,
+			&result,
+			OptionalInt16{},
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			"cannot encode edgedb.OptionalInt16 at args[0] "+
+			"because its value is missing")
 
 		return errors.New("rollback")
 	})
@@ -562,97 +1065,196 @@ func TestSendAndReceiveBool(t *testing.T) {
 }
 
 type CustomBool struct {
-	data [1]byte
+	data []byte
 }
 
 func (m CustomBool) MarshalEdgeDBBool() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomBool) UnmarshalEdgeDBBool(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveBoolMarshaler(t *testing.T) {
+func TestReceiveBoolUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <bool>$0,
-		decoded := <bool>true,
-	)`
-
-	type Result struct {
-		Encoded bool       `edgedb:"encoded"`
-		Decoded CustomBool `edgedb:"decoded"`
+	var result struct {
+		Val CustomBool `edgedb:"val"`
 	}
 
-	data := [1]byte{0x01}
-	arg := &CustomBool{}
-	copy(arg.data[:], data[:])
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := true }`, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01}, result.Val.data)
 
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: true,
-			Decoded: CustomBool{data},
-		},
-		result,
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bool>$0 }`,
+		&result,
+		OptionalBool{},
 	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomBool at "+
+		"struct { Val edgedb.CustomBool \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalBool(t *testing.T) {
+func TestSendBoolMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalBool `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE BoolFieldHolder {
-				CREATE PROPERTY bool -> bool;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <bool>$0 }`,
+		&result,
+		CustomBool{data: []byte{0x01}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBool(true), result.Val)
 
-			INSERT BoolFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bool>$0 }`,
+		&result,
+		CustomBool{data: []byte{0x01}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBool(true), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bool>$0 }`,
+		&result,
+		CustomBool{data: []byte{0x01, 0x02}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomBool "+
+		"at args[0] expected 1, got 2")
+}
+
+type CustomOptionalBool struct {
+	CustomBool
+	isSet bool
+}
+
+func (m CustomOptionalBool) MarshalEdgeDBBool() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	return m.CustomBool.MarshalEdgeDBBool()
+}
+
+func (m *CustomOptionalBool) UnmarshalEdgeDBBool(data []byte) error {
+	m.isSet = true
+	return m.CustomBool.UnmarshalEdgeDBBool(data)
+}
+
+func (m *CustomOptionalBool) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalBool) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalBoolUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> bool; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalBool `edgedb:"val"`
 		}
 
-		type Result struct {
-			Bool OptionalBool `edgedb:"bool"`
-		}
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := true }`, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{0x01}, result.Val.data)
 
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT BoolFieldHolder { bool } LIMIT 1`,
-			&result,
-		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.Bool.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalBool{}
-		arg.Set(true)
-		e = tx.QueryOne(ctx, `
-			SELECT BoolFieldHolder { bool := <bool>$0 } LIMIT 1`,
-			&result,
-			arg,
-		)
-		if e != nil {
-			return e
-		}
-
-		expected.Bool.Set(true)
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalBool{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalBoolMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalBool `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalBool {
+		return CustomOptionalBool{
+			isSet:      true,
+			CustomBool: CustomBool{data: data},
+		}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <bool>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBool(true), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bool>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBool(true), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL bool>$0 }`,
+			&result,
+			CustomOptionalBool{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalBool{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bool>$0 }`,
+		&result,
+		CustomOptionalBool{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalBool at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bool>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0x02}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalBool "+
+		"at args[0] expected 1, got 2")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bool>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0x02}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalBool "+
+		"at args[0] expected 1, got 2")
 }
 
 func TestSendAndReceiveFloat64(t *testing.T) {
@@ -722,45 +1324,207 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 }
 
 type CustomFloat64 struct {
-	data [8]byte
+	data []byte
 }
 
 func (m CustomFloat64) MarshalEdgeDBFloat64() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomFloat64) UnmarshalEdgeDBFloat64(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveFloat64Marshaler(t *testing.T) {
+func TestReceiveFloat64Unmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <float64>$0,
-		decoded := <float64>-15.625,
-	)`
-
-	type Result struct {
-		Encoded float64       `edgedb:"encoded"`
-		Decoded CustomFloat64 `edgedb:"decoded"`
+	var result struct {
+		Val CustomFloat64 `edgedb:"val"`
 	}
 
-	data := [8]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}
-	arg := &CustomFloat64{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := <float64>-15.625 }`, &result)
+	assert.NoError(t, err)
 	assert.Equal(t,
-		Result{
-			Encoded: -15.625,
-			Decoded: CustomFloat64{data},
-		},
-		result,
+		[]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00},
+		result.Val.data,
 	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float64>$0 }`,
+		&result,
+		OptionalFloat64{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomFloat64 at "+
+		"struct { Val edgedb.CustomFloat64 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendFloat64Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalFloat64 `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <float64>$0 }`,
+		&result,
+		CustomFloat64{data: []byte{
+			0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}},
+	)
+	assert.NoError(t, err)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float64>$0 }`,
+		&result,
+		CustomFloat64{data: []byte{
+			0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <float64>$0 }`,
+		&result,
+		CustomFloat64{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomFloat64 "+
+		"at args[0] expected 8, got 1")
+}
+
+type CustomOptionalFloat64 struct {
+	CustomFloat64
+	isSet bool
+}
+
+func (m CustomOptionalFloat64) MarshalEdgeDBFloat64() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	return m.CustomFloat64.MarshalEdgeDBFloat64()
+}
+
+func (m *CustomOptionalFloat64) UnmarshalEdgeDBFloat64(data []byte) error {
+	m.isSet = true
+	return m.CustomFloat64.UnmarshalEdgeDBFloat64(data)
+}
+
+func (m *CustomOptionalFloat64) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalFloat64) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalFloat64Unmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> float64; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalFloat64 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+		SELECT { val := <float64>-15.625 }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00},
+			result.Val.data,
+		)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalFloat64{}, result.Val)
+	})
+}
+
+func TestSendOptionalFloat64Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalFloat64 `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalFloat64 {
+		return CustomOptionalFloat64{
+			isSet:         true,
+			CustomFloat64: CustomFloat64{data: data},
+		}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <float64>$0 }`,
+		&result,
+		// -15.625,
+		newValue([]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float64>$0 }`,
+		&result,
+		newValue([]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL float64>$0 }`,
+			&result,
+			CustomOptionalFloat64{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalFloat64{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <float64>$0 }`,
+		&result,
+		CustomOptionalFloat64{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalFloat64 at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <float64>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalFloat64 "+
+		"at args[0] expected 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float64>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalFloat64 "+
+		"at args[0] expected 8, got 1")
 }
 
 func TestSendAndReceiveOptionalFloat64(t *testing.T) {
@@ -784,30 +1548,63 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 
 		var result Result
 		e = tx.QueryOne(ctx, `
+			# decode missing optional
 			SELECT Float64FieldHolder { float64 } LIMIT 1`,
 			&result,
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{}, result)
 
-		expected := Result{}
-		expected.Float64.Unset()
-		assert.Equal(t, expected, result)
+		if conn.protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QueryOne(ctx, `
+				# encode unset optional
+				SELECT Float64FieldHolder {
+					float64 := <OPTIONAL float64>$0
+				} LIMIT 1`,
+				&result,
+				OptionalFloat64{},
+			)
+			if e != nil {
+				return e
+			}
+			assert.Equal(t, Result{}, result)
+		}
 
-		arg := OptionalFloat64{}
-		arg.Set(64)
 		e = tx.QueryOne(ctx, `
-			SELECT Float64FieldHolder { float64 := <float64>$0 } LIMIT 1`,
+			# encode set optional
+			SELECT Float64FieldHolder {
+				float64 := <OPTIONAL float64>$0
+			} LIMIT 1`,
 			&result,
-			arg,
+			NewOptionalFloat64(6.4),
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{Float64: NewOptionalFloat64(6.4)}, result)
 
-		expected.Float64.Set(64)
-		assert.Equal(t, expected, result)
+		e = tx.QueryOne(ctx, `
+			# encode set optional into required argument
+			SELECT Float64FieldHolder { float64 := <float64>$0 } LIMIT 1`,
+			&result,
+			NewOptionalFloat64(6.4),
+		)
+		if e != nil {
+			return e
+		}
+		assert.Equal(t, Result{Float64: NewOptionalFloat64(6.4)}, result)
+
+		e = tx.QueryOne(ctx, `
+			# encode unset optional into required argument
+			SELECT Float64FieldHolder { float64 := <float64>$0 } LIMIT 1`,
+			&result,
+			OptionalFloat64{},
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			"cannot encode edgedb.OptionalFloat64 at args[0] "+
+			"because its value is missing")
 
 		return errors.New("rollback")
 	})
@@ -882,97 +1679,199 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 }
 
 type CustomFloat32 struct {
-	data [4]byte
+	data []byte
 }
 
 func (m CustomFloat32) MarshalEdgeDBFloat32() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomFloat32) UnmarshalEdgeDBFloat32(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveFloat32Marshaler(t *testing.T) {
+func TestReceiveFloat32Unmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <float32>$0,
-		decoded := <float32>-15.625,
-	)`
-
-	type Result struct {
-		Encoded float32       `edgedb:"encoded"`
-		Decoded CustomFloat32 `edgedb:"decoded"`
+	var result struct {
+		Val CustomFloat32 `edgedb:"val"`
 	}
 
-	data := [4]byte{0xc1, 0x7a, 0x00, 0x00}
-	arg := &CustomFloat32{}
-	copy(arg.data[:], data[:])
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := <float32>-15.625 }`, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0xc1, 0x7a, 0x00, 0x00}, result.Val.data)
 
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: -15.625,
-			Decoded: CustomFloat32{data},
-		},
-		result,
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float32>$0 }`,
+		&result,
+		OptionalFloat32{},
 	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomFloat32 at "+
+		"struct { Val edgedb.CustomFloat32 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalFloat32(t *testing.T) {
+func TestSendFloat32Marshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalFloat32 `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE Float32FieldHolder {
-				CREATE PROPERTY float32 -> float32;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <float32>$0 }`,
+		&result,
+		CustomFloat32{data: []byte{0xc1, 0x7a, 0x00, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
-			INSERT Float32FieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float32>$0 }`,
+		&result,
+		CustomFloat32{data: []byte{0xc1, 0x7a, 0x00, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <float32>$0 }`,
+		&result,
+		CustomFloat32{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomFloat32 "+
+		"at args[0] expected 4, got 1")
+}
+
+type CustomOptionalFloat32 struct {
+	CustomFloat32
+	isSet bool
+}
+
+func (m CustomOptionalFloat32) MarshalEdgeDBFloat32() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	return m.CustomFloat32.MarshalEdgeDBFloat32()
+}
+
+func (m *CustomOptionalFloat32) UnmarshalEdgeDBFloat32(data []byte) error {
+	m.isSet = true
+	return m.CustomFloat32.UnmarshalEdgeDBFloat32(data)
+}
+
+func (m *CustomOptionalFloat32) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalFloat32) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalFloat32Unmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> float32; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalFloat32 `edgedb:"val"`
 		}
 
-		type Result struct {
-			Float32 OptionalFloat32 `edgedb:"float32"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT Float32FieldHolder { float32 } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <float32>-15.625 }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{0xc1, 0x7a, 0x00, 0x00}, result.Val.data)
 
-		expected := Result{}
-		expected.Float32.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalFloat32{}
-		arg.Set(32)
-		e = tx.QueryOne(ctx, `
-			SELECT Float32FieldHolder { float32 := <float32>$0 } LIMIT 1`,
-			&result,
-			arg,
-		)
-		if e != nil {
-			return e
-		}
-
-		expected.Float32.Set(32)
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalFloat32{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalFloat32Marshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalFloat32 `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalFloat32 {
+		return CustomOptionalFloat32{
+			isSet:         true,
+			CustomFloat32: CustomFloat32{data: data},
+		}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <float32>$0 }`,
+		&result,
+		newValue([]byte{0xc1, 0x7a, 0x00, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float32>$0 }`,
+		&result,
+		newValue([]byte{0xc1, 0x7a, 0x00, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL float32>$0 }`,
+			&result,
+			CustomOptionalFloat32{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalFloat32{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <float32>$0 }`,
+		&result,
+		CustomOptionalFloat32{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalFloat32 at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <float32>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalFloat32 "+
+		"at args[0] expected 4, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float32>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalFloat32 "+
+		"at args[0] expected 4, got 1")
 }
 
 func TestSendAndReceiveBytes(t *testing.T) {
@@ -1012,93 +1911,186 @@ type CustomBytes struct {
 }
 
 func (m CustomBytes) MarshalEdgeDBBytes() ([]byte, error) {
-	return m.data, nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomBytes) UnmarshalEdgeDBBytes(data []byte) error {
-	m.data = data
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveBytesMarshaler(t *testing.T) {
+func TestReceiveBytesUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <bytes>$0,
-		decoded := b'\x01\x02\x03',
-	)`
-
-	type Result struct {
-		Encoded []byte      `edgedb:"encoded"`
-		Decoded CustomBytes `edgedb:"decoded"`
+	var result struct {
+		Val CustomBytes `edgedb:"val"`
 	}
 
-	data := []byte{0x01, 0x02, 0x03}
-	arg := &CustomBytes{make([]byte, len(data))}
-	copy(arg.data, data)
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := b'\x01\x02\x03' }`, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x02, 0x03}, result.Val.data)
 
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: data,
-			Decoded: CustomBytes{data},
-		},
-		result,
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bytes>$0 }`,
+		&result,
+		OptionalBytes{},
 	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomBytes at "+
+		"struct { Val edgedb.CustomBytes \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalBytes(t *testing.T) {
+func TestSendBytesMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalBytes `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE BytesFieldHolder {
-				CREATE PROPERTY bytes -> bytes;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <bytes>$0 }`,
+		&result,
+		CustomBytes{data: []byte{0x01, 0x02, 0x03}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-			INSERT BytesFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bytes>$0 }`,
+		&result,
+		CustomBytes{data: []byte{0x01, 0x02, 0x03}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL bytes>$0 }`,
+			&result,
+			CustomOptionalBytes{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalBytes{}, result.Val)
+	}
+
+	// encode missing value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bytes>$0 }`,
+		&result,
+		CustomOptionalBytes{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalBytes at args[0] "+
+		"because its value is missing")
+}
+
+type CustomOptionalBytes struct {
+	CustomBytes
+	isSet bool
+}
+
+func (m CustomOptionalBytes) MarshalEdgeDBBytes() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	return m.CustomBytes.MarshalEdgeDBBytes()
+}
+
+func (m *CustomOptionalBytes) UnmarshalEdgeDBBytes(data []byte) error {
+	m.isSet = true
+	return m.CustomBytes.UnmarshalEdgeDBBytes(data)
+}
+
+func (m *CustomOptionalBytes) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalBytes) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalBytesUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> bytes; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalBytes `edgedb:"val"`
 		}
 
-		type Result struct {
-			Bytes OptionalBytes `edgedb:"bytes"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT BytesFieldHolder { bytes } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := b'\x01\x02\x03' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{0x01, 0x02, 0x03}, result.Val.data)
 
-		expected := Result{}
-		expected.Bytes.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalBytes{}
-		arg.Set([]byte("hello"))
-		e = tx.QueryOne(ctx, `
-			SELECT BytesFieldHolder { bytes := <bytes>$0 } LIMIT 1`,
-			&result,
-			arg,
-		)
-		if e != nil {
-			return e
-		}
-
-		expected.Bytes.Set([]byte("hello"))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalBytes{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalBytesMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalBytes `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalBytes {
+		return CustomOptionalBytes{
+			isSet:       true,
+			CustomBytes: CustomBytes{data: data},
+		}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <bytes>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0x02, 0x03}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bytes>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0x02, 0x03}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL bytes>$0 }`,
+			&result,
+			CustomOptionalBytes{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalBytes{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bytes>$0 }`,
+		&result,
+		CustomOptionalBytes{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalBytes at args[0] "+
+		"because its value is missing")
 }
 
 func TestSendAndReceiveStr(t *testing.T) {
@@ -1126,43 +2118,171 @@ type CustomStr struct {
 }
 
 func (m CustomStr) MarshalEdgeDBStr() ([]byte, error) {
-	return m.data, nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomStr) UnmarshalEdgeDBStr(data []byte) error {
-	m.data = data
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveStrMarshaler(t *testing.T) {
+func TestReceiveStrUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str>$0,
-		decoded := 'Hello! 🙂',
-	)`
-
-	type Result struct {
-		Encoded string    `edgedb:"encoded"`
-		Decoded CustomStr `edgedb:"decoded"`
+	var result struct {
+		Val CustomStr `edgedb:"val"`
 	}
 
-	data := []byte{
-		0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x20, 0xf0, 0x9f, 0x99, 0x82,
-	}
-	arg := &CustomStr{make([]byte, len(data))}
-	copy(arg.data, data)
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := 'Hi 🙂' }`, &result)
+	assert.NoError(t, err)
 	assert.Equal(t,
-		Result{
-			Encoded: "Hello! 🙂",
-			Decoded: CustomStr{data},
-		},
-		result,
+		[]byte{0x48, 0x69, 0x20, 0xf0, 0x9f, 0x99, 0x82},
+		result.Val.data,
 	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL str>$0 }`,
+		&result,
+		OptionalStr{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomStr at "+
+		"struct { Val edgedb.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendStrMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalStr `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <str>$0 }`,
+		&result,
+		CustomStr{
+			data: []byte{0x48, 0x69, 0x20, 0xf0, 0x9f, 0x99, 0x82},
+		},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL str>$0 }`,
+		&result,
+		CustomStr{
+			data: []byte{0x48, 0x69, 0x20, 0xf0, 0x9f, 0x99, 0x82},
+		},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
+}
+
+type CustomOptionalStr struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalStr) MarshalEdgeDBStr() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalStr) UnmarshalEdgeDBStr(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalStr) SetMissing(missing bool) {
+	// todo: maybe this shouldn't take any arguments?
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalStr) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalStrUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> str; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalStr `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := "Hi 🙂" }`, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte("Hi 🙂"), result.Val.data)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalStr{}, result.Val)
+	})
+}
+
+func TestSendOptionalStrMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalStr `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalStr {
+		return CustomOptionalStr{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <str>$0 }`,
+		&result,
+		newValue([]byte("Hi 🙂")),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL str>$0 }`,
+		&result,
+		newValue([]byte("Hi 🙂")),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL str>$0 }`,
+			&result,
+			CustomOptionalStr{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalStr{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <str>$0 }`,
+		&result,
+		CustomOptionalStr{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalStr at args[0] "+
+		"because its value is missing")
 }
 
 func TestSendAndReceiveOptionalStr(t *testing.T) {
@@ -1171,7 +2291,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE StrFieldHolder {
-				CREATE PROPERTY string -> str;
+				CREATE PROPERTY str -> str;
 			};
 
 			INSERT StrFieldHolder;
@@ -1181,35 +2301,64 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 
 		type Result struct {
-			String OptionalStr `edgedb:"string"`
+			Str OptionalStr `edgedb:"str"`
 		}
 
 		var result Result
 		e = tx.QueryOne(ctx, `
-			SELECT StrFieldHolder { string } LIMIT 1`,
+			# decode missing optional
+			SELECT StrFieldHolder { str } LIMIT 1`,
 			&result,
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{}, result)
 
-		expected := Result{}
-		expected.String.Unset()
-		assert.Equal(t, expected, result)
+		if conn.protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QueryOne(ctx, `
+				# encode unset optional
+				SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
+				&result,
+				OptionalStr{},
+			)
+			if e != nil {
+				return e
+			}
+			assert.Equal(t, Result{}, result)
+		}
 
-		arg := OptionalStr{}
-		arg.Set("hello")
 		e = tx.QueryOne(ctx, `
-			SELECT StrFieldHolder { string := <str>$0 } LIMIT 1`,
+			# encode set optional
+			SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
 			&result,
-			arg,
+			NewOptionalStr("hello"),
 		)
 		if e != nil {
 			return e
 		}
+		assert.Equal(t, Result{Str: NewOptionalStr("hello")}, result)
 
-		expected.String.Set("hello")
-		assert.Equal(t, expected, result)
+		e = tx.QueryOne(ctx, `
+			# encode set optional into required argument
+			SELECT StrFieldHolder { str := <str>$0 } LIMIT 1`,
+			&result,
+			NewOptionalStr("hello"),
+		)
+		if e != nil {
+			return e
+		}
+		assert.Equal(t, Result{Str: NewOptionalStr("hello")}, result)
+
+		e = tx.QueryOne(ctx, `
+			# encode unset optional into required argument
+			SELECT StrFieldHolder { str := <str>$0 } LIMIT 1`,
+			&result,
+			OptionalStr{},
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			"cannot encode edgedb.OptionalStr at args[0] "+
+			"because its value is missing")
 
 		return errors.New("rollback")
 	})
@@ -1246,93 +2395,187 @@ type CustomJSON struct {
 }
 
 func (m CustomJSON) MarshalEdgeDBJSON() ([]byte, error) {
-	return m.data, nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomJSON) UnmarshalEdgeDBJSON(data []byte) error {
-	m.data = data
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveJSONMarshaler(t *testing.T) {
+func TestReceiveJSONUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := to_str(<json>$0),
-		decoded := <json>(hello := "world"),
-	)`
-
-	type Result struct {
-		Encoded string     `edgedb:"encoded"`
-		Decoded CustomJSON `edgedb:"decoded"`
+	var result struct {
+		Val CustomJSON `edgedb:"val"`
 	}
 
-	data := append([]byte{1}, []byte(`{"hello": "world"}`)...)
-	arg := &CustomJSON{make([]byte, len(data))}
-	copy(arg.data, data)
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <json>(hello := "world") }`,
+		&result,
+	)
+	assert.NoError(t, err)
 	assert.Equal(t,
-		Result{
-			Encoded: `{"hello": "world"}`,
-			Decoded: CustomJSON{data},
-		},
-		result,
+		append([]byte{0x01}, []byte(`{"hello": "world"}`)...),
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL json>$0 }`,
+		&result,
+		OptionalBytes{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomJSON at "+
+		"struct { Val edgedb.CustomJSON \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendJSONMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalBytes `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <json>$0 }`,
+		&result,
+		CustomJSON{data: append([]byte{1}, []byte(`{"hello": "world"}`)...)},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalBytes(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL json>$0 }`,
+		&result,
+		CustomJSON{data: append([]byte{1}, []byte(`{"hello": "world"}`)...)},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalBytes(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
+		result.Val,
 	)
 }
 
-func TestSendAndReceiveOptionalJSON(t *testing.T) {
-	ctx := context.Background()
+type CustomOptionalJSON struct {
+	data  []byte
+	isSet bool
+}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE JSONFieldHolder {
-				CREATE PROPERTY json -> json;
-			};
+func (m CustomOptionalJSON) MarshalEdgeDBJSON() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
 
-			INSERT JSONFieldHolder;
-		`)
-		if e != nil {
-			return e
+func (m *CustomOptionalJSON) UnmarshalEdgeDBJSON(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalJSON) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalJSON) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalJSONUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> json; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalJSON `edgedb:"val"`
 		}
 
-		type Result struct {
-			JSON OptionalBytes `edgedb:"json"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT JSONFieldHolder { json } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <json>(hello := "world") }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.JSON.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalBytes{}
-		arg.Set([]byte(`"hello"`))
-		e = tx.QueryOne(ctx, `
-			SELECT JSONFieldHolder { json := <json>$0 } LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			append([]byte{0x01}, []byte(`{"hello": "world"}`)...),
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.JSON.Set([]byte(`"hello"`))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalJSON{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalJSONMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalBytes `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalJSON {
+		return CustomOptionalJSON{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <json>$0 }`,
+		&result,
+		newValue(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalBytes(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL json>$0 }`,
+		&result,
+		newValue(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalBytes(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL json>$0 }`,
+			&result,
+			CustomOptionalJSON{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalBytes{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <json>$0 }`,
+		&result,
+		CustomOptionalJSON{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalJSON at args[0] "+
+		"because its value is missing")
 }
 
 func TestSendAndReceiveEnum(t *testing.T) {
@@ -1348,75 +2591,195 @@ func TestSendAndReceiveEnum(t *testing.T) {
 
 	query := `
 		WITH
-			e := <ColorEnum>$0,
+			e := <Color>$0,
 			s := <str>$1
 		SELECT (
 			encoded := <str>e,
-			decoded := <ColorEnum>s,
+			decoded := <Color>s,
 			round_trip := e,
-			is_equal := <ColorEnum>s = e,
-			string := <str><ColorEnum>s
+			is_equal := <Color>s = e,
+			string := <str><Color>s
 		)
 	`
 
-	var result Result
-	color := "Red"
-	err := conn.QuerySingle(ctx, query, &result, color, color)
-	require.NoError(t, err)
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx,
+			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
+		assert.NoError(t, e)
 
-	assert.Equal(t, color, result.Encoded, "encoding failed")
-	assert.Equal(t, color, result.Decoded, "decoding failed")
-	assert.Equal(t, color, result.RoundTrip, "round trip failed")
-	assert.True(t, result.IsEqual, "equality failed")
-	assert.Equal(t, color, result.String)
+		var result Result
+		color := "Red"
+		e = tx.QuerySingle(ctx, query, &result, color, color)
+		require.NoError(t, e)
 
-	query = "SELECT (decoded := <ColorEnum><str>$0)"
-	err = conn.QuerySingle(ctx, query, &result, "invalid")
+		assert.Equal(t, color, result.Encoded, "encoding failed")
+		assert.Equal(t, color, result.Decoded, "decoding failed")
+		assert.Equal(t, color, result.RoundTrip, "round trip failed")
+		assert.True(t, result.IsEqual, "equality failed")
+		assert.Equal(t, color, result.String)
 
-	expected := "edgedb.InvalidValueError: " +
-		"invalid input value for enum 'default::ColorEnum': \"invalid\""
-	assert.EqualError(t, err, expected)
+		query = "SELECT (decoded := <Color><str>$0)"
+		e = tx.QuerySingle(ctx, query, &result, "invalid")
+
+		expected := "edgedb.InvalidValueError: " +
+			"invalid input value for enum 'default::Color': \"invalid\""
+		assert.EqualError(t, e, expected)
+
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
 }
 
-type CustomEnum struct {
-	data []byte
-}
-
-func (m CustomEnum) MarshalEdgeDBStr() ([]byte, error) {
-	return m.data, nil
-}
-
-func (m *CustomEnum) UnmarshalEdgeDBStr(data []byte) error {
-	m.data = data
-	return nil
-}
-
-func TestSendAndReceiveEnumMarshaler(t *testing.T) {
+func TestReceiveEnumUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <ColorEnum>$0,
-		decoded := <ColorEnum>'Red',
-	)`
-
-	type Result struct {
-		Encoded string     `edgedb:"encoded"`
-		Decoded CustomEnum `edgedb:"decoded"`
+	var result struct {
+		Val CustomStr `edgedb:"val"`
 	}
-	data := []byte{0x52, 0x65, 0x64}
-	arg := &CustomEnum{make([]byte, len(data))}
-	copy(arg.data, data)
 
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: "Red",
-			Decoded: CustomEnum{data},
-		},
-		result,
-	)
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx,
+			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
+		assert.NoError(t, e)
+
+		// Decode value
+		e = tx.QuerySingle(ctx, `SELECT { val := <Color>'Red' }`, &result)
+		assert.NoError(t, e)
+		assert.Equal(t, []byte("Red"), result.Val.data)
+
+		// Decode missing value
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL Color>$0 }`,
+			&result,
+			OptionalStr{},
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			"the \"out\" argument does not match query schema: "+
+			"expected edgedb.CustomStr at "+
+			"struct { Val edgedb.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
+			"to be OptionalUnmarshaler interface "+
+			"because the field is not required")
+
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
+}
+
+func TestSendEnumMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalStr `edgedb:"val"`
+	}
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx,
+			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
+		assert.NoError(t, e)
+
+		// encode value into required argument
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <Color>$0 }`,
+			&result,
+			CustomStr{data: []byte("Red")},
+		)
+		assert.NoError(t, e)
+		assert.Equal(t, NewOptionalStr("Red"), result.Val)
+
+		// encode value into optional argument
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL Color>$0 }`,
+			&result,
+			CustomStr{data: []byte("Red")},
+		)
+		assert.NoError(t, e)
+		assert.Equal(t, NewOptionalStr("Red"), result.Val)
+
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
+}
+
+func TestReceiveOptionalEnumUnmarshaler(t *testing.T) {
+	ddl := `
+		CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;
+		CREATE TYPE Sample {
+			CREATE PROPERTY val -> Color;
+		};
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalStr `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := <Color>'Red' }`, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte("Red"), result.Val.data)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalStr{}, result.Val)
+	})
+}
+
+func TestSendOptionalEnumMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalStr `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalStr {
+		return CustomOptionalStr{isSet: true, data: data}
+	}
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx,
+			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
+		assert.NoError(t, e)
+
+		// encode value into required argument
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <Color>$0 }`,
+			&result,
+			newValue([]byte("Red")),
+		)
+		assert.NoError(t, e)
+		assert.Equal(t, NewOptionalStr("Red"), result.Val)
+
+		// encode value into optional argument
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL Color>$0 }`,
+			&result,
+			newValue([]byte("Red")),
+		)
+		assert.NoError(t, e)
+		assert.Equal(t, NewOptionalStr("Red"), result.Val)
+
+		if conn.protocolVersion.GTE(protocolVersion0p12) {
+			// encode missing value into optional argument
+			e = tx.QuerySingle(ctx, `
+				SELECT { val := <OPTIONAL Color>$0 }`,
+				&result,
+				CustomOptionalStr{},
+			)
+			assert.NoError(t, e)
+			assert.Equal(t, OptionalStr{}, result.Val)
+		}
+
+		// encode missing value into required argument
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <Color>$0 }`,
+			&result,
+			CustomOptionalStr{},
+		)
+		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+			"cannot encode edgedb.CustomOptionalStr at args[0] "+
+			"because its value is missing")
+
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
 }
 
 func TestSendAndReceiveDuration(t *testing.T) {
@@ -1483,104 +2846,233 @@ func TestSendAndReceiveDuration(t *testing.T) {
 }
 
 type CustomDuration struct {
-	data [16]byte
+	data []byte
 }
 
 func (m CustomDuration) MarshalEdgeDBDuration() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomDuration) UnmarshalEdgeDBDuration(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveDurationMarshaler(t *testing.T) {
+func TestReceiveDurationUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <duration>$0,
-		decoded := <duration>'48 hours 45 minutes 7.6 seconds',
-	)`
-
-	type Result struct {
-		Encoded Duration       `edgedb:"encoded"`
-		Decoded CustomDuration `edgedb:"decoded"`
+	var result struct {
+		Val CustomDuration `edgedb:"val"`
 	}
 
-	data := [16]byte{
-		0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
-		0x00, 0x00, 0x00, 0x00, // days
-		0x00, 0x00, 0x00, 0x00, // months
-	}
-	arg := &CustomDuration{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: Duration(0x28dd117280),
-			Decoded: CustomDuration{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <duration>'48 hours 45 minutes 7.6 seconds' }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x00, // days
+			0x00, 0x00, 0x00, 0x00, // months
+		},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL duration>$0 }`,
+		&result,
+		OptionalDuration{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomDuration at "+
+		"struct { Val edgedb.CustomDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalDuration(t *testing.T) {
+func TestSendDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalDuration `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE DurationFieldHolder {
-				CREATE PROPERTY duration -> duration;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <duration>$0 }`,
+		&result,
+		CustomDuration{data: []byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x00, // days
+			0x00, 0x00, 0x00, 0x00, // months
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
-			INSERT DurationFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL duration>$0 }`,
+		&result,
+		CustomDuration{data: []byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x00, // days
+			0x00, 0x00, 0x00, 0x00, // months
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <duration>$0 }`,
+		&result,
+		CustomDuration{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomDuration "+
+		"at args[0] expected 16, got 1")
+}
+
+type CustomOptionalDuration struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalDuration) MarshalEdgeDBDuration() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalDuration) UnmarshalEdgeDBDuration(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalDuration) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalDuration) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalDurationUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> duration; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalDuration `edgedb:"val"`
 		}
 
-		type Result struct {
-			Duration OptionalDuration `edgedb:"duration"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT DurationFieldHolder { duration } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <duration>'48 hours 45 minutes 7.6 seconds' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.Duration.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalDuration{}
-		arg.Set(123)
-		e = tx.QueryOne(ctx, `
-			SELECT DurationFieldHolder {
-				duration := <duration>$0
-			}
-			LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{
+				0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+				0x00, 0x00, 0x00, 0x00, // days
+				0x00, 0x00, 0x00, 0x00, // months
+			},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.Duration.Set(123)
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalDuration{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalDurationMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalDuration `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalDuration {
+		return CustomOptionalDuration{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <duration>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x00, // days
+			0x00, 0x00, 0x00, 0x00, // months
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL duration>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x00, // days
+			0x00, 0x00, 0x00, 0x00, // months
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL duration>$0 }`,
+			&result,
+			CustomOptionalDuration{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalDuration{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <duration>$0 }`,
+		&result,
+		CustomOptionalDuration{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalDuration at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <duration>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalDuration "+
+		"at args[0] expected 16, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL duration>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalDuration "+
+		"at args[0] expected 16, got 1")
 }
 
 func TestSendAndReceiveRelativeDuration(t *testing.T) {
@@ -1641,121 +3133,258 @@ func TestSendAndReceiveRelativeDuration(t *testing.T) {
 }
 
 type CustomRelativeDuration struct {
-	data [16]byte
+	data []byte
 }
 
 func (m CustomRelativeDuration) MarshalEdgeDBRelativeDuration() (
 	[]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomRelativeDuration) UnmarshalEdgeDBRelativeDuration(
 	data []byte,
 ) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveRelativeDurationMarshaler(t *testing.T) {
+func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	var duration RelativeDuration
-	err := conn.QuerySingle(ctx,
-		"SELECT <cal::relative_duration>'1y'", &duration)
-	if err != nil {
-		t.Skip("server version is too old for this feature")
+	var result struct {
+		Val CustomRelativeDuration `edgedb:"val"`
 	}
 
-	query := `SELECT (
-		encoded := <cal::relative_duration>$0,
-		decoded := <cal::relative_duration>
-			'8 months 5 days 48 hours 45 minutes 7.6 seconds',
-	)`
-
-	type Result struct {
-		Encoded RelativeDuration       `edgedb:"encoded"`
-		Decoded CustomRelativeDuration `edgedb:"decoded"`
-	}
-
-	data := [16]byte{
-		0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
-		0x00, 0x00, 0x00, 0x05, // days
-		0x00, 0x00, 0x00, 0x08, // months
-	}
-	arg := &CustomRelativeDuration{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err = conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: NewRelativeDuration(8, 5, 0x28dd117280),
-			Decoded: CustomRelativeDuration{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::relative_duration>
+			'8 months 5 days 48 hours 45 minutes 7.6 seconds' 
+		}`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
+		&result,
+		OptionalRelativeDuration{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomRelativeDuration at struct "+
+		"{ Val edgedb.CustomRelativeDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalRelativeDuration(t *testing.T) {
+func TestSendRelativeDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	var duration RelativeDuration
-	err := conn.QueryOne(ctx, "SELECT <cal::relative_duration>'1y'", &duration)
-	if err != nil {
-		t.Skip("server version is too old for this feature")
+	var result struct {
+		Val OptionalRelativeDuration `edgedb:"val"`
 	}
 
-	err = conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE RelativeDurationFieldHolder {
-				CREATE PROPERTY duration -> cal::relative_duration;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::relative_duration>$0 }`,
+		&result,
+		CustomRelativeDuration{data: []byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalRelativeDuration(NewRelativeDuration(8, 5, 0x28dd117280)),
+		result.Val,
+	)
 
-			INSERT RelativeDurationFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
+		&result,
+		CustomRelativeDuration{data: []byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalRelativeDuration(NewRelativeDuration(8, 5, 0x28dd117280)),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::relative_duration>$0 }`,
+		&result,
+		CustomRelativeDuration{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomRelativeDuration "+
+		"at args[0] expected 16, got 1")
+}
+
+type CustomOptionalRelativeDuration struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalRelativeDuration) MarshalEdgeDBRelativeDuration() (
+	[]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalRelativeDuration) UnmarshalEdgeDBRelativeDuration(
+	data []byte,
+) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalRelativeDuration) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalRelativeDuration) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalRelativeDurationUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample {
+		CREATE PROPERTY val -> cal::relative_duration;
+	};`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalRelativeDuration `edgedb:"val"`
 		}
 
-		type Result struct {
-			RelativeDuration OptionalRelativeDuration `edgedb:"duration"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT RelativeDurationFieldHolder { duration } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <cal::relative_duration>
+				'8 months 5 days 48 hours 45 minutes 7.6 seconds'
+			}`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.RelativeDuration.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalRelativeDuration{}
-		arg.Set(NewRelativeDuration(1, 2, 3))
-		e = tx.QueryOne(ctx, `
-			SELECT RelativeDurationFieldHolder {
-				duration := <cal::relative_duration>$0
-			}
-			LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{
+				0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+				0x00, 0x00, 0x00, 0x05, // days
+				0x00, 0x00, 0x00, 0x08, // months
+			},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.RelativeDuration.Set(NewRelativeDuration(1, 2, 3))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalRelativeDuration{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalRelativeDuration `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalRelativeDuration {
+		return CustomOptionalRelativeDuration{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::relative_duration>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalRelativeDuration(NewRelativeDuration(8, 5, 0x28dd117280)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x00, 0x00, 0x28, 0xdd, 0x11, 0x72, 0x80, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalRelativeDuration(NewRelativeDuration(8, 5, 0x28dd117280)),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
+			&result,
+			CustomOptionalRelativeDuration{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalRelativeDuration{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::relative_duration>$0 }`,
+		&result,
+		CustomOptionalRelativeDuration{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalRelativeDuration at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::relative_duration>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by "+
+		"edgedb.CustomOptionalRelativeDuration at args[0] expected 16, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded "+
+		"by edgedb.CustomOptionalRelativeDuration "+
+		"at args[0] expected 16, got 1")
 }
 
 func TestSendAndReceiveLocalTime(t *testing.T) {
@@ -1840,100 +3469,223 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 }
 
 type CustomLocalTime struct {
-	data [8]byte
+	data []byte
 }
 
 func (m CustomLocalTime) MarshalEdgeDBLocalTime() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomLocalTime) UnmarshalEdgeDBLocalTime(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveLocalTimeMarshaler(t *testing.T) {
+func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str><cal::local_time>$0,
-		decoded := <cal::local_time>'12:10:00',
-	)`
-
-	type Result struct {
-		Encoded string          `edgedb:"encoded"`
-		Decoded CustomLocalTime `edgedb:"decoded"`
+	var result struct {
+		Val CustomLocalTime `edgedb:"val"`
 	}
 
-	data := [8]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}
-	arg := &CustomLocalTime{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: "12:10:00",
-			Decoded: CustomLocalTime{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_time>'12:10:00' }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
+		&result,
+		OptionalLocalTime{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomLocalTime at "+
+		"struct { Val edgedb.CustomLocalTime \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalLocalTime(t *testing.T) {
+func TestSendLocalTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalLocalTime `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE LocalTimeFieldHolder {
-				CREATE PROPERTY local_time -> cal::local_time;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_time>$0 }`,
+		&result,
+		CustomLocalTime{data: []byte{
+			0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalTime(NewLocalTime(12, 10, 0, 0)),
+		result.Val,
+	)
 
-			INSERT LocalTimeFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
+		&result,
+		CustomLocalTime{data: []byte{
+			0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalTime(NewLocalTime(12, 10, 0, 0)),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_time>$0 }`,
+		&result,
+		CustomLocalTime{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomLocalTime "+
+		"at args[0] expected 8, got 1")
+}
+
+type CustomOptionalLocalTime struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalLocalTime) MarshalEdgeDBLocalTime() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalLocalTime) UnmarshalEdgeDBLocalTime(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalLocalTime) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalLocalTime) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalLocalTimeUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cal::local_time; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalLocalTime `edgedb:"val"`
 		}
 
-		type Result struct {
-			LocalTime OptionalLocalTime `edgedb:"local_time"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT LocalTimeFieldHolder { local_time } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <cal::local_time>'12:10:00' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.LocalTime.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalLocalTime{}
-		arg.Set(NewLocalTime(11, 53, 27, 4))
-		e = tx.QueryOne(ctx, `
-			SELECT LocalTimeFieldHolder {
-				local_time := <cal::local_time>$0
-			}
-			LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.LocalTime.Set(NewLocalTime(11, 53, 27, 4))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalLocalTime{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalLocalTime `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalLocalTime {
+		return CustomOptionalLocalTime{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_time>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalTime(NewLocalTime(12, 10, 0, 0)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalTime(NewLocalTime(12, 10, 0, 0)),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
+			&result,
+			CustomOptionalLocalTime{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalLocalTime{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_time>$0 }`,
+		&result,
+		CustomOptionalLocalTime{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalLocalTime at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_time>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalLocalTime "+
+		"at args[0] expected 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalLocalTime "+
+		"at args[0] expected 8, got 1")
 }
 
 func TestSendAndReceiveLocalDate(t *testing.T) {
@@ -2009,100 +3761,215 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 }
 
 type CustomLocalDate struct {
-	data [4]byte
+	data []byte
 }
 
 func (m CustomLocalDate) MarshalEdgeDBLocalDate() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomLocalDate) UnmarshalEdgeDBLocalDate(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveLocalDateMarshaler(t *testing.T) {
+func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str><cal::local_date>$0,
-		decoded := <cal::local_date>'2019-05-06',
-	)`
-
-	type Result struct {
-		Encoded string          `edgedb:"encoded"`
-		Decoded CustomLocalDate `edgedb:"decoded"`
+	var result struct {
+		Val CustomLocalDate `edgedb:"val"`
 	}
 
-	data := [4]byte{0x00, 0x00, 0x1b, 0x99}
-	arg := &CustomLocalDate{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: "2019-05-06",
-			Decoded: CustomLocalDate{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_date>'2019-05-06' }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x00, 0x00, 0x1b, 0x99}, result.Val.data)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
+		&result,
+		OptionalLocalDate{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomLocalDate at "+
+		"struct { Val edgedb.CustomLocalDate \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalLocalDate(t *testing.T) {
+func TestSendLocalDateMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalLocalDate `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE LocalDateFieldHolder {
-				CREATE PROPERTY local_date -> cal::local_date;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_date>$0 }`,
+		&result,
+		CustomLocalDate{data: []byte{0x00, 0x00, 0x1b, 0x99}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDate(NewLocalDate(2019, 5, 6)),
+		result.Val,
+	)
 
-			INSERT LocalDateFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
+		&result,
+		CustomLocalDate{data: []byte{0x00, 0x00, 0x1b, 0x99}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDate(NewLocalDate(2019, 5, 6)),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_date>$0 }`,
+		&result,
+		CustomLocalDate{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomLocalDate "+
+		"at args[0] expected 4, got 1")
+}
+
+type CustomOptionalLocalDate struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalLocalDate) MarshalEdgeDBLocalDate() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalLocalDate) UnmarshalEdgeDBLocalDate(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalLocalDate) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalLocalDate) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalLocalDateUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cal::local_date; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalLocalDate `edgedb:"val"`
 		}
 
-		type Result struct {
-			LocalDate OptionalLocalDate `edgedb:"local_date"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT LocalDateFieldHolder { local_date } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <cal::local_date>'2019-05-06' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{0x00, 0x00, 0x1b, 0x99}, result.Val.data)
 
-		expected := Result{}
-		expected.LocalDate.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalLocalDate{}
-		arg.Set(NewLocalDate(2020, 1, 1))
-		e = tx.QueryOne(ctx, `
-			SELECT LocalDateFieldHolder {
-				local_date := <cal::local_date>$0
-			}
-			LIMIT 1`,
-			&result,
-			arg,
-		)
-		if e != nil {
-			return e
-		}
-
-		expected.LocalDate.Set(NewLocalDate(2020, 1, 1))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalLocalDate{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalLocalDateMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalLocalDate `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalLocalDate {
+		return CustomOptionalLocalDate{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_date>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x00, 0x1b, 0x99}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDate(NewLocalDate(2019, 5, 6)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x00, 0x1b, 0x99}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDate(NewLocalDate(2019, 5, 6)),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL cal::local_date>$0 }`,
+			&result,
+			CustomOptionalLocalDate{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalLocalDate{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_date>$0 }`,
+		&result,
+		CustomOptionalLocalDate{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalLocalDate at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_date>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDate "+
+		"at args[0] expected 4, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDate "+
+		"at args[0] expected 4, got 1")
 }
 
 func TestSendAndReceiveLocalDateTime(t *testing.T) {
@@ -2185,100 +4052,228 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 }
 
 type CustomLocalDateTime struct {
-	data [8]byte
+	data []byte
 }
 
 func (m CustomLocalDateTime) MarshalEdgeDBLocalDateTime() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomLocalDateTime) UnmarshalEdgeDBLocalDateTime(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveLocalDateTimeMarshaler(t *testing.T) {
+func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str><cal::local_datetime>$0,
-		decoded := <cal::local_datetime>'2019-05-06T12:00:00',
-	)`
-
-	type Result struct {
-		Encoded string              `edgedb:"encoded"`
-		Decoded CustomLocalDateTime `edgedb:"decoded"`
+	var result struct {
+		Val CustomLocalDateTime `edgedb:"val"`
 	}
 
-	data := [8]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}
-	arg := &CustomLocalDateTime{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: "2019-05-06T12:00:00",
-			Decoded: CustomLocalDateTime{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_datetime>'2019-05-06T12:00:00' }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
+		&result,
+		OptionalLocalDateTime{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomLocalDateTime at "+
+		"struct { Val edgedb.CustomLocalDateTime \"edgedb:\\\"val\\\"\" }.val"+
+		" to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalLocalDateTime(t *testing.T) {
+func TestSendLocalDateTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalLocalDateTime `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE LocalDateTimeFieldHolder {
-				CREATE PROPERTY local_datetime -> cal::local_datetime;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_datetime>$0 }`,
+		&result,
+		CustomLocalDateTime{data: []byte{
+			0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDateTime(NewLocalDateTime(2019, 5, 6, 12, 0, 0, 0)),
+		result.Val,
+	)
 
-			INSERT LocalDateTimeFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
+		&result,
+		CustomLocalDateTime{data: []byte{
+			0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDateTime(NewLocalDateTime(2019, 5, 6, 12, 0, 0, 0)),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_datetime>$0 }`,
+		&result,
+		CustomLocalDateTime{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomLocalDateTime "+
+		"at args[0] expected 8, got 1")
+}
+
+type CustomOptionalLocalDateTime struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalLocalDateTime) MarshalEdgeDBLocalDateTime() (
+	[]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalLocalDateTime) UnmarshalEdgeDBLocalDateTime(
+	data []byte,
+) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalLocalDateTime) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalLocalDateTime) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalLocalDateTimeUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { 
+		CREATE PROPERTY val -> cal::local_datetime; 
+	};`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalLocalDateTime `edgedb:"val"`
 		}
 
-		type Result struct {
-			LocalDateTime OptionalLocalDateTime `edgedb:"local_datetime"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT LocalDateTimeFieldHolder { local_datetime } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx,
+			`SELECT { val := <cal::local_datetime>'2019-05-06T12:00:00' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.LocalDateTime.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalLocalDateTime{}
-		arg.Set(NewLocalDateTime(2020, 1, 1, 0, 0, 0, 0))
-		e = tx.QueryOne(ctx, `
-			SELECT LocalDateTimeFieldHolder {
-				local_datetime := <cal::local_datetime>$0
-			}
-			LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.LocalDateTime.Set(NewLocalDateTime(2020, 1, 1, 0, 0, 0, 0))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalLocalDateTime{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalLocalDateTime `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalLocalDateTime {
+		return CustomOptionalLocalDateTime{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_datetime>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDateTime(NewLocalDateTime(2019, 5, 6, 12, 0, 0, 0)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalLocalDateTime(NewLocalDateTime(2019, 5, 6, 12, 0, 0, 0)),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
+			&result,
+			CustomOptionalLocalDateTime{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalLocalDateTime{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_datetime>$0 }`,
+		&result,
+		CustomOptionalLocalDateTime{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalLocalDateTime at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <cal::local_datetime>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDateTime "+
+		"at args[0] expected 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDateTime "+
+		"at args[0] expected 8, got 1")
 }
 
 func TestSendAndReceiveDateTime(t *testing.T) {
@@ -2362,100 +4357,223 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 }
 
 type CustomDateTime struct {
-	data [8]byte
+	data []byte
 }
 
 func (m CustomDateTime) MarshalEdgeDBDateTime() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomDateTime) UnmarshalEdgeDBDateTime(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveDateTimeMarshaler(t *testing.T) {
+func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str><datetime>$0,
-		decoded := <datetime>'2019-05-06T12:00:00+00:00',
-	)`
-
-	type Result struct {
-		Encoded string         `edgedb:"encoded"`
-		Decoded CustomDateTime `edgedb:"decoded"`
+	var result struct {
+		Val CustomDateTime `edgedb:"val"`
 	}
 
-	data := [8]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}
-	arg := &CustomDateTime{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: "2019-05-06T12:00:00+00:00",
-			Decoded: CustomDateTime{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <datetime>'2019-05-06T12:00:00+00:00' }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL datetime>$0 }`,
+		&result,
+		OptionalDateTime{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomDateTime at "+
+		"struct { Val edgedb.CustomDateTime \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalDateTime(t *testing.T) {
+func TestSendDateTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalDateTime `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE DateTimeFieldHolder {
-				CREATE PROPERTY datetime -> datetime;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <datetime>$0 }`,
+		&result,
+		CustomDateTime{data: []byte{
+			0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateTime(time.Date(2019, 5, 6, 12, 0, 0, 0, time.UTC)),
+		result.Val,
+	)
 
-			INSERT DateTimeFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL datetime>$0 }`,
+		&result,
+		CustomDateTime{data: []byte{
+			0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateTime(time.Date(2019, 5, 6, 12, 0, 0, 0, time.UTC)),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <datetime>$0 }`,
+		&result,
+		CustomDateTime{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomDateTime "+
+		"at args[0] expected 8, got 1")
+}
+
+type CustomOptionalDateTime struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalDateTime) MarshalEdgeDBDateTime() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalDateTime) UnmarshalEdgeDBDateTime(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalDateTime) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalDateTime) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalDateTimeUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> datetime; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalDateTime `edgedb:"val"`
 		}
 
-		type Result struct {
-			DateTime OptionalDateTime `edgedb:"datetime"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT DateTimeFieldHolder { datetime } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <datetime>'2019-05-06T12:00:00+00:00' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.DateTime.Unset()
-		assert.Equal(t, expected, result)
-
-		val := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-		arg := OptionalDateTime{}
-		arg.Set(val)
-		e = tx.QueryOne(ctx, `
-			SELECT DateTimeFieldHolder { datetime := <datetime>$0 } LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		actual, ok := result.DateTime.Get()
-		assert.True(t, ok)
-		assert.True(t, val.Equal(actual),
-			"%v != %v", val.String(), actual.String())
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalDateTime{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalDateTimeMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalDateTime `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalDateTime {
+		return CustomOptionalDateTime{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <datetime>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateTime(time.Date(2019, 5, 6, 12, 0, 0, 0, time.UTC)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL datetime>$0 }`,
+		&result,
+		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateTime(time.Date(2019, 5, 6, 12, 0, 0, 0, time.UTC)),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL datetime>$0 }`,
+			&result,
+			CustomOptionalDateTime{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalDateTime{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <datetime>$0 }`,
+		&result,
+		CustomOptionalDateTime{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalDateTime at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <datetime>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalDateTime "+
+		"at args[0] expected 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL datetime>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalDateTime "+
+		"at args[0] expected 8, got 1")
 }
 
 func TestSendAndReceiveBigInt(t *testing.T) {
@@ -2619,150 +4737,566 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 	}
 }
 
+// The algorithm for decoding bigint is a summation.  If the result memory is
+// not cleared before decoding the decoded value will be added to the existing
+// value in memory.
+func TestReuseBigIntValue(t *testing.T) {
+	ctx := context.Background()
+	expected := big.NewInt(123)
+
+	var result *big.Int
+	err := conn.QuerySingle(ctx, "SELECT 123n", &result)
+	require.NoError(t, err)
+	assert.Equal(t,
+		0, expected.Cmp(result),
+		"%v != %v", expected.String(), result.String(),
+	)
+
+	err = conn.QuerySingle(ctx, "SELECT 123n", &result)
+	require.NoError(t, err)
+	assert.Equal(t,
+		0, expected.Cmp(result),
+		"%v != %v", expected.String(), result.String(),
+	)
+
+	err = conn.QuerySingle(ctx, "SELECT 123n", &result)
+	require.NoError(t, err)
+	assert.Equal(t,
+		0, expected.Cmp(result),
+		"%v != %v", expected.String(), result.String(),
+	)
+
+	var optional OptionalBigInt
+	err = conn.QuerySingle(ctx, "SELECT 123n", &optional)
+	require.NoError(t, err)
+	v, ok := optional.Get()
+	require.True(t, ok)
+	assert.Equal(t,
+		0, expected.Cmp(v),
+		"%v != %v", expected.String(), result.String(),
+	)
+
+	err = conn.QueryOne(ctx, "SELECT 123n", &optional)
+	require.NoError(t, err)
+	v, ok = optional.Get()
+	require.True(t, ok)
+	assert.Equal(t,
+		0, expected.Cmp(v),
+		"%v != %v", expected.String(), result.String(),
+	)
+}
+
 type CustomBigInt struct {
 	data []byte
 }
 
 func (m CustomBigInt) MarshalEdgeDBBigInt() ([]byte, error) {
-	return m.data, nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomBigInt) UnmarshalEdgeDBBigInt(data []byte) error {
-	m.data = data
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveBigIntMarshaler(t *testing.T) {
+func TestReceiveBigIntUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str><bigint>$0,
-		decoded := <bigint>-15000n,
-	)`
-
-	type Result struct {
-		Encoded string       `edgedb:"encoded"`
-		Decoded CustomBigInt `edgedb:"decoded"`
+	var result struct {
+		Val CustomBigInt `edgedb:"val"`
 	}
 
-	data := []byte{
-		0x00, 0x02, // ndigits
-		0x00, 0x01, // weight
-		0x40, 0x00, // sign
-		0x00, 0x00, // reserved
-		0x00, 0x01, 0x13, 0x88, // digits
-	}
-	arg := &CustomBigInt{make([]byte, len(data))}
-	copy(arg.data, data)
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
+	// Decode value
+	err := conn.QuerySingle(ctx, `SELECT { val := <bigint>-15000n }`, &result)
+	assert.NoError(t, err)
 	assert.Equal(t,
-		Result{
-			Encoded: `-15000`,
-			Decoded: CustomBigInt{data},
+		[]byte{
+			0x00, 0x02, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x00, // reserved
+			0x00, 0x01, 0x13, 0x88, // digits
 		},
-		result,
+		result.Val.data,
 	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bigint>$0 }`,
+		&result,
+		OptionalBigInt{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomBigInt at "+
+		"struct { Val edgedb.CustomBigInt \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalBigInt(t *testing.T) {
+func TestSendBigIntMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalBigInt `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE BigIntFieldHolder {
-				CREATE PROPERTY bigint -> bigint;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <bigint>$0 }`,
+		&result,
+		CustomBigInt{data: []byte{
+			0x00, 0x02, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x00, // reserved
+			0x00, 0x01, 0x13, 0x88, // digits
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
-			INSERT BigIntFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bigint>$0 }`,
+		&result,
+		CustomBigInt{data: []byte{
+			0x00, 0x02, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x00, // reserved
+			0x00, 0x01, 0x13, 0x88, // digits
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bigint>$0 }`,
+		&result,
+		CustomBigInt{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomBigInt "+
+		"at args[0] expected at least 8, got 1")
+}
+
+type CustomOptionalBigInt struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalBigInt) MarshalEdgeDBBigInt() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalBigInt) UnmarshalEdgeDBBigInt(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalBigInt) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalBigInt) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalBigIntUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> bigint; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalBigInt `edgedb:"val"`
 		}
 
-		type Result struct {
-			BigInt OptionalBigInt `edgedb:"bigint"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT BigIntFieldHolder { bigint } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx,
+			`SELECT { val := <bigint>-15000n }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.BigInt.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalBigInt{}
-		arg.Set(big.NewInt(123))
-		e = tx.QueryOne(ctx, `
-			SELECT BigIntFieldHolder { bigint := <bigint>$0 } LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{
+				0x00, 0x02, // ndigits
+				0x00, 0x01, // weight
+				0x40, 0x00, // sign
+				0x00, 0x00, // reserved
+				0x00, 0x01, 0x13, 0x88, // digits
+			},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.BigInt.Set(big.NewInt(123))
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalBigInt{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalBigIntMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalBigInt `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalBigInt {
+		return CustomOptionalBigInt{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <bigint>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x02, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x00, // reserved
+			0x00, 0x01, 0x13, 0x88, // digits
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bigint>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x02, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x00, // reserved
+			0x00, 0x01, 0x13, 0x88, // digits
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bigint>$0 }`,
+			&result,
+			CustomOptionalBigInt{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalBigInt{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bigint>$0 }`,
+		&result,
+		CustomOptionalBigInt{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalBigInt at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <bigint>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalBigInt "+
+		"at args[0] expected at least 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bigint>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalBigInt "+
+		"at args[0] expected at least 8, got 1")
 }
 
 type CustomDecimal struct {
 	data []byte
 }
 
-func (d CustomDecimal) MarshalEdgeDBDecimal() ([]byte, error) {
-	return d.data, nil
+func (m CustomDecimal) MarshalEdgeDBDecimal() ([]byte, error) {
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
-func (d *CustomDecimal) UnmarshalEdgeDBDecimal(data []byte) error {
-	d.data = data
+func (m *CustomDecimal) UnmarshalEdgeDBDecimal(data []byte) error {
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveDecimalMarshaler(t *testing.T) {
+func TestReceiveDecimalUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	data := []byte{
-		0x00, 0x03, // ndigits
-		0x00, 0x01, // weight
-		0x40, 0x00, // sign
-		0x00, 0x07, // dscale
-		0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+	var result struct {
+		Val CustomDecimal `edgedb:"val"`
 	}
 
-	arg := CustomDecimal{make([]byte, len(data))}
-	copy(arg.data, data)
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <decimal>-15000.6250000n }`,
+		&result,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		},
+		result.Val.data,
+	)
 
-	type Result struct {
-		Decoded CustomDecimal `edgedb:"decoded"`
-		Encoded string        `edgedb:"encoded"`
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL decimal>$0 }`,
+		&result,
+		CustomOptionalDecimal{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomDecimal at "+
+		"struct { Val edgedb.CustomDecimal \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendDecimalMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val CustomOptionalDecimal `edgedb:"val"`
 	}
 
-	query := `SELECT (
-		decoded := -15000.6250000n,
-		encoded := <str><decimal>$0,
-	)`
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <decimal>$0 }`,
+		&result,
+		CustomDecimal{data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		CustomOptionalDecimal{isSet: true, data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+		result.Val,
+	)
 
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL decimal>$0 }`,
+		&result,
+		CustomDecimal{data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		CustomOptionalDecimal{isSet: true, data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+		result.Val,
+	)
 
-	expected := CustomDecimal{make([]byte, len(data))}
-	copy(expected.data, data)
-	assert.Equal(t, Result{expected, "-15000.6250000"}, result)
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <decimal>$0 }`,
+		&result,
+		CustomDecimal{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomDecimal "+
+		"at args[0] expected at least 8, got 1")
+}
+
+type CustomOptionalDecimal struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalDecimal) MarshalEdgeDBDecimal() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalDecimal) UnmarshalEdgeDBDecimal(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalDecimal) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalDecimal) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalDecimalUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> decimal; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalDecimal `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <decimal>-15000.6250000n }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{
+				0x00, 0x03, // ndigits
+				0x00, 0x01, // weight
+				0x40, 0x00, // sign
+				0x00, 0x07, // dscale
+				0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+			},
+			result.Val.data,
+		)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalDecimal{}, result.Val)
+	})
+}
+
+func TestSendOptionalDecimalMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val CustomOptionalDecimal `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <decimal>$0 }`,
+		&result,
+		CustomDecimal{data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		CustomOptionalDecimal{isSet: true, data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL decimal>$0 }`,
+		&result,
+		CustomDecimal{data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		CustomOptionalDecimal{isSet: true, data: []byte{
+			0x00, 0x03, // ndigits
+			0x00, 0x01, // weight
+			0x40, 0x00, // sign
+			0x00, 0x07, // dscale
+			0x00, 0x01, 0x13, 0x88, 0x18, 0x6a, // digits
+		}},
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL decimal>$0 }`,
+			&result,
+			CustomOptionalDecimal{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalDecimal{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <decimal>$0 }`,
+		&result,
+		CustomOptionalDecimal{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalDecimal at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <decimal>$0 }`,
+		&result,
+		CustomOptionalDecimal{isSet: true, data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalDecimal "+
+		"at args[0] expected at least 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL decimal>$0 }`,
+		&result,
+		CustomOptionalDecimal{isSet: true, data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalDecimal "+
+		"at args[0] expected at least 8, got 1")
 }
 
 func TestSendAndReceiveUUID(t *testing.T) {
@@ -2823,105 +5357,253 @@ func TestSendAndReceiveUUID(t *testing.T) {
 }
 
 type CustomUUID struct {
-	data [16]byte
+	data []byte
 }
 
 func (m CustomUUID) MarshalEdgeDBUUID() ([]byte, error) {
-	return m.data[:], nil
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
 }
 
 func (m *CustomUUID) UnmarshalEdgeDBUUID(data []byte) error {
-	copy(m.data[:], data)
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
 	return nil
 }
 
-func TestSendAndReceiveUUIDMarshaler(t *testing.T) {
+func TestReceiveUUIDUnmarshaler(t *testing.T) {
 	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <str><uuid>$0,
-		decoded := <uuid>'b9545c35-1fe7-485f-a6ea-f8ead251abd3',
-	)`
-
-	type Result struct {
-		Encoded string     `edgedb:"encoded"`
-		Decoded CustomUUID `edgedb:"decoded"`
+	var result struct {
+		Val CustomUUID `edgedb:"val"`
 	}
 
-	data := [16]byte{
-		0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
-		0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
-	}
-	arg := &CustomUUID{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: "b9545c35-1fe7-485f-a6ea-f8ead251abd3",
-			Decoded: CustomUUID{data},
-		},
-		result,
+	// Decode value
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <uuid>'b9545c35-1fe7-485f-a6ea-f8ead251abd3' }`,
+		&result,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL uuid>$0 }`,
+		&result,
+		OptionalUUID{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomUUID at "+
+		"struct { Val edgedb.CustomUUID \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
 }
 
-func TestSendAndReceiveOptionalUUID(t *testing.T) {
+func TestSendUUIDMarshaler(t *testing.T) {
 	ctx := context.Background()
+	var result struct {
+		Val OptionalUUID `edgedb:"val"`
+	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE UUIDFieldHolder {
-				CREATE PROPERTY uuid -> uuid;
-			};
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <uuid>$0 }`,
+		&result,
+		CustomUUID{data: []byte{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalUUID(UUID{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}),
+		result.Val,
+	)
 
-			INSERT UUIDFieldHolder;
-		`)
-		if e != nil {
-			return e
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL uuid>$0 }`,
+		&result,
+		CustomUUID{data: []byte{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalUUID(UUID{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <uuid>$0 }`,
+		&result,
+		CustomUUID{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomUUID "+
+		"at args[0] expected 16, got 1")
+}
+
+type CustomOptionalUUID struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalUUID) MarshalEdgeDBUUID() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalUUID) UnmarshalEdgeDBUUID(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalUUID) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalUUID) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalUUIDUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> uuid; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalUUID `edgedb:"val"`
 		}
 
-		type Result struct {
-			UUID OptionalUUID `edgedb:"uuid"`
-		}
-
-		var result Result
-		e = tx.QueryOne(ctx, `
-			SELECT UUIDFieldHolder { uuid } LIMIT 1`,
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <uuid>'b9545c35-1fe7-485f-a6ea-f8ead251abd3' }`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
-
-		expected := Result{}
-		expected.UUID.Unset()
-		assert.Equal(t, expected, result)
-
-		arg := OptionalUUID{}
-		arg.Set(UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})
-		e = tx.QueryOne(ctx, `
-			SELECT UUIDFieldHolder { uuid := <uuid>$0 } LIMIT 1`,
-			&result,
-			arg,
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{
+				0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+				0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+			},
+			result.Val.data,
 		)
-		if e != nil {
-			return e
-		}
 
-		expected.UUID.Set(UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})
-		assert.Equal(t, expected, result)
-
-		return errors.New("rollback")
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalUUID{}, result.Val)
 	})
+}
 
-	assert.EqualError(t, err, "rollback")
+func TestSendOptionalUUIDMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalUUID `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalUUID {
+		return CustomOptionalUUID{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT { val := <uuid>$0 }`,
+		&result,
+		newValue([]byte{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalUUID(UUID{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}),
+		result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL uuid>$0 }`,
+		&result,
+		newValue([]byte{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalUUID(UUID{
+			0xb9, 0x54, 0x5c, 0x35, 0x1f, 0xe7, 0x48, 0x5f,
+			0xa6, 0xea, 0xf8, 0xea, 0xd2, 0x51, 0xab, 0xd3,
+		}),
+		result.Val,
+	)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL uuid>$0 }`,
+			&result,
+			CustomOptionalUUID{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalUUID{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <uuid>$0 }`,
+		&result,
+		CustomOptionalUUID{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalUUID at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <uuid>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalUUID "+
+		"at args[0] expected 16, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL uuid>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalUUID "+
+		"at args[0] expected 16, got 1")
 }
 
 func TestSendAndReceiveCustomScalars(t *testing.T) {
-	ctx := context.Background()
-
 	query := `
 		WITH
 			i := <CustomInt64>$0,
@@ -2947,61 +5629,200 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 		samples = append(samples, int64(rand.Uint64()))
 	}
 
-	for _, i := range samples {
-		s := fmt.Sprint(i)
-		t.Run(s, func(t *testing.T) {
-			var result Result
-			err := conn.QuerySingle(ctx, query, &result, i, s)
+	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
+	inRolledBackTx(t, ddl, func(c context.Context, tx *Tx) {
+		for _, i := range samples {
+			s := fmt.Sprint(i)
+			t.Run(s, func(t *testing.T) {
+				var result Result
 
+				e := tx.QuerySingle(c, query, &result, i, s)
+
+				assert.NoError(t, e)
+				assert.Equal(t, s, result.Encoded)
+				assert.Equal(t, i, result.Decoded)
+				assert.Equal(t, i, result.Decoded)
+				assert.True(t, result.IsEqual)
+			})
+		}
+	})
+}
+
+func TestReceiveCustomScalarUnmarshaler(t *testing.T) {
+	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomInt64 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <CustomInt64>123_456_789_987_654_321 }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+			result.Val.data,
+		)
+
+		// Decode missing value
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL CustomInt64>$0 }`,
+			&result,
+			OptionalInt64{},
+		)
+		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+			"the \"out\" argument does not match query schema: "+
+			"expected edgedb.CustomInt64 at "+
+			"struct { Val edgedb.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
+			"to be OptionalUnmarshaler interface "+
+			"because the field is not required")
+	})
+}
+
+func TestSendCustomScalarMarshaler(t *testing.T) {
+	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val OptionalInt64 `edgedb:"val"`
+		}
+
+		// encode value into required argument
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <CustomInt64>$0 }`,
+			&result,
+			CustomInt64{
+				data: []byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+		// encode value into optional argument
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL CustomInt64>$0 }`,
+			&result,
+			CustomInt64{
+				data: []byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+		// encode wrong number of bytes
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <CustomInt64>$0 }`,
+			&result,
+			CustomInt64{data: []byte{0x01}},
+		)
+		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+			"wrong number of bytes encoded by edgedb.CustomInt64 "+
+			"at args[0] expected 8, got 1")
+	})
+}
+
+func TestReceiveOptionalCustomScalarUnmarshaler(t *testing.T) {
+	ddl := `
+		CREATE SCALAR TYPE CustomInt64 EXTENDING int64;
+		CREATE TYPE Sample {
+			CREATE PROPERTY val -> CustomInt64;
+		};
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalInt64 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := 123_456_789_987_654_321 }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+			result.Val.data,
+		)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalInt64{}, result.Val)
+	})
+}
+
+func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
+	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val OptionalInt64 `edgedb:"val"`
+		}
+
+		newValue := func(data []byte) CustomOptionalInt64 {
+			return CustomOptionalInt64{isSet: true, data: data}
+		}
+
+		// encode value into required argument
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <CustomInt64>$0 }`,
+			&result,
+			newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+		// encode value into optional argument
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL CustomInt64>$0 }`,
+			&result,
+			newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
+
+		if conn.protocolVersion.GTE(protocolVersion0p12) {
+			// encode missing value into optional argument
+			err = tx.QuerySingle(ctx, `
+				SELECT { val := <OPTIONAL CustomInt64>$0 }`,
+				&result,
+				CustomOptionalInt64{},
+			)
 			assert.NoError(t, err)
-			assert.Equal(t, s, result.Encoded)
-			assert.Equal(t, i, result.Decoded)
-			assert.Equal(t, i, result.Decoded)
-			assert.True(t, result.IsEqual)
-		})
-	}
-}
+			assert.Equal(t, OptionalInt64{}, result.Val)
+		}
 
-type CustomScalar struct {
-	data [8]byte
-}
+		// encode missing value into required argument
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <CustomInt64>$0 }`,
+			&result,
+			CustomOptionalInt64{},
+		)
+		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+			"cannot encode edgedb.CustomOptionalInt64 at args[0] "+
+			"because its value is missing")
 
-func (m CustomScalar) MarshalEdgeDBInt64() ([]byte, error) {
-	return m.data[:], nil
-}
+		// encode wrong number of bytes with required argument
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <CustomInt64>$0 }`,
+			&result,
+			newValue([]byte{0x01}),
+		)
+		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+			"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+			"at args[0] expected 8, got 1")
 
-func (m *CustomScalar) UnmarshalEdgeDBInt64(data []byte) error {
-	copy(m.data[:], data)
-	return nil
-}
-
-func TestSendAndReceiveCustomScalarMarshaler(t *testing.T) {
-	ctx := context.Background()
-
-	query := `SELECT (
-		encoded := <CustomInt64>$0,
-		decoded := <CustomInt64>123_456_789_987_654_321,
-	)`
-
-	type Result struct {
-		Encoded int64        `edgedb:"encoded"`
-		Decoded CustomScalar `edgedb:"decoded"`
-	}
-
-	data := [8]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}
-	arg := &CustomScalar{}
-	copy(arg.data[:], data[:])
-
-	var result Result
-	err := conn.QuerySingle(ctx, query, &result, arg)
-	require.NoError(t, err)
-	assert.Equal(t,
-		Result{
-			Encoded: 123_456_789_987_654_321,
-			Decoded: CustomScalar{data},
-		},
-		result,
-	)
+		// encode wrong number of bytes with optional argument
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL CustomInt64>$0 }`,
+			&result,
+			newValue([]byte{0x01}),
+		)
+		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+			"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+			"at args[0] expected 8, got 1")
+	})
 }
 
 func TestDecodeDeeplyNestedTuple(t *testing.T) {
@@ -3172,11 +5993,6 @@ func TestSendAndReceiveArray(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, Tuple{[]int64{1}}, nested)
 
-	err = conn.QuerySingle(ctx,
-		"SELECT <array<int64>>$0", &result, []int64(nil))
-	require.NoError(t, err)
-	assert.Equal(t, []int64{}, result)
-
 	err = conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1}, result)
@@ -3248,24 +6064,39 @@ func TestReceiveSet(t *testing.T) {
 	}
 }
 
-type CustomOptionalInt16 struct {
-	value int64
-	isSet bool
-}
-
-func (i *CustomOptionalInt16) UnmarshalEdgeDBInt64(data []byte) error {
-	i.value = int64(binary.BigEndian.Uint64(data[:8]))
-	return nil
-}
-
-func (i *CustomOptionalInt16) SetMissing(missing bool) {
-	i.isSet = !missing
-}
-
 type OptionalTuple struct {
 	Zero int64 `edgedb:"0"`
 	One  int64 `edgedb:"1"`
 	Optional
+}
+
+func TestReceiveOptionalTuple(t *testing.T) {
+	ddl := `
+		CREATE TYPE Sample {
+			CREATE PROPERTY val -> tuple<int64, int64>;
+		};
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val OptionalTuple `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := (1, 2) }`, &result)
+		assert.NoError(t, err)
+		expected := OptionalTuple{Zero: 1, One: 2}
+		expected.SetMissing(false)
+		assert.Equal(t, expected, result.Val)
+
+		// Decode missing value
+		err = tx.QuerySingle(ctx, `
+			WITH inserted := (INSERT Sample)
+			SELECT inserted { val }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, true, result.Val.Missing())
+	})
 }
 
 type OptionalNamedTuple struct {
@@ -3278,8 +6109,169 @@ func (t *OptionalNamedTuple) SetMissing(missing bool) {
 	t.isSet = !missing
 }
 
+func inRolledBackTx(
+	t *testing.T,
+	ddl string,
+	action func(context.Context, *Tx),
+) {
+	ctx := context.Background()
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		e := tx.Execute(ctx, ddl)
+		assert.NoError(t, e)
+		if e == nil {
+			action(ctx, tx)
+		}
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
+}
+
+func TestReceiveOptionalNamedTuple(t *testing.T) {
+	ddl := `
+		CREATE TYPE Sample {
+			CREATE PROPERTY val -> tuple<a: int64, b: int64>;
+		};
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val OptionalNamedTuple `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := (a := 1, b := 2) }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			OptionalNamedTuple{isSet: true, A: 1, B: 2},
+			result.Val,
+		)
+
+		// Decode missing value
+		err = tx.QuerySingle(ctx, `
+			WITH inserted := (INSERT Sample)
+			SELECT inserted { val }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.False(t, result.Val.isSet)
+	})
+}
+
+func TestReceiveOptionalObject(t *testing.T) {
+	ddl := `
+		CREATE TYPE Nested {
+			CREATE PROPERTY a -> int64;
+			CREATE PROPERTY b -> int64;
+		};
+		CREATE TYPE Sample {
+			CREATE LINK val -> Nested;
+		};
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		type OptionalObject struct {
+			Optional
+			A OptionalInt64 `edgedb:"a"`
+			B OptionalInt64 `edgedb:"b"`
+		}
+
+		var result struct {
+			Val OptionalObject `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := { a := 1, b := 2 } }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		expected := OptionalObject{
+			A: NewOptionalInt64(1),
+			B: NewOptionalInt64(2),
+		}
+		expected.SetMissing(false)
+		assert.Equal(t, expected, result.Val)
+
+		// Decode missing value
+		err = tx.QuerySingle(ctx, `
+			WITH inserted := (INSERT Sample)
+			SELECT inserted { val: { a, b } } LIMIT 1`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.True(t, result.Val.Missing())
+	})
+}
+
+func TestReceiveOptionalArray(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> array<int64>; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val []int64 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `SELECT { val := [1, 2, 3] }`, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, []int64{1, 2, 3}, result.Val)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Nil(t, result.Val)
+	})
+}
+
+func TestSendOptioanlArray(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val []int64 `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := conn.QuerySingle(ctx, `
+		SELECT ( val := <array<int64>>$0 )`,
+		&result,
+		[]int64{1, 2, 3},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, []int64{1, 2, 3}, result.Val)
+
+	// encode value into optional argument
+	err = conn.QuerySingle(ctx, `
+		SELECT ( val := <OPTIONAL array<int64>>$0 )`,
+		&result,
+		[]int64{1, 2, 3},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, []int64{1, 2, 3}, result.Val)
+
+	if conn.protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = conn.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL array<int64>>$0 }`,
+			&result,
+			[]int64(nil),
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, []int64(nil), result.Val)
+	}
+
+	// encode missing value into required argument
+	err = conn.QuerySingle(ctx, `
+		SELECT <array<int64>>$0`,
+		&result.Val,
+		[]int64(nil),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode []int64 at args[0] "+
+		"because its value is missing")
+}
+
 type OtherSample struct {
-	SimpleScalar CustomOptionalInt16 `edgedb:"simple_scalar"`
+	SimpleScalar CustomOptionalInt64 `edgedb:"simple_scalar"`
 	Optional
 }
 
@@ -3288,28 +6280,22 @@ func TestMissingObjectFields(t *testing.T) {
 		t.Skip()
 	}
 
-	ctx := context.Background()
+	ddl := `
+		CREATE TYPE Sample {
+			CREATE PROPERTY simple_scalar -> int64;
+			CREATE PROPERTY array -> array<int64>;
+			CREATE PROPERTY tuple -> tuple<int64, int64>;
+			CREATE PROPERTY named_tuple -> tuple<a: int64, b: int64>;
+			CREATE LINK object -> Sample;
+			CREATE MULTI LINK set_ -> Sample;
+		};
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		e := tx.Execute(ctx, `
-			CREATE TYPE Sample {
-				CREATE PROPERTY simple_scalar -> int64;
-				CREATE PROPERTY array -> array<int64>;
-				CREATE PROPERTY tuple -> tuple<int64, int64>;
-				CREATE PROPERTY named_tuple -> tuple<a: int64, b: int64>;
-				CREATE LINK object -> Sample;
-				CREATE MULTI LINK set_ -> Sample;
-			};
-
-			# all fields are missing
-			INSERT Sample;
-		`)
-		if e != nil {
-			return e
-		}
-
+		# all fields are missing
+		INSERT Sample;
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		type Sample struct {
-			SimpleScalar CustomOptionalInt16 `edgedb:"simple_scalar"`
+			SimpleScalar CustomOptionalInt64 `edgedb:"simple_scalar"`
 			Array        []int64             `edgedb:"array"`
 			Tuple        OptionalTuple       `edgedb:"tuple"`
 			NamedTuple   OptionalNamedTuple  `edgedb:"named_tuple"`
@@ -3318,7 +6304,7 @@ func TestMissingObjectFields(t *testing.T) {
 		}
 
 		var result Sample
-		e = tx.QueryOne(ctx, `
+		err := tx.QueryOne(ctx, `
 			SELECT Sample {
 				simple_scalar,
 				array,
@@ -3330,12 +6316,10 @@ func TestMissingObjectFields(t *testing.T) {
 			LIMIT 1`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
+		assert.NoError(t, err)
 
 		expected := Sample{
-			SimpleScalar: CustomOptionalInt16{},
+			SimpleScalar: CustomOptionalInt64{},
 			Array:        nil,
 			Tuple:        OptionalTuple{},
 			NamedTuple:   OptionalNamedTuple{},
@@ -3344,7 +6328,7 @@ func TestMissingObjectFields(t *testing.T) {
 		}
 		assert.Equal(t, expected, result)
 
-		e = tx.QueryOne(ctx, `
+		err = tx.QueryOne(ctx, `
 			WITH
 				object := (INSERT Sample { simple_scalar := 2 }),
 				set_ := (INSERT Sample { simple_scalar := 3 }),
@@ -3367,13 +6351,11 @@ func TestMissingObjectFields(t *testing.T) {
 			LIMIT 1`,
 			&result,
 		)
-		if e != nil {
-			return e
-		}
+		assert.NoError(t, err)
 
 		expected = Sample{
-			SimpleScalar: CustomOptionalInt16{
-				value: 1,
+			SimpleScalar: CustomOptionalInt64{
+				data:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
 				isSet: true,
 			},
 			Array: []int64{1},
@@ -3386,18 +6368,14 @@ func TestMissingObjectFields(t *testing.T) {
 				B:     int64(2),
 				isSet: true,
 			},
-			Object: OtherSample{
-				SimpleScalar: CustomOptionalInt16{
-					value: 2,
-					isSet: true,
-				},
-			},
-			Set: []Sample{{
-				SimpleScalar: CustomOptionalInt16{
-					value: 3,
-					isSet: true,
-				},
+			Object: OtherSample{SimpleScalar: CustomOptionalInt64{
+				data:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02},
+				isSet: true,
 			}},
+			Set: []Sample{{SimpleScalar: CustomOptionalInt64{
+				data:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03},
+				isSet: true,
+			}}},
 		}
 		expected.Tuple.SetMissing(false)
 		expected.Object.SetMissing(false)
@@ -3409,17 +6387,13 @@ func TestMissingObjectFields(t *testing.T) {
 		}
 
 		var result2 WrongType
-		e = tx.QueryOne(ctx, `
+		err = tx.QueryOne(ctx, `
 			SELECT Sample { simple_scalar } LIMIT 1`,
 			&result2,
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
 			`the "out" argument does not match query schema: `+
 			`expected int64 at edgedb.WrongType.simple_scalar to be `+
 			`edgedb.OptionalInt64 because the field is not required`)
-
-		return errors.New("rollback")
 	})
-
-	assert.EqualError(t, err, "rollback")
 }

@@ -46,34 +46,55 @@ func (c *strCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(len(r.Buf))
 }
 
-func (c *strCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalStrMarshaler interface {
+	marshal.StrMarshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *strCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *strCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case string:
-		w.PushString(in)
+		return c.encodeData(w, in)
 	case types.OptionalStr:
 		str, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalStr at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushString(str)
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, str) },
+			func() error {
+				return missingValueError("edgedb.OptionalStr", path)
+			})
+	case optionalStrMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.StrMarshaler:
-		data, err := in.MarshalEdgeDBStr()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be string, edgedb.OptionalStr "+
 			"or StrMarshaler got %T", path, val)
 	}
+}
 
+func (c *strCodec) encodeData(w *buff.Writer, data string) error {
+	w.PushString(data)
+	return nil
+}
+
+func (c *strCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.StrMarshaler,
+	path Path,
+) error {
+	data, err := val.MarshalEdgeDBStr()
+	if err != nil {
+		return err
+	}
+	w.PushUint32(uint32(len(data)))
+	w.PushBytes(data)
 	return nil
 }
 

@@ -39,4 +39,16 @@ func (c noOpDecoder) DescriptorID() types.UUID { return descriptor.IDZero }
 
 func (c noOpDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {}
 
-func (c noOpDecoder) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type noOpEncoder struct{}
+
+func (c noOpEncoder) DescriptorID() types.UUID { return descriptor.IDZero }
+
+func (c noOpEncoder) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
+	w.PushUint32(0)
+	return nil
+}

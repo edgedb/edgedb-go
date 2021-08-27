@@ -121,5 +121,3 @@ func (c *setDecoder) DecodeMissing(out unsafe.Pointer) {
 	slice.Len = 0
 	slice.Cap = 0
 }
-
-func (c *setDecoder) DecodePresent(out unsafe.Pointer) {}
