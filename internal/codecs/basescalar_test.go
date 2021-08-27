@@ -48,7 +48,7 @@ func BenchmarkEncodeUUID(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = codec.Encode(w, id, Path(""))
+		_ = codec.Encode(w, id, Path(""), true)
 	}
 }
 

@@ -27,6 +27,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestQueryCachingIncludesOutType(t *testing.T) {
+	ctx := context.Background()
+
+	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		var result struct {
+			Val OptionalTuple `edgedb:"val"`
+		}
+		e := tx.Execute(ctx, `
+			CREATE TYPE Sample {
+				CREATE PROPERTY val -> tuple<int64, int64>;
+			};
+		`)
+		assert.NoError(t, e)
+
+		// Run a query with a particular out type
+		// that can later be run with a different out type.
+		return tx.QuerySingle(ctx, `SELECT Sample { val } LIMIT 1`, &result)
+	})
+	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+
+	err = conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		var result struct {
+			Val OptionalNamedTuple `edgedb:"val"`
+		}
+
+		e := tx.Execute(ctx, `
+			CREATE TYPE Sample {
+				CREATE PROPERTY val -> tuple<a: int64, b: int64>;
+			};
+		`)
+		assert.NoError(t, e)
+
+		// Run the same query string again with a different out type.
+		// There should not be any errors complaining about the out type.
+		return tx.QuerySingle(ctx, `SELECT Sample { val } LIMIT 1`, &result)
+	})
+	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+}
+
 func TestObjectWithoutID(t *testing.T) {
 	if conn.transactableConn.protocolVersion.LT(protocolVersion0p10) {
 		t.Skip("not expected to pass on protocol versions below 0.10")

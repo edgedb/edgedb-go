@@ -21,17 +21,21 @@ import (
 	"reflect"
 	"unsafe"
 
+	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
-func buildNamedTupleEncoder(desc descriptor.Descriptor) (Encoder, error) {
+func buildNamedTupleEncoder(
+	desc descriptor.Descriptor,
+	version internal.ProtocolVersion,
+) (Encoder, error) {
 	fields := make([]*EncoderField, len(desc.Fields))
 
 	for i, field := range desc.Fields {
-		encoder, err := BuildEncoder(field.Desc)
+		encoder, err := BuildEncoder(field.Desc, version)
 		if err != nil {
 			return nil, err
 		}
@@ -56,6 +60,7 @@ func (c *namedTupleEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	args, ok := val.([]interface{})
 	if !ok {
@@ -87,6 +92,7 @@ func (c *namedTupleEncoder) Encode(
 			w,
 			in[field.name],
 			path.AddField(field.name),
+			true,
 		)
 
 		if err != nil {
@@ -173,10 +179,6 @@ func (c *namedTupleDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	}
 }
 
-func (c *namedTupleDecoder) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
-}
-
 type optionalNamedTupleDecoder struct {
 	namedTupleDecoder
 	typ reflect.Type
@@ -188,16 +190,12 @@ func (c *optionalNamedTupleDecoder) DecodeMissing(out unsafe.Pointer) {
 	method.Call([]reflect.Value{trueValue})
 }
 
-func (c *optionalNamedTupleDecoder) DecodePresent(out unsafe.Pointer) {
-	val := reflect.NewAt(c.typ, out)
-	method := val.MethodByName("SetMissing")
-	method.Call([]reflect.Value{falseValue})
-}
-
 func (c *optionalNamedTupleDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) {
-	c.DecodePresent(out)
+	val := reflect.NewAt(c.typ, out)
+	method := val.MethodByName("SetMissing")
+	method.Call([]reflect.Value{falseValue})
 	c.namedTupleDecoder.Decode(r, out)
 }

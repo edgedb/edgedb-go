@@ -56,36 +56,44 @@ func (c *int16Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint16)(out) = r.PopUint16()
 }
 
-func (c *int16Codec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalInt16Marshaler interface {
+	marshal.Int16Marshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *int16Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *int16Codec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case int16:
-		w.PushUint32(2) // data length
-		w.PushUint16(uint16(in))
+		return c.encodeData(w, in)
 	case types.OptionalInt16:
-		i, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalInt16 at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(2) // data length
-		w.PushUint16(uint16(i))
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalInt16", path)
+			})
+	case optionalInt16Marshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error {
+				return encodeMarshaler(w, in, in.MarshalEdgeDBInt16, 2, path)
+			},
+			func() error { return missingValueError(in, path) })
 	case marshal.Int16Marshaler:
-		data, err := in.MarshalEdgeDBInt16()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return encodeMarshaler(w, in, in.MarshalEdgeDBInt16, 2, path)
 	default:
 		return fmt.Errorf("expected %v to be int16, edgedb.OptionalInt16 or "+
 			"Int16Marshaler got %T", path, val)
 	}
+}
 
+func (c *int16Codec) encodeData(w *buff.Writer, data int16) error {
+	w.PushUint32(2)
+	w.PushUint16(uint16(data))
 	return nil
 }
 
@@ -120,36 +128,44 @@ func (c *int32Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = r.PopUint32()
 }
 
-func (c *int32Codec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalInt32Marshaler interface {
+	marshal.Int32Marshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *int32Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *int32Codec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case int32:
-		w.PushUint32(4) // data length
-		w.PushUint32(uint32(in))
+		return c.encodeData(w, in)
 	case types.OptionalInt32:
-		i, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalInt32 at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(4) // data length
-		w.PushUint32(uint32(i))
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalInt32", path)
+			})
+	case optionalInt32Marshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error {
+				return encodeMarshaler(w, in, in.MarshalEdgeDBInt32, 4, path)
+			},
+			func() error { return missingValueError(val, path) })
 	case marshal.Int32Marshaler:
-		data, err := in.MarshalEdgeDBInt32()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return encodeMarshaler(w, in, in.MarshalEdgeDBInt32, 4, path)
 	default:
 		return fmt.Errorf("expected %v to be int32, edgedb.OptionalInt32 "+
 			"or Int32Marshaler got %T", path, val)
 	}
+}
 
+func (c *int32Codec) encodeData(w *buff.Writer, data int32) error {
+	w.PushUint32(4) // data length
+	w.PushUint32(uint32(data))
 	return nil
 }
 
@@ -184,36 +200,44 @@ func (c *int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 }
 
-func (c *int64Codec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalInt64Marshaler interface {
+	marshal.Int64Marshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *int64Codec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *int64Codec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case int64:
-		w.PushUint32(8) // data length
-		w.PushUint64(uint64(in))
+		return c.encodeData(w, in)
 	case types.OptionalInt64:
-		i, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalInt64 at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(8) // data length
-		w.PushUint64(uint64(i))
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalInt64", path)
+			})
+	case optionalInt64Marshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error {
+				return encodeMarshaler(w, in, in.MarshalEdgeDBInt64, 8, path)
+			},
+			func() error { return missingValueError(in, path) })
 	case marshal.Int64Marshaler:
-		data, err := in.MarshalEdgeDBInt64()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return encodeMarshaler(w, in, in.MarshalEdgeDBInt64, 8, path)
 	default:
 		return fmt.Errorf("expected %v to be int64, edgedb.OptionalInt64 or "+
 			"Int64Marshaler got %T", path, val)
 	}
+}
 
+func (c *int64Codec) encodeData(w *buff.Writer, data int64) error {
+	w.PushUint32(8) // data length
+	w.PushUint64(uint64(data))
 	return nil
 }
 
@@ -248,42 +272,44 @@ func (c *float32Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint32)(out) = r.PopUint32()
 }
 
-func (c *float32Codec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
+type optionalFloat32Marshaler interface {
+	marshal.Float32Marshaler
+	marshal.OptionalMarshaler
 }
 
 func (c *float32Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case float32:
-		w.PushUint32(4)
-		w.PushUint32(math.Float32bits(in))
+		return c.encodeData(w, in)
 	case types.OptionalFloat32:
-		f, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalFloat32 at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(4)
-		w.PushUint32(math.Float32bits(f))
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalFloat32", path)
+			})
+	case optionalFloat32Marshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error {
+				return encodeMarshaler(w, in, in.MarshalEdgeDBFloat32, 4, path)
+			},
+			func() error { return missingValueError(val, path) })
 	case marshal.Float32Marshaler:
-		data, err := in.MarshalEdgeDBFloat32()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return encodeMarshaler(w, in, in.MarshalEdgeDBFloat32, 4, path)
 	default:
 		return fmt.Errorf("expected %v to be float32, edgedb.OptionalFloat32 "+
 			"or Float32Marshaler got %T", path, val)
 	}
+}
 
+func (c *float32Codec) encodeData(w *buff.Writer, data float32) error {
+	w.PushUint32(4)
+	w.PushUint32(math.Float32bits(data))
 	return nil
 }
 
@@ -318,41 +344,44 @@ func (c *float64Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint64)(out) = r.PopUint64()
 }
 
-func (c *float64Codec) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
+type optionalFloat64Marshaler interface {
+	marshal.Float64Marshaler
+	marshal.OptionalMarshaler
 }
 
 func (c *float64Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
+	required bool,
 ) error {
 	switch in := val.(type) {
 	case float64:
-		w.PushUint32(8)
-		w.PushUint64(math.Float64bits(in))
+		return c.encodeData(w, in)
 	case types.OptionalFloat64:
-		f, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalFloat64 at %v "+
-				"because its value is missing", path)
-		}
-		w.PushUint32(8)
-		w.PushUint64(math.Float64bits(f))
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalFloat64", path)
+			})
+	case optionalFloat64Marshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error {
+				return encodeMarshaler(w, in, in.MarshalEdgeDBFloat64, 8, path)
+			},
+			func() error { return missingValueError(in, path) })
 	case marshal.Float64Marshaler:
-		data, err := in.MarshalEdgeDBFloat64()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return encodeMarshaler(w, in, in.MarshalEdgeDBFloat64, 8, path)
 	default:
 		return fmt.Errorf("expected %v to be float64, edgedb.OptionalFloat64 "+
 			"or Float64Marshaler got %T", path, val)
 	}
+}
 
+func (c *float64Codec) encodeData(w *buff.Writer, data float64) error {
+	w.PushUint32(8)
+	w.PushUint64(math.Float64bits(data))
 	return nil
 }
 

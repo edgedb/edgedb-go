@@ -17,6 +17,7 @@
 package codecs
 
 import (
+	"fmt"
 	"reflect"
 	"unsafe"
 
@@ -30,31 +31,82 @@ func getType(val interface{}) reflect.Type {
 	return reflect.TypeOf(val).Elem()
 }
 
-var unmarshalers = map[reflect.Type]string{
-	getType((*marshal.BoolUnmarshaler)(nil)):  "UnmarshalEdgeDBBool",
-	getType((*marshal.BytesUnmarshaler)(nil)): "UnmarshalEdgeDBBytes",
-	getType(
-		(*marshal.DateTimeUnmarshaler)(nil),
-	): "UnmarshalEdgeDBDateTime",
-	getType(
-		(*marshal.LocalDateTimeUnmarshaler)(nil),
-	): "UnmarshalEdgeDBLocalDateTime",
-	getType((*marshal.LocalDateUnmarshaler)(nil)): "UnmarshalEdgeDBLocalDate",
-	getType((*marshal.LocalTimeUnmarshaler)(nil)): "UnmarshalEdgeDBLocalTime",
-	getType((*marshal.DurationUnmarshaler)(nil)):  "UnmarshalEdgeDBDuration",
-	getType(
-		(*marshal.RelativeDurationUnmarshaler)(nil),
-	): "UnmarshalEdgeDBRelativeDuration",
-	getType((*marshal.JSONUnmarshaler)(nil)):    "UnmarshalEdgeDBJSON",
-	getType((*marshal.Int16Unmarshaler)(nil)):   "UnmarshalEdgeDBInt16",
-	getType((*marshal.Int32Unmarshaler)(nil)):   "UnmarshalEdgeDBInt32",
-	getType((*marshal.Int64Unmarshaler)(nil)):   "UnmarshalEdgeDBInt64",
-	getType((*marshal.Float32Unmarshaler)(nil)): "UnmarshalEdgeDBFloat32",
-	getType((*marshal.Float64Unmarshaler)(nil)): "UnmarshalEdgeDBFloat64",
-	getType((*marshal.BigIntUnmarshaler)(nil)):  "UnmarshalEdgeDBBigInt",
-	getType((*marshal.DecimalUnmarshaler)(nil)): "UnmarshalEdgeDBDecimal",
-	getType((*marshal.StrUnmarshaler)(nil)):     "UnmarshalEdgeDBStr",
-	getType((*marshal.UUIDUnmarshaler)(nil)):    "UnmarshalEdgeDBUUID",
+var unmarshalers = map[types.UUID]struct {
+	typ        reflect.Type
+	methodName string
+}{
+	boolID: {
+		typ:        getType((*marshal.BoolUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBBool",
+	},
+	bytesID: {
+		typ:        getType((*marshal.BytesUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBBytes",
+	},
+	dateTimeID: {
+		typ:        getType((*marshal.DateTimeUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBDateTime",
+	},
+	localDTID: {
+		typ:        getType((*marshal.LocalDateTimeUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBLocalDateTime",
+	},
+	localDateID: {
+		typ:        getType((*marshal.LocalDateUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBLocalDate",
+	},
+	localTimeID: {
+		typ:        getType((*marshal.LocalTimeUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBLocalTime",
+	},
+	durationID: {
+		typ:        getType((*marshal.DurationUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBDuration",
+	},
+	relativeDurationID: {
+		typ:        getType((*marshal.RelativeDurationUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBRelativeDuration",
+	},
+	jsonID: {
+		typ:        getType((*marshal.JSONUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBJSON",
+	},
+	int16ID: {
+		typ:        getType((*marshal.Int16Unmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBInt16",
+	},
+	int32ID: {
+		typ:        getType((*marshal.Int32Unmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBInt32",
+	},
+	int64ID: {
+		typ:        getType((*marshal.Int64Unmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBInt64",
+	},
+	float32ID: {
+		typ:        getType((*marshal.Float32Unmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBFloat32",
+	},
+	float64ID: {
+		typ:        getType((*marshal.Float64Unmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBFloat64",
+	},
+	bigIntID: {
+		typ:        getType((*marshal.BigIntUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBBigInt",
+	},
+	decimalID: {
+		typ:        getType((*marshal.DecimalUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBDecimal",
+	},
+	strID: {
+		typ:        getType((*marshal.StrUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBStr",
+	},
+	uuidID: {
+		typ:        getType((*marshal.UUIDUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBUUID",
+	},
 }
 
 var optionalUnmarshalerType = getType((*marshal.OptionalUnmarshaler)(nil))
@@ -63,22 +115,33 @@ func buildUnmarshaler(
 	desc descriptor.Descriptor,
 	typ reflect.Type,
 ) (Decoder, bool) {
-	for unmarshalerType, methodName := range unmarshalers {
-		ptr := reflect.PtrTo(typ)
-		if !ptr.Implements(unmarshalerType) {
-			continue
-		}
-
-		decoder := unmarshalerDecoder{desc.ID, typ, methodName}
-
-		if ptr.Implements(optionalUnmarshalerType) {
-			return &optionalUnmarshalerDecoder{decoder}, true
-		}
-
-		return &decoder, true
+	var id types.UUID
+	switch desc.Type {
+	case descriptor.BaseScalar:
+		id = desc.ID
+	case descriptor.Enum:
+		id = strID
+	default:
+		panic(fmt.Sprintf("unexpected descriptor type 0x%x", desc.Type))
 	}
 
-	return nil, false
+	iface, ok := unmarshalers[id]
+	if !ok {
+		return nil, false
+	}
+
+	ptr := reflect.PtrTo(typ)
+	if !ptr.Implements(iface.typ) {
+		return nil, false
+	}
+
+	var decoder = unmarshalerDecoder{desc.ID, typ, iface.methodName}
+
+	if ptr.Implements(optionalUnmarshalerType) {
+		return &optionalUnmarshalerDecoder{decoder}, true
+	}
+
+	return &decoder, true
 }
 
 type unmarshalerDecoder struct {
@@ -95,30 +158,23 @@ func (c *unmarshalerDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	method.Call([]reflect.Value{reflect.ValueOf(r.Buf)})
 }
 
-func (c *unmarshalerDecoder) DecodeMissing(out unsafe.Pointer) {
-	panic("unreachable")
-}
-
 type optionalUnmarshalerDecoder struct {
 	unmarshalerDecoder
 }
 
 func (c *optionalUnmarshalerDecoder) DecodeMissing(out unsafe.Pointer) {
-	val := reflect.NewAt(c.typ, out)
+	val := reflect.NewAt(c.unmarshalerDecoder.typ, out)
 	method := val.MethodByName("SetMissing")
 	method.Call([]reflect.Value{trueValue})
-}
-
-func (c *optionalUnmarshalerDecoder) DecodePresent(out unsafe.Pointer) {
-	val := reflect.NewAt(c.typ, out)
-	method := val.MethodByName("SetMissing")
-	method.Call([]reflect.Value{falseValue})
 }
 
 func (c *optionalUnmarshalerDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) {
-	c.DecodePresent(out)
+	// todo: should SetMissing be called with false?
+	val := reflect.NewAt(c.unmarshalerDecoder.typ, out)
+	method := val.MethodByName("SetMissing")
+	method.Call([]reflect.Value{falseValue})
 	c.unmarshalerDecoder.Decode(r, out)
 }

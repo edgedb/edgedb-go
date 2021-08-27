@@ -56,48 +56,62 @@ func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(n)
 }
 
-func (c *jsonCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalJSONMarshaler interface {
+	marshal.JSONMarshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *jsonCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *jsonCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case []byte:
-		// data length
-		w.PushUint32(uint32(1 + len(in)))
-
-		// json format is always 1
-		// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
-		w.PushUint8(1)
-
-		w.PushBytes(in)
+		return c.encodeData(w, in)
 	case types.OptionalBytes:
-		bts, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalBytes at %v "+
-				"because its value is missing", path)
-		}
-
-		// data length
-		w.PushUint32(uint32(1 + len(bts)))
-
-		// json format is always 1
-		// https://www.edgedb.com/docs/internals/protocol/dataformats#std-json
-		w.PushUint8(1)
-
-		w.PushBytes(bts)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalBytes", path)
+			})
+	case optionalJSONMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.JSONMarshaler:
-		data, err := in.MarshalEdgeDBJSON()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be []byte, edgedb.OptionalBytes or "+
 			"JSONMarshaler got %T", path, val)
 	}
+}
 
+func (c *jsonCodec) encodeData(w *buff.Writer, data []byte) error {
+	// data length
+	w.PushUint32(uint32(1 + len(data)))
+
+	// json format is always 1
+	// https://www.edgedb.com/docs/internals/protocol/dataformats
+	w.PushUint8(1)
+
+	w.PushBytes(data)
+	return nil
+}
+
+func (c *jsonCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.JSONMarshaler,
+	path Path,
+) error {
+	data, err := val.MarshalEdgeDBJSON()
+	if err != nil {
+		return err
+	}
+	w.PushUint32(uint32(len(data)))
+	w.PushBytes(data)
 	return nil
 }
 
@@ -108,12 +122,6 @@ type optionalJSONDecoder struct {
 func (c *optionalJSONDecoder) DescriptorID() types.UUID { return c.id }
 
 func (c *optionalJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
-	format := r.PopUint8()
-	if format != 1 {
-		panic(fmt.Sprintf(
-			"unexpected json format: expected 1, got %v", format))
-	}
-
 	opbytes := (*optionalBytesLayout)(out)
 	opbytes.set = true
 

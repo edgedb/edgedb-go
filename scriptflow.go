@@ -67,14 +67,12 @@ func (c *baseConn) execScriptFlow(r *buff.Reader, q sfQuery) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandComplete:
-			ignoreHeaders(r)
-			r.PopBytes() // command status
+			decodeCommandCompleteMsg(r)
 		case message.ReadyForCommand:
-			ignoreHeaders(r)
-			r.Discard(1) // transaction state
+			decodeReadyForCommandMsg(r)
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r, q.cmd))
+			err = wrapAll(err, decodeErrorResponseMsg(r, q.cmd))
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x

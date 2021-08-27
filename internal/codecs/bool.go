@@ -43,52 +43,55 @@ func (c *boolCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	*(*uint8)(out) = r.PopUint8()
 }
 
-func (c *boolCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalBoolMarshaler interface {
+	marshal.BoolMarshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *boolCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *boolCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case bool:
-		w.PushUint32(1) // data length
-
-		// convert bool to uint8
-		var out uint8
-		if in {
-			out = 1
-		}
-
-		w.PushUint8(out)
+		return c.encodeData(w, in)
 	case types.OptionalBool:
-		b, ok := in.Get()
-		if !ok {
-			return fmt.Errorf(
-				"cannot encode edgedb.OptionalBool at %v "+
-					"because its value is missing", path)
-		}
-
-		w.PushUint32(1) // data length
-
-		// convert bool to uint8
-		var out uint8
-		if b {
-			out = 1
-		}
-
-		w.PushUint8(out)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalBool", path)
+			})
+	case optionalBoolMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.BoolMarshaler:
-		data, err := in.MarshalEdgeDBBool()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be bool, edgedb.OptionalBool or "+
 			"BoolMarshaler got %T", path, val)
 	}
+}
 
+func (c *boolCodec) encodeData(w *buff.Writer, data bool) error {
+	w.PushUint32(1) // data length
+	var out uint8
+	if data {
+		out = 1
+	}
+	w.PushUint8(out)
 	return nil
+}
+
+func (c *boolCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.BoolMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBBool, 1, path)
 }
 
 type optionalBoolLayout struct {

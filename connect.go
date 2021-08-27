@@ -28,9 +28,10 @@ import (
 
 var (
 	protocolVersionMin  = internal.ProtocolVersion{Major: 0, Minor: 9}
-	protocolVersionMax  = internal.ProtocolVersion{Major: 0, Minor: 11}
+	protocolVersionMax  = internal.ProtocolVersion{Major: 0, Minor: 12}
 	protocolVersion0p10 = internal.ProtocolVersion{Major: 0, Minor: 10}
 	protocolVersion0p11 = internal.ProtocolVersion{Major: 0, Minor: 11}
+	protocolVersion0p12 = internal.ProtocolVersion{Major: 0, Minor: 12}
 )
 
 func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
@@ -107,7 +108,7 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(err, decodeError(r, ""))
+			err = wrapAll(err, decodeErrorResponseMsg(r, ""))
 			done.Signal()
 		default:
 			if e := c.fallThrough(r); e != nil {
@@ -179,7 +180,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 
 			done.Signal()
 		case message.ErrorResponse:
-			err = decodeError(r, "")
+			err = decodeErrorResponseMsg(r, "")
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
@@ -233,7 +234,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 			r.Discard(1) // transaction state
 			done.Signal()
 		case message.ErrorResponse:
-			err = wrapAll(decodeError(r, ""))
+			err = wrapAll(decodeErrorResponseMsg(r, ""))
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x

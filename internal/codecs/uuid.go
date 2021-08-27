@@ -45,36 +45,44 @@ func (c *uuidCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(16)
 }
 
-func (c *uuidCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalUUIDMarshaler interface {
+	marshal.UUIDMarshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *uuidCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *uuidCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case types.UUID:
-		w.PushUint32(16)
-		w.PushBytes(in[:])
+		return c.encodeData(w, in)
 	case types.OptionalUUID:
 		id, ok := in.Get()
-		if !ok {
-			return fmt.Errorf("cannot encode edgedb.OptionalUUID at %v "+
-				"because its value is missing", path)
-		}
-
-		w.PushUint32(16)
-		w.PushBytes(id[:])
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, id) },
+			func() error {
+				return missingValueError("edgedb.OptionalUUID", path)
+			})
+	case optionalUUIDMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error {
+				return encodeMarshaler(w, in, in.MarshalEdgeDBUUID, 16, path)
+			},
+			func() error { return missingValueError(in, path) })
 	case marshal.UUIDMarshaler:
-		data, err := in.MarshalEdgeDBUUID()
-		if err != nil {
-			return err
-		}
-
-		w.BeginBytes()
-		w.PushBytes(data)
-		w.EndBytes()
+		return encodeMarshaler(w, in, in.MarshalEdgeDBUUID, 16, path)
 	default:
 		return fmt.Errorf("expected %v to be edgedb.UUID, "+
 			"edgedb.OptionalUUID or UUIDMarshaler got %T", path, val)
 	}
+}
 
+func (c *uuidCodec) encodeData(w *buff.Writer, data types.UUID) error {
+	w.PushUint32(16)
+	w.PushBytes(data[:])
 	return nil
 }
 

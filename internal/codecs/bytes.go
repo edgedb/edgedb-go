@@ -61,37 +61,55 @@ func (c *bytesCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(len(r.Buf))
 }
 
-func (c *bytesCodec) DecodeMissing(out unsafe.Pointer) { panic("unreachable") }
+type optionalBytesMarshaler interface {
+	marshal.BytesMarshaler
+	marshal.OptionalMarshaler
+}
 
-func (c *bytesCodec) Encode(w *buff.Writer, val interface{}, path Path) error {
+func (c *bytesCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
 	switch in := val.(type) {
 	case []byte:
-		w.PushUint32(uint32(len(in)))
-		w.PushBytes(in)
+		return c.encodeData(w, in)
 	case types.OptionalBytes:
-		i, ok := in.Get()
-		if !ok {
-			return fmt.Errorf(
-				"cannot encode edgedb.OptionalBytes at %v "+
-					"because its value is missing", path)
-		}
-
-		w.PushUint32(uint32(len(i)))
-		w.PushBytes(i)
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError("edgedb.OptionalBytes", path)
+			})
+	case optionalBytesMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(in, path) })
 	case marshal.BytesMarshaler:
-		data, err := in.MarshalEdgeDBBytes()
-		if err != nil {
-			return err
-		}
-
-		w.PushUint32(uint32(len(data)))
-		w.PushBytes(data)
+		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be []byte, edgedb.OptionalBytes or "+
 			"BytesMarshaler got %T", path, val)
 	}
+}
 
+func (c *bytesCodec) encodeData(w *buff.Writer, data []byte) error {
+	w.PushUint32(uint32(len(data)))
+	w.PushBytes(data)
 	return nil
+}
+
+func (c *bytesCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.BytesMarshaler,
+	path Path,
+) error {
+	data, err := val.MarshalEdgeDBBytes()
+	if err != nil {
+		return err
+	}
+	return c.encodeData(w, data)
 }
 
 type optionalBytesLayout struct {
