@@ -166,11 +166,12 @@ func (c *transactableConn) RetryingTx(
 			txState: &txState{},
 			options: c.txOpts,
 		}
-		if e := tx.start(ctx); e != nil {
-			return e
+		err := tx.start(ctx)
+		if err != nil {
+			goto Error
 		}
 
-		err := action(ctx, tx)
+		err = action(ctx, tx)
 		if err == nil {
 			return tx.commit(ctx)
 		}
@@ -179,6 +180,7 @@ func (c *transactableConn) RetryingTx(
 			return e
 		}
 
+	Error:
 		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldRetry) {
 			rule := c.retryOpts.ruleForException(edbErr)
 
