@@ -77,7 +77,7 @@ type queryKey struct {
 	outType reflect.Type
 }
 
-func (c *baseConn) getTypeIDs(q *gfQuery) (*idPair, bool) {
+func (c *protocolConnection) getTypeIDs(q *gfQuery) (*idPair, bool) {
 	key := queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
@@ -93,7 +93,7 @@ func (c *baseConn) getTypeIDs(q *gfQuery) (*idPair, bool) {
 	return nil, false
 }
 
-func (c *baseConn) putTypeIDs(q *gfQuery, ids idPair) {
+func (c *protocolConnection) putTypeIDs(q *gfQuery, ids idPair) {
 	key := queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,

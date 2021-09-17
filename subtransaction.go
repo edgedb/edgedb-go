@@ -21,25 +21,27 @@ import (
 )
 
 type subtxable interface {
-	borrow(string) (*baseConn, error)
-	unborrow()
+	borrow(string) (*protocolConnection, error)
+	unborrow() error
 	txOptions() TxOptions
 	txstate() *txState
 }
 
-func runSubtx(ctx context.Context, action SubtxBlock, c subtxable) error {
+func runSubtx(
+	ctx context.Context,
+	action SubtxBlock,
+	c subtxable,
+) (err error) {
 	conn, err := c.borrow("subtransaction")
 	if err != nil {
 		return err
 	}
-	defer c.unborrow()
+	defer func() { err = firstError(err, c.unborrow()) }()
 
 	subtx := &Subtx{
-		borrowableConn: borrowableConn{
-			baseConn: conn,
-		},
-		txState: c.txstate(),
-		options: c.txOptions(),
+		borrowableConn: borrowableConn{conn: conn},
+		txState:        c.txstate(),
+		options:        c.txOptions(),
 	}
 
 	if e := subtx.declare(ctx); e != nil {

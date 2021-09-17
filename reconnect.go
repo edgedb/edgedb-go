@@ -32,15 +32,20 @@ var (
 
 type reconnectingConn struct {
 	borrowableConn
+	cacheCollection
+	cfg *connConfig
 
 	// isClosed is true when the connection has been closed by a user.
 	isClosed bool
 }
 
-// reconnect establishes a new connection with the server
-// retrying the connection on failure.
-// An error is returned if the `baseConn` was closed.
-func (c *reconnectingConn) reconnect(ctx context.Context) (err error) {
+// reconnect establishes a new connection with the server retrying the
+// connection on failure. Calling reconnect() on a closed connection is an
+// error.
+func (c *reconnectingConn) reconnect(
+	ctx context.Context,
+	single bool,
+) (err error) {
 	if c.isClosed {
 		return &interfaceError{msg: "Connection is closed"}
 	}
@@ -51,10 +56,10 @@ func (c *reconnectingConn) reconnect(ctx context.Context) (err error) {
 	}
 
 	var edbErr Error
-
 	for i := 1; true; i++ {
 		for _, addr := range c.cfg.addrs {
-			err = connectWithTimeout(ctx, c.borrowableConn.baseConn, addr)
+			c.conn, err = connectWithTimeout(
+				ctx, addr, c.cfg, c.cacheCollection)
 			if err == nil ||
 				errors.Is(err, context.Canceled) ||
 				errors.Is(err, context.DeadlineExceeded) ||
@@ -66,19 +71,23 @@ func (c *reconnectingConn) reconnect(ctx context.Context) (err error) {
 			}
 		}
 
+		if single {
+			return err
+		}
+
 		time.Sleep(time.Duration(10+rnd.Intn(200)) * time.Millisecond)
 	}
 
-	panic("unreachable")
+	return &clientError{msg: "unreachable"}
 }
 
 // ensureConnection reconnects to the server if not connected.
 func (c *reconnectingConn) ensureConnection(ctx context.Context) error {
-	if c.netConn != nil && !c.isClosed {
+	if c.conn != nil && !c.conn.isClosed() && !c.isClosed {
 		return nil
 	}
 
-	return c.reconnect(ctx)
+	return c.reconnect(ctx, false)
 }
 
 func (c *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
@@ -100,7 +109,17 @@ func (c *reconnectingConn) granularFlow(
 	return c.borrowableConn.granularFlow(ctx, q)
 }
 
-func (c *reconnectingConn) close() error {
+// Close closes the connection. Connections are not usable after they are
+// closed.
+func (c *reconnectingConn) Close() (err error) {
+	if c.isClosed {
+		return &interfaceError{msg: "connection released more than once"}
+	}
+
 	c.isClosed = true
-	return c.borrowableConn.close()
+	if c.conn != nil && !c.conn.isClosed() {
+		err = c.conn.close()
+	}
+
+	return err
 }

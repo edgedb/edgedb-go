@@ -18,8 +18,7 @@
 package soc
 
 import (
-	"errors"
-	"net"
+	"io"
 )
 
 const minChunkSize = 5
@@ -39,29 +38,9 @@ func (d *Data) Release() {
 	}
 }
 
-// IsPermanentNetErr returns true if the error is not a temporary net.Error.
-func IsPermanentNetErr(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return !netErr.Temporary()
-	}
-
-	return false
-}
-
 // Read reads a socket sending the read data to toBeDeserialized.
 // This should be run in it's own go routine.
-func Read(conn net.Conn, freeMemory *MemPool, toBeDeserialized chan *Data) {
-	mkRelease := func(slab []byte) func() {
-		return func() {
-			freeMemory.Release(slab)
-		}
-	}
-
+func Read(conn io.Reader, freeMemory *MemPool, toBeDeserialized chan *Data) {
 	for {
 		slab := freeMemory.Acquire()
 		buf := slab
@@ -75,17 +54,13 @@ func Read(conn net.Conn, freeMemory *MemPool, toBeDeserialized chan *Data) {
 			// releasing the last chunk of data written to the slab
 			// releases the whole slab.
 			if err != nil || len(buf) < minChunkSize {
-				data.release = mkRelease(slab)
+				data.release = func() { freeMemory.Release(slab) }
 			}
 
 			toBeDeserialized <- data
 
 			if err != nil {
 				toBeDeserialized <- &Data{Err: err}
-			}
-
-			// shut down on permanent error
-			if IsPermanentNetErr(err) {
 				return
 			}
 		}

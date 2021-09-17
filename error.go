@@ -17,10 +17,15 @@
 package edgedb
 
 import (
+	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"strconv"
 	"strings"
+	"syscall"
 	"unicode/utf8"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
@@ -191,4 +196,61 @@ func wrapAll(errs ...error) error {
 	}
 
 	return err
+}
+
+func isTLSError(err error) bool {
+	switch err.(type) {
+	case x509.HostnameError, x509.CertificateInvalidError,
+		x509.UnknownAuthorityError, x509.ConstraintViolationError,
+		x509.InsecureAlgorithmError, x509.UnhandledCriticalExtension:
+		return true
+	default:
+		return false
+	}
+}
+
+func isClientConnectionError(err error) bool {
+	var edbErr Error
+	return errors.As(err, &edbErr) && edbErr.Category(ClientConnectionError)
+}
+
+func wrapNetError(err error) error {
+	var errEDB Error
+	var errNetOp *net.OpError
+	var errDSN *net.DNSError
+
+	switch {
+	case err == nil:
+		return err
+	case errors.As(err, &errEDB):
+		return err
+
+	case errors.Is(err, context.Canceled):
+		fallthrough
+	case errors.Is(err, context.DeadlineExceeded):
+		fallthrough
+	case errors.As(err, &errNetOp) && errNetOp.Timeout():
+		return &clientConnectionTimeoutError{err: err}
+
+	case errors.Is(err, io.EOF):
+		fallthrough
+	case errors.Is(err, syscall.ECONNREFUSED):
+		fallthrough
+	case errors.Is(err, syscall.ECONNABORTED):
+		fallthrough
+	case errors.Is(err, syscall.ECONNRESET):
+		fallthrough
+	case errors.As(err, &errDSN):
+		fallthrough
+	case errors.Is(err, syscall.ENOENT):
+		return &clientConnectionFailedTemporarilyError{err: err}
+
+	// when go 1.15 is no longer supported this check can be changed to:
+	// case errors.Is(err, net.ErrClosed):
+	case err.Error() == "use of closed network connection":
+		return &clientConnectionClosedError{err: err}
+
+	default:
+		return &clientConnectionFailedError{err: err}
+	}
 }

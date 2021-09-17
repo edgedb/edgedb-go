@@ -24,11 +24,11 @@ import (
 )
 
 type borrowableConn struct {
-	*baseConn
+	conn   *protocolConnection
 	reason string
 }
 
-func (c *borrowableConn) borrow(reason string) (*baseConn, error) {
+func (c *borrowableConn) borrow(reason string) (*protocolConnection, error) {
 	switch c.reason {
 	case "":
 		// this is the expected value
@@ -43,24 +43,27 @@ func (c *borrowableConn) borrow(reason string) (*baseConn, error) {
 				"Use the methods on the subtransaction object instead.",
 		}
 	default:
-		panic(fmt.Sprintf("unexpected reason: %q", c.reason))
+		return nil, &interfaceError{msg: fmt.Sprintf(
+			"existing borrow reason is unexpected: %q", c.reason)}
 	}
 
 	switch reason {
 	case "transaction", "subtransaction":
 		c.reason = reason
-		return c.baseConn, nil
+		return c.conn, nil
 	default:
-		panic(fmt.Sprintf("unexpected reason: %q", reason))
+		return nil, &interfaceError{msg: fmt.Sprintf(
+			"unexpected borrow reason: %q", c.reason)}
 	}
 }
 
-func (c *borrowableConn) unborrow() {
+func (c *borrowableConn) unborrow() error {
 	if c.reason == "" {
-		panic("not currently borrowed, can not unborrow")
+		return &interfaceError{msg: "not currently borrowed, cannot unborrow"}
 	}
 
 	c.reason = ""
+	return nil
 }
 
 func (c *borrowableConn) assertUnborrowed() error {
@@ -78,7 +81,8 @@ func (c *borrowableConn) assertUnborrowed() error {
 				"Use the methods on the subtransaction object instead.",
 		}
 	default:
-		panic(fmt.Sprintf("unexpected reason: %q", c.reason))
+		return &interfaceError{msg: fmt.Sprintf(
+			"existing borrow reason is unexpected: %q", c.reason)}
 	}
 }
 
@@ -91,7 +95,7 @@ func (c *borrowableConn) scriptFlow(ctx context.Context, q sfQuery) error {
 		return e
 	}
 
-	return c.baseConn.scriptFlow(ctx, q)
+	return c.conn.scriptFlow(ctx, q)
 }
 
 func (c *borrowableConn) granularFlow(ctx context.Context, q *gfQuery) error {
@@ -99,5 +103,5 @@ func (c *borrowableConn) granularFlow(ctx context.Context, q *gfQuery) error {
 		return e
 	}
 
-	return c.baseConn.granularFlow(ctx, q)
+	return c.conn.granularFlow(ctx, q)
 }

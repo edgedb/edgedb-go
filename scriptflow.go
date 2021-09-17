@@ -50,15 +50,15 @@ func writeHeaders(w *buff.Writer, headers msgHeaders) {
 	}
 }
 
-func (c *baseConn) execScriptFlow(r *buff.Reader, q sfQuery) error {
+func (c *protocolConnection) execScriptFlow(r *buff.Reader, q sfQuery) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
 	writeHeaders(w, q.headers)
 	w.PushString(q.cmd)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return e
 	}
 
 	var err error
@@ -82,7 +82,7 @@ func (c *baseConn) execScriptFlow(r *buff.Reader, q sfQuery) error {
 	}
 
 	if r.Err != nil {
-		return &clientConnectionError{err: r.Err}
+		return r.Err
 	}
 
 	return err

@@ -111,23 +111,24 @@ func (c *transactableConn) QuerySingleJSON(
 // RawTx runs an action in a transaction.
 // If the action returns an error the transaction is rolled back,
 // otherwise it is committed.
-func (c *transactableConn) RawTx(ctx context.Context, action TxBlock) error {
+func (c *transactableConn) RawTx(
+	ctx context.Context,
+	action TxBlock,
+) (err error) {
 	conn, err := c.borrow("transaction")
 	if err != nil {
 		return err
 	}
-	defer c.unborrow()
+	defer func() { err = firstError(err, c.unborrow()) }()
 
 	if e := c.ensureConnection(ctx); e != nil {
 		return e
 	}
 
 	tx := &Tx{
-		borrowableConn: borrowableConn{
-			baseConn: conn,
-		},
-		txState: &txState{},
-		options: c.txOpts,
+		borrowableConn: borrowableConn{conn: conn},
+		txState:        &txState{},
+		options:        c.txOpts,
 	}
 	if e := tx.start(ctx); e != nil {
 		return e
@@ -145,39 +146,45 @@ func (c *transactableConn) RawTx(ctx context.Context, action TxBlock) error {
 func (c *transactableConn) RetryingTx(
 	ctx context.Context,
 	action TxBlock,
-) error {
+) (err error) {
 	conn, err := c.borrow("transaction")
 	if err != nil {
 		return err
 	}
-	defer c.unborrow()
+	defer func() { err = firstError(err, c.unborrow()) }()
 
 	var edbErr Error
-
 	for i := 1; true; i++ {
-		if e := c.ensureConnection(ctx); e != nil {
-			return e
+		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldReconnect) {
+			err = c.reconnect(ctx, true)
+			if err != nil {
+				goto Error
+			}
+			// get the newly connected protocolConnection
+			conn = c.conn
 		}
 
-		tx := &Tx{
-			borrowableConn: borrowableConn{
-				baseConn: conn,
-			},
-			txState: &txState{},
-			options: c.txOpts,
-		}
-		err := tx.start(ctx)
-		if err != nil {
-			goto Error
-		}
+		{
+			tx := &Tx{
+				borrowableConn: borrowableConn{conn: conn},
+				txState:        &txState{},
+				options:        c.txOpts,
+			}
+			err = tx.start(ctx)
+			if err != nil {
+				goto Error
+			}
 
-		err = action(ctx, tx)
-		if err == nil {
-			return tx.commit(ctx)
-		}
+			err = action(ctx, tx)
+			if err == nil {
+				return tx.commit(ctx)
+			} else if isClientConnectionError(err) {
+				goto Error
+			}
 
-		if e := tx.rollback(ctx); e != nil && !errors.As(e, &edbErr) {
-			return e
+			if e := tx.rollback(ctx); e != nil && !errors.As(e, &edbErr) {
+				return e
+			}
 		}
 
 	Error:
@@ -185,7 +192,7 @@ func (c *transactableConn) RetryingTx(
 			rule := c.retryOpts.ruleForException(edbErr)
 
 			if i >= rule.attempts {
-				break
+				return err
 			}
 
 			time.Sleep(rule.backoff(i))
@@ -195,5 +202,5 @@ func (c *transactableConn) RetryingTx(
 		return err
 	}
 
-	panic("unreachable")
+	return &clientError{msg: "unreachable"}
 }
