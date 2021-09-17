@@ -301,7 +301,7 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL int64>$0 }`,
@@ -559,7 +559,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL int32>$0 }`,
@@ -631,7 +631,7 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.protocolVersion.GTE(protocolVersion0p12) {
+		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 			e = tx.QueryOne(ctx, `
 				# encode unset optional
 				SELECT Int32FieldHolder {
@@ -897,7 +897,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL int16>$0 }`,
@@ -969,7 +969,7 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.protocolVersion.GTE(protocolVersion0p12) {
+		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 			e = tx.QueryOne(ctx, `
 				# encode unset optional
 				SELECT Int16FieldHolder {
@@ -1215,7 +1215,7 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBool(true), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL bool>$0 }`,
@@ -1485,7 +1485,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL float64>$0 }`,
@@ -1557,7 +1557,7 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.protocolVersion.GTE(protocolVersion0p12) {
+		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 			e = tx.QueryOne(ctx, `
 				# encode unset optional
 				SELECT Float64FieldHolder {
@@ -1832,7 +1832,7 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL float32>$0 }`,
@@ -1971,7 +1971,7 @@ func TestSendBytesMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL bytes>$0 }`,
@@ -2071,7 +2071,7 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL bytes>$0 }`,
@@ -2263,7 +2263,7 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL str>$0 }`,
@@ -2315,7 +2315,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.protocolVersion.GTE(protocolVersion0p12) {
+		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 			e = tx.QueryOne(ctx, `
 				# encode unset optional
 				SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
@@ -2556,7 +2556,7 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL json>$0 }`,
@@ -2756,7 +2756,7 @@ func TestSendOptionalEnumMarshaler(t *testing.T) {
 		assert.NoError(t, e)
 		assert.Equal(t, NewOptionalStr("Red"), result.Val)
 
-		if conn.protocolVersion.GTE(protocolVersion0p12) {
+		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 			// encode missing value into optional argument
 			e = tx.QuerySingle(ctx, `
 				SELECT { val := <OPTIONAL Color>$0 }`,
@@ -3033,7 +3033,7 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL duration>$0 }`,
@@ -3344,7 +3344,7 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
@@ -3646,7 +3646,7 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
@@ -3930,7 +3930,7 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL cal::local_date>$0 }`,
@@ -4234,7 +4234,7 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
@@ -4534,7 +4534,7 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL datetime>$0 }`,
@@ -4983,7 +4983,7 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
@@ -5257,7 +5257,7 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL decimal>$0 }`,
@@ -5561,7 +5561,7 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL uuid>$0 }`,
@@ -5782,7 +5782,7 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-		if conn.protocolVersion.GTE(protocolVersion0p12) {
+		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 			// encode missing value into optional argument
 			err = tx.QuerySingle(ctx, `
 				SELECT { val := <OPTIONAL CustomInt64>$0 }`,
@@ -6248,7 +6248,7 @@ func TestSendOptioanlArray(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result.Val)
 
-	if conn.protocolVersion.GTE(protocolVersion0p12) {
+	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
 		err = conn.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL array<int64>>$0 }`,
@@ -6276,7 +6276,7 @@ type OtherSample struct {
 }
 
 func TestMissingObjectFields(t *testing.T) {
-	if conn.transactableConn.protocolVersion.LT(protocolVersion0p11) {
+	if conn.conn.protocolVersion.LT(protocolVersion0p11) {
 		t.Skip()
 	}
 

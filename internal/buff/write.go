@@ -18,7 +18,6 @@ package buff
 
 import (
 	"encoding/binary"
-	"io"
 
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
@@ -35,8 +34,8 @@ func NewWriter(alocatedMemory []byte) *Writer {
 	return &Writer{buf: alocatedMemory[:0]}
 }
 
-// Send writes buffered data to conn.
-func (w *Writer) Send(conn io.Writer) (err error) {
+// Unwrap returns the underlying []byte.
+func (w *Writer) Unwrap() []byte {
 	if w.msgPos != 0 {
 		panic("cannot send: the previous message is not finished")
 	}
@@ -45,16 +44,9 @@ func (w *Writer) Send(conn io.Writer) (err error) {
 		panic("cannot send: no data")
 	}
 
-	for len(w.buf) > 0 {
-		n, err := conn.Write(w.buf)
-		if err != nil {
-			return err
-		}
-
-		w.buf = w.buf[n:]
-	}
-
-	return nil
+	buf := w.buf
+	w.buf = nil
+	return buf
 }
 
 // PushUint8 writes a uint8 to the buffer.

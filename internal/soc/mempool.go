@@ -37,16 +37,13 @@ func NewMemPool(slabCount, slabSize int) *MemPool {
 // The caller must Release() the slab to the pool
 // when the slab is no longer in use.
 func (p *MemPool) Acquire() []byte {
-	var buf []byte
-
 	select {
-	case buf = <-p.freeMemory:
+	case buf := <-p.freeMemory:
+		return buf
 	default:
 		// allocate a new slab if there aren't any free
-		buf = make([]byte, p.slabSize)
+		return make([]byte, p.slabSize)
 	}
-
-	return buf
 }
 
 // Release returns ownership of a slab to the pool.

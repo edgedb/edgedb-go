@@ -31,7 +31,10 @@ import (
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
-func (c *baseConn) execGranularFlow(r *buff.Reader, q *gfQuery) (err error) {
+func (c *protocolConnection) execGranularFlow(
+	r *buff.Reader,
+	q *gfQuery,
+) error {
 	ids, ok := c.getTypeIDs(q)
 	if !ok {
 		return c.pesimistic(r, q)
@@ -62,7 +65,7 @@ func (c *baseConn) execGranularFlow(r *buff.Reader, q *gfQuery) (err error) {
 	return c.execute(r, q, cdcs)
 }
 
-func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
+func (c *protocolConnection) pesimistic(r *buff.Reader, q *gfQuery) error {
 	err := c.prepare(r, q)
 	if err != nil {
 		return err
@@ -81,7 +84,10 @@ func (c *baseConn) pesimistic(r *buff.Reader, q *gfQuery) error {
 	return c.execute(r, q, cdcs)
 }
 
-func (c *baseConn) codecsFromIDs(ids *idPair, q *gfQuery) (*codecPair, error) {
+func (c *protocolConnection) codecsFromIDs(
+	ids *idPair,
+	q *gfQuery,
+) (*codecPair, error) {
 	var err error
 
 	in, ok := c.inCodecCache.Get(ids.in)
@@ -119,7 +125,7 @@ func (c *baseConn) codecsFromIDs(ids *idPair, q *gfQuery) (*codecPair, error) {
 	return &codecPair{in: in.(codecs.Encoder), out: out.(codecs.Decoder)}, nil
 }
 
-func (c *baseConn) codecsFromDescriptors(
+func (c *protocolConnection) codecsFromDescriptors(
 	q *gfQuery,
 	descs *descPair,
 ) (*codecPair, error) {
@@ -153,10 +159,10 @@ func (c *baseConn) codecsFromDescriptors(
 	return &cdcs, nil
 }
 
-func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) error {
+func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 	headers := copyHeaders(q.headers)
 
-	if c.explicitIDs {
+	if c.protocolVersion.GTE(protocolVersion0p10) {
 		headers[header.ExplicitObjectIDs] = []byte("true")
 	}
 
@@ -172,8 +178,8 @@ func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) error {
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return &clientConnectionClosedError{err: e}
 	}
 
 	var (
@@ -203,7 +209,7 @@ func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) error {
 	}
 
 	if r.Err != nil {
-		return &clientConnectionError{err: r.Err}
+		return r.Err
 	}
 
 	c.putTypeIDs(q, ids)
@@ -211,7 +217,10 @@ func (c *baseConn) prepare(r *buff.Reader, q *gfQuery) error {
 	return err
 }
 
-func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (*descPair, error) {
+func (c *protocolConnection) describe(
+	r *buff.Reader,
+	q *gfQuery,
+) (*descPair, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.DescribeStatement)
 	w.PushUint16(0) // no headers
@@ -222,8 +231,8 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (*descPair, error) {
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return nil, &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return nil, &clientConnectionClosedError{err: e}
 	}
 
 	var (
@@ -235,7 +244,7 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (*descPair, error) {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandDataDescription:
-			descs, err = decodeCommandDataDescriptionMsg(r, q, c)
+			descs, err = c.decodeCommandDataDescriptionMsg(r, q)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -250,13 +259,17 @@ func (c *baseConn) describe(r *buff.Reader, q *gfQuery) (*descPair, error) {
 	}
 
 	if r.Err != nil {
-		return nil, &clientConnectionError{err: r.Err}
+		return nil, r.Err
 	}
 
 	return descs, err
 }
 
-func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs *codecPair) error {
+func (c *protocolConnection) execute(
+	r *buff.Reader,
+	q *gfQuery,
+	cdcs *codecPair,
+) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
 	writeHeaders(w, q.headers)
@@ -269,8 +282,8 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs *codecPair) error {
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return &clientConnectionClosedError{err: e}
 	}
 
 	tmp := q.out
@@ -311,7 +324,7 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs *codecPair) error {
 	}
 
 	if r.Err != nil {
-		return &clientConnectionError{err: r.Err}
+		return r.Err
 	}
 
 	if !q.flat() {
@@ -321,14 +334,14 @@ func (c *baseConn) execute(r *buff.Reader, q *gfQuery, cdcs *codecPair) error {
 	return err
 }
 
-func (c *baseConn) optimistic(
+func (c *protocolConnection) optimistic(
 	r *buff.Reader,
 	q *gfQuery,
 	cdcs *codecPair,
 ) (*descPair, error) {
 	headers := copyHeaders(q.headers)
 
-	if c.explicitIDs {
+	if c.protocolVersion.GTE(protocolVersion0p10) {
 		headers[header.ExplicitObjectIDs] = []byte("true")
 	}
 
@@ -348,8 +361,8 @@ func (c *baseConn) optimistic(
 	w.BeginMessage(message.Sync)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return nil, &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return nil, &clientConnectionClosedError{err: e}
 	}
 
 	tmp := q.out
@@ -374,7 +387,7 @@ func (c *baseConn) optimistic(
 		case message.CommandComplete:
 			decodeCommandCompleteMsg(r)
 		case message.CommandDataDescription:
-			descs, err = decodeCommandDataDescriptionMsg(r, q, c)
+			descs, err = c.decodeCommandDataDescriptionMsg(r, q)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -393,7 +406,7 @@ func (c *baseConn) optimistic(
 	}
 
 	if r.Err != nil {
-		return nil, &clientConnectionError{err: r.Err}
+		return nil, r.Err
 	}
 
 	if !q.flat() {
@@ -444,10 +457,9 @@ func decodeDataMsg(
 	return reflect.Value{}, false
 }
 
-func decodeCommandDataDescriptionMsg(
+func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 	r *buff.Reader,
 	q *gfQuery,
-	c *baseConn,
 ) (*descPair, error) {
 	ignoreHeaders(r)
 	card := r.PopUint8()

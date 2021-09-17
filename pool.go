@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
-	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
 var (
@@ -57,10 +56,7 @@ type Pool struct {
 	retryOpts RetryOptions
 
 	cfg *connConfig
-
-	typeIDCache   *cache.Cache
-	inCodecCache  *cache.Cache
-	outCodecCache *cache.Cache
+	cacheCollection
 }
 
 // Connect a pool of connections to a server.
@@ -111,10 +107,17 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 
 		freeConns:      make(chan transactableConn, minConns),
 		potentialConns: make(chan struct{}, maxConns),
-		retryOpts:      RetryOptions{},
-		typeIDCache:    cache.New(1_000),
-		inCodecCache:   cache.New(1_000),
-		outCodecCache:  cache.New(1_000),
+		retryOpts: RetryOptions{
+			txConflict: RetryRule{attempts: 3, backoff: defaultBackoff},
+			network:    RetryRule{attempts: 3, backoff: defaultBackoff},
+		},
+
+		cacheCollection: cacheCollection{
+			serverSettings: cfg.serverSettings,
+			typeIDCache:    cache.New(1_000),
+			inCodecCache:   cache.New(1_000),
+			outCodecCache:  cache.New(1_000),
+		},
 	}
 
 	for i := 0; i < maxConns-minConns; i++ {
@@ -148,23 +151,16 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 }
 
 func (p *Pool) newConn(ctx context.Context) (transactableConn, error) {
-	base := &baseConn{
-		cfg:           p.cfg,
-		typeIDCache:   p.typeIDCache,
-		inCodecCache:  p.inCodecCache,
-		outCodecCache: p.outCodecCache,
-	}
-
-	borrowable := borrowableConn{baseConn: base}
-	reconnecting := &reconnectingConn{borrowableConn: borrowable}
-
 	conn := transactableConn{
-		reconnectingConn: reconnecting,
-		txOpts:           p.txOpts,
-		retryOpts:        p.retryOpts,
+		txOpts:    p.txOpts,
+		retryOpts: p.retryOpts,
+		reconnectingConn: &reconnectingConn{
+			cfg:             p.cfg,
+			cacheCollection: p.cacheCollection,
+		},
 	}
 
-	if err := conn.reconnect(ctx); err != nil {
+	if err := conn.reconnect(ctx, false); err != nil {
 		return transactableConn{}, err
 	}
 
@@ -228,9 +224,9 @@ func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
 }
 
 func (p *Pool) release(conn *transactableConn, err error) error {
-	if soc.IsPermanentNetErr(err) {
+	if isClientConnectionError(err) {
 		p.potentialConns <- struct{}{}
-		return conn.close()
+		return conn.Close()
 	}
 
 	select {
@@ -238,7 +234,7 @@ func (p *Pool) release(conn *transactableConn, err error) error {
 	default:
 		// we have MinConns idle so no need to keep this connection.
 		p.potentialConns <- struct{}{}
-		return conn.close()
+		return conn.Close()
 	}
 
 	return nil
@@ -263,7 +259,7 @@ func (p *Pool) Close() error {
 		case conn := <-p.freeConns:
 			wg.Add(1)
 			go func(i int) {
-				errs[i] = conn.close()
+				errs[i] = conn.Close()
 				wg.Done()
 			}(i)
 		case <-p.potentialConns:

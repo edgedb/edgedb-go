@@ -31,12 +31,6 @@ type Conn struct {
 	transactableConn
 }
 
-// Close closes the connection.
-// Connections are not usable after they are closed.
-func (c *Conn) Close() error {
-	return c.close()
-}
-
 // ConnectOne establishes a connection to an EdgeDB server.
 //
 // Deprecated: use Connect() instead
@@ -65,24 +59,20 @@ func ConnectOneDSN(
 		return nil, err
 	}
 
-	base := &baseConn{
-		typeIDCache:   cache.New(1_000),
-		inCodecCache:  cache.New(1_000),
-		outCodecCache: cache.New(1_000),
-		cfg:           config,
-	}
+	conn := &Conn{transactableConn{
+		txOpts: NewTxOptions(),
+		reconnectingConn: &reconnectingConn{
+			cfg: config,
+			cacheCollection: cacheCollection{
+				serverSettings: config.serverSettings,
+				typeIDCache:    cache.New(1_000),
+				inCodecCache:   cache.New(1_000),
+				outCodecCache:  cache.New(1_000),
+			},
+		},
+	}}
 
-	borrowable := borrowableConn{baseConn: base}
-	reconnecting := &reconnectingConn{borrowableConn: borrowable}
-
-	transactable := transactableConn{
-		reconnectingConn: reconnecting,
-		txOpts:           NewTxOptions(),
-	}
-
-	conn := &Conn{transactable}
-
-	if err := conn.reconnect(ctx); err != nil {
+	if err := conn.reconnect(ctx, false); err != nil {
 		return nil, err
 	}
 

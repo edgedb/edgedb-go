@@ -19,8 +19,6 @@ package edgedb
 import (
 	"context"
 	"errors"
-
-	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
 // PoolConn is a pooled connection.
@@ -58,13 +56,10 @@ func (c *PoolConn) Release() error {
 // checkErr records errors that indicate the connection should be closed
 // so that this connection can be recycled when it is released.
 func (c *PoolConn) checkErr(err error) {
-	if soc.IsPermanentNetErr(err) {
-		c.err = &err
-		return
-	}
-
 	var edbErr Error
-	if errors.As(err, &edbErr) && edbErr.Category(UnexpectedMessageError) {
+	if errors.As(err, &edbErr) &&
+		(edbErr.Category(UnexpectedMessageError) ||
+			edbErr.Category(ClientConnectionError)) {
 		c.err = &err
 	}
 }

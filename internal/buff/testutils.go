@@ -30,16 +30,3 @@ func newBenchmarkMessage(n int) []byte {
 
 	return buf
 }
-
-func newBenchmarkWriter(size int) *Writer {
-	return NewWriter(make([]byte, size))
-}
-
-type writerFixture struct {
-	written []byte
-}
-
-func (w *writerFixture) Write(b []byte) (int, error) {
-	w.written = make([]byte, len(b))
-	return copy(w.written, b), nil
-}

@@ -34,7 +34,7 @@ var (
 	protocolVersion0p12 = internal.ProtocolVersion{Major: 0, Minor: 12}
 )
 
-func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
+func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ClientHandshake)
 	w.PushUint16(protocolVersionMax.Major)
@@ -49,8 +49,8 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 
 	c.protocolVersion = protocolVersionMax
 
-	if err := w.Send(c.netConn); err != nil {
-		return &clientConnectionError{err: err}
+	if err := c.soc.WriteAll(w.Unwrap()); err != nil {
+		return err
 	}
 
 	var err error
@@ -59,17 +59,17 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.ServerHandshake:
-			// The client _MUST_ close the connection
-			// if the protocol version can't be supported.
-			// https://edgedb.com/docs/internals/protocol/overview
 			protocolVersion := internal.ProtocolVersion{
 				Major: r.PopUint16(),
 				Minor: r.PopUint16(),
 			}
 
+			// The client _MUST_ close the connection
+			// if the protocol version can't be supported.
+			// https://edgedb.com/docs/internals/protocol/overview
 			if protocolVersion.LT(protocolVersionMin) ||
 				protocolVersion.GT(protocolVersionMax) {
-				_ = c.netConn.Close()
+				_ = c.soc.Close()
 				msg := fmt.Sprintf(
 					"unsupported protocol version: %v.%v",
 					protocolVersion.Major,
@@ -118,25 +118,25 @@ func (c *baseConn) connect(r *buff.Reader, cfg *connConfig) error {
 		}
 	}
 
-	_, isTLS := c.netConn.(*tls.Conn)
+	if r.Err != nil {
+		return r.Err
+	}
+
+	_, isTLS := c.soc.conn.(*tls.Conn)
 	if !isTLS && c.protocolVersion.GTE(protocolVersion0p11) {
-		_ = c.close()
+		_ = c.soc.Close()
 		return &clientConnectionError{msg: fmt.Sprintf(
 			"server claims to use protocol version %v.%v without using TLS",
 			c.protocolVersion.Major, c.protocolVersion.Minor)}
-	}
-	if c.protocolVersion.GTE(protocolVersion0p10) {
-		c.explicitIDs = true
-	}
-
-	if r.Err != nil {
-		return &clientConnectionError{err: r.Err}
 	}
 
 	return err
 }
 
-func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
+func (c *protocolConnection) authenticate(
+	r *buff.Reader,
+	cfg *connConfig,
+) error {
 	client, err := scram.SHA256.NewClient(cfg.user, cfg.password, "")
 	if err != nil {
 		return &authenticationError{msg: err.Error()}
@@ -154,8 +154,8 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(scramMsg)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return e
 	}
 
 	done := buff.NewSignal()
@@ -190,7 +190,7 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return &clientConnectionError{err: r.Err}
+		return r.Err
 	}
 
 	if err != nil {
@@ -202,8 +202,8 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	w.PushString(scramMsg)
 	w.EndMessage()
 
-	if e := w.Send(c.netConn); e != nil {
-		return &clientConnectionError{err: e}
+	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
+		return e
 	}
 
 	done = buff.NewSignal()
@@ -244,20 +244,15 @@ func (c *baseConn) authenticate(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	if r.Err != nil {
-		return &clientConnectionError{err: r.Err}
+		return r.Err
 	}
 
 	return err
 }
 
-func (c *baseConn) terminate() error {
+func (c *protocolConnection) terminate() error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Terminate)
 	w.EndMessage()
-
-	if e := w.Send(c.netConn); e != nil {
-		return &clientConnectionError{err: e}
-	}
-
-	return nil
+	return c.soc.WriteAll(w.Unwrap())
 }

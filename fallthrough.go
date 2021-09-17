@@ -31,12 +31,12 @@ var logMsgSeverityLookup = map[uint8]string{
 	0x50: "WARNING",
 }
 
-func (c *baseConn) fallThrough(r *buff.Reader) error {
+func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 	switch r.MsgType {
 	case message.ParameterStatus:
 		name := r.PopString()
 		value := r.PopString()
-		c.cfg.serverSettings[name] = value
+		c.serverSettings[name] = value
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()
