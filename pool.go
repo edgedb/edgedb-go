@@ -113,10 +113,11 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 		},
 
 		cacheCollection: cacheCollection{
-			serverSettings: cfg.serverSettings,
-			typeIDCache:    cache.New(1_000),
-			inCodecCache:   cache.New(1_000),
-			outCodecCache:  cache.New(1_000),
+			serverSettings:    cfg.serverSettings,
+			typeIDCache:       cache.New(1_000),
+			inCodecCache:      cache.New(1_000),
+			outCodecCache:     cache.New(1_000),
+			capabilitiesCache: cache.New(1_000),
 		},
 	}
 
@@ -298,7 +299,7 @@ func (p *Pool) Query(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "Query", cmd, out, args)
+	err = runQuery(ctx, &conn, "Query", cmd, out, args)
 	return firstError(err, p.release(&conn, err))
 }
 
@@ -330,7 +331,7 @@ func (p *Pool) QuerySingle(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QuerySingle", cmd, out, args)
+	err = runQuery(ctx, &conn, "QuerySingle", cmd, out, args)
 	return firstError(err, p.release(&conn, err))
 }
 
@@ -346,7 +347,7 @@ func (p *Pool) QueryJSON(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QueryJSON", cmd, out, args)
+	err = runQuery(ctx, &conn, "QueryJSON", cmd, out, args)
 	return firstError(err, p.release(&conn, err))
 }
 
@@ -378,7 +379,7 @@ func (p *Pool) QuerySingleJSON(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QuerySingleJSON", cmd, out, args)
+	err = runQuery(ctx, &conn, "QuerySingleJSON", cmd, out, args)
 	return firstError(err, p.release(&conn, err))
 }
 

@@ -93,7 +93,7 @@ func (c *transactableConn) QueryOneJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	return c.QuerySingle(ctx, cmd, out, args...)
+	return c.QuerySingleJSON(ctx, cmd, out, args...)
 }
 
 // QuerySingleJSON runs a singleton-returning query.
@@ -106,6 +106,48 @@ func (c *transactableConn) QuerySingleJSON(
 	args ...interface{},
 ) error {
 	return runQuery(ctx, c, "QuerySingleJSON", cmd, out, args)
+}
+
+func (c *transactableConn) granularFlow(
+	ctx context.Context,
+	q *gfQuery,
+) error {
+	var (
+		err    error
+		edbErr Error
+	)
+
+	for i := 1; true; i++ {
+		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldReconnect) {
+			err = c.reconnect(ctx, true)
+			if err != nil {
+				goto Error
+			}
+		}
+
+		err = c.reconnectingConn.granularFlow(ctx, q)
+
+	Error:
+		// q is a read only query if it has no capabilities
+		// i.e. capabilities == 0. Read only queries are retryable.
+		capabilities, ok := c.getCachedCapabilities(q)
+		if ok && capabilities == 0 &&
+			errors.As(err, &edbErr) &&
+			edbErr.HasTag(ShouldRetry) {
+			rule := c.retryOpts.ruleForException(edbErr)
+
+			if i >= rule.attempts {
+				return err
+			}
+
+			time.Sleep(rule.backoff(i))
+			continue
+		}
+
+		return err
+	}
+
+	return &clientError{msg: "unreachable"}
 }
 
 // RawTx runs an action in a transaction.

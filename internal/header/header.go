@@ -29,6 +29,10 @@ const (
 	// AllowCapabilitieTransaction represents the transaction capability
 	// in the AllowCapabilities header.
 	AllowCapabilitieTransaction uint64 = 0b100
+
+	// Capabilities is returned in PrepareComplete and CommandDataDescription
+	// messages.
+	Capabilities uint16 = 0x1001
 )
 
 // NewAllowCapabilitiesWithout returns an AllowCapabilities header value

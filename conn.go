@@ -64,10 +64,11 @@ func ConnectOneDSN(
 		reconnectingConn: &reconnectingConn{
 			cfg: config,
 			cacheCollection: cacheCollection{
-				serverSettings: config.serverSettings,
-				typeIDCache:    cache.New(1_000),
-				inCodecCache:   cache.New(1_000),
-				outCodecCache:  cache.New(1_000),
+				serverSettings:    config.serverSettings,
+				typeIDCache:       cache.New(1_000),
+				inCodecCache:      cache.New(1_000),
+				outCodecCache:     cache.New(1_000),
+				capabilitiesCache: cache.New(1_000),
 			},
 		},
 	}}
