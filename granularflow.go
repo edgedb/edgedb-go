@@ -35,7 +35,7 @@ func (c *protocolConnection) execGranularFlow(
 	r *buff.Reader,
 	q *gfQuery,
 ) error {
-	ids, ok := c.getTypeIDs(q)
+	ids, ok := c.getCachedTypeIDs(q)
 	if !ok {
 		return c.pesimistic(r, q)
 	}
@@ -192,7 +192,7 @@ func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.PrepareComplete:
-			ignoreHeaders(r)
+			c.cacheCapabilities(q, decodeHeaders(r))
 			r.Discard(1) // cardianlity
 			ids = idPair{in: [16]byte(r.PopUUID()), out: [16]byte(r.PopUUID())}
 		case message.ReadyForCommand:
@@ -212,7 +212,7 @@ func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 		return r.Err
 	}
 
-	c.putTypeIDs(q, ids)
+	c.cacheTypeIDs(q, ids)
 
 	return err
 }
@@ -244,7 +244,7 @@ func (c *protocolConnection) describe(
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandDataDescription:
-			descs, err = c.decodeCommandDataDescriptionMsg(r, q)
+			descs, _, err = c.decodeCommandDataDescriptionMsg(r, q)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -387,7 +387,9 @@ func (c *protocolConnection) optimistic(
 		case message.CommandComplete:
 			decodeCommandCompleteMsg(r)
 		case message.CommandDataDescription:
-			descs, err = c.decodeCommandDataDescriptionMsg(r, q)
+			var headers msgHeaders
+			descs, headers, err = c.decodeCommandDataDescriptionMsg(r, q)
+			c.cacheCapabilities(q, headers)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -460,8 +462,8 @@ func decodeDataMsg(
 func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 	r *buff.Reader,
 	q *gfQuery,
-) (*descPair, error) {
-	ignoreHeaders(r)
+) (*descPair, msgHeaders, error) {
+	headers := decodeHeaders(r)
 	card := r.PopUint8()
 
 	var descs descPair
@@ -471,7 +473,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 		c.protocolVersion,
 	)
 	if descs.in.ID != id {
-		return nil, &clientError{msg: fmt.Sprintf(
+		return nil, nil, &clientError{msg: fmt.Sprintf(
 			"unexpected in descriptor id: %v", descs.in.ID)}
 	}
 
@@ -481,12 +483,12 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 		c.protocolVersion,
 	)
 	if descs.out.ID != id {
-		return nil, &clientError{msg: fmt.Sprintf(
+		return nil, nil, &clientError{msg: fmt.Sprintf(
 			"unexpected out descriptor id: %v", descs.in.ID)}
 	}
 
 	if q.expCard == cardinality.AtMostOne && card == cardinality.Many {
-		return nil, &resultCardinalityMismatchError{msg: fmt.Sprintf(
+		return nil, nil, &resultCardinalityMismatchError{msg: fmt.Sprintf(
 			"the query has cardinality %v "+
 				"which does not match the expected cardinality %v",
 			cardinality.ToStr[card],
@@ -496,5 +498,5 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 
 	descCache.Put(descs.in.ID, descs.in)
 	descCache.Put(descs.out.ID, descs.out)
-	return &descs, nil
+	return &descs, headers, nil
 }

@@ -41,11 +41,13 @@ Optimistic execute flow:
 */
 
 import (
+	"encoding/binary"
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
+	"github.com/edgedb/edgedb-go/internal/header"
 )
 
 var descCache = cache.New(1_000)
@@ -77,15 +79,17 @@ type queryKey struct {
 	outType reflect.Type
 }
 
-func (c *protocolConnection) getTypeIDs(q *gfQuery) (*idPair, bool) {
-	key := queryKey{
+func makeKey(q *gfQuery) queryKey {
+	return queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
 		expCard: q.expCard,
 		outType: q.outType,
 	}
+}
 
-	if val, ok := c.typeIDCache.Get(key); ok {
+func (c *protocolConnection) getCachedTypeIDs(q *gfQuery) (*idPair, bool) {
+	if val, ok := c.typeIDCache.Get(makeKey(q)); ok {
 		x := val.(idPair)
 		return &x, true
 	}
@@ -93,11 +97,25 @@ func (c *protocolConnection) getTypeIDs(q *gfQuery) (*idPair, bool) {
 	return nil, false
 }
 
-func (c *protocolConnection) putTypeIDs(q *gfQuery, ids idPair) {
-	key := queryKey{
-		cmd:     q.cmd,
-		fmt:     q.fmt,
-		expCard: q.expCard,
+func (c *protocolConnection) cacheTypeIDs(q *gfQuery, ids idPair) {
+	c.typeIDCache.Put(makeKey(q), ids)
+}
+
+func (c *protocolConnection) cacheCapabilities(
+	q *gfQuery,
+	headers msgHeaders,
+) {
+	if capabilities, ok := headers[header.Capabilities]; ok {
+		x := binary.BigEndian.Uint64(capabilities)
+		c.capabilitiesCache.Put(makeKey(q), x)
 	}
-	c.typeIDCache.Put(key, ids)
+}
+
+func (c *reconnectingConn) getCachedCapabilities(q *gfQuery) (uint64, bool) {
+	if val, ok := c.capabilitiesCache.Get(makeKey(q)); ok {
+		x := val.(uint64)
+		return x, true
+	}
+
+	return 0, false
 }

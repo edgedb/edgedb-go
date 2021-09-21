@@ -30,6 +30,20 @@ func ignoreHeaders(r *buff.Reader) {
 	}
 }
 
+func decodeHeaders(r *buff.Reader) msgHeaders {
+	n := int(r.PopUint16())
+
+	headers := make(msgHeaders, n)
+	for i := 0; i < n; i++ {
+		key := r.PopUint16()
+		val := r.PopBytes()
+		headers[key] = make([]byte, len(val))
+		copy(headers[key], val)
+	}
+
+	return headers
+}
+
 func copyHeaders(h msgHeaders) msgHeaders {
 	cpy := make(msgHeaders, len(h))
 

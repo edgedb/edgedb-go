@@ -147,9 +147,10 @@ func mockPool(opts Options) *Pool { // nolint:gocritic
 		retryOpts:      RetryOptions{},
 		cfg:            &connConfig{},
 		cacheCollection: cacheCollection{
-			typeIDCache:   &cache.Cache{},
-			inCodecCache:  &cache.Cache{},
-			outCodecCache: &cache.Cache{},
+			typeIDCache:       &cache.Cache{},
+			inCodecCache:      &cache.Cache{},
+			outCodecCache:     &cache.Cache{},
+			capabilitiesCache: &cache.Cache{},
 		},
 	}
 }
