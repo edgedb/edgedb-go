@@ -20,13 +20,13 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strconv"
 	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
 )
 
 var (
-	defaultMinConns = 1
 	defaultMaxConns = max(4, runtime.NumCPU())
 )
 
@@ -50,7 +50,6 @@ type Pool struct {
 	potentialConns chan struct{}
 
 	maxConns int
-	minConns int
 
 	txOpts    TxOptions
 	retryOpts RetryOptions
@@ -74,23 +73,6 @@ func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocri
 //
 // The following options are recognized: host, port, user, database, password.
 func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { // nolint:gocritic,lll
-	minConns := defaultMinConns
-	if opts.MinConns > 0 {
-		minConns = int(opts.MinConns)
-	}
-
-	maxConns := defaultMaxConns
-	if opts.MaxConns > 0 {
-		maxConns = int(opts.MaxConns)
-	}
-
-	if maxConns < minConns {
-		return nil, &configurationError{msg: fmt.Sprintf(
-			"MaxConns (%v) may not be less than MinConns (%v)",
-			maxConns, minConns,
-		)}
-	}
-
 	cfg, err := parseConnectDSNAndArgs(dsn, &opts)
 	if err != nil {
 		return nil, err
@@ -98,20 +80,15 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 
 	False := false
 	p := &Pool{
-		isClosed: &False,
-		mu:       &sync.RWMutex{},
-		maxConns: maxConns,
-		minConns: minConns,
-		cfg:      cfg,
-		txOpts:   NewTxOptions(),
-
-		freeConns:      make(chan transactableConn, minConns),
-		potentialConns: make(chan struct{}, maxConns),
+		isClosed:  &False,
+		mu:        &sync.RWMutex{},
+		cfg:       cfg,
+		txOpts:    NewTxOptions(),
+		freeConns: make(chan transactableConn, 1),
 		retryOpts: RetryOptions{
 			txConflict: RetryRule{attempts: 3, backoff: defaultBackoff},
 			network:    RetryRule{attempts: 3, backoff: defaultBackoff},
 		},
-
 		cacheCollection: cacheCollection{
 			serverSettings:    cfg.serverSettings,
 			typeIDCache:       cache.New(1_000),
@@ -121,31 +98,26 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 		},
 	}
 
-	for i := 0; i < maxConns-minConns; i++ {
-		p.potentialConns <- struct{}{}
-	}
-
-	wg := &sync.WaitGroup{}
-	errs := make([]error, minConns)
-	for i := 0; i < minConns; i++ {
-		wg.Add(1)
-		go func(i int, wg *sync.WaitGroup) {
-			defer wg.Done()
-
-			conn, err := p.newConn(ctx)
-			if err == nil {
-				p.freeConns <- conn
-				return
-			}
-			errs[i] = err
-			p.potentialConns <- struct{}{}
-		}(i, wg)
-	}
-
-	wg.Wait()
-	if err := wrapAll(errs...); err != nil {
-		_ = p.Close()
+	conn, err := p.newConn(ctx)
+	if err != nil {
 		return nil, err
+	}
+
+	suggested, err := strconv.Atoi(
+		conn.cfg.serverSettings["suggested_pool_concurrency"])
+	switch {
+	case opts.MaxConns == 0 && err == nil:
+		p.maxConns = suggested
+	case opts.MaxConns == 0:
+		p.maxConns = defaultMaxConns
+	default:
+		p.maxConns = int(opts.MaxConns)
+	}
+
+	p.freeConns <- conn
+	p.potentialConns = make(chan struct{}, p.maxConns)
+	for i := 0; i < p.maxConns-1; i++ {
+		p.potentialConns <- struct{}{}
 	}
 
 	return p, nil

@@ -87,9 +87,8 @@ type Options struct {
 	// to reestablish a connection.
 	WaitUntilAvailable time.Duration
 
-	// MinConns determines the minimum number of connections.
-	// If MinConns is zero, 1 will be used.
-	// Has no effect for single connections.
+	// MinConns has no effect.
+	// Deprecated: does nothing
 	MinConns uint
 
 	// MaxConns determines the maximum number of connections.
