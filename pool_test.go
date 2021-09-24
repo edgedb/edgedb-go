@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"errors"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -85,8 +86,12 @@ func TestConnectPoolZeroMinAndMaxConns(t *testing.T) {
 	p, err := Connect(ctx, o)
 	require.NoError(t, err)
 
-	require.Equal(t, defaultMinConns, p.minConns)
-	require.Equal(t, defaultMaxConns, p.maxConns)
+	expected, err := strconv.Atoi(
+		conn.cfg.serverSettings["suggested_pool_concurrency"])
+	if err != nil {
+		expected = defaultMaxConns
+	}
+	require.Equal(t, expected, p.maxConns)
 
 	var result string
 	err = p.QuerySingle(ctx, "SELECT 'hello';", &result)
@@ -112,27 +117,6 @@ func TestClosePoolConcurently(t *testing.T) {
 	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 }
 
-func TestConnectPoolMinConnLteMaxConn(t *testing.T) {
-	ctx := context.Background()
-	o := Options{MinConns: 5, MaxConns: 1}
-	_, err := Connect(ctx, o)
-	assert.EqualError(
-		t,
-		err,
-		"edgedb.ConfigurationError: "+
-			"MaxConns (1) may not be less than MinConns (5)",
-	)
-
-	var expected Error
-	require.True(t, errors.As(err, &expected), "wrong error: %v", err)
-	assert.True(
-		t,
-		expected.Category(ConfigurationError),
-		"wrong error: %v",
-		err,
-	)
-}
-
 func mockPool(opts Options) *Pool { // nolint:gocritic
 	False := false
 
@@ -140,7 +124,6 @@ func mockPool(opts Options) *Pool { // nolint:gocritic
 		isClosed:       &False,
 		mu:             &sync.RWMutex{},
 		maxConns:       int(opts.MaxConns),
-		minConns:       int(opts.MinConns),
 		freeConns:      make(chan transactableConn, opts.MinConns),
 		potentialConns: make(chan struct{}, opts.MaxConns),
 		txOpts:         TxOptions{},
