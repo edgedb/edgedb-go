@@ -22,21 +22,20 @@ import (
 
 func main() {
 	opts := edgedb.Options{
-		Database: "edgedb",
-		User: "edgedb",
-		MinConns: 1,
-		MaxConns: 4,
+		Database:    "edgedb",
+		User:        "edgedb",
+		Concurrency: 4,
 	}
 
 	ctx := context.Background()
-	pool, err := edgedb.Connect(ctx, opts)
+	client, err := edgedb.CreateClient(ctx, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pool.Close()
+	defer client.Close()
 
 	var result string
-	err = pool.QuerySingle(ctx, "SELECT 'hello EdgeDB!'", &result)
+	err = client.QuerySingle(ctx, "SELECT 'hello EdgeDB!'", &result)
 	if err != nil {
 		log.Fatal(err)
 	}

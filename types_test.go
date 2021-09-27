@@ -40,7 +40,7 @@ func TestMissmatchedUnmarshalerType(t *testing.T) {
 	var wrongType struct {
 		Val CustomInt32 `edgedb:"val"`
 	}
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := 123_456_789_987_654_321 }`,
 		&wrongType,
 	)
@@ -115,7 +115,7 @@ func TestSendAndReceiveInt64(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, numbers, strings)
+	err := client.Query(ctx, query, &results, numbers, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "unexpected result count")
 
@@ -156,7 +156,7 @@ func TestReceiveInt64Unmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := 123_456_789_987_654_321 }`,
 		&result,
 	)
@@ -167,7 +167,7 @@ func TestReceiveInt64Unmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int64>$0 }`,
 		&result,
 		OptionalInt64{},
@@ -187,7 +187,7 @@ func TestSendInt64Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <int64>$0 }`,
 		&result,
 		CustomInt64{
@@ -198,7 +198,7 @@ func TestSendInt64Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int64>$0 }`,
 		&result,
 		CustomInt64{
@@ -209,7 +209,7 @@ func TestSendInt64Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int64>$0 }`,
 		&result,
 		CustomInt64{data: []byte{0x01}},
@@ -284,7 +284,7 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <int64>$0 }`,
 		&result,
 		newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
@@ -293,7 +293,7 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int64>$0 }`,
 		&result,
 		newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
@@ -301,9 +301,9 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL int64>$0 }`,
 			&result,
 			CustomOptionalInt64{},
@@ -313,7 +313,7 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int64>$0 }`,
 		&result,
 		CustomOptionalInt64{},
@@ -323,7 +323,7 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int64>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -333,7 +333,7 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int64>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -386,7 +386,7 @@ func TestSendAndReceiveInt32(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, numbers, strings)
+	err := client.Query(ctx, query, &results, numbers, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
@@ -427,7 +427,7 @@ func TestReceiveInt32Unmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := <int32>655_665 }`, &result)
+	err := client.QuerySingle(ctx, `SELECT { val := <int32>655_665 }`, &result)
 	assert.NoError(t, err)
 	assert.Equal(t,
 		[]byte{0x00, 0x0a, 0x01, 0x31},
@@ -435,7 +435,7 @@ func TestReceiveInt32Unmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int32>$0 }`,
 		&result,
 		OptionalInt32{},
@@ -455,7 +455,7 @@ func TestSendInt32Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <int32>$0 }`,
 		&result,
 		CustomInt32{data: []byte{0x00, 0x0a, 0x01, 0x31}},
@@ -464,7 +464,7 @@ func TestSendInt32Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int32>$0 }`,
 		&result,
 		CustomInt32{data: []byte{0x00, 0x0a, 0x01, 0x31}},
@@ -473,7 +473,7 @@ func TestSendInt32Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int32>$0 }`,
 		&result,
 		CustomInt32{data: []byte{0x01}},
@@ -542,7 +542,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <int32>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x0a, 0x01, 0x31}),
@@ -551,7 +551,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int32>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x0a, 0x01, 0x31}),
@@ -559,9 +559,9 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL int32>$0 }`,
 			&result,
 			CustomOptionalInt32{},
@@ -571,7 +571,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int32>$0 }`,
 		&result,
 		CustomOptionalInt32{},
@@ -581,7 +581,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int32>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -591,7 +591,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 		"at args[0] expected 4, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int32>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -604,7 +604,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 func TestSendAndReceiveOptionalInt32(t *testing.T) {
 	ctx := context.Background()
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE Int32FieldHolder {
 				CREATE PROPERTY int32 -> int32;
@@ -621,7 +621,7 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 
 		var result Result
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# decode missing optional
 			SELECT Int32FieldHolder { int32 } LIMIT 1`,
 			&result,
@@ -631,8 +631,8 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QueryOne(ctx, `
+		if protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QuerySingle(ctx, `
 				# encode unset optional
 				SELECT Int32FieldHolder {
 					int32 := <OPTIONAL int32>$0
@@ -646,7 +646,7 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 			assert.Equal(t, Result{}, result)
 		}
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional
 			SELECT Int32FieldHolder { int32 := <OPTIONAL int32>$0 } LIMIT 1`,
 			&result,
@@ -657,7 +657,7 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 		assert.Equal(t, Result{Int32: NewOptionalInt32(32)}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional into required argument
 			SELECT Int32FieldHolder { int32 := <int32>$0 } LIMIT 1`,
 			&result,
@@ -668,7 +668,7 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 		assert.Equal(t, Result{Int32: NewOptionalInt32(32)}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode unset optional into required argument
 			SELECT Int32FieldHolder { int32 := <int32>$0 } LIMIT 1`,
 			&result,
@@ -727,7 +727,7 @@ func TestSendAndReceiveInt16(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, numbers, strings)
+	err := client.Query(ctx, query, &results, numbers, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
@@ -768,12 +768,12 @@ func TestReceiveInt16Unmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := <int16>6_556 }`, &result)
+	err := client.QuerySingle(ctx, `SELECT { val := <int16>6_556 }`, &result)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0x19, 0x9c}, result.Val.data)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int16>$0 }`,
 		&result,
 		OptionalInt16{},
@@ -793,7 +793,7 @@ func TestSendInt16Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <int16>$0 }`,
 		&result,
 		CustomInt16{data: []byte{0x19, 0x9c}},
@@ -802,7 +802,7 @@ func TestSendInt16Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int16>$0 }`,
 		&result,
 		CustomInt16{data: []byte{0x19, 0x9c}},
@@ -811,7 +811,7 @@ func TestSendInt16Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int16>$0 }`,
 		&result,
 		CustomInt16{data: []byte{0x01}},
@@ -880,7 +880,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <int16>$0 }`,
 		&result,
 		newValue([]byte{0x19, 0x9c}),
@@ -889,7 +889,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int16>$0 }`,
 		&result,
 		newValue([]byte{0x19, 0x9c}),
@@ -897,9 +897,9 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL int16>$0 }`,
 			&result,
 			CustomOptionalInt16{},
@@ -909,7 +909,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int16>$0 }`,
 		&result,
 		CustomOptionalInt16{},
@@ -919,7 +919,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <int16>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -929,7 +929,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 		"at args[0] expected 2, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL int16>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -942,7 +942,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 func TestSendAndReceiveOptionalInt16(t *testing.T) {
 	ctx := context.Background()
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE Int16FieldHolder {
 				CREATE PROPERTY int16 -> int16;
@@ -959,7 +959,7 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 
 		var result Result
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# decode missing optional
 			SELECT Int16FieldHolder { int16 } LIMIT 1`,
 			&result,
@@ -969,8 +969,8 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QueryOne(ctx, `
+		if protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QuerySingle(ctx, `
 				# encode unset optional
 				SELECT Int16FieldHolder {
 					int16 := <OPTIONAL int16>$0
@@ -984,7 +984,7 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 			assert.Equal(t, Result{}, result)
 		}
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional
 			SELECT Int16FieldHolder { int16 := <OPTIONAL int16>$0 } LIMIT 1`,
 			&result,
@@ -995,7 +995,7 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 		assert.Equal(t, Result{Int16: NewOptionalInt16(16)}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional into required argument
 			SELECT Int16FieldHolder { int16 := <int16>$0 } LIMIT 1`,
 			&result,
@@ -1006,7 +1006,7 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 		assert.Equal(t, Result{Int16: NewOptionalInt16(16)}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode unset optional into required argument
 			SELECT Int16FieldHolder { int16 := <int16>$0 } LIMIT 1`,
 			&result,
@@ -1052,7 +1052,7 @@ func TestSendAndReceiveBool(t *testing.T) {
 		s := fmt.Sprint(i)
 		t.Run(s, func(t *testing.T) {
 			var result Result
-			err := conn.QuerySingle(ctx, query, &result, i, s)
+			err := client.QuerySingle(ctx, query, &result, i, s)
 			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
@@ -1087,12 +1087,12 @@ func TestReceiveBoolUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := true }`, &result)
+	err := client.QuerySingle(ctx, `SELECT { val := true }`, &result)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0x01}, result.Val.data)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bool>$0 }`,
 		&result,
 		OptionalBool{},
@@ -1112,7 +1112,7 @@ func TestSendBoolMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <bool>$0 }`,
 		&result,
 		CustomBool{data: []byte{0x01}},
@@ -1121,7 +1121,7 @@ func TestSendBoolMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBool(true), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bool>$0 }`,
 		&result,
 		CustomBool{data: []byte{0x01}},
@@ -1130,7 +1130,7 @@ func TestSendBoolMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBool(true), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bool>$0 }`,
 		&result,
 		CustomBool{data: []byte{0x01, 0x02}},
@@ -1198,7 +1198,7 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <bool>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -1207,7 +1207,7 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBool(true), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bool>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -1215,9 +1215,9 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBool(true), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL bool>$0 }`,
 			&result,
 			CustomOptionalBool{},
@@ -1227,7 +1227,7 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bool>$0 }`,
 		&result,
 		CustomOptionalBool{},
@@ -1237,7 +1237,7 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bool>$0 }`,
 		&result,
 		newValue([]byte{0x01, 0x02}),
@@ -1247,7 +1247,7 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 		"at args[0] expected 1, got 2")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bool>$0 }`,
 		&result,
 		newValue([]byte{0x01, 0x02}),
@@ -1303,7 +1303,7 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, numbers, strings)
+	err := client.Query(ctx, query, &results, numbers, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
@@ -1346,7 +1346,8 @@ func TestReceiveFloat64Unmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := <float64>-15.625 }`, &result)
+	query := `SELECT { val := <float64>-15.625 }`
+	err := client.QuerySingle(ctx, query, &result)
 	assert.NoError(t, err)
 	assert.Equal(t,
 		[]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -1354,7 +1355,7 @@ func TestReceiveFloat64Unmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float64>$0 }`,
 		&result,
 		OptionalFloat64{},
@@ -1374,7 +1375,7 @@ func TestSendFloat64Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <float64>$0 }`,
 		&result,
 		CustomFloat64{data: []byte{
@@ -1383,7 +1384,7 @@ func TestSendFloat64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float64>$0 }`,
 		&result,
 		CustomFloat64{data: []byte{
@@ -1393,7 +1394,7 @@ func TestSendFloat64Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <float64>$0 }`,
 		&result,
 		CustomFloat64{data: []byte{0x01}},
@@ -1467,7 +1468,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <float64>$0 }`,
 		&result,
 		// -15.625,
@@ -1477,7 +1478,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float64>$0 }`,
 		&result,
 		newValue([]byte{0xc0, 0x2f, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}),
@@ -1485,9 +1486,9 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL float64>$0 }`,
 			&result,
 			CustomOptionalFloat64{},
@@ -1497,7 +1498,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <float64>$0 }`,
 		&result,
 		CustomOptionalFloat64{},
@@ -1507,7 +1508,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <float64>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -1517,7 +1518,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float64>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -1530,7 +1531,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 	ctx := context.Background()
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE Float64FieldHolder {
 				CREATE PROPERTY float64 -> float64;
@@ -1547,7 +1548,7 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 
 		var result Result
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# decode missing optional
 			SELECT Float64FieldHolder { float64 } LIMIT 1`,
 			&result,
@@ -1557,8 +1558,8 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QueryOne(ctx, `
+		if protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QuerySingle(ctx, `
 				# encode unset optional
 				SELECT Float64FieldHolder {
 					float64 := <OPTIONAL float64>$0
@@ -1572,7 +1573,7 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 			assert.Equal(t, Result{}, result)
 		}
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional
 			SELECT Float64FieldHolder {
 				float64 := <OPTIONAL float64>$0
@@ -1585,7 +1586,7 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 		assert.Equal(t, Result{Float64: NewOptionalFloat64(6.4)}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional into required argument
 			SELECT Float64FieldHolder { float64 := <float64>$0 } LIMIT 1`,
 			&result,
@@ -1596,7 +1597,7 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 		assert.Equal(t, Result{Float64: NewOptionalFloat64(6.4)}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode unset optional into required argument
 			SELECT Float64FieldHolder { float64 := <float64>$0 } LIMIT 1`,
 			&result,
@@ -1658,7 +1659,7 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, numbers, strings)
+	err := client.Query(ctx, query, &results, numbers, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(numbers), len(results), "wrong number of results")
 
@@ -1701,12 +1702,13 @@ func TestReceiveFloat32Unmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := <float32>-15.625 }`, &result)
+	query := `SELECT { val := <float32>-15.625 }`
+	err := client.QuerySingle(ctx, query, &result)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xc1, 0x7a, 0x00, 0x00}, result.Val.data)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float32>$0 }`,
 		&result,
 		OptionalFloat32{},
@@ -1726,7 +1728,7 @@ func TestSendFloat32Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <float32>$0 }`,
 		&result,
 		CustomFloat32{data: []byte{0xc1, 0x7a, 0x00, 0x00}},
@@ -1735,7 +1737,7 @@ func TestSendFloat32Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float32>$0 }`,
 		&result,
 		CustomFloat32{data: []byte{0xc1, 0x7a, 0x00, 0x00}},
@@ -1744,7 +1746,7 @@ func TestSendFloat32Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <float32>$0 }`,
 		&result,
 		CustomFloat32{data: []byte{0x01}},
@@ -1815,7 +1817,7 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <float32>$0 }`,
 		&result,
 		newValue([]byte{0xc1, 0x7a, 0x00, 0x00}),
@@ -1824,7 +1826,7 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float32>$0 }`,
 		&result,
 		newValue([]byte{0xc1, 0x7a, 0x00, 0x00}),
@@ -1832,9 +1834,9 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL float32>$0 }`,
 			&result,
 			CustomOptionalFloat32{},
@@ -1844,7 +1846,7 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <float32>$0 }`,
 		&result,
 		CustomOptionalFloat32{},
@@ -1854,7 +1856,7 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <float32>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -1864,7 +1866,7 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 		"at args[0] expected 4, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL float32>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -1895,7 +1897,7 @@ func TestSendAndReceiveBytes(t *testing.T) {
 	query := `SELECT array_unpack(<array<bytes>>$0)`
 
 	var results [][]byte
-	err := conn.Query(ctx, query, &results, samples)
+	err := client.Query(ctx, query, &results, samples)
 	require.NoError(t, err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
@@ -1929,12 +1931,13 @@ func TestReceiveBytesUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := b'\x01\x02\x03' }`, &result)
+	query := `SELECT { val := b'\x01\x02\x03' }`
+	err := client.QuerySingle(ctx, query, &result)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0x01, 0x02, 0x03}, result.Val.data)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bytes>$0 }`,
 		&result,
 		OptionalBytes{},
@@ -1954,7 +1957,7 @@ func TestSendBytesMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <bytes>$0 }`,
 		&result,
 		CustomBytes{data: []byte{0x01, 0x02, 0x03}},
@@ -1963,7 +1966,7 @@ func TestSendBytesMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bytes>$0 }`,
 		&result,
 		CustomBytes{data: []byte{0x01, 0x02, 0x03}},
@@ -1971,9 +1974,9 @@ func TestSendBytesMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL bytes>$0 }`,
 			&result,
 			CustomOptionalBytes{},
@@ -1983,7 +1986,7 @@ func TestSendBytesMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bytes>$0 }`,
 		&result,
 		CustomOptionalBytes{},
@@ -2054,7 +2057,7 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <bytes>$0 }`,
 		&result,
 		newValue([]byte{0x01, 0x02, 0x03}),
@@ -2063,7 +2066,7 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bytes>$0 }`,
 		&result,
 		newValue([]byte{0x01, 0x02, 0x03}),
@@ -2071,9 +2074,9 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL bytes>$0 }`,
 			&result,
 			CustomOptionalBytes{},
@@ -2083,7 +2086,7 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bytes>$0 }`,
 		&result,
 		CustomOptionalBytes{},
@@ -2097,7 +2100,7 @@ func TestSendAndReceiveStr(t *testing.T) {
 	ctx := context.Background()
 
 	var result string
-	err := conn.QuerySingle(ctx, `SELECT <str>$0`, &result, "abcdef")
+	err := client.QuerySingle(ctx, `SELECT <str>$0`, &result, "abcdef")
 	require.NoError(t, err)
 	assert.Equal(t, "abcdef", result, "round trip failed")
 }
@@ -2107,7 +2110,7 @@ func TestFetchLargeStr(t *testing.T) {
 	ctx := context.Background()
 
 	var result string
-	err := conn.QuerySingle(ctx,
+	err := client.QuerySingle(ctx,
 		"SELECT str_repeat('a', <int64>(10^6))", &result)
 	require.NoError(t, err)
 	assert.Equal(t, strings.Repeat("a", 1_000_000), result)
@@ -2136,7 +2139,7 @@ func TestReceiveStrUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := 'Hi 🙂' }`, &result)
+	err := client.QuerySingle(ctx, `SELECT { val := 'Hi 🙂' }`, &result)
 	assert.NoError(t, err)
 	assert.Equal(t,
 		[]byte{0x48, 0x69, 0x20, 0xf0, 0x9f, 0x99, 0x82},
@@ -2144,7 +2147,7 @@ func TestReceiveStrUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL str>$0 }`,
 		&result,
 		OptionalStr{},
@@ -2164,7 +2167,7 @@ func TestSendStrMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <str>$0 }`,
 		&result,
 		CustomStr{
@@ -2175,7 +2178,7 @@ func TestSendStrMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL str>$0 }`,
 		&result,
 		CustomStr{
@@ -2246,7 +2249,7 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <str>$0 }`,
 		&result,
 		newValue([]byte("Hi 🙂")),
@@ -2255,7 +2258,7 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL str>$0 }`,
 		&result,
 		newValue([]byte("Hi 🙂")),
@@ -2263,9 +2266,9 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL str>$0 }`,
 			&result,
 			CustomOptionalStr{},
@@ -2275,7 +2278,7 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <str>$0 }`,
 		&result,
 		CustomOptionalStr{},
@@ -2288,7 +2291,7 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 func TestSendAndReceiveOptionalStr(t *testing.T) {
 	ctx := context.Background()
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE StrFieldHolder {
 				CREATE PROPERTY str -> str;
@@ -2305,7 +2308,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 
 		var result Result
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# decode missing optional
 			SELECT StrFieldHolder { str } LIMIT 1`,
 			&result,
@@ -2315,8 +2318,8 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QueryOne(ctx, `
+		if protocolVersion.GTE(protocolVersion0p12) {
+			e = tx.QuerySingle(ctx, `
 				# encode unset optional
 				SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
 				&result,
@@ -2328,7 +2331,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 			assert.Equal(t, Result{}, result)
 		}
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional
 			SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
 			&result,
@@ -2339,7 +2342,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 		assert.Equal(t, Result{Str: NewOptionalStr("hello")}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode set optional into required argument
 			SELECT StrFieldHolder { str := <str>$0 } LIMIT 1`,
 			&result,
@@ -2350,7 +2353,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 		assert.Equal(t, Result{Str: NewOptionalStr("hello")}, result)
 
-		e = tx.QueryOne(ctx, `
+		e = tx.QuerySingle(ctx, `
 			# encode unset optional into required argument
 			SELECT StrFieldHolder { str := <str>$0 } LIMIT 1`,
 			&result,
@@ -2379,7 +2382,7 @@ func TestSendAndReceiveJSON(t *testing.T) {
 	query := `SELECT array_unpack(<array<json>>$0)`
 
 	var results [][]byte
-	err := conn.Query(ctx, query, &results, samples)
+	err := client.Query(ctx, query, &results, samples)
 	require.NoError(t, err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
@@ -2413,7 +2416,7 @@ func TestReceiveJSONUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <json>(hello := "world") }`,
 		&result,
 	)
@@ -2424,7 +2427,7 @@ func TestReceiveJSONUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL json>$0 }`,
 		&result,
 		OptionalBytes{},
@@ -2444,7 +2447,7 @@ func TestSendJSONMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <json>$0 }`,
 		&result,
 		CustomJSON{data: append([]byte{1}, []byte(`{"hello": "world"}`)...)},
@@ -2456,7 +2459,7 @@ func TestSendJSONMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL json>$0 }`,
 		&result,
 		CustomJSON{data: append([]byte{1}, []byte(`{"hello": "world"}`)...)},
@@ -2533,7 +2536,7 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <json>$0 }`,
 		&result,
 		newValue(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
@@ -2545,7 +2548,7 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL json>$0 }`,
 		&result,
 		newValue(append([]byte{1}, []byte(`{"hello": "world"}`)...)),
@@ -2556,9 +2559,9 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL json>$0 }`,
 			&result,
 			CustomOptionalJSON{},
@@ -2568,7 +2571,7 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <json>$0 }`,
 		&result,
 		CustomOptionalJSON{},
@@ -2602,7 +2605,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 		)
 	`
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2636,7 +2639,7 @@ func TestReceiveEnumUnmarshaler(t *testing.T) {
 		Val CustomStr `edgedb:"val"`
 	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2670,7 +2673,7 @@ func TestSendEnumMarshaler(t *testing.T) {
 		Val OptionalStr `edgedb:"val"`
 	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2733,7 +2736,7 @@ func TestSendOptionalEnumMarshaler(t *testing.T) {
 		return CustomOptionalStr{isSet: true, data: data}
 	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2756,7 +2759,7 @@ func TestSendOptionalEnumMarshaler(t *testing.T) {
 		assert.NoError(t, e)
 		assert.Equal(t, NewOptionalStr("Red"), result.Val)
 
-		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+		if protocolVersion.GTE(protocolVersion0p12) {
 			// encode missing value into optional argument
 			e = tx.QuerySingle(ctx, `
 				SELECT { val := <OPTIONAL Color>$0 }`,
@@ -2830,7 +2833,7 @@ func TestSendAndReceiveDuration(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, durations, strings)
+	err := client.Query(ctx, query, &results, durations, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(durations), len(results), "wrong number of results")
 
@@ -2868,7 +2871,7 @@ func TestReceiveDurationUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <duration>'48 hours 45 minutes 7.6 seconds' }`,
 		&result,
 	)
@@ -2883,7 +2886,7 @@ func TestReceiveDurationUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL duration>$0 }`,
 		&result,
 		OptionalDuration{},
@@ -2903,7 +2906,7 @@ func TestSendDurationMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <duration>$0 }`,
 		&result,
 		CustomDuration{data: []byte{
@@ -2916,7 +2919,7 @@ func TestSendDurationMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL duration>$0 }`,
 		&result,
 		CustomDuration{data: []byte{
@@ -2929,7 +2932,7 @@ func TestSendDurationMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <duration>$0 }`,
 		&result,
 		CustomDuration{data: []byte{0x01}},
@@ -3008,7 +3011,7 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <duration>$0 }`,
 		&result,
 		newValue([]byte{
@@ -3021,7 +3024,7 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL duration>$0 }`,
 		&result,
 		newValue([]byte{
@@ -3033,9 +3036,9 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL duration>$0 }`,
 			&result,
 			CustomOptionalDuration{},
@@ -3045,7 +3048,7 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <duration>$0 }`,
 		&result,
 		CustomOptionalDuration{},
@@ -3055,7 +3058,7 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <duration>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3065,7 +3068,7 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 		"at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL duration>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3079,7 +3082,7 @@ func TestSendAndReceiveRelativeDuration(t *testing.T) {
 	ctx := context.Background()
 
 	var duration RelativeDuration
-	err := conn.QuerySingle(ctx,
+	err := client.QuerySingle(ctx,
 		"SELECT <cal::relative_duration>'1y'", &duration)
 	if err != nil {
 		t.Skip("server version is too old for this feature")
@@ -3119,7 +3122,7 @@ func TestSendAndReceiveRelativeDuration(t *testing.T) {
 	`
 
 	var results []Result
-	err = conn.Query(ctx, query, &results, rds)
+	err = client.Query(ctx, query, &results, rds)
 	require.NoError(t, err)
 	require.Equal(t, len(rds), len(results), "wrong number of results")
 
@@ -3158,7 +3161,7 @@ func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>
 			'8 months 5 days 48 hours 45 minutes 7.6 seconds' 
 		}`,
@@ -3175,7 +3178,7 @@ func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
 		&result,
 		OptionalRelativeDuration{},
@@ -3195,7 +3198,7 @@ func TestSendRelativeDurationMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>$0 }`,
 		&result,
 		CustomRelativeDuration{data: []byte{
@@ -3211,7 +3214,7 @@ func TestSendRelativeDurationMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
 		&result,
 		CustomRelativeDuration{data: []byte{
@@ -3227,7 +3230,7 @@ func TestSendRelativeDurationMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>$0 }`,
 		&result,
 		CustomRelativeDuration{data: []byte{0x01}},
@@ -3313,7 +3316,7 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>$0 }`,
 		&result,
 		newValue([]byte{
@@ -3329,7 +3332,7 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
 		&result,
 		newValue([]byte{
@@ -3344,9 +3347,9 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
 			&result,
 			CustomOptionalRelativeDuration{},
@@ -3356,7 +3359,7 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>$0 }`,
 		&result,
 		CustomOptionalRelativeDuration{},
@@ -3366,7 +3369,7 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3376,7 +3379,7 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		"edgedb.CustomOptionalRelativeDuration at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3451,7 +3454,7 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, times, strings)
+	err := client.Query(ctx, query, &results, times, strings)
 	require.NoError(t, err)
 
 	for i, s := range strings {
@@ -3491,7 +3494,7 @@ func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_time>'12:10:00' }`,
 		&result,
 	)
@@ -3502,7 +3505,7 @@ func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
 		&result,
 		OptionalLocalTime{},
@@ -3522,7 +3525,7 @@ func TestSendLocalTimeMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_time>$0 }`,
 		&result,
 		CustomLocalTime{data: []byte{
@@ -3535,7 +3538,7 @@ func TestSendLocalTimeMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
 		&result,
 		CustomLocalTime{data: []byte{
@@ -3548,7 +3551,7 @@ func TestSendLocalTimeMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_time>$0 }`,
 		&result,
 		CustomLocalTime{data: []byte{0x01}},
@@ -3623,7 +3626,7 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_time>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}),
@@ -3635,7 +3638,7 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x00, 0x00, 0x0a, 0x32, 0xae, 0xf6, 0x00}),
@@ -3646,9 +3649,9 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
 			&result,
 			CustomOptionalLocalTime{},
@@ -3658,7 +3661,7 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_time>$0 }`,
 		&result,
 		CustomOptionalLocalTime{},
@@ -3668,7 +3671,7 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_time>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3678,7 +3681,7 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3742,7 +3745,7 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, dates, strings)
+	err := client.Query(ctx, query, &results, dates, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(dates), len(results))
 
@@ -3783,7 +3786,7 @@ func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_date>'2019-05-06' }`,
 		&result,
 	)
@@ -3791,7 +3794,7 @@ func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 	assert.Equal(t, []byte{0x00, 0x00, 0x1b, 0x99}, result.Val.data)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
 		&result,
 		OptionalLocalDate{},
@@ -3811,7 +3814,7 @@ func TestSendLocalDateMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_date>$0 }`,
 		&result,
 		CustomLocalDate{data: []byte{0x00, 0x00, 0x1b, 0x99}},
@@ -3823,7 +3826,7 @@ func TestSendLocalDateMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
 		&result,
 		CustomLocalDate{data: []byte{0x00, 0x00, 0x1b, 0x99}},
@@ -3835,7 +3838,7 @@ func TestSendLocalDateMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_date>$0 }`,
 		&result,
 		CustomLocalDate{data: []byte{0x01}},
@@ -3907,7 +3910,7 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_date>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x00, 0x1b, 0x99}),
@@ -3919,7 +3922,7 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x00, 0x1b, 0x99}),
@@ -3930,9 +3933,9 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL cal::local_date>$0 }`,
 			&result,
 			CustomOptionalLocalDate{},
@@ -3942,7 +3945,7 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_date>$0 }`,
 		&result,
 		CustomOptionalLocalDate{},
@@ -3952,7 +3955,7 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_date>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -3962,7 +3965,7 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		"at args[0] expected 4, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -4033,7 +4036,7 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, datetimes, strings)
+	err := client.Query(ctx, query, &results, datetimes, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(datetimes), len(results), "wrong number of results")
 
@@ -4074,7 +4077,7 @@ func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_datetime>'2019-05-06T12:00:00' }`,
 		&result,
 	)
@@ -4085,7 +4088,7 @@ func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
 		&result,
 		OptionalLocalDateTime{},
@@ -4105,7 +4108,7 @@ func TestSendLocalDateTimeMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_datetime>$0 }`,
 		&result,
 		CustomLocalDateTime{data: []byte{
@@ -4118,7 +4121,7 @@ func TestSendLocalDateTimeMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
 		&result,
 		CustomLocalDateTime{data: []byte{
@@ -4131,7 +4134,7 @@ func TestSendLocalDateTimeMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_datetime>$0 }`,
 		&result,
 		CustomLocalDateTime{data: []byte{0x01}},
@@ -4211,7 +4214,7 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_datetime>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
@@ -4223,7 +4226,7 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
@@ -4234,9 +4237,9 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
 			&result,
 			CustomOptionalLocalDateTime{},
@@ -4246,7 +4249,7 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_datetime>$0 }`,
 		&result,
 		CustomOptionalLocalDateTime{},
@@ -4256,7 +4259,7 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <cal::local_datetime>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -4266,7 +4269,7 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -4332,7 +4335,7 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 	`
 
 	var results []Result
-	err := conn.Query(ctx, query, &results, samples, strings)
+	err := client.Query(ctx, query, &results, samples, strings)
 	require.NoError(t, err)
 	require.Equal(t, len(samples), len(results), "wrong number of results")
 
@@ -4379,7 +4382,7 @@ func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <datetime>'2019-05-06T12:00:00+00:00' }`,
 		&result,
 	)
@@ -4390,7 +4393,7 @@ func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL datetime>$0 }`,
 		&result,
 		OptionalDateTime{},
@@ -4410,7 +4413,7 @@ func TestSendDateTimeMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <datetime>$0 }`,
 		&result,
 		CustomDateTime{data: []byte{
@@ -4423,7 +4426,7 @@ func TestSendDateTimeMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL datetime>$0 }`,
 		&result,
 		CustomDateTime{data: []byte{
@@ -4436,7 +4439,7 @@ func TestSendDateTimeMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <datetime>$0 }`,
 		&result,
 		CustomDateTime{data: []byte{0x01}},
@@ -4511,7 +4514,7 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <datetime>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
@@ -4523,7 +4526,7 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL datetime>$0 }`,
 		&result,
 		newValue([]byte{0x00, 0x02, 0x2b, 0x35, 0x9b, 0xc4, 0x10, 0x00}),
@@ -4534,9 +4537,9 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL datetime>$0 }`,
 			&result,
 			CustomOptionalDateTime{},
@@ -4546,7 +4549,7 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <datetime>$0 }`,
 		&result,
 		CustomOptionalDateTime{},
@@ -4556,7 +4559,7 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <datetime>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -4566,7 +4569,7 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL datetime>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -4724,7 +4727,7 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 			require.Equal(t, s, i.String())
 
 			var result Result
-			err := conn.QuerySingle(ctx, query, &result, i, s)
+			err := client.QuerySingle(ctx, query, &result, i, s)
 			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
@@ -4745,21 +4748,21 @@ func TestReuseBigIntValue(t *testing.T) {
 	expected := big.NewInt(123)
 
 	var result *big.Int
-	err := conn.QuerySingle(ctx, "SELECT 123n", &result)
+	err := client.QuerySingle(ctx, "SELECT 123n", &result)
 	require.NoError(t, err)
 	assert.Equal(t,
 		0, expected.Cmp(result),
 		"%v != %v", expected.String(), result.String(),
 	)
 
-	err = conn.QuerySingle(ctx, "SELECT 123n", &result)
+	err = client.QuerySingle(ctx, "SELECT 123n", &result)
 	require.NoError(t, err)
 	assert.Equal(t,
 		0, expected.Cmp(result),
 		"%v != %v", expected.String(), result.String(),
 	)
 
-	err = conn.QuerySingle(ctx, "SELECT 123n", &result)
+	err = client.QuerySingle(ctx, "SELECT 123n", &result)
 	require.NoError(t, err)
 	assert.Equal(t,
 		0, expected.Cmp(result),
@@ -4767,7 +4770,7 @@ func TestReuseBigIntValue(t *testing.T) {
 	)
 
 	var optional OptionalBigInt
-	err = conn.QuerySingle(ctx, "SELECT 123n", &optional)
+	err = client.QuerySingle(ctx, "SELECT 123n", &optional)
 	require.NoError(t, err)
 	v, ok := optional.Get()
 	require.True(t, ok)
@@ -4776,7 +4779,7 @@ func TestReuseBigIntValue(t *testing.T) {
 		"%v != %v", expected.String(), result.String(),
 	)
 
-	err = conn.QueryOne(ctx, "SELECT 123n", &optional)
+	err = client.QuerySingle(ctx, "SELECT 123n", &optional)
 	require.NoError(t, err)
 	v, ok = optional.Get()
 	require.True(t, ok)
@@ -4809,7 +4812,8 @@ func TestReceiveBigIntUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `SELECT { val := <bigint>-15000n }`, &result)
+	query := `SELECT { val := <bigint>-15000n }`
+	err := client.QuerySingle(ctx, query, &result)
 	assert.NoError(t, err)
 	assert.Equal(t,
 		[]byte{
@@ -4823,7 +4827,7 @@ func TestReceiveBigIntUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
 		&result,
 		OptionalBigInt{},
@@ -4843,7 +4847,7 @@ func TestSendBigIntMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <bigint>$0 }`,
 		&result,
 		CustomBigInt{data: []byte{
@@ -4858,7 +4862,7 @@ func TestSendBigIntMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
 		&result,
 		CustomBigInt{data: []byte{
@@ -4873,7 +4877,7 @@ func TestSendBigIntMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bigint>$0 }`,
 		&result,
 		CustomBigInt{data: []byte{0x01}},
@@ -4954,7 +4958,7 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <bigint>$0 }`,
 		&result,
 		newValue([]byte{
@@ -4969,7 +4973,7 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
 		&result,
 		newValue([]byte{
@@ -4983,9 +4987,9 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
 			&result,
 			CustomOptionalBigInt{},
@@ -4995,7 +4999,7 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bigint>$0 }`,
 		&result,
 		CustomOptionalBigInt{},
@@ -5005,7 +5009,7 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <bigint>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -5015,7 +5019,7 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 		"at args[0] expected at least 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -5048,7 +5052,7 @@ func TestReceiveDecimalUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <decimal>-15000.6250000n }`,
 		&result,
 	)
@@ -5065,7 +5069,7 @@ func TestReceiveDecimalUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL decimal>$0 }`,
 		&result,
 		CustomOptionalDecimal{},
@@ -5085,7 +5089,7 @@ func TestSendDecimalMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <decimal>$0 }`,
 		&result,
 		CustomDecimal{data: []byte{
@@ -5109,7 +5113,7 @@ func TestSendDecimalMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL decimal>$0 }`,
 		&result,
 		CustomDecimal{data: []byte{
@@ -5133,7 +5137,7 @@ func TestSendDecimalMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <decimal>$0 }`,
 		&result,
 		CustomDecimal{data: []byte{0x01}},
@@ -5210,7 +5214,7 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <decimal>$0 }`,
 		&result,
 		CustomDecimal{data: []byte{
@@ -5234,7 +5238,7 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL decimal>$0 }`,
 		&result,
 		CustomDecimal{data: []byte{
@@ -5257,9 +5261,9 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL decimal>$0 }`,
 			&result,
 			CustomOptionalDecimal{},
@@ -5269,7 +5273,7 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <decimal>$0 }`,
 		&result,
 		CustomOptionalDecimal{},
@@ -5279,7 +5283,7 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <decimal>$0 }`,
 		&result,
 		CustomOptionalDecimal{isSet: true, data: []byte{0x01}},
@@ -5289,7 +5293,7 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		"at args[0] expected at least 8, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL decimal>$0 }`,
 		&result,
 		CustomOptionalDecimal{isSet: true, data: []byte{0x01}},
@@ -5343,7 +5347,7 @@ func TestSendAndReceiveUUID(t *testing.T) {
 			require.NoError(t, err)
 
 			var result Result
-			err = conn.QuerySingle(ctx, query, &result, id, s)
+			err = client.QuerySingle(ctx, query, &result, id, s)
 			assert.NoError(t, err)
 
 			assert.True(t, result.IsEqual, "equality check faild")
@@ -5379,7 +5383,7 @@ func TestReceiveUUIDUnmarshaler(t *testing.T) {
 	}
 
 	// Decode value
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <uuid>'b9545c35-1fe7-485f-a6ea-f8ead251abd3' }`,
 		&result,
 	)
@@ -5393,7 +5397,7 @@ func TestReceiveUUIDUnmarshaler(t *testing.T) {
 	)
 
 	// Decode missing value
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL uuid>$0 }`,
 		&result,
 		OptionalUUID{},
@@ -5413,7 +5417,7 @@ func TestSendUUIDMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <uuid>$0 }`,
 		&result,
 		CustomUUID{data: []byte{
@@ -5431,7 +5435,7 @@ func TestSendUUIDMarshaler(t *testing.T) {
 	)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL uuid>$0 }`,
 		&result,
 		CustomUUID{data: []byte{
@@ -5449,7 +5453,7 @@ func TestSendUUIDMarshaler(t *testing.T) {
 	)
 
 	// encode wrong number of bytes
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <uuid>$0 }`,
 		&result,
 		CustomUUID{data: []byte{0x01}},
@@ -5527,7 +5531,7 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT { val := <uuid>$0 }`,
 		&result,
 		newValue([]byte{
@@ -5544,7 +5548,7 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL uuid>$0 }`,
 		&result,
 		newValue([]byte{
@@ -5561,9 +5565,9 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 			SELECT { val := <OPTIONAL uuid>$0 }`,
 			&result,
 			CustomOptionalUUID{},
@@ -5573,7 +5577,7 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <uuid>$0 }`,
 		&result,
 		CustomOptionalUUID{},
@@ -5583,7 +5587,7 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <uuid>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -5593,7 +5597,7 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		"at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL uuid>$0 }`,
 		&result,
 		newValue([]byte{0x01}),
@@ -5782,7 +5786,7 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-		if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+		if protocolVersion.GTE(protocolVersion0p12) {
 			// encode missing value into optional argument
 			err = tx.QuerySingle(ctx, `
 				SELECT { val := <OPTIONAL CustomInt64>$0 }`,
@@ -5845,7 +5849,7 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 	}
 
 	var result ParentTuple
-	err := conn.QuerySingle(ctx, query, &result)
+	err := client.QuerySingle(ctx, query, &result)
 	require.NoError(t, err)
 
 	expected := ParentTuple{
@@ -5890,7 +5894,7 @@ func TestReceiveObject(t *testing.T) {
 	}
 
 	var result Function
-	err := conn.QuerySingle(ctx, query, &result)
+	err := client.QuerySingle(ctx, query, &result)
 	require.NoError(t, err)
 	assert.Equal(t, "std::str_repeat", result.Name)
 	assert.Equal(t, 2, len(result.Params))
@@ -5906,7 +5910,7 @@ func TestReceiveNamedTuple(t *testing.T) {
 	}
 
 	var result NamedTuple
-	err := conn.QuerySingle(ctx, "SELECT (a := 1,)", &result)
+	err := client.QuerySingle(ctx, "SELECT (a := 1,)", &result)
 	require.NoError(t, err)
 	assert.Equal(t, NamedTuple{A: 1}, result)
 }
@@ -5915,17 +5919,17 @@ func TestReceiveTuple(t *testing.T) {
 	ctx := context.Background()
 
 	var wrongType string
-	err := conn.QuerySingle(ctx, `SELECT ()`, &wrongType)
+	err := client.QuerySingle(ctx, `SELECT ()`, &wrongType)
 	require.EqualError(t, err, "edgedb.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected string to be a struct got string")
 
 	var emptyStruct struct{}
-	err = conn.QuerySingle(ctx, `SELECT ()`, &emptyStruct)
+	err = client.QuerySingle(ctx, `SELECT ()`, &emptyStruct)
 	require.NoError(t, err)
 
 	var missingTag struct{ first int64 }
-	err = conn.QuerySingle(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
+	err = client.QuerySingle(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
 	require.EqualError(t, err, "edgedb.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected struct { first int64 } to have a field "+
@@ -5943,12 +5947,12 @@ func TestReceiveTuple(t *testing.T) {
 	}
 
 	result := []Tuple{}
-	err = conn.Query(ctx, `SELECT (<int64>$0,)`, &result, int64(1))
+	err = client.Query(ctx, `SELECT (<int64>$0,)`, &result, int64(1))
 	require.NoError(t, err)
 	assert.Equal(t, []Tuple{{first: 1}}, result)
 
 	result = []Tuple{}
-	err = conn.Query(ctx, `SELECT {(1, "abc"), (2, "def")}`, &result)
+	err = client.Query(ctx, `SELECT {(1, "abc"), (2, "def")}`, &result)
 	require.NoError(t, err)
 	require.Equal(t,
 		[]Tuple{
@@ -5959,7 +5963,7 @@ func TestReceiveTuple(t *testing.T) {
 	)
 
 	result = []Tuple{}
-	err = conn.Query(ctx, `SELECT (1, "abc", (2.3, true))`, &result)
+	err = client.Query(ctx, `SELECT (1, "abc", (2.3, true))`, &result)
 	require.NoError(t, err)
 	require.Equal(t,
 		[]Tuple{{
@@ -5978,7 +5982,7 @@ func TestSendAndReceiveArray(t *testing.T) {
 	ctx := context.Background()
 
 	var result []int64
-	err := conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, "hello")
+	err := client.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, "hello")
 	assert.EqualError(t, err,
 		"edgedb.InvalidArgumentError: "+
 			"expected args[0] to be a slice got: string")
@@ -5988,17 +5992,18 @@ func TestSendAndReceiveArray(t *testing.T) {
 	}
 
 	var nested Tuple
-	err = conn.QuerySingle(ctx,
+	err = client.QuerySingle(ctx,
 		"SELECT (<array<int64>>$0,)", &nested, []int64{1})
 	require.NoError(t, err)
 	assert.Equal(t, Tuple{[]int64{1}}, nested)
 
-	err = conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, []int64{1})
+	query := "SELECT <array<int64>>$0"
+	err = client.QuerySingle(ctx, query, &result, []int64{1})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1}, result)
 
 	arg := []int64{1, 2, 3}
-	err = conn.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, arg)
+	err = client.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, arg)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result)
 }
@@ -6022,7 +6027,7 @@ func TestReceiveSet(t *testing.T) {
 		`
 
 		var result Function
-		err := conn.QuerySingle(ctx, query, &result)
+		err := client.QuerySingle(ctx, query, &result)
 		require.NoError(t, err)
 		assert.Equal(t, [][]int64{{1, 2}, {1}}, result.Sets)
 	}
@@ -6052,7 +6057,7 @@ func TestReceiveSet(t *testing.T) {
 		`
 
 		var result Function
-		err := conn.QuerySingle(ctx, query, &result)
+		err := client.QuerySingle(ctx, query, &result)
 		require.NoError(t, err)
 		assert.Equal(t,
 			[][]Tuple{
@@ -6115,7 +6120,7 @@ func inRolledBackTx(
 	action func(context.Context, *Tx),
 ) {
 	ctx := context.Background()
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, ddl)
 		assert.NoError(t, e)
 		if e == nil {
@@ -6231,7 +6236,7 @@ func TestSendOptioanlArray(t *testing.T) {
 	}
 
 	// encode value into required argument
-	err := conn.QuerySingle(ctx, `
+	err := client.QuerySingle(ctx, `
 		SELECT ( val := <array<int64>>$0 )`,
 		&result,
 		[]int64{1, 2, 3},
@@ -6240,7 +6245,7 @@ func TestSendOptioanlArray(t *testing.T) {
 	assert.Equal(t, []int64{1, 2, 3}, result.Val)
 
 	// encode value into optional argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT ( val := <OPTIONAL array<int64>>$0 )`,
 		&result,
 		[]int64{1, 2, 3},
@@ -6248,9 +6253,9 @@ func TestSendOptioanlArray(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result.Val)
 
-	if conn.conn.protocolVersion.GTE(protocolVersion0p12) {
+	if protocolVersion.GTE(protocolVersion0p12) {
 		// encode missing value into optional argument
-		err = conn.QuerySingle(ctx, `
+		err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL array<int64>>$0 }`,
 			&result,
 			[]int64(nil),
@@ -6260,7 +6265,7 @@ func TestSendOptioanlArray(t *testing.T) {
 	}
 
 	// encode missing value into required argument
-	err = conn.QuerySingle(ctx, `
+	err = client.QuerySingle(ctx, `
 		SELECT <array<int64>>$0`,
 		&result.Val,
 		[]int64(nil),
@@ -6276,7 +6281,7 @@ type OtherSample struct {
 }
 
 func TestMissingObjectFields(t *testing.T) {
-	if conn.conn.protocolVersion.LT(protocolVersion0p11) {
+	if protocolVersion.LT(protocolVersion0p11) {
 		t.Skip()
 	}
 
@@ -6304,7 +6309,7 @@ func TestMissingObjectFields(t *testing.T) {
 		}
 
 		var result Sample
-		err := tx.QueryOne(ctx, `
+		err := tx.QuerySingle(ctx, `
 			SELECT Sample {
 				simple_scalar,
 				array,
@@ -6328,7 +6333,7 @@ func TestMissingObjectFields(t *testing.T) {
 		}
 		assert.Equal(t, expected, result)
 
-		err = tx.QueryOne(ctx, `
+		err = tx.QuerySingle(ctx, `
 			WITH
 				object := (INSERT Sample { simple_scalar := 2 }),
 				set_ := (INSERT Sample { simple_scalar := 3 }),
@@ -6387,7 +6392,7 @@ func TestMissingObjectFields(t *testing.T) {
 		}
 
 		var result2 WrongType
-		err = tx.QueryOne(ctx, `
+		err = tx.QuerySingle(ctx, `
 			SELECT Sample { simple_scalar } LIMIT 1`,
 			&result2,
 		)

@@ -27,7 +27,7 @@ import (
 
 func TestTxRollesBack(t *testing.T) {
 	ctx := context.Background()
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
 		if e := tx.Execute(ctx, query); e != nil {
 			return e
@@ -54,7 +54,7 @@ func TestTxRollesBack(t *testing.T) {
 	`
 
 	var testNames []string
-	err = conn.Query(ctx, query, &testNames)
+	err = client.Query(ctx, query, &testNames)
 
 	require.NoError(t, err)
 	require.Equal(t, 0, len(testNames), "The transaction wasn't rolled back")
@@ -62,7 +62,7 @@ func TestTxRollesBack(t *testing.T) {
 
 func TestTxRollesBackOnUserError(t *testing.T) {
 	ctx := context.Background()
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
 		if e := tx.Execute(ctx, query); e != nil {
 			return e
@@ -82,7 +82,7 @@ func TestTxRollesBackOnUserError(t *testing.T) {
 	`
 
 	var testNames []string
-	err = conn.Query(ctx, query, &testNames)
+	err = client.Query(ctx, query, &testNames)
 
 	require.NoError(t, err)
 	require.Equal(t, 0, len(testNames), "The transaction wasn't rolled back")
@@ -90,7 +90,7 @@ func TestTxRollesBackOnUserError(t *testing.T) {
 
 func TestTxCommits(t *testing.T) {
 	ctx := context.Background()
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		return tx.Execute(ctx, "INSERT TxTest {name := 'Test Commit'};")
 	})
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestTxCommits(t *testing.T) {
 	`
 
 	var testNames []string
-	err = conn.Query(ctx, query, &testNames)
+	err = client.Query(ctx, query, &testNames)
 
 	require.NoError(t, err)
 	require.Equal(
@@ -160,9 +160,9 @@ func TestTxKinds(t *testing.T) {
 		name := fmt.Sprintf("%#v", opts)
 
 		t.Run(name, func(t *testing.T) {
-			c := conn.WithTxOptions(opts)
-			require.NoError(t, c.RawTx(ctx, noOp))
-			require.NoError(t, c.RetryingTx(ctx, noOp))
+			p := client.WithTxOptions(opts)
+			require.NoError(t, p.RawTx(ctx, noOp))
+			require.NoError(t, p.RetryingTx(ctx, noOp))
 		})
 	}
 }

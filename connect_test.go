@@ -26,7 +26,7 @@ import (
 
 func TestAuth(t *testing.T) {
 	ctx := context.Background()
-	conn, err := ConnectOne(ctx, Options{
+	p, err := CreateClient(ctx, Options{
 		Hosts:             opts.Hosts,
 		Ports:             opts.Ports,
 		User:              "user_with_password",
@@ -38,21 +38,21 @@ func TestAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	var result string
-	err = conn.QuerySingle(ctx, "SELECT 'It worked!';", &result)
+	err = p.QuerySingle(ctx, "SELECT 'It worked!';", &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "It worked!", result)
 
-	connCopy := conn.WithTxOptions(NewTxOptions())
+	clientCopy := p.WithTxOptions(NewTxOptions())
 
-	err = conn.Close()
+	err = p.Close()
 	assert.Nil(t, err, "unexpected error: %v", err)
 
 	// A connection should not be closeable more than once.
-	err = conn.Close()
-	msg := "edgedb.InterfaceError: connection released more than once"
+	err = p.Close()
+	msg := "edgedb.InterfaceError: client closed"
 	assert.EqualError(t, err, msg)
 
 	// Copied connections should not be closeable after another copy is closed.
-	err = connCopy.Close()
+	err = clientCopy.Close()
 	assert.EqualError(t, err, msg)
 }

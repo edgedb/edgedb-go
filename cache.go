@@ -25,8 +25,11 @@ Type ID -> Type Descriptor
 codec cache (conn/pool specific) mapping:
 (Type ID, Go Type Ref) -> Codec
 
-type id cache (conn/pool) mapping:
-(Query, Expected Cardinality, IO Format) -> (In Type ID, Out Type ID)
+type id cache (conn/pool specific) mapping:
+(Query, Expected Cardinality, IO Format, outType) -> (In Type ID, Out Type ID)
+
+capabilities cache (conn/pool specific) mapping:
+(Query, Expected Cardinality, IO Format, outType) -> capabilities
 
 Optimistic execute flow:
 1. check type id cache for (eql, expCard, format).

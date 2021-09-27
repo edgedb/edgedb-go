@@ -178,20 +178,6 @@ func (t *Tx) Query(
 	return runQuery(ctx, t, "Query", cmd, out, args)
 }
 
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingle()
-func (t *Tx) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return t.QuerySingle(ctx, cmd, out, args...)
-}
-
 // QuerySingle runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // a NoDataError is returned.
@@ -212,20 +198,6 @@ func (t *Tx) QueryJSON(
 	args ...interface{},
 ) error {
 	return runQuery(ctx, t, "QueryJSON", cmd, out, args)
-}
-
-// QueryOneJSON runs a singleton-returning query.
-// If the query executes successfully but doesn't have a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingleJSON()
-func (t *Tx) QueryOneJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	return t.QuerySingleJSON(ctx, cmd, out, args...)
 }
 
 // QuerySingleJSON runs a singleton-returning query.
