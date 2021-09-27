@@ -87,14 +87,10 @@ type Options struct {
 	// to reestablish a connection.
 	WaitUntilAvailable time.Duration
 
-	// MinConns has no effect.
-	// Deprecated: does nothing
-	MinConns uint
-
-	// MaxConns determines the maximum number of connections.
-	// If MaxConns is zero, max(4, runtime.NumCPU()) will be used.
+	// Concurrency determines the maximum number of connections.
+	// If Concurrency is zero, max(4, runtime.NumCPU()) will be used.
 	// Has no effect for single connections.
-	MaxConns uint
+	Concurrency uint
 
 	// Read the TLS certificate from this file
 	TLSCAFile string
@@ -142,7 +138,7 @@ func NewRetryRule() RetryRule {
 }
 
 // RetryRule determines how transactions should be retried
-// when run in RetryingTx() methods. See Pool.RetryingTx() for details.
+// when run in RetryingTx() methods. See Client.RetryingTx() for details.
 type RetryRule struct {
 	// fromFactory indicates that a RetryOptions value was created using
 	// NewRetryOptions() and not created directly. Requiring users to use the
@@ -280,14 +276,14 @@ func (o TxOptions) WithIsolation(i IsolationLevel) TxOptions {
 	return o
 }
 
-// WithReadOnly returns a shallow copy of the pool
+// WithReadOnly returns a shallow copy of the client
 // with the transaction read only access mode set to r.
 func (o TxOptions) WithReadOnly(r bool) TxOptions {
 	o.readOnly = r
 	return o
 }
 
-// WithDeferrable returns a shallow copy of the pool
+// WithDeferrable returns a shallow copy of the client
 // with the transaction deferrable mode set to d.
 func (o TxOptions) WithDeferrable(d bool) TxOptions {
 	o.deferrable = d
@@ -322,9 +318,9 @@ func (o TxOptions) startTxQuery() string { // nolint:gocritic
 	return query
 }
 
-// WithTxOptions returns a shallow copy of the pool
+// WithTxOptions returns a shallow copy of the client
 // with the TxOptions set to opts.
-func (p Pool) WithTxOptions(opts TxOptions) *Pool { // nolint:gocritic
+func (p Client) WithTxOptions(opts TxOptions) *Client { // nolint:gocritic
 	if !opts.fromFactory {
 		panic("TxOptions not created with NewTxOptions() are not valid")
 	}
@@ -333,57 +329,15 @@ func (p Pool) WithTxOptions(opts TxOptions) *Pool { // nolint:gocritic
 	return &p
 }
 
-// WithRetryOptions returns a shallow copy of the pool
+// WithRetryOptions returns a shallow copy of the client
 // with the RetryOptions set to opts.
-func (p Pool) WithRetryOptions(opts RetryOptions) *Pool { // nolint:gocritic
+func (p Client) WithRetryOptions( // nolint:gocritic
+	opts RetryOptions,
+) *Client {
 	if !opts.fromFactory {
 		panic("RetryOptions not created with NewRetryOptions() are not valid")
 	}
 
 	p.retryOpts = opts
 	return &p
-}
-
-// WithTxOptions returns a shallow copy of the connection
-// with the TxOptions set to opts.
-func (c PoolConn) WithTxOptions(opts TxOptions) *PoolConn { // nolint:gocritic
-	if !opts.fromFactory {
-		panic("TxOptions not created with NewTxOptions() are not valid")
-	}
-
-	c.txOpts = opts
-	return &c
-}
-
-// WithRetryOptions returns a shallow copy of the connection
-// with the RetryOptions set to opts.
-func (c PoolConn) WithRetryOptions(opts RetryOptions) *PoolConn { // nolint:gocritic,lll
-	if !opts.fromFactory {
-		panic("RetryOptions not created with NewRetryOptions() are not valid")
-	}
-
-	c.retryOpts = opts
-	return &c
-}
-
-// WithTxOptions returns a shallow copy of the connection
-// with the TxOptions set to opts.
-func (c Conn) WithTxOptions(opts TxOptions) *Conn { // nolint:gocritic
-	if !opts.fromFactory {
-		panic("TxOptions not created with NewTxOptions() are not valid")
-	}
-
-	c.txOpts = opts
-	return &c
-}
-
-// WithRetryOptions returns a shallow copy of the connection
-// with the RetryOptions set to opts.
-func (c Conn) WithRetryOptions(opts RetryOptions) *Conn { // nolint:gocritic
-	if !opts.fromFactory {
-		panic("RetryOptions not created with NewRetryOptions() are not valid")
-	}
-
-	c.retryOpts = opts
-	return &c
 }

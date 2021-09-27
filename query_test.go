@@ -30,7 +30,7 @@ import (
 func TestQueryCachingIncludesOutType(t *testing.T) {
 	ctx := context.Background()
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
 			Val OptionalTuple `edgedb:"val"`
 		}
@@ -47,7 +47,7 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 	})
 	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
 
-	err = conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err = client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
 			Val OptionalNamedTuple `edgedb:"val"`
 		}
@@ -67,7 +67,7 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 }
 
 func TestObjectWithoutID(t *testing.T) {
-	if conn.transactableConn.conn.protocolVersion.LT(protocolVersion0p10) {
+	if protocolVersion.LT(protocolVersion0p10) {
 		t.Skip("not expected to pass on protocol versions below 0.10")
 	}
 
@@ -78,7 +78,7 @@ func TestObjectWithoutID(t *testing.T) {
 	}
 
 	var result Database
-	err := conn.QuerySingle(
+	err := client.QuerySingle(
 		ctx, `
 		SELECT sys::Database{ name }
 		FILTER .name = 'edgedb'
@@ -92,7 +92,7 @@ func TestObjectWithoutID(t *testing.T) {
 func TestWrongNumberOfArguments(t *testing.T) {
 	var result string
 	ctx := context.Background()
-	err := conn.QuerySingle(ctx, `SELECT <str>$0`, &result)
+	err := client.QuerySingle(ctx, `SELECT <str>$0`, &result)
 	assert.EqualError(t, err,
 		"edgedb.InvalidArgumentError: expected 1 arguments got 0")
 }
@@ -102,20 +102,20 @@ func TestConnRejectsTransactions(t *testing.T) {
 		"cannot execute transaction control commands"
 
 	ctx := context.Background()
-	err := conn.Execute(ctx, "START TRANSACTION")
+	err := client.Execute(ctx, "START TRANSACTION")
 	assert.EqualError(t, err, expected)
 
 	var result []byte
-	err = conn.Query(ctx, "START TRANSACTION", &result)
+	err = client.Query(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = conn.QueryJSON(ctx, "START TRANSACTION", &result)
+	err = client.QueryJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = conn.QuerySingle(ctx, "START TRANSACTION", &result)
+	err = client.QuerySingle(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 
-	err = conn.QuerySingleJSON(ctx, "START TRANSACTION", &result)
+	err = client.QuerySingleJSON(ctx, "START TRANSACTION", &result)
 	assert.EqualError(t, err, expected)
 }
 
@@ -123,7 +123,7 @@ func TestMissmatchedCardinality(t *testing.T) {
 	ctx := context.Background()
 
 	var result []int64
-	err := conn.QuerySingle(ctx, "SELECT {1, 2, 3}", &result)
+	err := client.QuerySingle(ctx, "SELECT {1, 2, 3}", &result)
 
 	expected := "edgedb.ResultCardinalityMismatchError: " +
 		"the query has cardinality MANY " +
@@ -147,7 +147,7 @@ func TestMissmatchedResultType(t *testing.T) {
 	var result A
 
 	ctx := context.Background()
-	err := conn.QuerySingle(ctx, "SELECT (x := (y := (z := 7)))", &result)
+	err := client.QuerySingle(ctx, "SELECT (x := (y := (z := 7)))", &result)
 
 	expected := "edgedb.InvalidArgumentError: " +
 		"the \"out\" argument does not match query schema: " +
@@ -162,7 +162,7 @@ func TestParseAllMessagesAfterError(t *testing.T) {
 
 	// cause error during prepare
 	var number float64
-	err := conn.QuerySingle(ctx, "SELECT 1 / $0", &number, int64(5))
+	err := client.QuerySingle(ctx, "SELECT 1 / $0", &number, int64(5))
 	expected := `edgedb.QueryError: missing a type cast before the parameter
 query:1:12
 
@@ -171,15 +171,15 @@ SELECT 1 / $0
 	assert.EqualError(t, err, expected)
 
 	// cause erroy during execute
-	err = conn.QuerySingle(ctx, "SELECT 1 / 0", &number)
+	err = client.QuerySingle(ctx, "SELECT 1 / 0", &number)
 	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
 
 	// cache query so that it is run optimistically next time
-	err = conn.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
+	err = client.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
 	assert.NoError(t, err)
 
 	// cause error during optimistic execute
-	err = conn.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
+	err = client.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
 	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
 }
 
@@ -190,7 +190,7 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 
 	var res Tuple
 	ctx := context.Background()
-	err := conn.QuerySingle(ctx,
+	err := client.QuerySingle(ctx,
 		"SELECT (<int16>$0 + <int16>$1,)", &res, 1, 1111)
 
 	require.NotNil(t, err)
@@ -202,7 +202,7 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 func TestNamedQueryArguments(t *testing.T) {
 	ctx := context.Background()
 	var result [][]int64
-	err := conn.Query(
+	err := client.Query(
 		ctx,
 		"SELECT [<int64>$first, <int64>$second]",
 		&result,
@@ -219,7 +219,7 @@ func TestNamedQueryArguments(t *testing.T) {
 func TestNumberedQueryArguments(t *testing.T) {
 	ctx := context.Background()
 	result := [][]int64{}
-	err := conn.Query(
+	err := client.Query(
 		ctx,
 		"SELECT [<int64>$0, <int64>$1]",
 		&result,
@@ -234,7 +234,7 @@ func TestNumberedQueryArguments(t *testing.T) {
 func TestQueryJSON(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := conn.QueryJSON(
+	err := client.QueryJSON(
 		ctx,
 		"SELECT {(a := 0, b := <int64>$0), (a := 42, b := <int64>$1)}",
 		&result,
@@ -257,7 +257,7 @@ func TestQueryJSON(t *testing.T) {
 func TestQuerySingleJSON(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := conn.QuerySingleJSON(
+	err := client.QuerySingleJSON(
 		ctx,
 		"SELECT (a := 0, b := <int64>$0)",
 		&result,
@@ -275,7 +275,7 @@ func TestQuerySingleJSON(t *testing.T) {
 func TestQuerySingleJSONZeroResults(t *testing.T) {
 	ctx := context.Background()
 	var result []byte
-	err := conn.QuerySingleJSON(ctx, "SELECT <int64>{}", &result)
+	err := client.QuerySingleJSON(ctx, "SELECT <int64>{}", &result)
 
 	require.Equal(t, err, errZeroResults)
 	assert.Equal(t, []byte(nil), result)
@@ -284,7 +284,7 @@ func TestQuerySingleJSONZeroResults(t *testing.T) {
 func TestQuerySingle(t *testing.T) {
 	ctx := context.Background()
 	var result int64
-	err := conn.QuerySingle(ctx, "SELECT 42", &result)
+	err := client.QuerySingle(ctx, "SELECT 42", &result)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(42), result)
@@ -293,14 +293,14 @@ func TestQuerySingle(t *testing.T) {
 func TestQuerySingleZeroResults(t *testing.T) {
 	ctx := context.Background()
 	var result int64
-	err := conn.QuerySingle(ctx, "SELECT <int64>{}", &result)
+	err := client.QuerySingle(ctx, "SELECT <int64>{}", &result)
 
 	assert.Equal(t, errZeroResults, err)
 }
 
 func TestError(t *testing.T) {
 	ctx := context.Background()
-	err := conn.Execute(ctx, "malformed query;")
+	err := client.Execute(ctx, "malformed query;")
 	assert.EqualError(
 		t,
 		err,
@@ -320,7 +320,7 @@ func TestQueryTimesOut(t *testing.T) {
 	defer cancel()
 
 	var r int64
-	err := conn.QuerySingle(ctx, "SELECT 1;", &r)
+	err := client.QuerySingle(ctx, "SELECT 1;", &r)
 	require.True(
 		t,
 		errors.Is(err, context.DeadlineExceeded) ||
@@ -329,14 +329,14 @@ func TestQueryTimesOut(t *testing.T) {
 	)
 	require.Equal(t, int64(0), r)
 
-	err = conn.QuerySingle(context.Background(), "SELECT 2;", &r)
+	err = client.QuerySingle(context.Background(), "SELECT 2;", &r)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), r)
 }
 
 func TestNilResultValue(t *testing.T) {
 	ctx := context.Background()
-	err := conn.Query(ctx, "SELECT 1", nil)
+	err := client.Query(ctx, "SELECT 1", nil)
 	assert.EqualError(t, err,
 		"the \"out\" argument must be a pointer, got untyped nil")
 }

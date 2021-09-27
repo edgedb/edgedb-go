@@ -18,6 +18,8 @@
 //
 // Typical usage looks like this:
 //
+//   package main
+//
 //   import (
 //       "context"
 //       "log"
@@ -25,53 +27,42 @@
 //       "github.com/edgedb/edgedb-go"
 //   )
 //
-//   opts := edgedb.Options{
-//       MinConns: 1,
-//       MaxConns: 4,
-//   }
-//
 //   func main() {
 //       ctx := context.Background()
-//       pool, err := edgedb.ConnectDSN(ctx, "my_instance", opts)
+//       client, err := edgedb.CreateClient(ctx, edgedb.Options{})
 //       if err != nil {
 //           log.Fatal(err)
 //       }
-//       defer pool.Close()
+//       defer client.Close()
 //
 //       var (
-//           age int64 = 21
-//           users []struct{
-//               ID edgedb.UUID `edgedb:"id"`
-//               Name string    `edgedb:"name"`
+//           age   int64 = 21
+//           users []struct {
+//               ID   edgedb.UUID `edgedb:"id"`
+//               Name string      `edgedb:"name"`
 //           }
 //       )
 //
-//       query := "SELECT User{name} WHERE .age = <int64>$0"
-//       err = pool.Query(ctx, query, &users, age)
+//       query := "SELECT User{name} FILTER .age = <int64>$0"
+//       err = client.Query(ctx, query, &users, age)
 //       ...
 //   }
 //
 // You can also connect to a database using a DSN:
 //
 //   url := "edgedb://edgedb@localhost/edgedb"
-//   pool, err := edgedb.ConnectDSN(ctx, url, opts)
+//   client, err := edgedb.CreateClientDSN(ctx, url, opts)
 //
 // Or you can use Option fields.
 //
 //   opts := edgedb.Options{
-//       Database: "edgedb",
-//       User:     "edgedb",
-//       MinConns: 1,
-//       MaxConns: 4,
+//       Database:    "edgedb",
+//       User:        "edgedb",
+//       Concurrency: 4,
 //   }
 //
-//   pool, err := edgedb.Connect(ctx, opts)
+//   client, err := edgedb.CreateClient(ctx, opts)
 //
-// Pooling
-//
-// Most use cases will benefit from the concurrency safe pool implementation
-// returned from Connect() and ConnectDSN(). Pool.RetryingTx() or Pool.RawTx()
-// will give you access to a single connection.
 //
 // Errors
 //
@@ -79,13 +70,13 @@
 // If you are checking for things like context expiration
 // use errors.Is() or errors.As().
 //
-//   err := pool.Query(...)
+//   err := client.Query(...)
 //   if errors.Is(err, context.Canceled) { ... }
 //
 // Most errors returned by the edgedb package will satisfy the edgedb.Error
 // interface which has methods for introspecting.
 //
-//   err := pool.Query(...)
+//   err := client.Query(...)
 //
 //   var edbErr edgedb.Error
 //   if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){

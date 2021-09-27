@@ -32,13 +32,9 @@ type User struct {
 }
 
 func Example() {
-	opts := edgedb.Options{
-		MinConns: 1,
-		MaxConns: 4,
-	}
-
+	opts := edgedb.Options{Concurrency: 4}
 	ctx := context.Background()
-	db, err := edgedb.ConnectDSN(ctx, "edgedb://edgedb@localhost/test", opts)
+	db, err := edgedb.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
 	if err != nil {
 		log.Fatal(err)
 	}

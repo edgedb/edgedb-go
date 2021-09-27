@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	defaultMaxConns = max(4, runtime.NumCPU())
+	defaultConcurrency = max(4, runtime.NumCPU())
 )
 
 func max(a, b int) int {
@@ -38,18 +38,20 @@ func max(a, b int) int {
 	return b
 }
 
-// Pool is a connection pool and is safe for concurrent use.
-type Pool struct {
-	isClosed *bool
-	mu       *sync.RWMutex // locks isClosed
+// Client is a connection pool and is safe for concurrent use.
+type Client struct {
+	isClosed      *bool
+	isClosedMutex *sync.RWMutex // locks isClosed
 
 	// A buffered channel of connections ready for use.
 	freeConns chan transactableConn
 
 	// A buffered channel of structs representing unconnected capacity.
-	potentialConns chan struct{}
+	// This field remains nil until the first connection is acquired.
+	potentialConns       chan struct{}
+	potentialConnsMutext *sync.Mutex
 
-	maxConns int
+	concurrency int
 
 	txOpts    TxOptions
 	retryOpts RetryOptions
@@ -58,12 +60,13 @@ type Pool struct {
 	cacheCollection
 }
 
-// Connect a pool of connections to a server.
-func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocritic,lll
-	return ConnectDSN(ctx, "", opts)
+// CreateClient returns a new client. The client connects lazily. Call
+// Client.EnsureConnected() to force a connection.
+func CreateClient(ctx context.Context, opts Options) (*Client, error) { // nolint:gocritic,lll
+	return CreateClientDSN(ctx, "", opts)
 }
 
-// ConnectDSN connects a pool to a server.
+// CreateClientDSN returns a new client. See also CreateClient.
 //
 // dsn is either an instance name
 // https://www.edgedb.com/docs/clients/00_python/instances/#edgedb-instances
@@ -72,19 +75,21 @@ func Connect(ctx context.Context, opts Options) (*Pool, error) { // nolint:gocri
 //     edgedb://user:password@host:port/database?option=value.
 //
 // The following options are recognized: host, port, user, database, password.
-func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { // nolint:gocritic,lll
+func CreateClientDSN(ctx context.Context, dsn string, opts Options) (*Client, error) { // nolint:gocritic,lll
 	cfg, err := parseConnectDSNAndArgs(dsn, &opts)
 	if err != nil {
 		return nil, err
 	}
 
 	False := false
-	p := &Pool{
-		isClosed:  &False,
-		mu:        &sync.RWMutex{},
-		cfg:       cfg,
-		txOpts:    NewTxOptions(),
-		freeConns: make(chan transactableConn, 1),
+	p := &Client{
+		isClosed:             &False,
+		isClosedMutex:        &sync.RWMutex{},
+		cfg:                  cfg,
+		txOpts:               NewTxOptions(),
+		concurrency:          int(opts.Concurrency),
+		freeConns:            make(chan transactableConn, 1),
+		potentialConnsMutext: &sync.Mutex{},
 		retryOpts: RetryOptions{
 			txConflict: RetryRule{attempts: 3, backoff: defaultBackoff},
 			network:    RetryRule{attempts: 3, backoff: defaultBackoff},
@@ -98,32 +103,10 @@ func ConnectDSN(ctx context.Context, dsn string, opts Options) (*Pool, error) { 
 		},
 	}
 
-	conn, err := p.newConn(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	suggested, err := strconv.Atoi(
-		conn.cfg.serverSettings["suggested_pool_concurrency"])
-	switch {
-	case opts.MaxConns == 0 && err == nil:
-		p.maxConns = suggested
-	case opts.MaxConns == 0:
-		p.maxConns = defaultMaxConns
-	default:
-		p.maxConns = int(opts.MaxConns)
-	}
-
-	p.freeConns <- conn
-	p.potentialConns = make(chan struct{}, p.maxConns)
-	for i := 0; i < p.maxConns-1; i++ {
-		p.potentialConns <- struct{}{}
-	}
-
 	return p, nil
 }
 
-func (p *Pool) newConn(ctx context.Context) (transactableConn, error) {
+func (p *Client) newConn(ctx context.Context) (transactableConn, error) {
 	conn := transactableConn{
 		txOpts:    p.txOpts,
 		retryOpts: p.retryOpts,
@@ -140,13 +123,43 @@ func (p *Pool) newConn(ctx context.Context) (transactableConn, error) {
 	return conn, nil
 }
 
-func (p *Pool) acquire(ctx context.Context) (transactableConn, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+func (p *Client) acquire(ctx context.Context) (transactableConn, error) {
+	p.isClosedMutex.RLock()
+	defer p.isClosedMutex.RUnlock()
 
 	if *p.isClosed {
-		return transactableConn{}, &interfaceError{msg: "pool closed"}
+		return transactableConn{}, &interfaceError{msg: "client closed"}
 	}
+
+	p.potentialConnsMutext.Lock()
+	if p.potentialConns == nil {
+		conn, err := p.newConn(ctx)
+		if err != nil {
+			p.potentialConnsMutext.Unlock()
+			return transactableConn{}, err
+		}
+
+		if p.concurrency == 0 {
+			// The user did not set Concurrency in provided Options.
+			// See if the server sends a suggested max size.
+			suggested, err := strconv.Atoi(
+				conn.cfg.serverSettings["suggested_pool_concurrency"])
+			if err == nil {
+				p.concurrency = suggested
+			} else {
+				p.concurrency = defaultConcurrency
+			}
+		}
+
+		p.potentialConns = make(chan struct{}, p.concurrency)
+		for i := 0; i < p.concurrency-1; i++ {
+			p.potentialConns <- struct{}{}
+		}
+
+		p.potentialConnsMutext.Unlock()
+		return conn, nil
+	}
+	p.potentialConnsMutext.Unlock()
 
 	// force do nothing if context is expired
 	select {
@@ -177,26 +190,7 @@ func (p *Pool) acquire(ctx context.Context) (transactableConn, error) {
 	}
 }
 
-// Acquire returns a connection from the pool
-// blocking until a connection is available.
-// Acquired connections must be released to the pool when no longer needed.
-//
-// Deprecated: use the query methods on Pool instead
-func (p *Pool) Acquire(ctx context.Context) (*PoolConn, error) {
-	conn, err := p.acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	False := false
-	return &PoolConn{
-		transactableConn: conn,
-		pool:             p,
-		isClosed:         &False,
-	}, nil
-}
-
-func (p *Pool) release(conn *transactableConn, err error) error {
+func (p *Client) release(conn *transactableConn, err error) error {
 	if isClientConnectionError(err) {
 		p.potentialConns <- struct{}{}
 		return conn.Close()
@@ -213,21 +207,39 @@ func (p *Pool) release(conn *transactableConn, err error) error {
 	return nil
 }
 
+// EnsureConnected forces the client to connect if it hasn't already.
+func (p *Client) EnsureConnected(ctx context.Context) error {
+	conn, err := p.acquire(ctx)
+	if err != nil {
+		return err
+	}
+
+	return p.release(&conn, nil)
+}
+
 // Close closes all connections in the pool.
 // Calling close blocks until all acquired connections have been released,
 // and returns an error if called more than once.
-func (p *Pool) Close() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (p *Client) Close() error {
+	p.isClosedMutex.Lock()
+	defer p.isClosedMutex.Unlock()
 
 	if *p.isClosed {
-		return &interfaceError{msg: "pool closed"}
+		return &interfaceError{msg: "client closed"}
 	}
 	*p.isClosed = true
 
+	p.potentialConnsMutext.Lock()
+	if p.potentialConns == nil {
+		// The client never made any connections.
+		p.potentialConnsMutext.Unlock()
+		return nil
+	}
+	p.potentialConnsMutext.Unlock()
+
 	wg := sync.WaitGroup{}
-	errs := make([]error, p.maxConns)
-	for i := 0; i < p.maxConns; i++ {
+	errs := make([]error, p.concurrency)
+	for i := 0; i < p.concurrency; i++ {
 		select {
 		case conn := <-p.freeConns:
 			wg.Add(1)
@@ -244,7 +256,7 @@ func (p *Pool) Close() error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (p *Pool) Execute(ctx context.Context, cmd string) error {
+func (p *Client) Execute(ctx context.Context, cmd string) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
@@ -260,7 +272,7 @@ func (p *Pool) Execute(ctx context.Context, cmd string) error {
 }
 
 // Query runs a query and returns the results.
-func (p *Pool) Query(
+func (p *Client) Query(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -275,24 +287,10 @@ func (p *Pool) Query(
 	return firstError(err, p.release(&conn, err))
 }
 
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingle()
-func (p *Pool) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return p.QuerySingle(ctx, cmd, out, args...)
-}
-
 // QuerySingle runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // a NoDataError is returned.
-func (p *Pool) QuerySingle(
+func (p *Client) QuerySingle(
 	ctx context.Context,
 	cmd string,
 	out interface{},
@@ -308,7 +306,7 @@ func (p *Pool) QuerySingle(
 }
 
 // QueryJSON runs a query and return the results as JSON.
-func (p *Pool) QueryJSON(
+func (p *Client) QueryJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -323,24 +321,10 @@ func (p *Pool) QueryJSON(
 	return firstError(err, p.release(&conn, err))
 }
 
-// QueryOneJSON runs a singleton-returning query.
-// If the query executes successfully but doesn't have a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingleJSON()
-func (p *Pool) QueryOneJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	return p.QuerySingleJSON(ctx, cmd, out, args...)
-}
-
 // QuerySingleJSON runs a singleton-returning query.
 // If the query executes successfully but doesn't have a result
 // a NoDataError is returned.
-func (p *Pool) QuerySingleJSON(
+func (p *Client) QuerySingleJSON(
 	ctx context.Context,
 	cmd string,
 	out *[]byte,
@@ -358,7 +342,7 @@ func (p *Pool) QuerySingleJSON(
 // RawTx runs an action in a transaction.
 // If the action returns an error the transaction is rolled back,
 // otherwise it is committed.
-func (p *Pool) RawTx(ctx context.Context, action TxBlock) error {
+func (p *Client) RawTx(ctx context.Context, action TxBlock) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
@@ -382,7 +366,7 @@ func (p *Pool) RawTx(ctx context.Context, action TxBlock) error {
 // If either field is unset (see RetryRule) then the default rule is used.
 // If the object's default is unset the fall back is 3 attempts
 // and exponential backoff.
-func (p *Pool) RetryingTx(ctx context.Context, action TxBlock) error {
+func (p *Client) RetryingTx(ctx context.Context, action TxBlock) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err

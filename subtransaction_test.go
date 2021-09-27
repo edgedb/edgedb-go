@@ -33,7 +33,7 @@ func TestSubtxRollback(t *testing.T) {
 		return fmt.Sprintf("INSERT TxTest {name := 'subtx %v'};", s)
 	}
 
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		err := tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
 			err := stx.Execute(ctx, insertName("rollback 1"))
 			assert.Nil(t, err, "unexpected error: %v", err)
@@ -79,7 +79,7 @@ func TestSubtxRollback(t *testing.T) {
 	assert.Nil(t, err, "unexpected error: %v", err)
 
 	var names []string
-	err = conn.Query(
+	err = client.Query(
 		ctx, `
 		SELECT names := (SELECT TxTest {name}).name
 		FILTER names LIKE 'subtx %'
@@ -98,81 +98,28 @@ func TestSubtxRollback(t *testing.T) {
 
 func TestSubtxBorrowing(t *testing.T) {
 	ctx := context.Background()
-
 	noOpSubtx := func(ctx context.Context, stx *Subtx) error { return nil }
-	noOpTx := func(ctx context.Context, tx *Tx) error { return nil }
 
-	expected := "edgedb.InterfaceError: " +
-		"The connection is borrowed for a transaction. " +
-		"Use the methods on the transaction object instead."
-
-	connCopy := conn.WithTxOptions(NewTxOptions())
-
-	err := conn.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
-		// the connection should not be borrowable
-		err := conn.Execute(ctx, "SELECT 1")
-		assert.EqualError(t, err, expected)
-
-		var result []byte
-		err = conn.Query(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = conn.QueryOne(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = conn.QueryJSON(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = conn.QueryOneJSON(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = conn.RawTx(ctx, noOpTx)
-		assert.EqualError(t, err, expected)
-
-		err = conn.RetryingTx(ctx, noOpTx)
-		assert.EqualError(t, err, expected)
-
-		// copied connections should not be borrowable either
-		err = connCopy.Execute(ctx, "SELECT 1")
-		assert.EqualError(t, err, expected)
-
-		err = connCopy.Query(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = connCopy.QueryOne(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = connCopy.QueryJSON(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = connCopy.QueryOneJSON(ctx, "SELECT b''", &result)
-		assert.EqualError(t, err, expected)
-
-		err = connCopy.RawTx(ctx, noOpTx)
-		assert.EqualError(t, err, expected)
-
-		err = connCopy.RetryingTx(ctx, noOpTx)
-		assert.EqualError(t, err, expected)
-
-		err = tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
+	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+		err := tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
 			expected := "edgedb.InterfaceError: " +
 				"The transaction is borrowed for a subtransaction. " +
 				"Use the methods on the subtransaction object instead."
 
-			err = tx.Execute(ctx, "SELECT 1")
+			err := tx.Execute(ctx, "SELECT 1")
 			assert.EqualError(t, err, expected)
 
 			var result []byte
 			err = tx.Query(ctx, "SELECT b''", &result)
 			assert.EqualError(t, err, expected)
 
-			err = tx.QueryOne(ctx, "SELECT b''", &result)
+			err = tx.QuerySingle(ctx, "SELECT b''", &result)
 			assert.EqualError(t, err, expected)
 
 			err = tx.QueryJSON(ctx, "SELECT b''", &result)
 			assert.EqualError(t, err, expected)
 
-			err = tx.QueryOneJSON(ctx, "SELECT b''", &result)
+			err = tx.QuerySingleJSON(ctx, "SELECT b''", &result)
 			assert.EqualError(t, err, expected)
 
 			err = tx.Subtx(ctx, noOpSubtx)

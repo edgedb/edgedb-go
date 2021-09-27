@@ -46,20 +46,6 @@ func (c *transactableConn) Query(
 	return runQuery(ctx, c, "Query", cmd, out, args)
 }
 
-// QueryOne runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingle() instead
-func (c *transactableConn) QueryOne(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return c.QuerySingle(ctx, cmd, out, args...)
-}
-
 // QuerySingle runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
 // a NoDataError is returned.
@@ -80,20 +66,6 @@ func (c *transactableConn) QueryJSON(
 	args ...interface{},
 ) error {
 	return runQuery(ctx, c, "QueryJSON", cmd, out, args)
-}
-
-// QueryOneJSON runs a singleton-returning query.
-// If the query executes successfully but doesn't have a result
-// a NoDataError is returned.
-//
-// Deprecated: use QuerySingleJSON() instead
-func (c *transactableConn) QueryOneJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	return c.QuerySingleJSON(ctx, cmd, out, args...)
 }
 
 // QuerySingleJSON runs a singleton-returning query.

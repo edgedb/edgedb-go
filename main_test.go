@@ -33,17 +33,20 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/edgedb/edgedb-go/internal"
 )
 
 // initialized by TestMain
 var (
-	opts Options
-	conn *Conn
+	opts            Options
+	client          *Client
+	protocolVersion internal.ProtocolVersion
 )
 
 func executeOrPanic(command string) {
 	ctx := context.Background()
-	err := conn.Execute(ctx, command)
+	err := client.Execute(ctx, command)
 	if err != nil {
 		panic(err)
 	}
@@ -219,13 +222,22 @@ func TestMain(m *testing.M) {
 
 	ctx := context.Background()
 	log.Println("connecting")
-	conn, err = ConnectOne(ctx, opts)
+	client, err = CreateClient(ctx, opts)
 	if err != nil {
 		panic(err)
 	}
 	log.Println("connected")
 
-	defer conn.Close() // nolint:errcheck
+	defer client.Close() // nolint:errcheck
+	conn, err := client.acquire(ctx)
+	if err != nil {
+		panic(err)
+	}
+	protocolVersion = conn.conn.protocolVersion
+	err = client.release(&conn, nil)
+	if err != nil {
+		panic(err)
+	}
 
 	log.Println("running migration")
 	executeOrPanic(`

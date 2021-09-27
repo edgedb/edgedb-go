@@ -432,7 +432,7 @@ func TestConUtils(t *testing.T) {
 
 func TestConnectTimeout(t *testing.T) {
 	ctx := context.Background()
-	conn, err := ConnectOne(ctx, Options{
+	p, err := CreateClient(ctx, Options{
 		Hosts:              opts.Hosts,
 		Ports:              opts.Ports,
 		User:               opts.User,
@@ -442,8 +442,9 @@ func TestConnectTimeout(t *testing.T) {
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
-	if conn != nil {
-		_ = conn.Close()
+	if p != nil {
+		err = p.EnsureConnected(ctx)
+		_ = p.Close()
 	}
 
 	require.NotNil(t, err, "connection didn't timeout")
@@ -461,14 +462,15 @@ func TestConnectTimeout(t *testing.T) {
 
 func TestConnectRefused(t *testing.T) {
 	ctx := context.Background()
-	conn, err := ConnectOne(ctx, Options{
+	p, err := CreateClient(ctx, Options{
 		Hosts:              []string{"localhost"},
 		Ports:              []int{23456},
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
-	if conn != nil {
-		_ = conn.Close()
+	if p != nil {
+		err = p.EnsureConnected(ctx)
+		_ = p.Close()
 	}
 
 	require.NotNil(t, err, "connection wasn't refused")
@@ -485,14 +487,15 @@ func TestConnectRefused(t *testing.T) {
 
 func TestConnectInvalidName(t *testing.T) {
 	ctx := context.Background()
-	conn, err := ConnectOne(ctx, Options{
+	p, err := CreateClient(ctx, Options{
 		Hosts:              []string{"invalid.example.org"},
 		Ports:              []int{23456},
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
-	if conn != nil {
-		_ = conn.Close()
+	if p != nil {
+		err = p.EnsureConnected(ctx)
+		_ = p.Close()
 	}
 
 	require.NotNil(t, err, "name was resolved")
@@ -518,13 +521,14 @@ func TestConnectInvalidName(t *testing.T) {
 
 func TestConnectRefusedUnixSocket(t *testing.T) {
 	ctx := context.Background()
-	conn, err := ConnectOne(ctx, Options{
+	p, err := CreateClient(ctx, Options{
 		Hosts:              []string{"/tmp/non-existent"},
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
-	if conn != nil {
-		_ = conn.Close()
+	if p != nil {
+		err = p.EnsureConnected(ctx)
+		_ = p.Close()
 	}
 
 	require.NotNil(t, err, "connection wasn't refused")
