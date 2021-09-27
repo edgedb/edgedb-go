@@ -557,7 +557,9 @@ func parseConnectDSNAndArgs(
 		NextProtos: []string{"edgedb-binary"},
 	}
 
-	if verify, ok := tlsVerifyHostname.Get(); ok && !verify {
+	if os.Getenv("EDGEDB_INSECURE_DEV_MODE") != "" {
+		tlsConfig.InsecureSkipVerify = true
+	} else if verify, ok := tlsVerifyHostname.Get(); ok && !verify {
 		// Set InsecureSkipVerify to skip the default validation we are
 		// replacing. This will not disable VerifyConnection.
 		tlsConfig.InsecureSkipVerify = true
