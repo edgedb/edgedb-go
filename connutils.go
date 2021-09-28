@@ -462,7 +462,8 @@ func parseConnectDSNAndArgs(
 		if dsnEnvExists {
 			compoundOptionsCount++
 		}
-		instanceName, instanceEnvExists := os.LookupEnv("EDGEDB_INSTANCE")
+		var instanceEnvExists bool
+		instanceName, instanceEnvExists = os.LookupEnv("EDGEDB_INSTANCE")
 		if instanceEnvExists {
 			compoundOptionsCount++
 		}

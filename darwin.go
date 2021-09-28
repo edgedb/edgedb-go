@@ -24,8 +24,6 @@ import (
 	"path"
 )
 
-var defaultHosts = []string{"/run/edgedb", "/var/run/edgedb"}
-
 func getSystemCertPool() (*x509.CertPool, error) {
 	return x509.SystemCertPool()
 }
