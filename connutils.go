@@ -762,23 +762,25 @@ func parseDSNIntoConfig(
 		)}
 	}
 
-	query, err := url.ParseQuery(parsed.RawQuery)
+	parsedQuery, err := url.ParseQuery(parsed.RawQuery)
 	if err != nil {
 		return &configurationError{msg: fmt.Sprintf(
 			"could not parse DSN query parameters %q: %v",
 			parsed.RawQuery, err,
 		)}
 	}
-	for k, v := range query {
+	query := make(map[string]string, len(parsedQuery))
+	for k, v := range parsedQuery {
 		if len(v) > 1 {
 			return &configurationError{msg: fmt.Sprintf(
 				`invalid DSN: duplicate query parameter %q`, k,
 			)}
 		}
+		query[k] = v[0]
 	}
 
 	if host, source, isSet, err := getDSNPart(
-		&query, "host", parsed.Hostname(), resolvedConfig.host != "",
+		query, "host", parsed.Hostname(), resolvedConfig.host != "",
 	); err != nil || isSet {
 		if err != nil {
 			return err
@@ -790,7 +792,7 @@ func parseDSNIntoConfig(
 	}
 
 	if port, source, isSet, err := getDSNPart(
-		&query, "port", parsed.Port(), resolvedConfig.port != 0,
+		query, "port", parsed.Port(), resolvedConfig.port != 0,
 	); err != nil || isSet {
 		if err != nil {
 			return err
@@ -802,7 +804,7 @@ func parseDSNIntoConfig(
 	}
 
 	if database, source, isSet, err := getDSNPart(
-		&query, "database",
+		query, "database",
 		strings.TrimPrefix(parsed.Path, "/"),
 		resolvedConfig.database != "",
 	); err != nil || isSet {
@@ -818,7 +820,7 @@ func parseDSNIntoConfig(
 	}
 
 	if user, source, isSet, err := getDSNPart(
-		&query, "user", parsed.User.Username(), resolvedConfig.user != "",
+		query, "user", parsed.User.Username(), resolvedConfig.user != "",
 	); err != nil || isSet {
 		if err != nil {
 			return err
@@ -831,7 +833,7 @@ func parseDSNIntoConfig(
 
 	parsedPassword, _ := parsed.User.Password()
 	if password, source, isSet, err := getDSNPart(
-		&query, "password", parsedPassword, resolvedConfig.passwordSet,
+		query, "password", parsedPassword, resolvedConfig.passwordSet,
 	); err != nil || isSet {
 		if err != nil {
 			return err
@@ -840,7 +842,7 @@ func parseDSNIntoConfig(
 	}
 
 	if certFile, source, isSet, err := getDSNPart(
-		&query, "tls_cert_file", "", len(resolvedConfig.tlsCAData) != 0,
+		query, "tls_cert_file", "", len(resolvedConfig.tlsCAData) != 0,
 	); err != nil || isSet {
 		if err != nil {
 			return err
@@ -852,7 +854,7 @@ func parseDSNIntoConfig(
 	}
 
 	if verifyHostname, source, isSet, err := getDSNPart(
-		&query, "tls_verify_hostname", "", resolvedConfig.tlsVerifyHostnameSet,
+		query, "tls_verify_hostname", "", resolvedConfig.tlsVerifyHostnameSet,
 	); err != nil || isSet {
 		if err != nil {
 			return err
@@ -863,17 +865,13 @@ func parseDSNIntoConfig(
 		}
 	}
 
-	serverSettings := make(map[string]string, len(query))
-	for k, v := range query {
-		serverSettings[k] = v[0]
-	}
-	resolvedConfig.addServerSettings(serverSettings)
+	resolvedConfig.addServerSettings(query)
 
 	return nil
 }
 
 func getDSNPart(
-	query *url.Values,
+	query map[string]string,
 	paramName string,
 	value string,
 	isResolved bool,
@@ -882,22 +880,20 @@ func getDSNPart(
 	if value != "" {
 		duplicateCount++
 	}
-	queryVal, queryValIsSet := query.Get(paramName), query.Has(paramName)
+	queryVal, queryValIsSet := query[paramName]
 	if queryValIsSet {
 		duplicateCount++
-		query.Del(paramName)
+		delete(query, paramName)
 	}
-	queryEnvVal, queryEnvValIsSet :=
-		query.Get(paramName+"_env"), query.Has(paramName+"_env")
+	queryEnvVal, queryEnvValIsSet := query[paramName+"_env"]
 	if queryEnvValIsSet {
 		duplicateCount++
-		query.Del(paramName + "_env")
+		delete(query, paramName+"_env")
 	}
-	queryFileVal, queryFileValIsSet :=
-		query.Get(paramName+"_file"), query.Has(paramName+"_file")
+	queryFileVal, queryFileValIsSet := query[paramName+"_file"]
 	if queryFileValIsSet {
 		duplicateCount++
-		query.Del(paramName + "_file")
+		delete(query, paramName+"_file")
 	}
 
 	if duplicateCount > 1 {
