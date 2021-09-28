@@ -21,7 +21,6 @@ import (
 	"errors"
 	"net"
 	"os"
-	"path"
 	"testing"
 	"time"
 
@@ -84,8 +83,8 @@ func TestConUtils(t *testing.T) {
 		{
 			name: "host and user options",
 			opts: Options{
-				User:  "user",
-				Hosts: []string{"localhost"},
+				User: "user",
+				Host: "localhost",
 			},
 			expected: Result{
 				cfg: connConfig{
@@ -127,10 +126,10 @@ func TestConUtils(t *testing.T) {
 				"EDGEDB_PORT":     "123",
 			},
 			opts: Options{
-				Hosts:    []string{"host2"},
-				Ports:    []int{456},
+				Host:     "host2",
+				Port:     456,
 				User:     "user2",
-				Password: "passw2",
+				Password: NewOptionalStr("passw2"),
 				Database: "db2",
 			},
 			expected: Result{
@@ -156,16 +155,16 @@ func TestConUtils(t *testing.T) {
 			},
 			dsn: "edgedb://user3:123123@localhost/abcdef",
 			opts: Options{
-				Hosts:          []string{"host2"},
-				Ports:          []int{456},
+				// Host:           "host2",
+				// Port:           456,
 				User:           "user2",
-				Password:       "passw2",
+				Password:       NewOptionalStr("passw2"),
 				Database:       "db2",
 				ServerSettings: map[string]string{"ssl": "False"},
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "host2:456"}},
+					addrs:              []*dialArgs{{"tcp", "localhost:5656"}},
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
@@ -213,32 +212,18 @@ func TestConUtils(t *testing.T) {
 			name: "DSN with multiple hosts",
 			dsn:  "edgedb://user@host1,host2/db",
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "host1:5656"},
-						{"tcp", "host2:5656"},
-					},
-					user:               "user",
-					database:           "db",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: `edgedb.ConfigurationError: ` +
+					`invalid host: "host1,host2"`,
 			},
 		},
 		{
 			name: "DSN with multiple hosts and ports",
 			dsn:  "edgedb://user@host1:1111,host2:2222/db",
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "host1:1111"},
-						{"tcp", "host2:2222"},
-					},
-					database:           "db",
-					user:               "user",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: `edgedb.ConfigurationError: ` +
+					`invalid host: "host1:1111,host2"`,
 			},
 		},
 		{
@@ -247,18 +232,11 @@ func TestConUtils(t *testing.T) {
 				"EDGEDB_HOST": "host1:1111,host2:2222",
 				"EDGEDB_USER": "foo",
 			},
-			dsn: "edgedb:///db",
+			dsn: "",
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "host1:1111"},
-						{"tcp", "host2:2222"},
-					},
-					database:           "db",
-					user:               "foo",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: `edgedb.ConfigurationError: ` +
+					`invalid host: "host1:1111,host2:2222"`,
 			},
 		},
 		{
@@ -268,56 +246,42 @@ func TestConUtils(t *testing.T) {
 			},
 			dsn: "edgedb:///db?host=host1:1111,host2:2222",
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "host1:1111"},
-						{"tcp", "host2:2222"},
-					},
-					database:           "db",
-					user:               "foo",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: `edgedb.ConfigurationError: ` +
+					`invalid host: "host1:1111,host2:2222"`,
 			},
 		},
 		{
-			name: "options with multiple hosts",
+			name: "multiple compound options",
 			env: map[string]string{
 				"EDGEDB_USER": "foo",
 			},
 			dsn: "edgedb:///db",
 			opts: Options{
-				Hosts: []string{"host1", "host2"},
+				Host: "host1,host2",
 			},
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "host1:5656"},
-						{"tcp", "host2:5656"},
-					},
-					user:               "foo",
-					database:           "db",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: `edgedb.ConfigurationError: ` +
+					`Cannot have more than one of the following ` +
+					`connection options: dsn, CredentialsFile, or Host/Port`,
 			},
 		},
 		{
 			name: "DSN with server settings",
-			dsn: "edgedb://user3:123123@localhost:5555/" +
-				"abcdef?param=sss&param=123&host=testhost&user=testuser" +
+			dsn: "edgedb://?param=123&host=testhost&user=testuser" +
 				"&port=2222&database=testdb",
 			opts: Options{
-				Hosts:    []string{"127.0.0.1"},
-				Ports:    []int{888},
+				// Host:     "127.0.0.1",
+				// Port:     888,
 				User:     "me",
-				Password: "ask",
+				Password: NewOptionalStr("ask"),
 				Database: "db",
 			},
 			expected: Result{
 				cfg: connConfig{
 					addrs: []*dialArgs{
-						{"tcp", "127.0.0.1:888"},
+						{"tcp", "testhost:2222"},
 					},
 					serverSettings:     map[string]string{"param": "123"},
 					user:               "me",
@@ -329,21 +293,20 @@ func TestConUtils(t *testing.T) {
 		},
 		{
 			name: "DSN and options server settings are merged",
-			dsn: "edgedb://user3:123123@localhost:5555/" +
-				"abcdef?param=sss&param=123&host=testhost&user=testuser" +
+			dsn: "edgedb://?param=123&host=testhost&user=testuser" +
 				"&port=2222&database=testdb",
 			opts: Options{
-				Hosts:          []string{"127.0.0.1"},
-				Ports:          []int{888},
+				// Host:           "127.0.0.1",
+				// Port:           888,
 				User:           "me",
-				Password:       "ask",
+				Password:       NewOptionalStr("ask"),
 				Database:       "db",
 				ServerSettings: map[string]string{"aa": "bb"},
 			},
 			expected: Result{
 				cfg: connConfig{
 					addrs: []*dialArgs{
-						{"tcp", "127.0.0.1:888"},
+						{"tcp", "testhost:2222"},
 					},
 					serverSettings: map[string]string{
 						"aa":    "bb",
@@ -360,15 +323,9 @@ func TestConUtils(t *testing.T) {
 			name: "DSN with unix socket",
 			dsn:  "edgedb:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{{
-						"unix", path.Join("/unix_sock/test", ".s.EDGEDB.5656"),
-					}},
-					user:               "spam",
-					database:           "dbname",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: "edgedb.ConfigurationError: " +
+					`unix socket paths not supported`,
 			},
 		},
 		{
@@ -376,35 +333,17 @@ func TestConUtils(t *testing.T) {
 			dsn:  "pq:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: "edgedb.ConfigurationError: dsn " +
-					`"pq:///dbname?host=/unix_sock/test&user=spam" ` +
-					"is neither a edgedb:// URI nor valid instance name",
-			},
-		},
-		{
-			name: "host count must match port count",
-			dsn:  "edgedb://host1,host2,host3/db",
-			opts: Options{
-				Ports: []int{111, 222},
-			},
-			expected: Result{
-				err:        &configurationError{},
-				errMessage: "edgedb.ConfigurationError: could not match 2 port numbers to 3 hosts", // nolint:lll
+				errMessage: "edgedb.ConfigurationError: " +
+					`invalid DSN: scheme is expected to be "edgedb", got "pq"`,
 			},
 		},
 		{
 			name: "DSN query parameter with unix socket",
 			dsn:  "edgedb://user@?port=56226&host=%2Ftmp",
 			expected: Result{
-				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"unix", path.Join("/tmp", ".s.EDGEDB.56226")},
-					},
-					user:               "user",
-					database:           "edgedb",
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				},
+				err: &configurationError{},
+				errMessage: "edgedb.ConfigurationError: " +
+					`unix socket paths not supported`,
 			},
 		},
 	}
@@ -433,8 +372,8 @@ func TestConUtils(t *testing.T) {
 func TestConnectTimeout(t *testing.T) {
 	ctx := context.Background()
 	p, err := CreateClient(ctx, Options{
-		Hosts:              opts.Hosts,
-		Ports:              opts.Ports,
+		Host:               opts.Host,
+		Port:               opts.Port,
 		User:               opts.User,
 		Password:           opts.Password,
 		Database:           opts.Database,
@@ -463,8 +402,8 @@ func TestConnectTimeout(t *testing.T) {
 func TestConnectRefused(t *testing.T) {
 	ctx := context.Background()
 	p, err := CreateClient(ctx, Options{
-		Hosts:              []string{"localhost"},
-		Ports:              []int{23456},
+		Host:               "localhost",
+		Port:               23456,
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
@@ -488,8 +427,8 @@ func TestConnectRefused(t *testing.T) {
 func TestConnectInvalidName(t *testing.T) {
 	ctx := context.Background()
 	p, err := CreateClient(ctx, Options{
-		Hosts:              []string{"invalid.example.org"},
-		Ports:              []int{23456},
+		Host:               "invalid.example.org",
+		Port:               23456,
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
@@ -522,7 +461,7 @@ func TestConnectInvalidName(t *testing.T) {
 func TestConnectRefusedUnixSocket(t *testing.T) {
 	ctx := context.Background()
 	p, err := CreateClient(ctx, Options{
-		Hosts:              []string{"/tmp/non-existent"},
+		Host:               "/tmp/non-existent",
 		WaitUntilAvailable: 1 * time.Nanosecond,
 	})
 
@@ -537,7 +476,7 @@ func TestConnectRefusedUnixSocket(t *testing.T) {
 	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
 	assert.True(
 		t,
-		edbErr.Category(ClientConnectionFailedError),
+		edbErr.Category(ConfigurationError),
 		"wrong error: %v",
 		err,
 	)

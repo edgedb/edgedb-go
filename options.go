@@ -43,7 +43,7 @@ type Options struct {
 	//   "/run/edgedb" and "/var/run/edgedb"
 	//
 	// - "localhost"
-	Hosts []string
+	Host string
 
 	// Ports is a slice of port numbers to connect to at the server host
 	// (or Unix-domain socket file extension).
@@ -57,7 +57,10 @@ type Options struct {
 	// - empty indicating the value parsed from the dsn argument
 	//   should be used, or the value of the EDGEDB_PORT environment variable,
 	//   or 5656 if neither is specified.
-	Ports []int
+	Port int
+
+	// CredentialsFile is a path to a file containing credentials.
+	CredentialsFile string
 
 	// User is the name of the database role used for authentication.
 	// If not specified, the value parsed from the dsn argument is used,
@@ -78,7 +81,7 @@ type Options struct {
 	// Note that the use of the environment variable is discouraged
 	// as other users and applications may be able to read it
 	// without needing specific privileges.
-	Password string
+	Password OptionalStr
 
 	// ConnectTimeout is used when establishing connections in the background.
 	ConnectTimeout time.Duration

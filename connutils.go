@@ -22,9 +22,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -32,8 +32,6 @@ import (
 	"strings"
 	"time"
 )
-
-const edgedbPort = 5656
 
 type connConfig struct {
 	addrs              []*dialArgs
@@ -51,123 +49,173 @@ type dialArgs struct {
 	address string
 }
 
-func validatePortSpec(hosts []string, ports []int) ([]int, error) {
-	var result []int
-	if len(ports) > 1 {
-		if len(ports) != len(hosts) {
-			return nil, &configurationError{msg: fmt.Sprintf(
-				"could not match %v port numbers to %v hosts",
-				len(ports), len(hosts),
-			)}
-		}
-
-		result = ports
-	} else {
-		result = make([]int, len(hosts))
-		for i := 0; i < len(hosts); i++ {
-			result[i] = ports[0]
-		}
-	}
-
-	return result, nil
+type resolvedParams struct {
+	host                    string
+	hostSource              string
+	port                    int
+	portSource              string
+	database                string
+	databaseSource          string
+	user                    string
+	userSource              string
+	password                string
+	passwordSource          string
+	passwordSet             bool
+	tlsCAData               []byte
+	tlsCADataSource         string
+	tlsVerifyHostname       bool
+	tlsVerifyHostnameSource string
+	tlsVerifyHostnameSet    bool
+	serverSettings          map[string]string
 }
 
-func parsePortSpec(spec string) ([]int, error) {
-	ports := make([]int, 0, strings.Count(spec, ","))
-
-	for _, p := range strings.Split(spec, ",") {
-		port, err := strconv.Atoi(p)
-		if err != nil {
-			return nil, &configurationError{msg: fmt.Sprintf(
-				"invalid port %q found in %q: %v",
-				p, spec, err,
-			)}
-		}
-
-		ports = append(ports, port)
+func (params *resolvedParams) setHost(val string, source string) error {
+	if params.host != "" {
+		return nil
 	}
-
-	return ports, nil
+	if err := validateHost(val); err != nil {
+		return err
+	}
+	params.host = val
+	params.hostSource = source
+	return nil
 }
 
-func parseHostList(hostList string, ports []int) ([]string, []int, error) {
-	hostSpecs := strings.Split(hostList, ",")
-
-	var (
-		err           error
-		defaultPorts  []int
-		hostListPorts []int
-	)
-
-	if len(ports) == 0 {
-		if portSpec := os.Getenv("EDGEDB_PORT"); portSpec != "" {
-			defaultPorts, err = parsePortSpec(portSpec)
-			if err != nil {
-				return nil, nil, err
-			}
-		} else {
-			defaultPorts = []int{edgedbPort}
-		}
-
-		defaultPorts, err = validatePortSpec(hostSpecs, defaultPorts)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		ports, err = validatePortSpec(hostSpecs, ports)
-		if err != nil {
-			return nil, nil, err
-		}
+func (params *resolvedParams) setPort(val int, source string) error {
+	if params.port != 0 {
+		return nil
 	}
-
-	hosts := make([]string, 0, len(hostSpecs))
-	for i, hostSpec := range hostSpecs {
-		addr, hostSpecPort := partition(hostSpec, ":")
-		hosts = append(hosts, addr)
-
-		if len(ports) == 0 {
-			if hostSpecPort != "" {
-				port, err := strconv.Atoi(hostSpecPort)
-				if err != nil {
-					msg := fmt.Sprintf(
-						"invalid port %q found in %q: %v",
-						hostSpecPort, hostSpec, err,
-					)
-					err = &configurationError{msg: msg}
-					return nil, nil, err
-				}
-				hostListPorts = append(hostListPorts, port)
-			} else {
-				hostListPorts = append(hostListPorts, defaultPorts[i])
-			}
-		}
+	if err := validatePort(val); err != nil {
+		return err
 	}
-
-	if len(ports) == 0 {
-		ports = hostListPorts
-	}
-
-	return hosts, ports, nil
+	params.port = val
+	params.portSource = source
+	return nil
 }
 
-func partition(s, sep string) (string, string) {
-	list := strings.SplitN(s, sep, 2)
-	switch len(list) {
-	case 2:
-		return list[0], list[1]
-	case 1:
-		return list[0], ""
-	default:
-		return "", ""
+func (params *resolvedParams) setPortStr(val string, source string) error {
+	if params.port != 0 {
+		return nil
+	}
+	port, err := strconv.Atoi(val)
+	if err != nil {
+		return &configurationError{msg: fmt.Sprintf(
+			"invalid port %q: %v",
+			val, err,
+		)}
+	}
+	return params.setPort(port, source)
+}
+
+func (params *resolvedParams) setDatabase(val string, source string) error {
+	if params.database != "" {
+		return nil
+	}
+	if val == "" {
+		return &configurationError{msg: "invalid database name"}
+	}
+	params.database = val
+	params.databaseSource = source
+	return nil
+}
+
+func (params *resolvedParams) setUser(val string, source string) error {
+	if params.user != "" {
+		return nil
+	}
+	if val == "" {
+		return &configurationError{msg: "invalid user name"}
+	}
+	params.user = val
+	params.userSource = source
+	return nil
+}
+
+func (params *resolvedParams) setPassword(val string, source string) {
+	if params.passwordSet {
+		return
+	}
+	params.password = val
+	params.passwordSource = source
+	params.passwordSet = true
+}
+
+func (params *resolvedParams) setTLSCAData(data []byte, source string) {
+	if len(params.tlsCAData) != 0 {
+		return
+	}
+	params.tlsCAData = data
+	params.tlsCADataSource = source
+}
+
+func (params *resolvedParams) setTLSCAFile(file string, source string) error {
+	if len(params.tlsCAData) != 0 {
+		return nil
+	}
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		return &configurationError{err: err}
+	}
+	params.tlsCAData = data
+	params.tlsCADataSource = source
+	return nil
+}
+
+func (params *resolvedParams) setTLSVerifyHostname(val bool, source string) {
+	if params.tlsVerifyHostnameSet {
+		return
+	}
+	params.tlsVerifyHostname = val
+	params.tlsVerifyHostnameSource = source
+	params.tlsVerifyHostnameSet = true
+}
+
+func (params *resolvedParams) setTLSVerifyHostnameStr(
+	val string,
+	source string,
+) error {
+	if params.tlsVerifyHostnameSet {
+		return nil
+	}
+	verifyHostname, err := parseVerifyHostname(val)
+	if err != nil {
+		return err
+	}
+	params.setTLSVerifyHostname(verifyHostname, source)
+	return nil
+}
+
+func (params *resolvedParams) addServerSettings(
+	serverSettings map[string]string,
+) {
+	for k, v := range serverSettings {
+		if _, keyExists := params.serverSettings[k]; !keyExists {
+			params.serverSettings[k] = v
+		}
 	}
 }
 
-func pop(m map[string]string, key string) string {
-	v, ok := m[key]
-	if ok {
-		delete(m, key)
+func validateHost(host string) error {
+	if strings.Contains(host, "/") {
+		return &configurationError{
+			msg: "unix socket paths not supported",
+		}
 	}
-	return v
+	if host == "" || strings.Contains(host, ",") {
+		return &configurationError{
+			msg: fmt.Sprintf(`invalid host: %q`, host),
+		}
+	}
+	return nil
+}
+
+func validatePort(port int) error {
+	if port < 1 || port > 65535 {
+		return &configurationError{
+			msg: fmt.Sprintf(`invalid port: %v`, port),
+		}
+	}
+	return nil
 }
 
 func stashPath(p string) (string, error) {
@@ -242,321 +290,343 @@ func findConfigPath(suffix ...string) (string, error) {
 	return dir, nil
 }
 
+var isDSNLike = regexp.MustCompile(`(?i)^[a-z]+://`)
+var isIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9]*$`)
+
 func parseConnectDSNAndArgs(
 	dsn string,
 	opts *Options,
 ) (*connConfig, error) {
-	usingCredentials := false
-	hosts := opts.Hosts
-	ports := opts.Ports
-	user := opts.User
-	password := opts.Password
-	database := opts.Database
-	tlsCAFile := opts.TLSCAFile
-	tlsVerifyHostname := opts.TLSVerifyHostname
-	var certData []byte
-
-	serverSettings := make(map[string]string, len(opts.ServerSettings))
-	for k, v := range opts.ServerSettings {
-		serverSettings[k] = v
+	resolvedConfig := resolvedParams{
+		serverSettings: map[string]string{},
 	}
 
-	if dsn == "" && len(hosts) == 0 && len(ports) == 0 &&
-		os.Getenv("EDGEDB_HOST") == "" && os.Getenv("EDGEDB_PORT") == "" {
-		if instanceName := os.Getenv("EDGEDB_INSTANCE"); instanceName != "" {
-			dsn = instanceName
+	var instanceName string
+	if !isDSNLike.MatchString(dsn) {
+		instanceName = dsn
+		dsn = ""
+	}
+
+	compoundOptionsCount := 0
+
+	if opts.Database != "" {
+		err := resolvedConfig.setDatabase(opts.Database, "Database option")
+		if err != nil {
+			return nil, err
+		}
+	}
+	if opts.User != "" {
+		err := resolvedConfig.setUser(opts.User, "User option")
+		if err != nil {
+			return nil, err
+		}
+	}
+	if password, passwordIsSet := opts.Password.Get(); passwordIsSet {
+		resolvedConfig.setPassword(password, "Password option")
+	}
+	if opts.TLSCAFile != "" {
+		err := resolvedConfig.setTLSCAFile(opts.TLSCAFile, "TLSCAFile option")
+		if err != nil {
+			return nil, err
+		}
+	}
+	if verifyHostname, verifyHostnameIsSet :=
+		opts.TLSVerifyHostname.Get(); verifyHostnameIsSet {
+		resolvedConfig.setTLSVerifyHostname(
+			verifyHostname, "TLSVerifyHostname option",
+		)
+	}
+	resolvedConfig.addServerSettings(opts.ServerSettings)
+
+	if dsn != "" {
+		compoundOptionsCount++
+	}
+	if instanceName != "" {
+		compoundOptionsCount++
+	}
+	if opts.CredentialsFile != "" {
+		compoundOptionsCount++
+	}
+	if opts.Host != "" {
+		compoundOptionsCount++
+	}
+	if opts.Host == "" && opts.Port != 0 {
+		compoundOptionsCount++
+	}
+
+	if compoundOptionsCount > 1 {
+		return nil, &configurationError{
+			msg: "Cannot have more than one of the following connection " +
+				"options: dsn, CredentialsFile, or Host/Port"}
+	}
+
+	if compoundOptionsCount == 1 {
+		if dsn != "" || opts.Host != "" || opts.Port != 0 {
+			dsnSource := "dsn option"
+			if dsn == "" {
+				if opts.Port != 0 {
+					err := resolvedConfig.setPort(opts.Port, "Port option")
+					if err != nil {
+						return nil, err
+					}
+				}
+				if opts.Host != "" {
+					err := validateHost(opts.Host)
+					if err != nil {
+						return nil, err
+					}
+					dsn = "edgedb://" + opts.Host
+					dsnSource = "Host option"
+				} else {
+					dsn = "edgedb://"
+					dsnSource = "Port option"
+				}
+			}
+
+			err := parseDSNIntoConfig(&resolvedConfig, dsn, dsnSource)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			dir, err := os.Getwd()
-			if err != nil {
-				return nil, &clientConnectionError{err: err}
-			}
-
-			tomlPath := filepath.Join(dir, "edgedb.toml")
-			if _, e := os.Stat(tomlPath); os.IsNotExist(e) {
-				return nil, &clientConnectionError{
-					msg: "no `edgedb.toml` found " +
-						"and no connection options specified" +
-						" either via arguments to connect API " +
-						"or via environment variables " +
-						"EDGEDB_HOST/EDGEDB_PORT or EDGEDB_INSTANCE",
-				}
-			}
-
-			stashDir, err := stashPath(dir)
-			if err != nil {
-				return nil, &clientConnectionError{err: err}
-			}
-
-			if _, e := os.Stat(stashDir); os.IsNotExist(e) {
-				return nil, &clientConnectionError{
-					msg: "Found `edgedb.toml` " +
-						"but the project is not initialized. " +
-						"Run `edgedb project init`.",
-				}
-			}
-
-			data, err := ioutil.ReadFile(
-				filepath.Join(stashDir, "instance-name"),
+			err := loadCredentialsIntoConfig(
+				&resolvedConfig,
+				instanceName,
+				instanceName != "",
+				"dsn (parsed as instance name)",
+				opts.CredentialsFile,
+				opts.CredentialsFile != "",
+				"CredentialsFile option",
 			)
 			if err != nil {
-				return nil, &clientConnectionError{err: err}
+				return nil, err
 			}
-
-			dsn = strings.TrimSpace(string(data))
 		}
 	}
 
-	if dsn != "" && strings.HasPrefix(dsn, "edgedb://") {
-		parsed, err := url.Parse(dsn)
-		if err != nil {
-			return nil, &configurationError{msg: fmt.Sprintf(
-				"could not parse %q: %v", dsn, err)}
+	if compoundOptionsCount == 0 {
+		portEnv, portEnvExists := os.LookupEnv("EDGEDB_PORT")
+		if portEnvExists && resolvedConfig.port == 0 &&
+			strings.HasPrefix(portEnv, "tcp://") {
+			// EDGEDB_PORT is set by 'docker --link' so ignore and warn
+			log.Println(
+				"Warning: EDGEDB_PORT in 'tcp://host:port' format, " +
+					"so will be ignored",
+			)
+			portEnvExists = false
 		}
 
-		if parsed.Scheme != "edgedb" {
-			return nil, &configurationError{msg: fmt.Sprintf(
-				`invalid DSN: scheme is expected to be "edgedb", got %q`, dsn,
-			)}
+		if database, dbEnvExists :=
+			os.LookupEnv("EDGEDB_DATABASE"); dbEnvExists {
+			err := resolvedConfig.setDatabase(
+				database, "EDGEDB_DATABASE environment variable",
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
-
-		if len(hosts) == 0 && parsed.Host != "" {
-			hosts, ports, err = parseHostList(parsed.Host, ports)
+		if user, userEnvExists := os.LookupEnv("EDGEDB_USER"); userEnvExists {
+			err := resolvedConfig.setUser(
+				user, "EDGEDB_USER environment variable",
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if password, passwordEnvExists :=
+			os.LookupEnv("EDGEDB_PASSWORD"); passwordEnvExists {
+			resolvedConfig.setPassword(
+				password, "EDGEDB_PASSWORD environment variable",
+			)
+		}
+		if tlsCAFile, tlsCAFileEnvExists :=
+			os.LookupEnv("EDGEDB_TLS_CA_FILE"); tlsCAFileEnvExists {
+			err := resolvedConfig.setTLSCAFile(
+				tlsCAFile, "EDGEDB_TLS_CA_FILE environment variable",
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if tlsVerifyHostname, tlsVerifyHostnameEnvExists :=
+			os.LookupEnv(
+				"EDGEDB_TLS_VERIFY_HOSTNAME"); tlsVerifyHostnameEnvExists {
+			err := resolvedConfig.setTLSVerifyHostnameStr(
+				tlsVerifyHostname, "EDGEDB_USER environment variable",
+			)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		if database == "" {
-			database = strings.TrimLeft(parsed.Path, "/")
+		dsn, dsnEnvExists := os.LookupEnv("EDGEDB_DSN")
+		if dsnEnvExists {
+			compoundOptionsCount++
+		}
+		instanceName, instanceEnvExists := os.LookupEnv("EDGEDB_INSTANCE")
+		if instanceEnvExists {
+			compoundOptionsCount++
+		}
+		credentialsFile, credFileEnvExists :=
+			os.LookupEnv("EDGEDB_CREDENTIALS_FILE")
+		if credFileEnvExists {
+			compoundOptionsCount++
+		}
+		host, hostEnvExists := os.LookupEnv("EDGEDB_HOST")
+		if hostEnvExists {
+			compoundOptionsCount++
+		}
+		if !hostEnvExists && portEnvExists {
+			compoundOptionsCount++
 		}
 
-		if user == "" {
-			user = parsed.User.Username()
-		}
-
-		if password == "" {
-			password, _ = parsed.User.Password()
-		}
-
-		if parsed.RawQuery != "" {
-			q, err := url.ParseQuery(parsed.RawQuery)
-			if err != nil {
-				msg := fmt.Sprintf("invalid DSN %q: %v", dsn, err)
-				return nil, &configurationError{msg: msg}
+		if compoundOptionsCount > 1 {
+			return nil, &configurationError{
+				msg: "Cannot have more than one of the following " +
+					"environment variables: EDGEDB_DSN, EDGEDB_INSTANCE, " +
+					"EDGEDB_CREDENTIALS_FILE, or EDGEDB_HOST/EDGEDB_PORT",
 			}
+		}
 
-			query := make(map[string]string, len(q))
-			for key, val := range q {
-				query[key] = val[len(val)-1]
-			}
+		if compoundOptionsCount == 1 {
+			if dsnEnvExists || hostEnvExists || portEnvExists {
+				dsnSource := "EDGEDB_DSN environment variable"
+				if !dsnEnvExists {
+					if portEnvExists {
+						err := resolvedConfig.setPortStr(
+							portEnv, "EDGEDB_PORT environment variable",
+						)
+						if err != nil {
+							return nil, err
+						}
+					}
+					if hostEnvExists {
+						err := validateHost(host)
+						if err != nil {
+							return nil, err
+						}
+						dsn = "edgedb://" + host
+						dsnSource = "EDGEDB_HOST environment variable"
+					} else {
+						dsn = "edgedb://"
+						dsnSource = "EDGEDB_PORT environment variable"
+					}
+				}
 
-			if val := pop(query, "port"); val != "" && len(ports) == 0 {
-				ports, err = parsePortSpec(val)
+				err := parseDSNIntoConfig(&resolvedConfig, dsn, dsnSource)
 				if err != nil {
 					return nil, err
 				}
-			}
-
-			if val := pop(query, "host"); val != "" && len(hosts) == 0 {
-				hosts, ports, err = parseHostList(val, ports)
+			} else {
+				err := loadCredentialsIntoConfig(
+					&resolvedConfig,
+					instanceName,
+					instanceEnvExists,
+					"dsn (parsed as instance name)",
+					credentialsFile,
+					credFileEnvExists,
+					"CredentialsFile option",
+				)
 				if err != nil {
 					return nil, err
 				}
-			}
-
-			if val := pop(query, "dbname"); database == "" {
-				database = val
-			}
-
-			if val := pop(query, "database"); database == "" {
-				database = val
-			}
-
-			if val := pop(query, "user"); user == "" {
-				user = val
-			}
-
-			if val := pop(query, "password"); password == "" {
-				password = val
-			}
-
-			if val := pop(query, "tls_cert_file"); tlsCAFile == "" {
-				tlsCAFile = val
-			}
-
-			_, ok := tlsVerifyHostname.Get()
-			if val := pop(query, "tls_verify_hostname"); !ok && val != "" {
-				v, err := parseVerifyHostname(val)
-				if err != nil {
-					return nil, &configurationError{msg: err.Error()}
-				}
-
-				tlsVerifyHostname.Set(v)
-			}
-
-			for k, v := range query {
-				serverSettings[k] = v
-			}
-		}
-	} else if dsn != "" {
-		isIdentifier := regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9]*$`)
-		if !isIdentifier.Match([]byte(dsn)) {
-			return nil, &configurationError{msg: fmt.Sprintf(
-				"dsn %q is neither a edgedb:// URI nor valid instance name",
-				dsn,
-			)}
-		}
-
-		usingCredentials = true
-
-		file, err := findConfigPath("credentials", dsn+".json")
-		if err != nil {
-			return nil, &configurationError{msg: err.Error()}
-		}
-
-		creds, err := readCredentials(file)
-		if err != nil {
-			return nil, &configurationError{msg: fmt.Sprintf(
-				"cannot read credentials of instance %q: %v", dsn, err,
-			)}
-		}
-
-		if len(ports) == 0 {
-			ports = []int{creds.port}
-		}
-
-		if user == "" {
-			user = creds.user
-		}
-
-		if len(hosts) == 0 && creds.host != "" {
-			hosts = []string{creds.host}
-		}
-
-		if password == "" {
-			password = creds.password
-		}
-
-		if database == "" {
-			database = creds.database
-		}
-
-		if tlsCAFile == "" {
-			certData = creds.certData
-		}
-
-		if _, ok := tlsVerifyHostname.Get(); !ok {
-			if val, ok := creds.verifyHostname.Get(); ok {
-				tlsVerifyHostname.Set(val)
 			}
 		}
 	}
 
-	var err error
+	if compoundOptionsCount == 0 {
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, &clientConnectionError{err: err}
+		}
 
-	if spec := os.Getenv("EDGEDB_HOST"); len(hosts) == 0 && spec != "" {
-		hosts, ports, err = parseHostList(spec, ports)
+		tomlPath := filepath.Join(dir, "edgedb.toml")
+		if _, e := os.Stat(tomlPath); os.IsNotExist(e) {
+			return nil, &clientConnectionError{
+				msg: "no `edgedb.toml` found " +
+					"and no connection options specified" +
+					" either via arguments to connect API " +
+					"or via environment variables " +
+					"EDGEDB_HOST/EDGEDB_PORT, EDGEDB_INSTANCE, " +
+					"EDGEDB_DSN or EDGEDB_CREDENTIALS_FILE",
+			}
+		}
+
+		stashDir, err := stashPath(dir)
+		if err != nil {
+			return nil, &clientConnectionError{err: err}
+		}
+
+		if _, e := os.Stat(stashDir); os.IsNotExist(e) {
+			return nil, &clientConnectionError{
+				msg: "Found `edgedb.toml` " +
+					"but the project is not initialized. " +
+					"Run `edgedb project init`.",
+			}
+		}
+
+		data, err := ioutil.ReadFile(filepath.Join(stashDir, "instance-name"))
+		if err != nil {
+			return nil, &clientConnectionError{err: err}
+		}
+
+		instanceName = strings.TrimSpace(string(data))
+
+		err = loadCredentialsIntoConfig(
+			&resolvedConfig,
+			instanceName,
+			true,
+			"project linked instance ('"+instanceName+"')",
+			"",
+			false,
+			"",
+		)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if len(hosts) == 0 {
-		if !usingCredentials {
-			hosts = append(hosts, defaultHosts...)
-		}
-		hosts = append(hosts, "127.0.0.1")
+	host := resolvedConfig.host
+	if host == "" {
+		host = "localhost"
+	}
+	port := resolvedConfig.port
+	if port == 0 {
+		port = 5656
 	}
 
-	if len(ports) == 0 {
-		if portSpec := os.Getenv("EDGEDB_PORT"); portSpec != "" {
-			ports, err = parsePortSpec(portSpec)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			ports = []int{edgedbPort}
-		}
-	}
+	addrs := []*dialArgs{{
+		"tcp",
+		fmt.Sprintf("%v:%v", host, port),
+	}}
 
-	ports, err = validatePortSpec(hosts, ports)
-	if err != nil {
-		return nil, err
+	database := resolvedConfig.database
+	if database == "" {
+		database = "edgedb"
 	}
-
-	if user == "" {
-		user = os.Getenv("EDGEDB_USER")
-	}
-
+	user := resolvedConfig.user
 	if user == "" {
 		user = "edgedb"
 	}
 
-	if password == "" {
-		password = os.Getenv("EDGEDB_PASSWORD")
-	}
-
-	if database == "" {
-		database = os.Getenv("EDGEDB_DATABASE")
-	}
-
-	if database == "" {
-		database = "edgedb"
-	}
-
-	var addrs []*dialArgs
-	for i := 0; i < len(hosts); i++ {
-		h := hosts[i]
-		p := ports[i]
-
-		if strings.HasPrefix(h, "/") {
-			if !strings.Contains(h, ".s.EDGEDB.") {
-				h = path.Join(h, fmt.Sprintf(".s.EDGEDB.%v", p))
-			}
-			addrs = append(addrs, &dialArgs{"unix", h})
-		} else {
-			addrs = append(addrs, &dialArgs{
-				"tcp",
-				fmt.Sprintf("%v:%v", h, p),
-			})
-		}
-	}
-
-	if len(addrs) == 0 {
-		return nil, &configurationError{
-			msg: "could not determine the database address to connect to",
-		}
-	}
-
-	waitUntilAvailable := opts.WaitUntilAvailable
-	if waitUntilAvailable == 0 {
-		waitUntilAvailable = 30 * time.Second
-	}
-
-	if tlsCAFile != "" {
-		// certFile overrides certData
-		certData, err = ioutil.ReadFile(tlsCAFile)
-		if err != nil {
-			return nil, &configurationError{err: err}
-		}
-	}
-
 	var roots *x509.CertPool
-	if len(certData) != 0 {
+	certData := &resolvedConfig.tlsCAData
+	if len(*certData) != 0 {
 		roots = x509.NewCertPool()
-		ok := roots.AppendCertsFromPEM(certData)
+		ok := roots.AppendCertsFromPEM(*certData)
 		if !ok {
 			return nil, &configurationError{msg: "invalid certificate data"}
 		}
 	} else {
+		var err error
 		roots, err = getSystemCertPool()
 		if err != nil {
 			return nil, &configurationError{err: err}
 		}
 	}
 
-	if _, ok := tlsVerifyHostname.Get(); !ok {
-		tlsVerifyHostname.Set(len(certData) == 0)
+	verifyHostname := resolvedConfig.tlsVerifyHostname
+	if !resolvedConfig.tlsVerifyHostnameSet {
+		verifyHostname = len(resolvedConfig.tlsCAData) == 0
 	}
 
 	tlsConfig := &tls.Config{
@@ -566,7 +636,7 @@ func parseConnectDSNAndArgs(
 
 	if os.Getenv("EDGEDB_INSECURE_DEV_MODE") != "" {
 		tlsConfig.InsecureSkipVerify = true
-	} else if verify, ok := tlsVerifyHostname.Get(); ok && !verify {
+	} else if !verifyHostname {
 		// Set InsecureSkipVerify to skip the default validation we are
 		// replacing. This will not disable VerifyConnection.
 		tlsConfig.InsecureSkipVerify = true
@@ -585,16 +655,301 @@ func parseConnectDSNAndArgs(
 		}
 	}
 
+	waitUntilAvailable := opts.WaitUntilAvailable
+	if waitUntilAvailable == 0 {
+		waitUntilAvailable = 30 * time.Second
+	}
+
 	cfg := &connConfig{
 		addrs:              addrs,
 		user:               user,
-		password:           password,
+		password:           resolvedConfig.password,
 		database:           database,
 		connectTimeout:     opts.ConnectTimeout,
 		waitUntilAvailable: waitUntilAvailable,
-		serverSettings:     serverSettings,
+		serverSettings:     resolvedConfig.serverSettings,
 		tlsConfig:          tlsConfig,
 	}
 
 	return cfg, nil
+}
+
+func loadCredentialsIntoConfig(
+	resolvedConfig *resolvedParams,
+	instanceName string,
+	instanceIsSet bool,
+	instanceNameSource string,
+	credentialsFile string,
+	credentialsFileIsSet bool,
+	credentialsFileSource string,
+) error {
+	if instanceIsSet && credentialsFileIsSet {
+		return &configurationError{msg: "cannot have both instance name " +
+			"and credentials file"}
+	}
+
+	source := credentialsFileSource
+	if instanceIsSet {
+		if !isIdentifier.MatchString(instanceName) {
+			return &configurationError{
+				msg: "invalid instance name '" + instanceName + "'",
+			}
+		}
+		var err error
+		credentialsFile, err = findConfigPath(
+			"credentials", instanceName+".json",
+		)
+		if err != nil {
+			return &configurationError{msg: err.Error()}
+		}
+		source = instanceNameSource
+	}
+
+	creds, err := readCredentials(credentialsFile)
+	if err != nil {
+		if credentialsFileIsSet {
+			return &configurationError{
+				msg: fmt.Sprintf("cannot read credentials of file '%q': %v",
+					credentialsFile, err,
+				),
+			}
+		}
+		return &configurationError{
+			msg: fmt.Sprintf("cannot read credentials of instance %q: %v",
+				instanceName, err,
+			),
+		}
+	}
+
+	if err := resolvedConfig.setHost(creds.host, source); err != nil {
+		return err
+	}
+	if err := resolvedConfig.setPort(creds.port, source); err != nil {
+		return err
+	}
+	if err := resolvedConfig.setDatabase(creds.database, source); err != nil {
+		return err
+	}
+	if err := resolvedConfig.setUser(creds.user, source); err != nil {
+		return err
+	}
+	resolvedConfig.setPassword(creds.password, source)
+	resolvedConfig.setTLSCAData(creds.certData, source)
+	if verifyHostname, verifyHostnameSet :=
+		creds.verifyHostname.Get(); verifyHostnameSet {
+		resolvedConfig.setTLSVerifyHostname(verifyHostname, source)
+	}
+
+	return nil
+}
+
+func parseDSNIntoConfig(
+	resolvedConfig *resolvedParams,
+	dsn string,
+	source string,
+) error {
+	parsed, err := url.Parse(dsn)
+
+	if err != nil {
+		return &configurationError{msg: fmt.Sprintf(
+			"could not parse DSN %q: %v", dsn, err)}
+	}
+
+	if parsed.Scheme != "edgedb" {
+		return &configurationError{msg: fmt.Sprintf(
+			`invalid DSN: scheme is expected to be "edgedb", got %q`,
+			parsed.Scheme,
+		)}
+	}
+
+	query, err := url.ParseQuery(parsed.RawQuery)
+	if err != nil {
+		return &configurationError{msg: fmt.Sprintf(
+			"could not parse DSN query parameters %q: %v",
+			parsed.RawQuery, err,
+		)}
+	}
+	for k, v := range query {
+		if len(v) > 1 {
+			return &configurationError{msg: fmt.Sprintf(
+				`invalid DSN: duplicate query parameter %q`, k,
+			)}
+		}
+	}
+
+	if host, source, isSet, err := getDSNPart(
+		&query, "host", parsed.Hostname(), resolvedConfig.host != "",
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		err := resolvedConfig.setHost(host, source)
+		if err != nil {
+			return err
+		}
+	}
+
+	if port, source, isSet, err := getDSNPart(
+		&query, "port", parsed.Port(), resolvedConfig.port != 0,
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		err := resolvedConfig.setPortStr(port, source)
+		if err != nil {
+			return err
+		}
+	}
+
+	if database, source, isSet, err := getDSNPart(
+		&query, "database",
+		strings.TrimPrefix(parsed.Path, "/"),
+		resolvedConfig.database != "",
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		err := resolvedConfig.setDatabase(
+			strings.TrimPrefix(database, "/"), source,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	if user, source, isSet, err := getDSNPart(
+		&query, "user", parsed.User.Username(), resolvedConfig.user != "",
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		err := resolvedConfig.setUser(user, source)
+		if err != nil {
+			return err
+		}
+	}
+
+	parsedPassword, _ := parsed.User.Password()
+	if password, source, isSet, err := getDSNPart(
+		&query, "password", parsedPassword, resolvedConfig.passwordSet,
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		resolvedConfig.setPassword(password, source)
+	}
+
+	if certFile, source, isSet, err := getDSNPart(
+		&query, "tls_cert_file", "", len(resolvedConfig.tlsCAData) != 0,
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		err := resolvedConfig.setTLSCAFile(certFile, source)
+		if err != nil {
+			return err
+		}
+	}
+
+	if verifyHostname, source, isSet, err := getDSNPart(
+		&query, "tls_verify_hostname", "", resolvedConfig.tlsVerifyHostnameSet,
+	); err != nil || isSet {
+		if err != nil {
+			return err
+		}
+		err := resolvedConfig.setTLSVerifyHostnameStr(verifyHostname, source)
+		if err != nil {
+			return err
+		}
+	}
+
+	serverSettings := make(map[string]string, len(query))
+	for k, v := range query {
+		serverSettings[k] = v[0]
+	}
+	resolvedConfig.addServerSettings(serverSettings)
+
+	return nil
+}
+
+func getDSNPart(
+	query *url.Values,
+	paramName string,
+	value string,
+	isResolved bool,
+) (string, string, bool, error) {
+	duplicateCount := 0
+	if value != "" {
+		duplicateCount++
+	}
+	queryVal, queryValIsSet := query.Get(paramName), query.Has(paramName)
+	if queryValIsSet {
+		duplicateCount++
+		query.Del(paramName)
+	}
+	queryEnvVal, queryEnvValIsSet :=
+		query.Get(paramName+"_env"), query.Has(paramName+"_env")
+	if queryEnvValIsSet {
+		duplicateCount++
+		query.Del(paramName + "_env")
+	}
+	queryFileVal, queryFileValIsSet :=
+		query.Get(paramName+"_file"), query.Has(paramName+"_file")
+	if queryFileValIsSet {
+		duplicateCount++
+		query.Del(paramName + "_file")
+	}
+
+	if duplicateCount > 1 {
+		var dsnValMsg string
+		if value != "" {
+			dsnValMsg = fmt.Sprintf(`%v, `, paramName)
+		}
+		return "", "", false, &configurationError{
+			msg: fmt.Sprintf(`invalid DSN: more than one of %v?%v=, `+
+				`?%v_env= or ?%v_file= was specified`, dsnValMsg, paramName,
+				paramName, paramName),
+		}
+	}
+
+	param := value
+	source := ""
+	isSet := false
+
+	if !isResolved {
+		if param != "" {
+			isSet = true
+		}
+		if !isSet && queryValIsSet {
+			param = queryVal
+			source = fmt.Sprintf(` (?%v=)`, paramName)
+			isSet = true
+		}
+		if !isSet && queryEnvValIsSet {
+			var envExists bool
+			param, envExists = os.LookupEnv(queryEnvVal)
+			if !envExists {
+				return "", "", false, &configurationError{
+					msg: fmt.Sprintf(`'%v_env' environment variable %q `+
+						`doesn't exist`, paramName, queryEnvVal),
+				}
+			}
+			source = fmt.Sprintf(` (%v_env: %q)`, paramName, queryEnvVal)
+			isSet = true
+		}
+		if !isSet && queryFileValIsSet {
+			data, err := ioutil.ReadFile(queryFileVal)
+			if err != nil {
+				return "", "", false, &configurationError{
+					msg: fmt.Sprintf(`failed to read '%v_file' file %q: %v`,
+						paramName, queryFileVal, err),
+				}
+			}
+			param = string(data)
+			source = fmt.Sprintf(` (%v_file: %q)`, paramName, queryFileVal)
+			isSet = true
+		}
+	}
+
+	return param, source, isSet, nil
 }
