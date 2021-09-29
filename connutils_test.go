@@ -329,7 +329,8 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: "edgedb.ConfigurationError: " +
-					`unix socket paths not supported`,
+					`invalid host: unix socket paths not supported, ` +
+					`got "/unix_sock/test"`,
 			},
 		},
 		{
@@ -347,7 +348,8 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: "edgedb.ConfigurationError: " +
-					`unix socket paths not supported`,
+					`invalid host: unix socket paths not supported, ` +
+					`got "/tmp"`,
 			},
 		},
 	}

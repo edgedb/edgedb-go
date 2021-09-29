@@ -112,7 +112,9 @@ func (params *resolvedParams) setDatabase(val string, source string) error {
 		return nil
 	}
 	if val == "" {
-		return &configurationError{msg: "invalid database name"}
+		return &configurationError{
+			msg: fmt.Sprintf("invalid database name: %q", val),
+		}
 	}
 	params.database = val
 	params.databaseSource = source
@@ -124,7 +126,9 @@ func (params *resolvedParams) setUser(val string, source string) error {
 		return nil
 	}
 	if val == "" {
-		return &configurationError{msg: "invalid user name"}
+		return &configurationError{
+			msg: fmt.Sprintf("invalid user name: %q", val),
+		}
 	}
 	params.user = val
 	params.userSource = source
@@ -198,7 +202,10 @@ func (params *resolvedParams) addServerSettings(
 func validateHost(host string) error {
 	if strings.Contains(host, "/") {
 		return &configurationError{
-			msg: "unix socket paths not supported",
+			msg: fmt.Sprintf(
+				"invalid host: unix socket paths not supported, got %q",
+				host,
+			),
 		}
 	}
 	if host == "" || strings.Contains(host, ",") {
