@@ -389,8 +389,9 @@ var testcaseErrorMapping = map[string]string{
 		"connection options",
 	"multiple_compound_env": "Cannot have more than one of the following " +
 		"environment variables",
-	"env_not_found":  "environment variable .* doesn't exist",
-	"file_not_found": "cannot find the path specified",
+	"env_not_found": "environment variable .* doesn't exist",
+	"file_not_found": "no such file or directory|" +
+		"cannot find the (?:file|path) specified",
 	"invalid_tls_verify_hostname": "tls_verify_hostname can only be one " +
 		"of yes/no",
 }
