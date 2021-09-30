@@ -48,22 +48,22 @@ func (o *OptionalBigInt) Unset() {
 	o.isSet = false
 }
 
-func (optBigint OptionalBigInt) MarshalJSON() ([]byte, error) {
-	if optBigint.isSet {
-		return json.Marshal(optBigint.val)
+func (o OptionalBigInt) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optBigint *OptionalBigInt) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalBigInt) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optBigint.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optBigint.isSet = true
+	o.isSet = true
 
 	return nil
 }

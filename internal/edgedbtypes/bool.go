@@ -42,22 +42,22 @@ func (o *OptionalBool) Unset() {
 	o.isSet = false
 }
 
-func (optBool OptionalBool) MarshalJSON() ([]byte, error) {
-	if optBool.isSet {
-		return json.Marshal(optBool.val)
+func (o OptionalBool) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optBool *OptionalBool) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalBool) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optBool.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optBool.isSet = true
+	o.isSet = true
 
 	return nil
 }

@@ -54,22 +54,22 @@ func (o *OptionalInt16) Unset() {
 	o.isSet = false
 }
 
-func (optInt OptionalInt16) MarshalJSON() ([]byte, error) {
-	if optInt.isSet {
-		return json.Marshal(optInt.val)
+func (o OptionalInt16) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optInt *OptionalInt16) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalInt16) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optInt.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optInt.isSet = true
+	o.isSet = true
 
 	return nil
 }
@@ -96,22 +96,22 @@ func (o *OptionalInt32) Unset() {
 	o.isSet = false
 }
 
-func (optInt OptionalInt32) MarshalJSON() ([]byte, error) {
-	if optInt.isSet {
-		return json.Marshal(optInt.val)
+func (o OptionalInt32) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optInt *OptionalInt32) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalInt32) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optInt.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optInt.isSet = true
+	o.isSet = true
 
 	return nil
 }
@@ -140,22 +140,22 @@ func (o *OptionalInt64) Unset() *OptionalInt64 {
 	return o
 }
 
-func (optInt OptionalInt64) MarshalJSON() ([]byte, error) {
-	if optInt.isSet {
-		return json.Marshal(optInt.val)
+func (o OptionalInt64) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optInt *OptionalInt64) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalInt64) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optInt.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optInt.isSet = true
+	o.isSet = true
 
 	return nil
 }
@@ -182,22 +182,22 @@ func (o *OptionalFloat32) Unset() {
 	o.isSet = false
 }
 
-func (optFloat OptionalFloat32) MarshalJSON() ([]byte, error) {
-	if optFloat.isSet {
-		return json.Marshal(optFloat.val)
+func (o OptionalFloat32) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optFloat *OptionalFloat32) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalFloat32) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optFloat.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optFloat.isSet = true
+	o.isSet = true
 
 	return nil
 }
@@ -224,22 +224,22 @@ func (o *OptionalFloat64) Unset() {
 	o.isSet = false
 }
 
-func (optFloat OptionalFloat64) MarshalJSON() ([]byte, error) {
-	if optFloat.isSet {
-		return json.Marshal(optFloat.val)
+func (o OptionalFloat64) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
 }
 
-func (optFloat *OptionalFloat64) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalFloat64) UnmarshalJSON(bytes []byte) error {
 	if string(bytes) == "null" {
 		return nil
 	}
 
-	if err := json.Unmarshal(bytes, &optFloat.val); err != nil {
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
-	optFloat.isSet = true
+	o.isSet = true
 
 	return nil
 }
