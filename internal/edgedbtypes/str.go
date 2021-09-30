@@ -16,6 +16,10 @@
 
 package edgedbtypes
 
+import (
+	"encoding/json"
+)
+
 // OptionalStr is an optional string. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalStr struct {
@@ -36,4 +40,24 @@ func (o *OptionalStr) Set(val string) {
 func (o *OptionalStr) Unset() {
 	o.val = ""
 	o.isSet = false
+}
+
+func (optStr OptionalStr) MarshalJSON() ([]byte, error) {
+	if optStr.isSet {
+		return json.Marshal(optStr.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (optStr *OptionalStr) UnmarshalJSON(bytes []byte) error {
+	if string(bytes) == "null" {
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &optStr.val); err != nil {
+		return err
+	}
+	optStr.isSet = true
+
+	return nil
 }

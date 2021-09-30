@@ -16,6 +16,10 @@
 
 package edgedbtypes
 
+import (
+	"encoding/json"
+)
+
 // OptionalBool is an optional bool. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalBool struct {
@@ -36,4 +40,24 @@ func (o *OptionalBool) Set(val bool) {
 func (o *OptionalBool) Unset() {
 	o.val = false
 	o.isSet = false
+}
+
+func (optBool OptionalBool) MarshalJSON() ([]byte, error) {
+	if optBool.isSet {
+		return json.Marshal(optBool.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (optBool *OptionalBool) UnmarshalJSON(bytes []byte) error {
+	if string(bytes) == "null" {
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &optBool.val); err != nil {
+		return err
+	}
+	optBool.isSet = true
+
+	return nil
 }
