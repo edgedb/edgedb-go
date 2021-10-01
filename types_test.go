@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -6396,4 +6397,182 @@ func TestMissingObjectFields(t *testing.T) {
 			`expected int64 at edgedb.WrongType.simple_scalar to be `+
 			`edgedb.OptionalInt64 because the field is not required`)
 	})
+}
+
+func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
+	type testJSONStruct struct {
+		Str                     string
+		OptStr                  OptionalStr
+		OptStrNull              OptionalStr
+		Bool                    bool
+		OptBool                 OptionalBool
+		OptBoolNull             OptionalBool
+		Int16                   int16
+		OptInt16                OptionalInt16
+		OptInt16Null            OptionalInt16
+		Int32                   int32
+		OptInt32                OptionalInt32
+		OptInt32Null            OptionalInt32
+		Int64                   int64
+		OptInt64                OptionalInt64
+		OptInt64Null            OptionalInt64
+		Float32                 float32
+		OptFloat32              OptionalFloat32
+		OptFloat32Null          OptionalFloat32
+		Float64                 float64
+		OptFloat64              OptionalFloat64
+		OptFloat64Null          OptionalFloat64
+		BigInt                  *big.Int
+		OptBigInt               OptionalBigInt
+		OptBigIntNull           OptionalBigInt
+		Uuid                    UUID
+		OptUuid                 OptionalUUID
+		OptUuidNull             OptionalUUID
+		Bytes                   []byte
+		OptBytes                OptionalBytes
+		OptBytesNull            OptionalBytes
+		DateTime                time.Time
+		OptDateTime             OptionalDateTime
+		OptDateTimeNull         OptionalDateTime
+		LocalDateTime           LocalDateTime
+		OptLocalDateTime        OptionalLocalDateTime
+		OptLocalDateTimeNull    OptionalLocalDateTime
+		LocalTime               LocalTime
+		OptLocalTime            OptionalLocalTime
+		OptLocalTimeNull        OptionalLocalTime
+		LocalDate               LocalDate
+		OptLocalDate            OptionalLocalDate
+		OptLocalDateNull        OptionalLocalDate
+		Duration                Duration
+		OptDuration             OptionalDuration
+		OptDurationNull         OptionalDuration
+		RelativeDuration        RelativeDuration
+		OptRelativeDuration     OptionalRelativeDuration
+		OptRelativeDurationNull OptionalRelativeDuration
+	}
+
+	testJson := []byte(`{
+		"Str": "test str",
+		"OptStr": "null test str",
+		"OptStrNull": null,
+		"Bool": true,
+		"OptBool": true,
+		"OptBoolNull": null,
+		"Int16": 12345,
+		"OptInt16": 12345,
+		"OptInt16Null": null,
+		"Int32": 12345,
+		"OptInt32": 12345,
+		"OptInt32Null": null,
+		"Int64": 12345,
+		"OptInt64": 12345,
+		"OptInt64Null": null,
+		"Float32": 12345,
+		"OptFloat32": 12345,
+		"OptFloat32Null": null,
+		"Float64": 12345,
+		"OptFloat64": 12345,
+		"OptFloat64Null": null,
+		"BigInt": 123456789012345678901234567890,
+		"OptBigInt": 123456789012345678901234567890,
+		"OptBigIntNull": null,
+		"Uuid": "759637d8-6635-11e9-b9d4-098002d459d5",
+		"OptUuid": "759637d8-6635-11e9-b9d4-098002d459d5",
+		"OptUuidNull": null,
+		"Bytes": "cXdlcnR5Cgl1aW9w",
+		"OptBytes": "cXdlcnR5Cgl1aW9w",
+		"OptBytesNull": null,
+		"DateTime": "2021-10-01T12:34:56.123456789Z",
+		"OptDateTime": "2021-10-01T12:34:56.123456789Z",
+		"OptDateTimeNull": null,
+		"LocalDateTime": {},
+		"OptLocalDateTime": {},
+		"OptLocalDateTimeNull": null,
+		"LocalTime": {},
+		"OptLocalTime": {},
+		"OptLocalTimeNull": null,
+		"LocalDate": {},
+		"OptLocalDate": {},
+		"OptLocalDateNull": null,
+		"Duration": 1234567,
+		"OptDuration": 1234567,
+		"OptDurationNull": null,
+		"RelativeDuration": {},
+		"OptRelativeDuration": {},
+		"OptRelativeDurationNull": null
+	}`)
+
+	bigInt, _ := (&big.Int{}).SetString("123456789012345678901234567890", 10)
+	uuid, _ := ParseUUID("759637d8-6635-11e9-b9d4-098002d459d5")
+	dt := time.Date(2021, 10, 1, 12, 34, 56, 123456789, time.UTC)
+	localDatetime := NewLocalDateTime(
+		dt.Year(), dt.Month(), dt.Day(),
+		dt.Hour(), dt.Minute(), dt.Second(), 0,
+	)
+	localTime := NewLocalTime(dt.Hour(), dt.Minute(), dt.Second(), 0)
+	localDate := NewLocalDate(dt.Year(), dt.Month(), dt.Day())
+	duration := Duration(1234567)
+	relDuration := NewRelativeDuration(3, -4, 5)
+
+	decoded := testJSONStruct{
+		OptStrNull:              NewOptionalStr("string"),
+		OptBoolNull:             NewOptionalBool(true),
+		OptInt16Null:            NewOptionalInt16(12345),
+		OptInt32Null:            NewOptionalInt32(12345),
+		OptInt64Null:            NewOptionalInt64(12345),
+		OptFloat32Null:          NewOptionalFloat32(12345),
+		OptFloat64Null:          NewOptionalFloat64(12345),
+		OptBigIntNull:           NewOptionalBigInt(bigInt),
+		OptUuidNull:             NewOptionalUUID(uuid),
+		OptBytesNull:            NewOptionalBytes([]byte("abcd")),
+		OptDateTimeNull:         NewOptionalDateTime(time.Now()),
+		OptLocalDateTimeNull:    NewOptionalLocalDateTime(localDatetime),
+		OptLocalTimeNull:        NewOptionalLocalTime(localTime),
+		OptLocalDateNull:        NewOptionalLocalDate(localDate),
+		OptDurationNull:         NewOptionalDuration(duration),
+		OptRelativeDurationNull: NewOptionalRelativeDuration(relDuration),
+	}
+	err := json.Unmarshal(testJson, &decoded)
+	assert.NoError(t, err)
+
+	expected := testJSONStruct{
+		Str:         "test str",
+		OptStr:      NewOptionalStr("null test str"),
+		Bool:        true,
+		OptBool:     NewOptionalBool(true),
+		Int16:       12345,
+		OptInt16:    NewOptionalInt16(12345),
+		Int32:       12345,
+		OptInt32:    NewOptionalInt32(12345),
+		Int64:       12345,
+		OptInt64:    NewOptionalInt64(12345),
+		Float32:     12345,
+		OptFloat32:  NewOptionalFloat32(12345),
+		Float64:     12345,
+		OptFloat64:  NewOptionalFloat64(12345),
+		BigInt:      bigInt,
+		OptBigInt:   NewOptionalBigInt(bigInt),
+		Uuid:        uuid,
+		OptUuid:     NewOptionalUUID(uuid),
+		Bytes:       []byte("qwerty\n\tuiop"),
+		OptBytes:    NewOptionalBytes([]byte("qwerty\n\tuiop")),
+		DateTime:    dt,
+		OptDateTime: NewOptionalDateTime(dt),
+		Duration:    duration,
+		OptDuration: NewOptionalDuration(duration),
+		// Use empty values since these types don't survive a roundtrip
+		LocalDateTime:       LocalDateTime{},
+		OptLocalDateTime:    NewOptionalLocalDateTime(LocalDateTime{}),
+		LocalTime:           LocalTime{},
+		OptLocalTime:        NewOptionalLocalTime(LocalTime{}),
+		LocalDate:           LocalDate{},
+		OptLocalDate:        NewOptionalLocalDate(LocalDate{}),
+		RelativeDuration:    RelativeDuration{},
+		OptRelativeDuration: NewOptionalRelativeDuration(RelativeDuration{}),
+	}
+	assert.Equal(t, expected, decoded)
+
+	encoded, err := json.MarshalIndent(decoded, "\t", "\t")
+	assert.NoError(t, err)
+	assert.Equal(t, testJson, encoded)
 }

@@ -62,7 +62,8 @@ func (o OptionalInt16) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalInt16) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 
@@ -104,7 +105,8 @@ func (o OptionalInt32) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalInt32) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 
@@ -148,7 +150,8 @@ func (o OptionalInt64) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalInt64) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 
@@ -190,7 +193,8 @@ func (o OptionalFloat32) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalFloat32) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 
@@ -232,7 +236,8 @@ func (o OptionalFloat64) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalFloat64) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 

@@ -56,7 +56,8 @@ func (o OptionalBigInt) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalBigInt) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 

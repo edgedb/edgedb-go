@@ -50,7 +50,8 @@ func (o OptionalBool) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OptionalBool) UnmarshalJSON(bytes []byte) error {
-	if string(bytes) == "null" {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
 		return nil
 	}
 

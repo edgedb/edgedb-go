@@ -17,6 +17,7 @@
 package edgedbtypes
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -58,6 +59,27 @@ func (o *OptionalDateTime) Set(val time.Time) {
 func (o *OptionalDateTime) Unset() {
 	o.val = time.Time{}
 	o.isSet = false
+}
+
+func (o OptionalDateTime) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalDateTime) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
 
 // NewLocalDateTime returns a new LocalDateTime
@@ -108,6 +130,27 @@ func (o *OptionalLocalDateTime) Unset() {
 	o.isSet = false
 }
 
+func (o OptionalLocalDateTime) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalLocalDateTime) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
+}
+
 // NewLocalDate returns a new LocalDate
 func NewLocalDate(year int, month time.Month, day int) LocalDate {
 	t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
@@ -147,6 +190,27 @@ func (o *OptionalLocalDate) Set(val LocalDate) {
 func (o *OptionalLocalDate) Unset() {
 	o.val = LocalDate{}
 	o.isSet = false
+}
+
+func (o OptionalLocalDate) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalLocalDate) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
 
 // NewLocalTime returns a new LocalTime
@@ -206,6 +270,27 @@ func (o *OptionalLocalTime) Set(val LocalTime) {
 func (o *OptionalLocalTime) Unset() {
 	o.val = LocalTime{}
 	o.isSet = false
+}
+
+func (o OptionalLocalTime) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
 
 // Duration represents the elapsed time between two instants
@@ -282,6 +367,27 @@ func (o *OptionalDuration) Set(val Duration) {
 func (o *OptionalDuration) Unset() {
 	o.val = 0
 	o.isSet = false
+}
+
+func (o OptionalDuration) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalDuration) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
 
 // NewRelativeDuration returns a new RelativeDuration
@@ -395,4 +501,25 @@ func (o *OptionalRelativeDuration) Set(val RelativeDuration) {
 func (o *OptionalRelativeDuration) Unset() {
 	o.val = RelativeDuration{}
 	o.isSet = false
+}
+
+func (o OptionalRelativeDuration) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalRelativeDuration) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
