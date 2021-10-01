@@ -18,7 +18,9 @@ package edgedbtypes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -106,6 +108,20 @@ func (dt LocalDateTime) String() string {
 	return time.Unix(sec, nsec).UTC().Format("2006-01-02T15:04:05.999999")
 }
 
+func (dt LocalDateTime) MarshalText() ([]byte, error) {
+	return []byte(dt.String()), nil
+}
+
+func (dt *LocalDateTime) UnmarshalText(b []byte) error {
+	t, err := time.Parse("2006-01-02T15:04:05.999999", string(b))
+	if err != nil {
+		return err
+	}
+	dt.usec = t.UnixMicro() + timeShift*1_000_000
+
+	return nil
+}
+
 // OptionalLocalDateTime is an optional LocalDateTime. Optional types must be
 // used for out parameters when a shape field is not required.
 type OptionalLocalDateTime struct {
@@ -132,7 +148,6 @@ func (o *OptionalLocalDateTime) Unset() {
 
 func (o OptionalLocalDateTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
-		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -144,7 +159,6 @@ func (o *OptionalLocalDateTime) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
-	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
@@ -172,6 +186,20 @@ func (d LocalDate) String() string {
 	).UTC().Format("2006-01-02")
 }
 
+func (d LocalDate) MarshalText() ([]byte, error) {
+	return []byte(d.String()), nil
+}
+
+func (d *LocalDate) UnmarshalText(b []byte) error {
+	t, err := time.Parse("2006-01-02", string(b))
+	if err != nil {
+		return err
+	}
+	d.days = int32((t.Unix() + timeShift) / 86400)
+
+	return nil
+}
+
 // OptionalLocalDate is an optional LocalDate. Optional types must be used for
 // out parameters when a shape field is not required.
 type OptionalLocalDate struct {
@@ -196,7 +224,6 @@ func (o *OptionalLocalDate) Unset() {
 
 func (o OptionalLocalDate) MarshalJSON() ([]byte, error) {
 	if o.isSet {
-		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -208,7 +235,6 @@ func (o *OptionalLocalDate) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
-	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
@@ -254,6 +280,21 @@ func (t LocalTime) String() string {
 	).UTC().Format("15:04:05.999999")
 }
 
+func (t LocalTime) MarshalText() ([]byte, error) {
+	return []byte(t.String()), nil
+}
+
+func (t *LocalTime) UnmarshalText(b []byte) error {
+	pt, err := time.Parse("15:04:05.999999", string(b))
+	if err != nil {
+		return err
+	}
+	// microseconds between 0000-01-01T00:00 and 1970-01-01T00:00
+	t.usec = pt.UnixMicro() + 62_167_219_200_000_000
+
+	return nil
+}
+
 // OptionalLocalTime is an optional LocalTime. Optional types must be used for
 // out parameters when a shape field is not required.
 type OptionalLocalTime struct {
@@ -278,7 +319,6 @@ func (o *OptionalLocalTime) Unset() {
 
 func (o OptionalLocalTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
-		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -290,7 +330,6 @@ func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
-	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
@@ -485,6 +524,85 @@ func (rd RelativeDuration) String() string {
 	return strings.Join(buf, "")
 }
 
+func (rd RelativeDuration) MarshalText() ([]byte, error) {
+	return []byte(rd.String()), nil
+}
+
+var errMalformedRelativeDuration = errors.New(
+	"malformed edgedb.RelativeDuration")
+
+var relDurationRegex = regexp.MustCompile(
+	`P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)?` +
+		`(?:T(?:(-?\d+)H)?(?:(-?\d+)M)?(?:(-?\d+)(?:\.(\d{1,6}))?S)?)?`,
+)
+
+func (rd *RelativeDuration) UnmarshalText(b []byte) error {
+	str := string(b)
+	*rd = RelativeDuration{}
+
+	if str == "PT0S" {
+		return nil
+	}
+
+	match := relDurationRegex.FindStringSubmatch(str)
+	if len(match) == 0 {
+		return errMalformedRelativeDuration
+	}
+
+	fmt.Println(match[1], match[2], match[3], match[4], match[5], match[6], match[7])
+	if match[1] != "" {
+		years, err := strconv.ParseInt(match[1], 10, 32)
+		if err != nil {
+			return err
+		}
+		rd.months = int32(years) * monthsPerYear
+	}
+	if match[2] != "" {
+		months, err := strconv.ParseInt(match[2], 10, 32)
+		if err != nil {
+			return err
+		}
+		rd.months += int32(months)
+	}
+	if match[3] != "" {
+		days, err := strconv.ParseInt(match[3], 10, 32)
+		if err != nil {
+			return err
+		}
+		rd.days = int32(days)
+	}
+	if match[4] != "" {
+		hours, err := strconv.ParseInt(match[4], 10, 64)
+		if err != nil {
+			return err
+		}
+		rd.microseconds = hours * usecsPerHour
+	}
+	if match[5] != "" {
+		minutes, err := strconv.ParseInt(match[5], 10, 64)
+		if err != nil {
+			return err
+		}
+		rd.microseconds += minutes * usecsPerMinute
+	}
+	if match[6] != "" {
+		secs, err := strconv.ParseInt(match[6], 10, 64)
+		if err != nil {
+			return err
+		}
+		rd.microseconds += secs * usecsPerSecond
+	}
+	if match[7] != "" {
+		usecs, err := strconv.ParseInt(match[7], 10, 64)
+		if err != nil {
+			return err
+		}
+		rd.microseconds += usecs
+	}
+
+	return nil
+}
+
 // OptionalRelativeDuration is an optional RelativeDuration. Optional types
 // must be used for out parameters when a shape field is not required.
 type OptionalRelativeDuration struct {
@@ -511,7 +629,6 @@ func (o *OptionalRelativeDuration) Unset() {
 
 func (o OptionalRelativeDuration) MarshalJSON() ([]byte, error) {
 	if o.isSet {
-		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -523,7 +640,6 @@ func (o *OptionalRelativeDuration) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
-	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}

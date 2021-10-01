@@ -6485,34 +6485,31 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		"DateTime": "2021-10-01T12:34:56.123456789Z",
 		"OptDateTime": "2021-10-01T12:34:56.123456789Z",
 		"OptDateTimeNull": null,
-		"LocalDateTime": {},
-		"OptLocalDateTime": {},
+		"LocalDateTime": "2021-10-01T12:34:56.123456",
+		"OptLocalDateTime": "2021-10-01T12:34:56.123456",
 		"OptLocalDateTimeNull": null,
-		"LocalTime": {},
-		"OptLocalTime": {},
+		"LocalTime": "12:34:56.123456",
+		"OptLocalTime": "12:34:56.123456",
 		"OptLocalTimeNull": null,
-		"LocalDate": {},
-		"OptLocalDate": {},
+		"LocalDate": "2021-10-01",
+		"OptLocalDate": "2021-10-01",
 		"OptLocalDateNull": null,
 		"Duration": 1234567,
 		"OptDuration": 1234567,
 		"OptDurationNull": null,
-		"RelativeDuration": {},
-		"OptRelativeDuration": {},
+		"RelativeDuration": "P2Y3M-4DT23M12.345678S",
+		"OptRelativeDuration": "P2Y3M-4DT23M12.345678S",
 		"OptRelativeDurationNull": null
 	}`)
 
 	bigInt, _ := (&big.Int{}).SetString("123456789012345678901234567890", 10)
 	uuid, _ := ParseUUID("759637d8-6635-11e9-b9d4-098002d459d5")
 	dt := time.Date(2021, 10, 1, 12, 34, 56, 123456789, time.UTC)
-	localDatetime := NewLocalDateTime(
-		dt.Year(), dt.Month(), dt.Day(),
-		dt.Hour(), dt.Minute(), dt.Second(), 0,
-	)
-	localTime := NewLocalTime(dt.Hour(), dt.Minute(), dt.Second(), 0)
-	localDate := NewLocalDate(dt.Year(), dt.Month(), dt.Day())
+	localDatetime := NewLocalDateTime(2021, 10, 1, 12, 34, 56, 123456)
+	localTime := NewLocalTime(12, 34, 56, 123456)
+	localDate := NewLocalDate(2021, 10, 1)
 	duration := Duration(1234567)
-	relDuration := NewRelativeDuration(3, -4, 5)
+	relDuration := NewRelativeDuration(27, -4, 1392345678)
 
 	decoded := testJSONStruct{
 		OptStrNull:              NewOptionalStr("string"),
@@ -6536,39 +6533,38 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := testJSONStruct{
-		Str:         "test str",
-		OptStr:      NewOptionalStr("null test str"),
-		Bool:        true,
-		OptBool:     NewOptionalBool(true),
-		Int16:       12345,
-		OptInt16:    NewOptionalInt16(12345),
-		Int32:       12345,
-		OptInt32:    NewOptionalInt32(12345),
-		Int64:       12345,
-		OptInt64:    NewOptionalInt64(12345),
-		Float32:     12345,
-		OptFloat32:  NewOptionalFloat32(12345),
-		Float64:     12345,
-		OptFloat64:  NewOptionalFloat64(12345),
-		BigInt:      bigInt,
-		OptBigInt:   NewOptionalBigInt(bigInt),
-		UUID:        uuid,
-		OptUUID:     NewOptionalUUID(uuid),
-		Bytes:       []byte("qwerty\n\tuiop"),
-		OptBytes:    NewOptionalBytes([]byte("qwerty\n\tuiop")),
-		DateTime:    dt,
-		OptDateTime: NewOptionalDateTime(dt),
-		Duration:    duration,
-		OptDuration: NewOptionalDuration(duration),
-		// Use empty values since these types don't survive a roundtrip
-		LocalDateTime:       LocalDateTime{},
-		OptLocalDateTime:    NewOptionalLocalDateTime(LocalDateTime{}),
-		LocalTime:           LocalTime{},
-		OptLocalTime:        NewOptionalLocalTime(LocalTime{}),
-		LocalDate:           LocalDate{},
-		OptLocalDate:        NewOptionalLocalDate(LocalDate{}),
-		RelativeDuration:    RelativeDuration{},
-		OptRelativeDuration: NewOptionalRelativeDuration(RelativeDuration{}),
+		Str:                 "test str",
+		OptStr:              NewOptionalStr("null test str"),
+		Bool:                true,
+		OptBool:             NewOptionalBool(true),
+		Int16:               12345,
+		OptInt16:            NewOptionalInt16(12345),
+		Int32:               12345,
+		OptInt32:            NewOptionalInt32(12345),
+		Int64:               12345,
+		OptInt64:            NewOptionalInt64(12345),
+		Float32:             12345,
+		OptFloat32:          NewOptionalFloat32(12345),
+		Float64:             12345,
+		OptFloat64:          NewOptionalFloat64(12345),
+		BigInt:              bigInt,
+		OptBigInt:           NewOptionalBigInt(bigInt),
+		UUID:                uuid,
+		OptUUID:             NewOptionalUUID(uuid),
+		Bytes:               []byte("qwerty\n\tuiop"),
+		OptBytes:            NewOptionalBytes([]byte("qwerty\n\tuiop")),
+		DateTime:            dt,
+		OptDateTime:         NewOptionalDateTime(dt),
+		Duration:            duration,
+		OptDuration:         NewOptionalDuration(duration),
+		LocalDateTime:       localDatetime,
+		OptLocalDateTime:    NewOptionalLocalDateTime(localDatetime),
+		LocalTime:           localTime,
+		OptLocalTime:        NewOptionalLocalTime(localTime),
+		LocalDate:           localDate,
+		OptLocalDate:        NewOptionalLocalDate(localDate),
+		RelativeDuration:    relDuration,
+		OptRelativeDuration: NewOptionalRelativeDuration(relDuration),
 	}
 	assert.Equal(t, expected, decoded)
 
