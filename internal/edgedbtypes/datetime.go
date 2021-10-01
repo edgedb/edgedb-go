@@ -117,7 +117,7 @@ func (dt *LocalDateTime) UnmarshalText(b []byte) error {
 	if err != nil {
 		return err
 	}
-	dt.usec = t.UnixMicro() + timeShift*1_000_000
+	dt.usec = (t.Unix()+timeShift)*1_000_000 + int64(t.Nanosecond()/1000)
 
 	return nil
 }
@@ -289,8 +289,9 @@ func (t *LocalTime) UnmarshalText(b []byte) error {
 	if err != nil {
 		return err
 	}
-	// microseconds between 0000-01-01T00:00 and 1970-01-01T00:00
-	t.usec = pt.UnixMicro() + 62_167_219_200_000_000
+	t.usec = pt.Unix()*1_000_000 + int64(pt.Nanosecond()/1000) +
+		// microseconds between 0000-01-01T00:00 and 1970-01-01T00:00
+		62_167_219_200_000_000
 
 	return nil
 }
@@ -549,7 +550,6 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		return errMalformedRelativeDuration
 	}
 
-	fmt.Println(match[1], match[2], match[3], match[4], match[5], match[6], match[7])
 	if match[1] != "" {
 		years, err := strconv.ParseInt(match[1], 10, 32)
 		if err != nil {
