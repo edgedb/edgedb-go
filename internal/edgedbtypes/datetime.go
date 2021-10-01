@@ -132,6 +132,7 @@ func (o *OptionalLocalDateTime) Unset() {
 
 func (o OptionalLocalDateTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
+		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -143,6 +144,7 @@ func (o *OptionalLocalDateTime) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
+	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
@@ -194,6 +196,7 @@ func (o *OptionalLocalDate) Unset() {
 
 func (o OptionalLocalDate) MarshalJSON() ([]byte, error) {
 	if o.isSet {
+		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -205,6 +208,7 @@ func (o *OptionalLocalDate) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
+	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
@@ -274,6 +278,7 @@ func (o *OptionalLocalTime) Unset() {
 
 func (o OptionalLocalTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
+		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -285,6 +290,7 @@ func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
+	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}
@@ -505,6 +511,7 @@ func (o *OptionalRelativeDuration) Unset() {
 
 func (o OptionalRelativeDuration) MarshalJSON() ([]byte, error) {
 	if o.isSet {
+		//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 		return json.Marshal(o.val)
 	}
 	return json.Marshal(nil)
@@ -516,6 +523,7 @@ func (o *OptionalRelativeDuration) UnmarshalJSON(bytes []byte) error {
 		return nil
 	}
 
+	//lint:ignore SA9005 custom datetime types don't implement MarshalJSON
 	if err := json.Unmarshal(bytes, &o.val); err != nil {
 		return err
 	}

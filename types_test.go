@@ -3161,7 +3161,7 @@ func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 	// Decode value
 	err := conn.QuerySingle(ctx, `
 		SELECT { val := <cal::relative_duration>
-			'8 months 5 days 48 hours 45 minutes 7.6 seconds' 
+			'8 months 5 days 48 hours 45 minutes 7.6 seconds'
 		}`,
 		&result,
 	)
@@ -4174,8 +4174,8 @@ func (m *CustomOptionalLocalDateTime) SetMissing(missing bool) {
 func (m CustomOptionalLocalDateTime) Missing() bool { return !m.isSet }
 
 func TestReceiveOptionalLocalDateTimeUnmarshaler(t *testing.T) {
-	ddl := `CREATE TYPE Sample { 
-		CREATE PROPERTY val -> cal::local_datetime; 
+	ddl := `CREATE TYPE Sample {
+		CREATE PROPERTY val -> cal::local_datetime;
 	};`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
@@ -6425,9 +6425,9 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		BigInt                  *big.Int
 		OptBigInt               OptionalBigInt
 		OptBigIntNull           OptionalBigInt
-		Uuid                    UUID
-		OptUuid                 OptionalUUID
-		OptUuidNull             OptionalUUID
+		UUID                    UUID
+		OptUUID                 OptionalUUID
+		OptUUIDNull             OptionalUUID
 		Bytes                   []byte
 		OptBytes                OptionalBytes
 		OptBytesNull            OptionalBytes
@@ -6451,7 +6451,7 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		OptRelativeDurationNull OptionalRelativeDuration
 	}
 
-	testJson := []byte(`{
+	testJSON := []byte(`{
 		"Str": "test str",
 		"OptStr": "null test str",
 		"OptStrNull": null,
@@ -6476,9 +6476,9 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		"BigInt": 123456789012345678901234567890,
 		"OptBigInt": 123456789012345678901234567890,
 		"OptBigIntNull": null,
-		"Uuid": "759637d8-6635-11e9-b9d4-098002d459d5",
-		"OptUuid": "759637d8-6635-11e9-b9d4-098002d459d5",
-		"OptUuidNull": null,
+		"UUID": "759637d8-6635-11e9-b9d4-098002d459d5",
+		"OptUUID": "759637d8-6635-11e9-b9d4-098002d459d5",
+		"OptUUIDNull": null,
 		"Bytes": "cXdlcnR5Cgl1aW9w",
 		"OptBytes": "cXdlcnR5Cgl1aW9w",
 		"OptBytesNull": null,
@@ -6523,7 +6523,7 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		OptFloat32Null:          NewOptionalFloat32(12345),
 		OptFloat64Null:          NewOptionalFloat64(12345),
 		OptBigIntNull:           NewOptionalBigInt(bigInt),
-		OptUuidNull:             NewOptionalUUID(uuid),
+		OptUUIDNull:             NewOptionalUUID(uuid),
 		OptBytesNull:            NewOptionalBytes([]byte("abcd")),
 		OptDateTimeNull:         NewOptionalDateTime(time.Now()),
 		OptLocalDateTimeNull:    NewOptionalLocalDateTime(localDatetime),
@@ -6532,7 +6532,7 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		OptDurationNull:         NewOptionalDuration(duration),
 		OptRelativeDurationNull: NewOptionalRelativeDuration(relDuration),
 	}
-	err := json.Unmarshal(testJson, &decoded)
+	err := json.Unmarshal(testJSON, &decoded)
 	assert.NoError(t, err)
 
 	expected := testJSONStruct{
@@ -6552,8 +6552,8 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		OptFloat64:  NewOptionalFloat64(12345),
 		BigInt:      bigInt,
 		OptBigInt:   NewOptionalBigInt(bigInt),
-		Uuid:        uuid,
-		OptUuid:     NewOptionalUUID(uuid),
+		UUID:        uuid,
+		OptUUID:     NewOptionalUUID(uuid),
 		Bytes:       []byte("qwerty\n\tuiop"),
 		OptBytes:    NewOptionalBytes([]byte("qwerty\n\tuiop")),
 		DateTime:    dt,
@@ -6574,5 +6574,5 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 
 	encoded, err := json.MarshalIndent(decoded, "\t", "\t")
 	assert.NoError(t, err)
-	assert.Equal(t, testJson, encoded)
+	assert.Equal(t, testJSON, encoded)
 }
