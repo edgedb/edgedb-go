@@ -217,8 +217,8 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@host1,host2/db",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: ` +
-					`invalid host: "host1,host2"`,
+				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+					`edgedb.ConfigurationError: invalid host: "host1,host2"`,
 			},
 		},
 		{
@@ -226,8 +226,9 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@host1:1111,host2:2222/db",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: ` +
-					`invalid host: "host1:1111,host2"`,
+				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+					`edgedb.ConfigurationError: invalid host: ` +
+					`"host1:1111,host2"`,
 			},
 		},
 		{
@@ -251,8 +252,9 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb:///db?host=host1:1111,host2:2222",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: ` +
-					`invalid host: "host1:1111,host2:2222"`,
+				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+					`edgedb.ConfigurationError: invalid host: ` +
+					`"host1:1111,host2:2222"`,
 			},
 		},
 		{
@@ -328,9 +330,9 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: "edgedb.ConfigurationError: " +
-					`invalid host: unix socket paths not supported, ` +
-					`got "/unix_sock/test"`,
+				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+					`edgedb.ConfigurationError: invalid host: ` +
+					`unix socket paths not supported, got "/unix_sock/test"`,
 			},
 		},
 		{
@@ -347,9 +349,9 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@?port=56226&host=%2Ftmp",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: "edgedb.ConfigurationError: " +
-					`invalid host: unix socket paths not supported, ` +
-					`got "/tmp"`,
+				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+					`edgedb.ConfigurationError: invalid host: ` +
+					`unix socket paths not supported, got "/tmp"`,
 			},
 		},
 	}

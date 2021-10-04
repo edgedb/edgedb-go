@@ -752,7 +752,9 @@ func loadCredentialsIntoConfig(
 }
 
 func fmtDSNErr(err error) error {
-	return fmt.Errorf(`invalid DSN: %w`, err)
+	return &configurationError{
+		msg: fmt.Sprintf(`invalid DSN: %v`, err),
+	}
 }
 
 func parseDSNIntoConfig(
