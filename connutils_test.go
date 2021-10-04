@@ -218,7 +218,7 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`edgedb.ConfigurationError: invalid host: "host1,host2"`,
+					`invalid host: "host1,host2"`,
 			},
 		},
 		{
@@ -227,8 +227,7 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`edgedb.ConfigurationError: invalid host: ` +
-					`"host1:1111,host2"`,
+					`invalid host: "host1:1111,host2"`,
 			},
 		},
 		{
@@ -253,8 +252,7 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`edgedb.ConfigurationError: invalid host: ` +
-					`"host1:1111,host2:2222"`,
+					`invalid host: "host1:1111,host2:2222"`,
 			},
 		},
 		{
@@ -331,8 +329,8 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`edgedb.ConfigurationError: invalid host: ` +
-					`unix socket paths not supported, got "/unix_sock/test"`,
+					`invalid host: unix socket paths not supported, ` +
+					`got "/unix_sock/test"`,
 			},
 		},
 		{
@@ -350,8 +348,8 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`edgedb.ConfigurationError: invalid host: ` +
-					`unix socket paths not supported, got "/tmp"`,
+					`invalid host: unix socket paths not supported, ` +
+					`got "/tmp"`,
 			},
 		},
 	}
