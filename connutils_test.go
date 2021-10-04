@@ -399,8 +399,12 @@ var testcaseErrorMapping = map[string]string{
 }
 
 func TestConnectionTestcases(t *testing.T) {
-	data, err := ioutil.ReadFile("./connection_testcases.json")
-	require.NoError(t, err)
+	data, err := ioutil.ReadFile(
+		"./shared-client-testcases/connection_testcases.json",
+	)
+	require.NoError(t, err, "Failed to read 'connection_testcases.json'\n"+
+		"Is the 'shared-client-testcases' submodule initialised? "+
+		"Try running 'git submodule update --init'.")
 
 	var testcases []map[string]interface{}
 	err = json.Unmarshal(data, &testcases)

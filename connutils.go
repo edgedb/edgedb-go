@@ -751,6 +751,10 @@ func loadCredentialsIntoConfig(
 	return nil
 }
 
+func fmtDSNErr(err error) error {
+	return fmt.Errorf(`invalid DSN: %w`, err)
+}
+
 func parseDSNIntoConfig(
 	resolvedConfig *resolvedParams,
 	dsn string,
@@ -791,11 +795,11 @@ func parseDSNIntoConfig(
 		query, "host", parsed.Hostname(), resolvedConfig.host != "",
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		err := resolvedConfig.setHost(host, source)
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 	}
 
@@ -803,11 +807,11 @@ func parseDSNIntoConfig(
 		query, "port", parsed.Port(), resolvedConfig.port != 0,
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		err := resolvedConfig.setPortStr(port, source)
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 	}
 
@@ -817,13 +821,13 @@ func parseDSNIntoConfig(
 		resolvedConfig.database != "",
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		err := resolvedConfig.setDatabase(
 			strings.TrimPrefix(database, "/"), source,
 		)
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 	}
 
@@ -831,11 +835,11 @@ func parseDSNIntoConfig(
 		query, "user", parsed.User.Username(), resolvedConfig.user != "",
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		err := resolvedConfig.setUser(user, source)
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 	}
 
@@ -844,7 +848,7 @@ func parseDSNIntoConfig(
 		query, "password", parsedPassword, resolvedConfig.passwordSet,
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		resolvedConfig.setPassword(password, source)
 	}
@@ -853,11 +857,11 @@ func parseDSNIntoConfig(
 		query, "tls_cert_file", "", len(resolvedConfig.tlsCAData) != 0,
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		err := resolvedConfig.setTLSCAFile(certFile, source)
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 	}
 
@@ -865,11 +869,11 @@ func parseDSNIntoConfig(
 		query, "tls_verify_hostname", "", resolvedConfig.tlsVerifyHostnameSet,
 	); err != nil || isSet {
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 		err := resolvedConfig.setTLSVerifyHostnameStr(verifyHostname, source)
 		if err != nil {
-			return err
+			return fmtDSNErr(err)
 		}
 	}
 
