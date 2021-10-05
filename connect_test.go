@@ -45,7 +45,7 @@ func TestAuth(t *testing.T) {
 	clientCopy := p.WithTxOptions(NewTxOptions())
 
 	err = p.Close()
-	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.NoError(t, err)
 
 	// A connection should not be closeable more than once.
 	err = p.Close()

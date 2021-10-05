@@ -190,5 +190,5 @@ func TestTutorial(t *testing.T) {
 	expected[0].Year.Set(2017)
 
 	assert.Equal(t, expected, out)
-	assert.Nil(t, edb.Close())
+	assert.NoError(t, edb.Close())
 }
