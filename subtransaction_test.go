@@ -36,7 +36,7 @@ func TestSubtxRollback(t *testing.T) {
 	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
 		err := tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
 			err := stx.Execute(ctx, insertName("rollback 1"))
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 
 			return firstError(err, errors.New("user error 1"))
 		})
@@ -48,17 +48,17 @@ func TestSubtxRollback(t *testing.T) {
 		err = tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
 			err = stx.Subtx(ctx, func(ctx context.Context, stx2 *Subtx) error {
 				err = stx2.Execute(ctx, insertName("commit 1"))
-				assert.Nil(t, err, "unexpected error: %v", err)
+				assert.NoError(t, err)
 				return err
 			})
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 			if err != nil {
 				return err
 			}
 
 			err = stx.Subtx(ctx, func(ctx context.Context, stx2 *Subtx) error {
 				err = stx2.Execute(ctx, insertName("rollback 2"))
-				assert.Nil(t, err, "unexpected error: %v", err)
+				assert.NoError(t, err)
 
 				return firstError(err, errors.New("user error 2"))
 			})
@@ -68,15 +68,15 @@ func TestSubtxRollback(t *testing.T) {
 			}
 
 			err = stx.Execute(ctx, insertName("commit 2"))
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 
 			return err
 		})
-		assert.Nil(t, err, "unexpected error: %v", err)
+		assert.NoError(t, err)
 
 		return err
 	})
-	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.NoError(t, err)
 
 	var names []string
 	err = client.Query(
@@ -86,7 +86,7 @@ func TestSubtxRollback(t *testing.T) {
 		ORDER BY names`,
 		&names,
 	)
-	require.Nil(t, err, "unexpected error: %v", err)
+	require.NoError(t, err)
 
 	expected := []string{
 		"subtx commit 1",
@@ -147,13 +147,13 @@ func TestSubtxBorrowing(t *testing.T) {
 
 				return nil
 			})
-			assert.Nil(t, err, "unexpected error: %v", err)
+			assert.NoError(t, err)
 
 			return nil
 		})
-		assert.Nil(t, err, "unexpected error: %v", err)
+		assert.NoError(t, err)
 
 		return nil
 	})
-	assert.Nil(t, err, "unexpected error: %v", err)
+	assert.NoError(t, err)
 }
