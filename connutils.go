@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -175,6 +176,10 @@ func stashPath(p string) (string, error) {
 		return "", err
 	}
 
+	if runtime.GOOS == "windows" && !strings.HasPrefix(p, `\\`) {
+		p = `\\?\` + p
+	}
+
 	hash := fmt.Sprintf("%x", sha1.Sum([]byte(p)))
 	baseName := filepath.Base(p)
 	dirName := baseName + "-" + hash
@@ -200,7 +205,7 @@ func oldConfigDir() (string, error) {
 		return "", err
 	}
 
-	return path.Join(dir, ".edgedb"), nil
+	return filepath.Join(dir, ".edgedb"), nil
 }
 
 func exists(path string) bool {
@@ -217,7 +222,7 @@ func findConfigPath(suffix ...string) (string, error) {
 	}
 
 	parts := append([]string{dir}, suffix...)
-	dir = path.Join(parts...)
+	dir = filepath.Join(parts...)
 	if exists(dir) {
 		return dir, nil
 	}
@@ -228,7 +233,7 @@ func findConfigPath(suffix ...string) (string, error) {
 	}
 
 	parts = append([]string{fallback}, suffix...)
-	fallback = path.Join(parts...)
+	fallback = filepath.Join(parts...)
 
 	if exists(fallback) {
 		return fallback, nil
@@ -266,7 +271,7 @@ func parseConnectDSNAndArgs(
 				return nil, &clientConnectionError{err: err}
 			}
 
-			tomlPath := path.Join(dir, "edgedb.toml")
+			tomlPath := filepath.Join(dir, "edgedb.toml")
 			if _, e := os.Stat(tomlPath); os.IsNotExist(e) {
 				return nil, &clientConnectionError{
 					msg: "no `edgedb.toml` found " +
@@ -290,7 +295,9 @@ func parseConnectDSNAndArgs(
 				}
 			}
 
-			data, err := ioutil.ReadFile(path.Join(stashDir, "instance-name"))
+			data, err := ioutil.ReadFile(
+				filepath.Join(stashDir, "instance-name"),
+			)
 			if err != nil {
 				return nil, &clientConnectionError{err: err}
 			}

@@ -20,7 +20,7 @@ package edgedb
 
 import (
 	"crypto/x509"
-	"path"
+	"path/filepath"
 
 	"github.com/certifi/gocertifi"
 	"golang.org/x/sys/windows"
@@ -41,5 +41,5 @@ func configDir() (string, error) {
 		return "", err
 	}
 
-	return path.Join(dir, "EdgeDB"), nil
+	return filepath.Join(dir, "EdgeDB", "config"), nil
 }
