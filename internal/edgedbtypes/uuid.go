@@ -45,7 +45,7 @@ func ParseUUID(s string) (UUID, error) {
 }
 
 // UUID a universally unique identifier
-// https://www.edgedb.com/docs/datamodel/scalars/uuid#type::std::uuid
+// https://www.edgedb.com/docs/stdlib/uuid
 type UUID [16]byte
 
 func (id UUID) String() string {

@@ -73,7 +73,7 @@ func NewLocalDateTime(
 }
 
 // LocalDateTime is a date and time without timezone.
-// https://www.edgedb.com/docs/datamodel/scalars/datetime/
+// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_datetime
 type LocalDateTime struct {
 	usec int64
 }
@@ -115,7 +115,7 @@ func NewLocalDate(year int, month time.Month, day int) LocalDate {
 }
 
 // LocalDate is a date without a time zone.
-// https://www.edgedb.com/docs/datamodel/scalars/datetime/
+// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_date
 type LocalDate struct {
 	days int32
 }
@@ -174,7 +174,7 @@ func NewLocalTime(hour, minute, second, microsecond int) LocalTime {
 }
 
 // LocalTime is a time without a time zone.
-// https://www.edgedb.com/docs/datamodel/scalars/datetime/
+// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_time
 type LocalTime struct {
 	usec int64
 }
