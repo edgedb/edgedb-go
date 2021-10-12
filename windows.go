@@ -26,8 +26,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var defaultHosts = []string{"localhost"}
-
 func getSystemCertPool() (*x509.CertPool, error) {
 	// x509.SystemCertPool() doesn't work on Windows.
 	// https://github.com/golang/go/issues/16736

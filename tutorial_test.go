@@ -49,8 +49,8 @@ func TestTutorial(t *testing.T) {
 	edb, err := CreateClient(
 		ctx,
 		Options{
-			Hosts:             opts.Hosts,
-			Ports:             opts.Ports,
+			Host:              opts.Host,
+			Port:              opts.Port,
 			User:              opts.User,
 			Password:          opts.Password,
 			Database:          dbName,

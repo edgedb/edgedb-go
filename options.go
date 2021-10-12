@@ -25,60 +25,53 @@ import (
 
 // Options for connecting to an EdgeDB server
 type Options struct {
-	// Hosts is a slice of database host addresses as one of the following
+	// Host is an EdgeDB server host address, given as either an IP address or
+	// domain name. (Unix-domain socket paths are not supported)
 	//
-	// - an IP address or domain name
-	//
-	// - an absolute path to the directory
-	//   containing the database server Unix-domain socket
-	//   (not supported on Windows)
-	//
-	// If the slice is empty, the following will be tried, in order:
-	//
-	// - host address(es) parsed from the dsn argument
-	//
-	// - the value of the EDGEDB_HOST environment variable
-	//
-	// - on Unix, common directories used for EdgeDB Unix-domain sockets:
-	//   "/run/edgedb" and "/var/run/edgedb"
-	//
-	// - "localhost"
-	Hosts []string
+	// Host cannot be specified alongside the 'dsn' argument, or
+	// CredentialsFile option. Host will override all other credentials
+	// resolved from any environment variables, or project credentials with
+	// their defaults.
+	Host string
 
-	// Ports is a slice of port numbers to connect to at the server host
-	// (or Unix-domain socket file extension).
+	// Port is a port number to connect to at the server host.
 	//
-	// Ports may either be:
+	// Port cannot be specified alongside the 'dsn' argument, or
+	// CredentialsFile option. Port will override all other credentials
+	// resolved from any environment variables, or project credentials with
+	// their defaults.
+	Port int
+
+	// CredentialsFile is a path to a file containing connection credentials.
 	//
-	// - the same length ans Hosts
-	//
-	// - a single port to be used all specified hosts
-	//
-	// - empty indicating the value parsed from the dsn argument
-	//   should be used, or the value of the EDGEDB_PORT environment variable,
-	//   or 5656 if neither is specified.
-	Ports []int
+	// CredentialsFile cannot be specified alongside the 'dsn' argument, Host,
+	// or Port. CredentialsFile will override all other credentials not
+	// present in the credentials file with their defaults.
+	CredentialsFile string
 
 	// User is the name of the database role used for authentication.
-	// If not specified, the value parsed from the dsn argument is used,
-	// or the value of the EDGEDB_USER environment variable,
-	// or the operating system name of the user running the application.
+	//
+	// If not specified, the value is resolved from any compound
+	// argument/option, then from EDGEDB_USER, then any compound environment
+	// variable, then project credentials.
 	User string
 
 	// Database is the name of the database to connect to.
-	// If not specified, the value parsed from the dsn argument is used,
-	// or the value of the EDGEDB_DATABASE environment variable,
-	// or the operating system name of the user running the application.
+	//
+	// If not specified, the value is resolved from any compound
+	// argument/option, then from EDGEDB_DATABASE, then any compound
+	// environment variable, then project credentials.
 	Database string
 
-	// Password to be used for authentication,
-	// if the server requires one. If not specified,
-	// the value parsed from the dsn argument is used,
-	// or the value of the EDGEDB_PASSWORD environment variable.
+	// Password to be used for authentication, if the server requires one.
+	//
+	// If not specified, the value is resolved from any compound
+	// argument/option, then from EDGEDB_PASSWORD, then any compound
+	// environment variable, then project credentials.
 	// Note that the use of the environment variable is discouraged
 	// as other users and applications may be able to read it
 	// without needing specific privileges.
-	Password string
+	Password OptionalStr
 
 	// ConnectTimeout is used when establishing connections in the background.
 	ConnectTimeout time.Duration

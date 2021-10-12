@@ -191,10 +191,10 @@ func startServer() {
 	}
 
 	opts = Options{
-		Hosts:             []string{"127.0.0.1"},
-		Ports:             []int{info.Port},
+		Host:              "127.0.0.1",
+		Port:              info.Port,
 		User:              "test",
-		Password:          "shhh",
+		Password:          NewOptionalStr("shhh"),
 		Database:          "edgedb",
 		TLSCAFile:         info.TLSCertFile,
 		TLSVerifyHostname: NewOptionalBool(false),

@@ -27,10 +27,10 @@ import (
 func TestAuth(t *testing.T) {
 	ctx := context.Background()
 	p, err := CreateClient(ctx, Options{
-		Hosts:             opts.Hosts,
-		Ports:             opts.Ports,
+		Host:              opts.Host,
+		Port:              opts.Port,
 		User:              "user_with_password",
-		Password:          "secret",
+		Password:          NewOptionalStr("secret"),
 		Database:          opts.Database,
 		TLSCAFile:         opts.TLSCAFile,
 		TLSVerifyHostname: opts.TLSVerifyHostname,
