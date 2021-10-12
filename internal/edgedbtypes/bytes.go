@@ -16,6 +16,8 @@
 
 package edgedbtypes
 
+import "encoding/json"
+
 // OptionalBytes is an optional []byte. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalBytes struct {
@@ -42,4 +44,25 @@ func (o *OptionalBytes) Set(val []byte) {
 func (o *OptionalBytes) Unset() {
 	o.val = nil
 	o.isSet = false
+}
+
+func (o OptionalBytes) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalBytes) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }

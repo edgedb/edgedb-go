@@ -17,6 +17,7 @@
 package edgedbtypes
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -97,4 +98,25 @@ func (o *OptionalUUID) Set(val UUID) {
 func (o *OptionalUUID) Unset() {
 	o.val = UUID{}
 	o.isSet = false
+}
+
+func (o OptionalUUID) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalUUID) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }

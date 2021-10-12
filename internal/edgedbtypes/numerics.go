@@ -16,7 +16,10 @@
 
 package edgedbtypes
 
-import "math/big"
+import (
+	"encoding/json"
+	"math/big"
+)
 
 // OptionalBigInt is an optional *big.Int. Optional types must be used for out
 // parameters when a shape field is not required.
@@ -43,4 +46,25 @@ func (o *OptionalBigInt) Set(val *big.Int) {
 func (o *OptionalBigInt) Unset() {
 	o.val = nil
 	o.isSet = false
+}
+
+func (o OptionalBigInt) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalBigInt) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }

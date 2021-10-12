@@ -16,6 +16,10 @@
 
 package edgedbtypes
 
+import (
+	"encoding/json"
+)
+
 // Optional represents a shape field that is not required.
 type Optional struct {
 	isSet bool
@@ -50,6 +54,27 @@ func (o *OptionalInt16) Unset() {
 	o.isSet = false
 }
 
+func (o OptionalInt16) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalInt16) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
+}
+
 // OptionalInt32 is an optional int32. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalInt32 struct {
@@ -70,6 +95,27 @@ func (o *OptionalInt32) Set(val int32) {
 func (o *OptionalInt32) Unset() {
 	o.val = 0
 	o.isSet = false
+}
+
+func (o OptionalInt32) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalInt32) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
 
 // OptionalInt64 is an optional int64. Optional types must be used for out
@@ -96,6 +142,27 @@ func (o *OptionalInt64) Unset() *OptionalInt64 {
 	return o
 }
 
+func (o OptionalInt64) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalInt64) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
+}
+
 // OptionalFloat32 is an optional float32. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalFloat32 struct {
@@ -118,6 +185,27 @@ func (o *OptionalFloat32) Unset() {
 	o.isSet = false
 }
 
+func (o OptionalFloat32) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalFloat32) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
+}
+
 // OptionalFloat64 is an optional float64. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalFloat64 struct {
@@ -138,4 +226,25 @@ func (o *OptionalFloat64) Set(val float64) {
 func (o *OptionalFloat64) Unset() {
 	o.val = 0
 	o.isSet = false
+}
+
+func (o OptionalFloat64) MarshalJSON() ([]byte, error) {
+	if o.isSet {
+		return json.Marshal(o.val)
+	}
+	return json.Marshal(nil)
+}
+
+func (o *OptionalFloat64) UnmarshalJSON(bytes []byte) error {
+	if bytes[0] == 0x6e { // null
+		o.Unset()
+		return nil
+	}
+
+	if err := json.Unmarshal(bytes, &o.val); err != nil {
+		return err
+	}
+	o.isSet = true
+
+	return nil
 }
