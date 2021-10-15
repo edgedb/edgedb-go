@@ -25,13 +25,12 @@ import (
 )
 
 type credentials struct {
-	host     string
-	port     int
-	user     string
-	database string
-	password string
-	certData []byte
-
+	host           OptionalStr
+	port           OptionalInt32
+	user           string
+	database       OptionalStr
+	password       OptionalStr
+	certData       OptionalBytes
 	verifyHostname OptionalBool
 }
 
@@ -71,9 +70,7 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		if !ok || port != math.Trunc(port) || port < 1 || port > 65535 {
 			return nil, errors.New("invalid `port` value")
 		}
-		result.port = int(port)
-	} else {
-		result.port = 5656
+		result.port.Set(int32(port))
 	}
 
 	user, ok := data["user"]
@@ -85,25 +82,28 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		return nil, errors.New("`user` must be a string")
 	}
 
-	if host, ok := data["host"]; ok {
-		result.host, ok = host.(string)
+	if host, ok := data["host"]; ok && host != "" {
+		h, ok := host.(string)
 		if !ok {
 			return nil, errors.New("`host` must be a string")
 		}
+		result.host.Set(h)
 	}
 
 	if database, ok := data["database"]; ok {
-		result.database, ok = database.(string)
+		db, ok := database.(string)
 		if !ok {
 			return nil, errors.New("`database` must be a string")
 		}
+		result.database.Set(db)
 	}
 
 	if password, ok := data["password"]; ok {
-		result.password, ok = password.(string)
+		pwd, ok := password.(string)
 		if !ok {
 			return nil, errors.New("`password` must be a string")
 		}
+		result.password.Set(pwd)
 	}
 
 	if certData, ok := data["tls_cert_data"]; ok {
@@ -111,7 +111,7 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		if !ok {
 			return nil, errors.New("`tls_cert_data` must be a string")
 		}
-		result.certData = []byte(str)
+		result.certData.Set([]byte(str))
 	}
 
 	if verifyHostname, ok := data["tls_verify_hostname"]; ok {
@@ -119,7 +119,6 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		if !ok {
 			return nil, errors.New("`tls_verify_hostname` must be a boolean")
 		}
-
 		result.verifyHostname.Set(val)
 	}
 

@@ -51,11 +51,10 @@ type protocolConnection struct {
 // connectWithTimeout makes a single attempt to connect to `addr`.
 func connectWithTimeout(
 	ctx context.Context,
-	addr *dialArgs,
 	cfg *connConfig,
 	caches cacheCollection,
 ) (*protocolConnection, error) {
-	socket, err := connectAutoClosingSocket(ctx, addr, cfg)
+	socket, err := connectAutoClosingSocket(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

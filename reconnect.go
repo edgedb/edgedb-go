@@ -57,18 +57,15 @@ func (c *reconnectingConn) reconnect(
 
 	var edbErr Error
 	for i := 1; true; i++ {
-		for _, addr := range c.cfg.addrs {
-			c.conn, err = connectWithTimeout(
-				ctx, addr, c.cfg, c.cacheCollection)
-			if err == nil ||
-				errors.Is(err, context.Canceled) ||
-				errors.Is(err, context.DeadlineExceeded) ||
-				!errors.As(err, &edbErr) ||
-				!edbErr.Category(ClientConnectionError) ||
-				!edbErr.HasTag("SHOULD_RECONNECT") ||
-				(i > 1 && time.Now().After(maxTime)) {
-				return err
-			}
+		c.conn, err = connectWithTimeout(ctx, c.cfg, c.cacheCollection)
+		if err == nil ||
+			errors.Is(err, context.Canceled) ||
+			errors.Is(err, context.DeadlineExceeded) ||
+			!errors.As(err, &edbErr) ||
+			!edbErr.Category(ClientConnectionError) ||
+			!edbErr.HasTag("SHOULD_RECONNECT") ||
+			(i > 1 && time.Now().After(maxTime)) {
+			return err
 		}
 
 		if single {
