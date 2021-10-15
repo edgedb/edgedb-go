@@ -28,9 +28,9 @@ func TestCredentialsRead(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := &credentials{
-		database: "test3n",
-		password: "lZTBy1RVCfOpBAOwSCwIyBIR",
-		port:     10702,
+		database: NewOptionalStr("test3n"),
+		password: NewOptionalStr("lZTBy1RVCfOpBAOwSCwIyBIR"),
+		port:     NewOptionalInt32(10702),
 		user:     "test3n",
 	}
 

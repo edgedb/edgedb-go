@@ -63,6 +63,7 @@ func (o *OptionalDateTime) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalDateTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -70,6 +71,7 @@ func (o OptionalDateTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalDateTime) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()
@@ -108,10 +110,12 @@ func (dt LocalDateTime) String() string {
 	return time.Unix(sec, nsec).UTC().Format("2006-01-02T15:04:05.999999")
 }
 
+// MarshalText returns dt marshaled as text.
 func (dt LocalDateTime) MarshalText() ([]byte, error) {
 	return []byte(dt.String()), nil
 }
 
+// UnmarshalText unmarshales bytes into *dt.
 func (dt *LocalDateTime) UnmarshalText(b []byte) error {
 	t, err := time.Parse("2006-01-02T15:04:05.999999", string(b))
 	if err != nil {
@@ -146,6 +150,7 @@ func (o *OptionalLocalDateTime) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalLocalDateTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -153,6 +158,7 @@ func (o OptionalLocalDateTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalLocalDateTime) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()
@@ -186,10 +192,12 @@ func (d LocalDate) String() string {
 	).UTC().Format("2006-01-02")
 }
 
+// MarshalText returns d marshaled as text.
 func (d LocalDate) MarshalText() ([]byte, error) {
 	return []byte(d.String()), nil
 }
 
+// UnmarshalText unmarshales bytes into *d.
 func (d *LocalDate) UnmarshalText(b []byte) error {
 	t, err := time.Parse("2006-01-02", string(b))
 	if err != nil {
@@ -222,6 +230,7 @@ func (o *OptionalLocalDate) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalLocalDate) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -229,6 +238,7 @@ func (o OptionalLocalDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalLocalDate) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()
@@ -280,10 +290,12 @@ func (t LocalTime) String() string {
 	).UTC().Format("15:04:05.999999")
 }
 
+// MarshalText returns t marshaled as text.
 func (t LocalTime) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
+// UnmarshalText unmarshales bytes into *t.
 func (t *LocalTime) UnmarshalText(b []byte) error {
 	pt, err := time.Parse("15:04:05.999999", string(b))
 	if err != nil {
@@ -318,6 +330,7 @@ func (o *OptionalLocalTime) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalLocalTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -325,6 +338,7 @@ func (o OptionalLocalTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()
@@ -415,6 +429,7 @@ func (o *OptionalDuration) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalDuration) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -422,6 +437,7 @@ func (o OptionalDuration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalDuration) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()
@@ -525,6 +541,7 @@ func (rd RelativeDuration) String() string {
 	return strings.Join(buf, "")
 }
 
+// MarshalText returns rd marshaled as text.
 func (rd RelativeDuration) MarshalText() ([]byte, error) {
 	return []byte(rd.String()), nil
 }
@@ -537,6 +554,7 @@ var relDurationRegex = regexp.MustCompile(
 		`(?:T(?:(-?\d+)H)?(?:(-?\d+)M)?(?:(-?\d+)(?:\.(\d{1,6}))?S)?)?`,
 )
 
+// UnmarshalText unmarshales bytes into *rd.
 func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 	str := string(b)
 	*rd = RelativeDuration{}
@@ -627,6 +645,7 @@ func (o *OptionalRelativeDuration) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalRelativeDuration) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -634,6 +653,7 @@ func (o OptionalRelativeDuration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalRelativeDuration) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()

@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !windows && !darwin
 // +build !windows,!darwin
 
 package edgedb
@@ -22,6 +23,7 @@ import (
 	"crypto/x509"
 	"os"
 	"path"
+	"syscall"
 )
 
 func getSystemCertPool() (*x509.CertPool, error) {
@@ -44,4 +46,13 @@ func configDir() (string, error) {
 	}
 
 	return path.Join(dir, "edgedb"), nil
+}
+
+func device(dir string) (int, error) {
+	stat, err := os.Stat(dir)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(stat.Sys().(*syscall.Stat_t).Dev), nil
 }

@@ -42,6 +42,7 @@ func (o *OptionalBool) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalBool) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -49,6 +50,7 @@ func (o OptionalBool) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalBool) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()

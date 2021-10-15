@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"os"
 	"path"
+	"syscall"
 )
 
 func getSystemCertPool() (*x509.CertPool, error) {
@@ -35,4 +36,13 @@ func configDir() (string, error) {
 	}
 
 	return path.Join(dir, "Library", "Application Support", "edgedb"), nil
+}
+
+func device(dir string) (int, error) {
+	stat, err := os.Stat(dir)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(stat.Sys().(*syscall.Stat_t).Dev), nil
 }

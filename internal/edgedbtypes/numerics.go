@@ -48,6 +48,7 @@ func (o *OptionalBigInt) Unset() {
 	o.isSet = false
 }
 
+// MarshalJSON returns o marshaled as json.
 func (o OptionalBigInt) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
@@ -55,6 +56,7 @@ func (o OptionalBigInt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON unmarshales bytes into *o.
 func (o *OptionalBigInt) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()

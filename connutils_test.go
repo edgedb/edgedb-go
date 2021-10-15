@@ -92,7 +92,7 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "localhost:5656"}},
+					addr:               dialArgs{"tcp", "localhost:5656"},
 					user:               "user",
 					database:           "edgedb",
 					serverSettings:     map[string]string{},
@@ -111,7 +111,7 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "host:123"}},
+					addr:               dialArgs{"tcp", "host:123"},
 					user:               "user",
 					password:           "passw",
 					database:           "testdb",
@@ -138,7 +138,7 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "host2:456"}},
+					addr:               dialArgs{"tcp", "host2:456"},
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
@@ -159,8 +159,6 @@ func TestConUtils(t *testing.T) {
 			},
 			dsn: "edgedb://user3:123123@localhost/abcdef",
 			opts: Options{
-				// Host:           "host2",
-				// Port:           456,
 				User:           "user2",
 				Password:       NewOptionalStr("passw2"),
 				Database:       "db2",
@@ -168,7 +166,7 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "localhost:5656"}},
+					addr:               dialArgs{"tcp", "localhost:5656"},
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
@@ -189,7 +187,7 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb://user3:123123@localhost:5555/abcdef",
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "localhost:5555"}},
+					addr:               dialArgs{"tcp", "localhost:5555"},
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
@@ -203,7 +201,7 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user3:123123@localhost:5555/abcdef",
 			expected: Result{
 				cfg: connConfig{
-					addrs:              []*dialArgs{{"tcp", "localhost:5555"}},
+					addr:               dialArgs{"tcp", "localhost:5555"},
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
@@ -267,8 +265,8 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: ` +
-					`Cannot have more than one of the following ` +
-					`connection options: dsn, CredentialsFile, or Host/Port`,
+					`mutually exclusive connection options specified: ` +
+					`dsn, edgedb.Options.Host`,
 			},
 		},
 		{
@@ -276,17 +274,13 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb://?param=123&host=testhost&user=testuser" +
 				"&port=2222&database=testdb",
 			opts: Options{
-				// Host:     "127.0.0.1",
-				// Port:     888,
 				User:     "me",
 				Password: NewOptionalStr("ask"),
 				Database: "db",
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "testhost:2222"},
-					},
+					addr:               dialArgs{"tcp", "testhost:2222"},
 					serverSettings:     map[string]string{"param": "123"},
 					user:               "me",
 					password:           "ask",
@@ -300,8 +294,6 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb://?param=123&host=testhost&user=testuser" +
 				"&port=2222&database=testdb",
 			opts: Options{
-				// Host:           "127.0.0.1",
-				// Port:           888,
 				User:           "me",
 				Password:       NewOptionalStr("ask"),
 				Database:       "db",
@@ -309,9 +301,7 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addrs: []*dialArgs{
-						{"tcp", "testhost:2222"},
-					},
+					addr: dialArgs{"tcp", "testhost:2222"},
 					serverSettings: map[string]string{
 						"aa":    "bb",
 						"param": "123",
@@ -387,18 +377,31 @@ var testcaseErrorMapping = map[string]string{
 	"invalid_host":             "invalid host",
 	"invalid_user":             "invalid user",
 	"invalid_database":         "invalid database",
-	"multiple_compound_opts": "Cannot have more than one of the following " +
-		"connection options",
-	"multiple_compound_env": "Cannot have more than one of the following " +
-		"environment variables",
-	"env_not_found": "environment variable .* doesn't exist",
+	"multiple_compound_opts":   "mutually exclusive connection options",
+	"multiple_compound_env":    "mutually exclusive environment variables",
+	"env_not_found":            "environment variable .* is not set",
 	"file_not_found": "no such file or directory|" +
 		"cannot find the (?:file|path) specified",
 	"invalid_tls_verify_hostname": "tls_verify_hostname can only be one " +
 		"of yes/no",
 }
 
-func TestConnectionTestcases(t *testing.T) {
+func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
+	if lookup[key] == nil {
+		return ""
+	}
+
+	str, ok := lookup[key].(string)
+	if !ok {
+		t.Skipf("%v is not a string", key)
+	} else if str == "" {
+		t.Skipf("%v is an empty string", key)
+	}
+
+	return str
+}
+
+func TestConnectionParameterResoultion(t *testing.T) {
 	data, err := ioutil.ReadFile(
 		"./shared-client-testcases/connection_testcases.json",
 	)
@@ -410,167 +413,103 @@ func TestConnectionTestcases(t *testing.T) {
 	err = json.Unmarshal(data, &testcases)
 	require.NoError(t, err)
 
-	testcasesRunCount := 0
-
 	for i, testcase := range testcases {
-		if _, usesFs := testcase["fs"]; !usesFs {
-			t.Run("Testcase "+strconv.Itoa(i), func(t *testing.T) {
-				env := make(map[string]string)
-				if testcase["env"] != nil {
-					testcaseEnv := testcase["env"].(map[string]interface{})
-					for k, v := range testcaseEnv {
-						env[k] = v.(string)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			if _, ok := testcase["fs"]; ok {
+				t.Skip("file system test")
+			}
+
+			env := make(map[string]string)
+			if testcase["env"] != nil {
+				testcaseEnv := testcase["env"].(map[string]interface{})
+				for k, v := range testcaseEnv {
+					env[k] = v.(string)
+				}
+			}
+			if len(env) > 0 {
+				cleanup := setenvmap(env)
+				defer cleanup()
+			}
+
+			var dsn string
+			var options Options
+
+			if opts, ok := testcase["opts"].(map[string]interface{}); ok {
+				dsn = getStr(t, opts, "dsn")
+				options.CredentialsFile = getStr(t, opts, "credentialsFile")
+				options.Host = getStr(t, opts, "host")
+				if opts["port"] != nil {
+					options.Port, _ = opts["port"].(int)
+					if options.Port == 0 {
+						t.Skip("unusable port value")
 					}
 				}
-				if len(env) > 0 {
-					cleanup := setenvmap(env)
-					defer cleanup()
+				options.Database = getStr(t, opts, "database")
+				options.User = getStr(t, opts, "user")
+				if opts["password"] != nil {
+					options.Password.Set(opts["password"].(string))
 				}
-
-				var dsn string
-				var options Options
-
-				if testcase["opts"] != nil {
-					opts := testcase["opts"].(map[string]interface{})
-
-					if opts["dsn"] != nil {
-						dsn, _ = opts["dsn"].(string)
-						if dsn == "" {
-							return
-						}
-					}
-					if opts["credentialsFile"] != nil {
-						if credFile, _ :=
-							opts["credentialsFile"].(string); credFile != "" {
-							options.CredentialsFile = credFile
-						} else {
-							return
-						}
-					}
-					if opts["host"] != nil {
-						if host, _ := opts["host"].(string); host != "" {
-							options.Host = host
-						} else {
-							return
-						}
-					}
-					if opts["port"] != nil {
-						if port, _ := opts["port"].(int); port != 0 {
-							options.Port = port
-						} else {
-							return
-						}
-					}
-					if opts["database"] != nil {
-						if database, _ :=
-							opts["database"].(string); database != "" {
-							options.Database = database
-						} else {
-							return
-						}
-					}
-					if opts["user"] != nil {
-						if user, _ := opts["user"].(string); user != "" {
-							options.User = user
-						} else {
-							return
-						}
-					}
-					if opts["password"] != nil {
-						if password, ok := opts["password"].(string); ok {
-							options.Password = NewOptionalStr(password)
-						} else {
-							return
-						}
-					}
-					if opts["tlsCAFile"] != nil {
-						if tlsCAFile, _ :=
-							opts["tlsCAFile"].(string); tlsCAFile != "" {
-							options.TLSCAFile = tlsCAFile
-						} else {
-							return
-						}
-					}
-					if opts["tlsVerifyHostname"] != nil {
-						if tlsVerifyHostname, ok :=
-							opts["tlsVerifyHostname"].(bool); ok {
-							options.TLSVerifyHostname.Set(tlsVerifyHostname)
-						} else {
-							return
-						}
-					}
-					if opts["serverSettings"] != nil {
-						serverSettings := make(map[string]string)
-						ss := opts["serverSettings"].(map[string]interface{})
-						for k, v := range ss {
-							serverSettings[k] = v.(string)
-						}
-						options.ServerSettings = serverSettings
+				options.TLSCAFile = getStr(t, opts, "tlsCAFile")
+				if opts["tlsVerifyHostname"] != nil {
+					if verify, ok := opts["tlsVerifyHostname"].(bool); ok {
+						options.TLSVerifyHostname.Set(verify)
+					} else {
+						t.Skip("tlsVerifyHostname is not boolean")
 					}
 				}
-
-				expectedResult := connConfig{
-					serverSettings:     map[string]string{},
-					waitUntilAvailable: 30 * time.Second,
-				}
-
-				if testcase["result"] != nil {
-					res := testcase["result"].(map[string]interface{})
-					addr := res["address"].([]interface{})
-
-					expectedResult.addrs = []*dialArgs{{
-						"tcp",
-						fmt.Sprintf("%v:%v", addr[0].(string),
-							int(addr[1].(float64))),
-					}}
-					expectedResult.database = res["database"].(string)
-					expectedResult.user = res["user"].(string)
-					if res["password"] != nil {
-						expectedResult.password = res["password"].(string)
-					}
-
-					serverSettings :=
-						res["serverSettings"].(map[string]interface{})
-					for k, v := range serverSettings {
-						expectedResult.serverSettings[k] = v.(string)
+				if opts["serverSettings"] != nil {
+					ss := opts["serverSettings"].(map[string]interface{})
+					options.ServerSettings = make(map[string]string, len(ss))
+					for k, v := range ss {
+						options.ServerSettings[k] = v.(string)
 					}
 				}
+			}
 
-				var expectedErr error
-				var expectedErrMsg string
+			expectedResult := connConfig{
+				serverSettings:     map[string]string{},
+				waitUntilAvailable: 30 * time.Second,
+			}
 
-				if testcase["error"] != nil {
-					expectedErr = &configurationError{}
+			if testcase["result"] != nil {
+				res := testcase["result"].(map[string]interface{})
+				addr := res["address"].([]interface{})
 
-					e := testcase["error"].(map[string]interface{})
-					errorID := e["type"].(string)
-					var ok bool
-					if expectedErrMsg, ok =
-						testcaseErrorMapping[errorID]; !ok {
-						panic(fmt.Sprintf("unknown error type: %q", errorID))
-					}
+				expectedResult.addr = dialArgs{
+					network: "tcp",
+					address: fmt.Sprintf("%v:%v", addr[0], addr[1]),
+				}
+				expectedResult.database = res["database"].(string)
+				expectedResult.user = res["user"].(string)
+				if res["password"] != nil {
+					expectedResult.password = res["password"].(string)
 				}
 
-				config, err := parseConnectDSNAndArgs(dsn, &options)
-
-				if expectedErr != nil {
-					require.True(t, errors.As(err, &expectedErr))
-					require.Regexp(t, expectedErrMsg, err.Error())
-					assert.Nil(t, config)
-				} else {
-					require.NoError(t, err)
-					// tlsConfigs cannot be compared reliably
-					config.tlsConfig = nil
-					assert.Equal(t, expectedResult, *config)
+				ss := res["serverSettings"].(map[string]interface{})
+				for k, v := range ss {
+					expectedResult.serverSettings[k] = v.(string)
 				}
+			}
 
-				testcasesRunCount++
-			})
-		}
+			config, err := parseConnectDSNAndArgs(dsn, &options)
+
+			if testcase["error"] != nil {
+				errType := &configurationError{}
+				require.IsType(t, errType, err)
+				e := testcase["error"].(map[string]interface{})
+				id := e["type"].(string)
+				expected, ok := testcaseErrorMapping[id]
+				require.Truef(t, ok, "unknown error type: %q", id)
+				require.Regexp(t, expected, err.Error())
+				assert.Nil(t, config)
+			} else {
+				require.NoError(t, err)
+				// tlsConfigs cannot be compared reliably
+				config.tlsConfig = nil
+				assert.Equal(t, expectedResult, *config)
+			}
+		})
 	}
-
-	fmt.Printf("skipped %v connection testcases\n",
-		len(testcases)-testcasesRunCount)
 }
 
 func TestConnectTimeout(t *testing.T) {

@@ -41,3 +41,7 @@ func configDir() (string, error) {
 
 	return filepath.Join(dir, "EdgeDB", "config"), nil
 }
+
+func device(dir string) (int, error) {
+	return 0, nil
+}

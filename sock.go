@@ -26,7 +26,6 @@ import (
 
 func connectAutoClosingSocket(
 	ctx context.Context,
-	addr *dialArgs,
 	cfg *connConfig,
 ) (*autoClosingSocket, error) {
 	var cancel context.CancelFunc
@@ -35,14 +34,14 @@ func connectAutoClosingSocket(
 		defer cancel()
 	}
 
-	conn, err := connectTLS(ctx, addr, cfg)
+	conn, err := connectTLS(ctx, cfg)
 	if err != nil {
 		if isTLSError(err) {
 			return nil, err
 		}
 
 		var e error
-		conn, e = connectNet(ctx, addr)
+		conn, e = connectNet(ctx, cfg.addr)
 		if e != nil {
 			return nil, err
 		}
@@ -53,11 +52,10 @@ func connectAutoClosingSocket(
 
 func connectTLS(
 	ctx context.Context,
-	addr *dialArgs,
 	cfg *connConfig,
 ) (net.Conn, error) {
 	d := tls.Dialer{Config: cfg.tlsConfig}
-	conn, err := d.DialContext(ctx, addr.network, addr.address)
+	conn, err := d.DialContext(ctx, cfg.addr.network, cfg.addr.address)
 	if err != nil {
 		return nil, wrapNetError(err)
 	}
@@ -75,7 +73,7 @@ func connectTLS(
 
 func connectNet(
 	ctx context.Context,
-	addr *dialArgs,
+	addr dialArgs,
 ) (net.Conn, error) {
 	var d net.Dialer
 	conn, err := d.DialContext(ctx, addr.network, addr.address)
