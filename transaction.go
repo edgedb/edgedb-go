@@ -78,7 +78,7 @@ func (s *txState) nextSavepointName() string {
 	return fmt.Sprintf("EdgeDBGoSavepoint%v", s.txSavepointCount)
 }
 
-// Tx is a transaction. Use RetryingTx() or RawTx() to get a transaction.
+// Tx is a transaction. Use Client.Tx() to get a transaction.
 type Tx struct {
 	borrowableConn
 	*txState

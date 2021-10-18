@@ -30,7 +30,7 @@ import (
 func TestQueryCachingIncludesOutType(t *testing.T) {
 	ctx := context.Background()
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
 			Val OptionalTuple `edgedb:"val"`
 		}
@@ -47,7 +47,7 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 	})
 	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
 
-	err = client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err = client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
 			Val OptionalNamedTuple `edgedb:"val"`
 		}
