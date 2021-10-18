@@ -27,7 +27,7 @@ import (
 
 func TestTxRollesBack(t *testing.T) {
 	ctx := context.Background()
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
 		if e := tx.Execute(ctx, query); e != nil {
 			return e
@@ -62,7 +62,7 @@ func TestTxRollesBack(t *testing.T) {
 
 func TestTxRollesBackOnUserError(t *testing.T) {
 	ctx := context.Background()
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		query := "INSERT TxTest {name := 'Test Roll Back'};"
 		if e := tx.Execute(ctx, query); e != nil {
 			return e
@@ -90,7 +90,7 @@ func TestTxRollesBackOnUserError(t *testing.T) {
 
 func TestTxCommits(t *testing.T) {
 	ctx := context.Background()
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		return tx.Execute(ctx, "INSERT TxTest {name := 'Test Commit'};")
 	})
 	require.NoError(t, err)
@@ -161,8 +161,7 @@ func TestTxKinds(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			p := client.WithTxOptions(opts)
-			require.NoError(t, p.RawTx(ctx, noOp))
-			require.NoError(t, p.RetryingTx(ctx, noOp))
+			require.NoError(t, p.Tx(ctx, noOp))
 		})
 	}
 }

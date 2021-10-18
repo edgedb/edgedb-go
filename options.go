@@ -106,7 +106,7 @@ func defaultBackoff(attempt int) time.Duration {
 }
 
 // RetryCondition represents scenarios that can caused a transaction
-// run in RetryingTx() methods to be retried.
+// run in Tx() methods to be retried.
 type RetryCondition int
 
 // The following conditions can be configured with a custom RetryRule.
@@ -130,8 +130,8 @@ func NewRetryRule() RetryRule {
 	}
 }
 
-// RetryRule determines how transactions should be retried
-// when run in RetryingTx() methods. See Client.RetryingTx() for details.
+// RetryRule determines how transactions should be retried when run in Tx()
+// methods. See Client.Tx() for details.
 type RetryRule struct {
 	// fromFactory indicates that a RetryOptions value was created using
 	// NewRetryOptions() and not created directly. Requiring users to use the
@@ -170,9 +170,9 @@ func (r RetryRule) WithBackoff(fn RetryBackoff) RetryRule {
 	return r
 }
 
-// RetryOptions configures how RetryingTx() retries failed transactions.
-// Use NewRetryOptions to get a default RetryOptions value
-// instead of creating one yourself.
+// RetryOptions configures how Tx() retries failed transactions.  Use
+// NewRetryOptions to get a default RetryOptions value instead of creating one
+// yourself.
 type RetryOptions struct {
 	fromFactory bool
 	txConflict  RetryRule

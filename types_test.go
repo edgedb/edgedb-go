@@ -605,7 +605,7 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 func TestSendAndReceiveOptionalInt32(t *testing.T) {
 	ctx := context.Background()
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE Int32FieldHolder {
 				CREATE PROPERTY int32 -> int32;
@@ -943,7 +943,7 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 func TestSendAndReceiveOptionalInt16(t *testing.T) {
 	ctx := context.Background()
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE Int16FieldHolder {
 				CREATE PROPERTY int16 -> int16;
@@ -1532,7 +1532,7 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 	ctx := context.Background()
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE Float64FieldHolder {
 				CREATE PROPERTY float64 -> float64;
@@ -2292,7 +2292,7 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 func TestSendAndReceiveOptionalStr(t *testing.T) {
 	ctx := context.Background()
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, `
 			CREATE TYPE StrFieldHolder {
 				CREATE PROPERTY str -> str;
@@ -2606,7 +2606,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 		)
 	`
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2640,7 +2640,7 @@ func TestReceiveEnumUnmarshaler(t *testing.T) {
 		Val CustomStr `edgedb:"val"`
 	}
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2674,7 +2674,7 @@ func TestSendEnumMarshaler(t *testing.T) {
 		Val OptionalStr `edgedb:"val"`
 	}
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -2737,7 +2737,7 @@ func TestSendOptionalEnumMarshaler(t *testing.T) {
 		return CustomOptionalStr{isSet: true, data: data}
 	}
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx,
 			"CREATE SCALAR TYPE Color EXTENDING enum<Red, Green, Blue>;")
 		assert.NoError(t, e)
@@ -6121,7 +6121,7 @@ func inRolledBackTx(
 	action func(context.Context, *Tx),
 ) {
 	ctx := context.Background()
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		e := tx.Execute(ctx, ddl)
 		assert.NoError(t, e)
 		if e == nil {

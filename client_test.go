@@ -118,7 +118,7 @@ func TestCloseClientConcurently(t *testing.T) {
 	assert.True(t, edbErr.Category(InterfaceError), "wrong error: %v", err)
 }
 
-func TestClientRetryingTx(t *testing.T) {
+func TestClientTx(t *testing.T) {
 	ctx := context.Background()
 
 	p, err := CreateClient(ctx, opts)
@@ -126,10 +126,10 @@ func TestClientRetryingTx(t *testing.T) {
 	defer p.Close() // nolint:errcheck
 
 	var result int64
-	err = p.RetryingTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err = p.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		return tx.QuerySingle(ctx, "SELECT 33*21", &result)
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, int64(693), result, "Client.RetryingTx() failed")
+	require.Equal(t, int64(693), result, "Client.Tx() failed")
 }

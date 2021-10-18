@@ -122,42 +122,9 @@ func (c *transactableConn) granularFlow(
 	return &clientError{msg: "unreachable"}
 }
 
-// RawTx runs an action in a transaction.
-// If the action returns an error the transaction is rolled back,
-// otherwise it is committed.
-func (c *transactableConn) RawTx(
-	ctx context.Context,
-	action TxBlock,
-) (err error) {
-	conn, err := c.borrow("transaction")
-	if err != nil {
-		return err
-	}
-	defer func() { err = firstError(err, c.unborrow()) }()
-
-	if e := c.ensureConnection(ctx); e != nil {
-		return e
-	}
-
-	tx := &Tx{
-		borrowableConn: borrowableConn{conn: conn},
-		txState:        &txState{},
-		options:        c.txOpts,
-	}
-	if e := tx.start(ctx); e != nil {
-		return e
-	}
-
-	if e := action(ctx, tx); e != nil {
-		return firstError(tx.rollback(ctx), e)
-	}
-
-	return tx.commit(ctx)
-}
-
-// RetryingTx does the same as RawTx but retries failed actions
-// if they might succeed on a subsequent attempt.
-func (c *transactableConn) RetryingTx(
+// Tx runs an action in a transaction retrying failed actions if they might
+// succeed on a subsequent attempt.
+func (c *transactableConn) Tx(
 	ctx context.Context,
 	action TxBlock,
 ) (err error) {

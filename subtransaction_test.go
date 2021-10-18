@@ -33,7 +33,7 @@ func TestSubtxRollback(t *testing.T) {
 		return fmt.Sprintf("INSERT TxTest {name := 'subtx %v'};", s)
 	}
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		err := tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
 			err := stx.Execute(ctx, insertName("rollback 1"))
 			assert.NoError(t, err)
@@ -100,7 +100,7 @@ func TestSubtxBorrowing(t *testing.T) {
 	ctx := context.Background()
 	noOpSubtx := func(ctx context.Context, stx *Subtx) error { return nil }
 
-	err := client.RawTx(ctx, func(ctx context.Context, tx *Tx) error {
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		err := tx.Subtx(ctx, func(ctx context.Context, stx *Subtx) error {
 			expected := "edgedb.InterfaceError: " +
 				"The transaction is borrowed for a subtransaction. " +

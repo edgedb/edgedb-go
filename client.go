@@ -339,20 +339,7 @@ func (p *Client) QuerySingleJSON(
 	return firstError(err, p.release(&conn, err))
 }
 
-// RawTx runs an action in a transaction.
-// If the action returns an error the transaction is rolled back,
-// otherwise it is committed.
-func (p *Client) RawTx(ctx context.Context, action TxBlock) error {
-	conn, err := p.acquire(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = conn.RawTx(ctx, action)
-	return firstError(err, p.release(&conn, err))
-}
-
-// RetryingTx does the same as RawTx but retries failed actions
+// Tx runs an action in a transaction retrying failed actions
 // if they might succeed on a subsequent attempt.
 //
 // Retries are governed by retry rules.
@@ -366,12 +353,12 @@ func (p *Client) RawTx(ctx context.Context, action TxBlock) error {
 // If either field is unset (see RetryRule) then the default rule is used.
 // If the object's default is unset the fall back is 3 attempts
 // and exponential backoff.
-func (p *Client) RetryingTx(ctx context.Context, action TxBlock) error {
+func (p *Client) Tx(ctx context.Context, action TxBlock) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = conn.RetryingTx(ctx, action)
+	err = conn.Tx(ctx, action)
 	return firstError(err, p.release(&conn, err))
 }
