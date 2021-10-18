@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: ["1.15", "1.16"]
+        go-version: ["1.16", "1.17"]
         edgedb-version: [stable, nightly]
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
@@ -29,7 +29,7 @@ jobs:
 
       - name: Lint
         run: |
-          go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.37.1
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
           make lint
 
       - name: Build
