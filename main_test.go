@@ -234,7 +234,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	protocolVersion = conn.conn.protocolVersion
-	err = client.release(&conn, nil)
+	err = client.release(conn, nil)
 	if err != nil {
 		panic(err)
 	}
