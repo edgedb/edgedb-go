@@ -324,7 +324,7 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 }
 
 func (r *configResolver) resolveCredentials(
-	instance, credentials, source string,
+	instance, credentials, source string, paths *cfgPaths,
 ) error {
 	if instance != "" && credentials != "" {
 		return errors.New("cannot have both instance name and " +
@@ -335,11 +335,11 @@ func (r *configResolver) resolveCredentials(
 		if !isIdentifier.MatchString(instance) {
 			return fmt.Errorf("invalid instance name %q", instance)
 		}
-		var err error
-		credentials, err = findConfigPath("credentials", instance+".json")
+		dir, err := paths.CfgDir()
 		if err != nil {
 			return err
 		}
+		credentials = filepath.Join(dir, "credentials", instance+".json")
 	}
 
 	creds, err := readCredentials(credentials)
@@ -389,7 +389,7 @@ func (r *configResolver) resolveCredentials(
 	return nil
 }
 
-func (r *configResolver) resolveEnvVars() (bool, error) {
+func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	if db, ok := os.LookupEnv("EDGEDB_DATABASE"); ok {
 		err := r.setDatabase(db, "EDGEDB_DATABASE environment variable")
 		if err != nil {
@@ -482,7 +482,7 @@ func (r *configResolver) resolveEnvVars() (bool, error) {
 		if instanceOk {
 			source = "EDGEDB_INSTANCE environment variable"
 		}
-		err := r.resolveCredentials(instance, credentials, source)
+		err := r.resolveCredentials(instance, credentials, source, paths)
 		if err != nil {
 			return false, err
 		}
@@ -493,17 +493,18 @@ func (r *configResolver) resolveEnvVars() (bool, error) {
 	return true, nil
 }
 
-func (r *configResolver) resolveTOML() (string, error) {
-	toml, err := findEdgeDBTOML()
-	if err != nil {
-		return "", err
-	}
-	stashDir, err := stashPath(filepath.Dir(toml))
+func (r *configResolver) resolveTOML(paths *cfgPaths) (string, error) {
+	toml, err := findEdgeDBTOML(paths)
 	if err != nil {
 		return "", err
 	}
 
-	if _, e := os.Stat(stashDir); os.IsNotExist(e) {
+	stashDir, err := stashPath(filepath.Dir(toml), paths)
+	if err != nil {
+		return "", err
+	}
+
+	if !exists(stashDir) {
 		return "", errors.New("Found `edgedb.toml` " +
 			"but the project is not initialized. Run `edgedb project init`.")
 	}
@@ -607,7 +608,11 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 	}, nil
 }
 
-func newConfigResolver(dsn string, opts *Options) (*configResolver, error) {
+func newConfigResolver(
+	dsn string,
+	opts *Options,
+	paths *cfgPaths,
+) (*configResolver, error) {
 	cfg := &configResolver{serverSettings: map[string]string{}}
 
 	var instance string
@@ -650,19 +655,20 @@ func newConfigResolver(dsn string, opts *Options) (*configResolver, error) {
 		if instance != "" {
 			source = "dsn (parsed as instance name)"
 		}
-		err := cfg.resolveCredentials(instance, opts.CredentialsFile, source)
+		err := cfg.resolveCredentials(
+			instance, opts.CredentialsFile, source, paths)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		ok, err := cfg.resolveEnvVars()
+		ok, err := cfg.resolveEnvVars(paths)
 		if err != nil {
 			return nil, err
 		} else if ok {
 			break
 		}
 
-		instance, err := cfg.resolveTOML()
+		instance, err := cfg.resolveTOML(paths)
 		if errors.Is(err, errNoTOMLFound) {
 			return nil, errors.New(
 				"no `edgedb.toml` found and no connection options " +
@@ -677,7 +683,7 @@ func newConfigResolver(dsn string, opts *Options) (*configResolver, error) {
 		}
 
 		source := fmt.Sprintf("project linked instance (%q)", instance)
-		err = cfg.resolveCredentials(instance, "", source)
+		err = cfg.resolveCredentials(instance, "", source, paths)
 		if err != nil {
 			return nil, err
 		}
@@ -686,8 +692,12 @@ func newConfigResolver(dsn string, opts *Options) (*configResolver, error) {
 	return cfg, nil
 }
 
-func parseConnectDSNAndArgs(dsn string, opts *Options) (*connConfig, error) {
-	resolver, err := newConfigResolver(dsn, opts)
+func parseConnectDSNAndArgs(
+	dsn string,
+	opts *Options,
+	paths *cfgPaths,
+) (*connConfig, error) {
+	resolver, err := newConfigResolver(dsn, opts, paths)
 	if err != nil {
 		return nil, &configurationError{err: err}
 	}
@@ -852,7 +862,7 @@ func popDSNValue(
 	}
 }
 
-func stashPath(p string) (string, error) {
+func stashPath(p string, paths *cfgPaths) (string, error) {
 	p, err := filepath.EvalSymlinks(p)
 	if err != nil {
 		return "", err
@@ -866,7 +876,12 @@ func stashPath(p string) (string, error) {
 	baseName := filepath.Base(p)
 	dirName := baseName + "-" + hash
 
-	return findConfigPath("projects", dirName)
+	cfgDir, err := paths.CfgDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(cfgDir, "projects", dirName), nil
 }
 
 func parseVerifyHostname(s string) (bool, error) {
@@ -897,14 +912,12 @@ func exists(path string) bool {
 	return true
 }
 
-func findConfigPath(suffix ...string) (string, error) {
-	dir, err := configDir()
+func cfgDir() (string, error) {
+	dir, err := configDirOSSpecific()
 	if err != nil {
 		return "", err
 	}
 
-	parts := append([]string{dir}, suffix...)
-	dir = filepath.Join(parts...)
 	if exists(dir) {
 		return dir, nil
 	}
@@ -914,20 +927,35 @@ func findConfigPath(suffix ...string) (string, error) {
 		return "", err
 	}
 
-	parts = append([]string{fallback}, suffix...)
-	fallback = filepath.Join(parts...)
-
 	if exists(fallback) {
-		return fallback, nil
+		return fallback, err
 	}
 
 	return dir, nil
 }
 
-func findEdgeDBTOML() (string, error) {
+func newCfgPaths() *cfgPaths {
+	paths := &cfgPaths{}
+	paths.cwd, paths.cwdErr = os.Getwd()
+	paths.cfgDir, paths.cfgDirErr = cfgDir()
+	return paths
+}
+
+type cfgPaths struct {
+	cwd       string
+	cwdErr    error
+	cfgDir    string
+	cfgDirErr error
+}
+
+func (c *cfgPaths) Cwd() (string, error) { return c.cwd, c.cwdErr }
+
+func (c *cfgPaths) CfgDir() (string, error) { return c.cfgDir, c.cfgDirErr }
+
+func findEdgeDBTOML(paths *cfgPaths) (string, error) {
 	// If the current directory can be reached via multiple paths (due to
 	// symbolic links), Getwd may return any one of them.
-	dir, err := os.Getwd()
+	dir, err := paths.Cwd()
 	if err != nil {
 		return "", &clientConnectionError{err: err}
 	}

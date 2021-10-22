@@ -18,13 +18,17 @@ package edgedb
 
 import (
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -349,7 +353,8 @@ func TestConUtils(t *testing.T) {
 			cleanup := setenvmap(c.env)
 			defer cleanup()
 
-			config, err := parseConnectDSNAndArgs(c.dsn, &c.opts)
+			config, err := parseConnectDSNAndArgs(
+				c.dsn, &c.opts, newCfgPaths())
 
 			if c.expected.err != nil {
 				require.EqualError(t, err, c.expected.errMessage)
@@ -366,20 +371,21 @@ func TestConUtils(t *testing.T) {
 }
 
 var testcaseErrorMapping = map[string]string{
-	"credentials_file_not_found": "cannot read credentials file",
+	"credentials_file_not_found": "cannot read credentials",
+	"project_not_initialised":    "project is not initialized",
 	"no_options_or_toml": "no `edgedb.toml` found and no connection options " +
 		"specified either",
-	"invalid_credentials_file": "cannot read credentials file",
-	"invalid_instance_name":    "invalid instance name",
-	"invalid_dsn":              "invalid DSN",
-	"unix_socket_unsupported":  "unix socket paths not supported",
-	"invalid_port":             "invalid port",
-	"invalid_host":             "invalid host",
-	"invalid_user":             "invalid user",
-	"invalid_database":         "invalid database",
-	"multiple_compound_opts":   "mutually exclusive connection options",
-	"multiple_compound_env":    "mutually exclusive environment variables",
-	"env_not_found":            "environment variable .* is not set",
+	"invalid_credentials_file":     "cannot read credentials",
+	"invalid_dsn_or_instance_name": "invalid DSN|invalid instance name",
+	"invalid_dsn":                  "invalid DSN",
+	"unix_socket_unsupported":      "unix socket paths not supported",
+	"invalid_port":                 "invalid port",
+	"invalid_host":                 "invalid host",
+	"invalid_user":                 "invalid user",
+	"invalid_database":             "invalid database",
+	"multiple_compound_opts":       "mutually exclusive connection options",
+	"multiple_compound_env":        "mutually exclusive environment variables",
+	"env_not_found":                "environment variable .* is not set",
 	"file_not_found": "no such file or directory|" +
 		"cannot find the (?:file|path) specified",
 	"invalid_tls_verify_hostname": "tls_verify_hostname can only be one " +
@@ -401,6 +407,87 @@ func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
 	return str
 }
 
+func configureFileSystem(
+	tmpDir string,
+	cfg map[string]interface{},
+	paths *cfgPaths,
+) error {
+	var err error
+	paths.cfgDir = filepath.Join(tmpDir, "home", "edgedb", ".config", "edgedb")
+
+	if cwd, ok := cfg["cwd"]; ok {
+		paths.cwdErr = nil
+		paths.cwd = filepath.Join(tmpDir, cwd.(string))
+		err = os.MkdirAll(paths.cwd, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	if home, ok := cfg["homedir"]; ok {
+		paths.cfgDirErr = nil
+		paths.cfgDir = filepath.Join(
+			tmpDir, home.(string), ".config", "edgedb")
+		err = os.MkdirAll(paths.cfgDir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	if files, ok := cfg["files"]; ok {
+		for file, data := range files.(map[string]interface{}) {
+			switch x := data.(type) {
+			case string:
+				err = createFile(tmpDir, file, x)
+			case map[string]interface{}:
+				err = createProjectDir(tmpDir, file, x)
+			default:
+				err = fmt.Errorf("unexpected data type %T", data)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func createProjectDir(
+	tmpDir, dir string,
+	contents map[string]interface{},
+) error {
+	path := filepath.Join(tmpDir, contents["project-path"].(string))
+	path, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return err
+	}
+
+	if runtime.GOOS == "windows" && !strings.HasPrefix(path, `\\`) {
+		path = `\\?\` + path
+	}
+
+	hash := fmt.Sprintf("%x", sha1.Sum([]byte(path)))
+	dir = strings.Replace(dir, "${HASH}", hash, 1)
+	err = createFile(tmpDir, filepath.Join(dir, "project-path"), path)
+	if err != nil {
+		return err
+	}
+
+	instance := contents["instance-name"].(string)
+	return createFile(tmpDir, filepath.Join(dir, "instance-name"), instance)
+}
+
+func createFile(tmpDir, file, data string) error {
+	file = filepath.Join(tmpDir, file)
+	err := os.MkdirAll(filepath.Dir(file), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(file, []byte(data), 0644)
+}
+
 func TestConnectionParameterResoultion(t *testing.T) {
 	data, err := ioutil.ReadFile(
 		"./shared-client-testcases/connection_testcases.json",
@@ -415,10 +502,18 @@ func TestConnectionParameterResoultion(t *testing.T) {
 
 	for i, testcase := range testcases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			if _, ok := testcase["fs"]; ok {
-				t.Skip("file system test")
+			if _, ok := testcase["platform"]; ok {
+				t.Skip("platform specific tests no supported")
 			}
-
+			tmpDir, err := ioutil.TempDir(os.TempDir(), "edgedb-go-tests")
+			require.NoError(t, err)
+			defer os.RemoveAll(tmpDir) // nolint:errcheck
+			paths := newCfgPaths()
+			if fs, ok := testcase["fs"]; ok {
+				err = configureFileSystem(
+					tmpDir, fs.(map[string]interface{}), paths)
+				require.NoError(t, err)
+			}
 			env := make(map[string]string)
 			if testcase["env"] != nil {
 				testcaseEnv := testcase["env"].(map[string]interface{})
@@ -436,7 +531,11 @@ func TestConnectionParameterResoultion(t *testing.T) {
 
 			if opts, ok := testcase["opts"].(map[string]interface{}); ok {
 				dsn = getStr(t, opts, "dsn")
-				options.CredentialsFile = getStr(t, opts, "credentialsFile")
+				dsn = strings.ReplaceAll(dsn, "_file=/", "_file="+tmpDir+"/")
+				file := getStr(t, opts, "credentialsFile")
+				if file != "" {
+					options.CredentialsFile = filepath.Join(tmpDir, file)
+				}
 				options.Host = getStr(t, opts, "host")
 				if opts["port"] != nil {
 					options.Port, _ = opts["port"].(int)
@@ -449,7 +548,10 @@ func TestConnectionParameterResoultion(t *testing.T) {
 				if opts["password"] != nil {
 					options.Password.Set(opts["password"].(string))
 				}
-				options.TLSCAFile = getStr(t, opts, "tlsCAFile")
+				file = getStr(t, opts, "tlsCAFile")
+				if file != "" {
+					options.TLSCAFile = filepath.Join(tmpDir, file)
+				}
 				if opts["tlsVerifyHostname"] != nil {
 					if verify, ok := opts["tlsVerifyHostname"].(bool); ok {
 						options.TLSVerifyHostname.Set(verify)
@@ -491,7 +593,7 @@ func TestConnectionParameterResoultion(t *testing.T) {
 				}
 			}
 
-			config, err := parseConnectDSNAndArgs(dsn, &options)
+			config, err := parseConnectDSNAndArgs(dsn, &options, paths)
 
 			if testcase["error"] != nil {
 				errType := &configurationError{}
