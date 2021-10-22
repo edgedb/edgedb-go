@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
 // +build windows
 
 package edgedb
@@ -32,7 +33,7 @@ func getSystemCertPool() (*x509.CertPool, error) {
 	return gocertifi.CACerts()
 }
 
-func configDir() (string, error) {
+func configDirOSSpecific() (string, error) {
 	dir, err := windows.KnownFolderPath(
 		windows.FOLDERID_LocalAppData, windows.KF_FLAG_DEFAULT)
 	if err != nil {

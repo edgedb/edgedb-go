@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build darwin
 // +build darwin
 
 package edgedb
@@ -29,7 +30,7 @@ func getSystemCertPool() (*x509.CertPool, error) {
 	return x509.SystemCertPool()
 }
 
-func configDir() (string, error) {
+func configDirOSSpecific() (string, error) {
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

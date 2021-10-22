@@ -30,7 +30,7 @@ func getSystemCertPool() (*x509.CertPool, error) {
 	return x509.SystemCertPool()
 }
 
-func configDir() (string, error) {
+func configDirOSSpecific() (string, error) {
 	dir, ok := os.LookupEnv("XDG_CONFIG_HOME")
 	if !ok {
 		dir = "."
