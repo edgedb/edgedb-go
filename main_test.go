@@ -191,13 +191,13 @@ func startServer() {
 	}
 
 	opts = Options{
-		Host:              "127.0.0.1",
-		Port:              info.Port,
-		User:              "test",
-		Password:          NewOptionalStr("shhh"),
-		Database:          "edgedb",
-		TLSCAFile:         info.TLSCertFile,
-		TLSVerifyHostname: NewOptionalBool(false),
+		Host:        "127.0.0.1",
+		Port:        info.Port,
+		User:        "test",
+		Password:    NewOptionalStr("shhh"),
+		Database:    "edgedb",
+		TLSCAFile:   info.TLSCertFile,
+		TLSSecurity: "no_host_verification",
 	}
 
 	log.Print("server started")

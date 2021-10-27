@@ -60,14 +60,14 @@ type cfgVal struct {
 }
 
 type configResolver struct {
-	host              cfgVal // string
-	port              cfgVal // int
-	database          cfgVal // string
-	user              cfgVal // string
-	password          cfgVal // OptionalStr
-	tlsCAData         cfgVal // []byte
-	tlsVerifyHostname cfgVal // OptionalBool
-	serverSettings    map[string]string
+	host           cfgVal // string
+	port           cfgVal // int
+	database       cfgVal // string
+	user           cfgVal // string
+	password       cfgVal // OptionalStr
+	tlsCAData      cfgVal // []byte
+	tlsSecurity    cfgVal // string
+	serverSettings map[string]string
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -155,22 +155,17 @@ func (r *configResolver) setTLSCAFile(file, source string) error {
 	return nil
 }
 
-func (r *configResolver) setTLSVerifyHostname(val bool, source string) {
-	if r.tlsVerifyHostname.val != nil {
-		return
-	}
-	r.tlsVerifyHostname = cfgVal{val: val, source: source}
-}
-
-func (r *configResolver) setTLSVerifyHostnameStr(val, source string) error {
-	if r.tlsVerifyHostname.val != nil {
+func (r *configResolver) setTLSSecurity(val string, source string) error {
+	if r.tlsSecurity.val != nil {
 		return nil
 	}
-	v, err := parseVerifyHostname(val)
-	if err != nil {
-		return err
+
+	switch val {
+	case "insecure", "no_host_verification", "strict":
+	default:
+		return invalidTLSSecurity(val)
 	}
-	r.setTLSVerifyHostname(v, source)
+	r.tlsSecurity = cfgVal{val: val, source: source}
 	return nil
 }
 
@@ -223,8 +218,11 @@ func (r *configResolver) resolveOptions(opts *Options) (err error) {
 		}
 	}
 
-	if val, ok := opts.TLSVerifyHostname.Get(); ok {
-		r.setTLSVerifyHostname(val, "TLSVerifyHostname option")
+	if opts.TLSSecurity != "" {
+		err = r.setTLSSecurity(opts.TLSSecurity, "TLSVerifyHostname option")
+		if err != nil {
+			return err
+		}
 	}
 	r.addServerSettings(opts.ServerSettings)
 	return nil
@@ -308,12 +306,28 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 	}
 
 	val, err = popDSNValue(query, "", "tls_verify_hostname",
-		r.tlsVerifyHostname.val == nil)
+		r.tlsSecurity.val == nil)
 	if err != nil {
 		return err
 	}
 	if val.val != nil {
-		err = r.setTLSVerifyHostnameStr(val.val.(string), source+val.source)
+		switch val.val.(string) {
+		case "insecure", "no_host_verification", "strict":
+			err = r.setTLSSecurity(val.val.(string), source+val.source)
+			if err != nil {
+				return err
+			}
+		default:
+			return invalidTLSSecurity(val.val.(string))
+		}
+	}
+
+	val, err = popDSNValue(query, "", "tls_security", r.tlsSecurity.val == nil)
+	if err != nil {
+		return err
+	}
+	if val.val != nil {
+		err = r.setTLSSecurity(val.val.(string), source+val.source)
 		if err != nil {
 			return err
 		}
@@ -382,8 +396,10 @@ func (r *configResolver) resolveCredentials(
 		r.setTLSCAData(data, source)
 	}
 
-	if verifyHostname, ok := creds.verifyHostname.Get(); ok {
-		r.setTLSVerifyHostname(verifyHostname, source)
+	if security, ok := creds.tlsSecurity.Get(); ok {
+		if e := r.setTLSSecurity(security, source); e != nil {
+			return e
+		}
 	}
 
 	return nil
@@ -415,9 +431,9 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		}
 	}
 
-	if verify, ok := os.LookupEnv("EDGEDB_TLS_VERIFY_HOSTNAME"); ok {
-		source := "EDGEDB_TLS_VERIFY_HOSTNAME environment variable"
-		if e := r.setTLSVerifyHostnameStr(verify, source); e != nil {
+	if verify, ok := os.LookupEnv("EDGEDB_CLIENT_TLS_SECURITY"); ok {
+		source := "EDGEDB_CLIENT_TLS_SECURITY environment variable"
+		if e := r.setTLSSecurity(verify, source); e != nil {
 			return false, e
 		}
 	}
@@ -454,7 +470,7 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	if len(names) > 1 {
 		return false, fmt.Errorf(
 			"mutually exclusive environment variables set: %v",
-			strings.Join(names, ", "))
+			englishList(names, "and"))
 	}
 
 	switch {
@@ -556,9 +572,14 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		}
 	}
 
-	verifyHostname := len(certData) == 0
-	if r.tlsVerifyHostname.val != nil {
-		verifyHostname = r.tlsVerifyHostname.val.(bool)
+	var tlsSecurity string
+	switch {
+	case r.tlsSecurity.val != nil:
+		tlsSecurity = r.tlsSecurity.val.(string)
+	case len(certData) > 0:
+		tlsSecurity = "no_host_verification"
+	default:
+		tlsSecurity = "strict"
 	}
 
 	tlsConfig := &tls.Config{
@@ -566,9 +587,16 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		NextProtos: []string{"edgedb-binary"},
 	}
 
-	if os.Getenv("EDGEDB_INSECURE_DEV_MODE") != "" {
+	security, err := getEnvVarSetting(
+		"EDGEDB_CLIENT_SECURITY", "default", "default", "insecure_dev_mode")
+	if err != nil {
+		return nil, err
+	}
+
+	switch {
+	case security == "insecure_dev_mode" || tlsSecurity == "insecure":
 		tlsConfig.InsecureSkipVerify = true
-	} else if !verifyHostname {
+	case tlsSecurity == "no_host_verification":
 		// Set InsecureSkipVerify to skip the default validation we are
 		// replacing. This will not disable VerifyConnection.
 		tlsConfig.InsecureSkipVerify = true
@@ -608,6 +636,38 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 	}, nil
 }
 
+func getEnvVarSetting(name, defalt string, values ...string) (string, error) {
+	value, ok := os.LookupEnv(name)
+	if !ok || value == "default" || value == "" {
+		return defalt, nil
+	}
+
+	for _, v := range values {
+		if value == v {
+			return value, nil
+		}
+	}
+
+	return "", fmt.Errorf(
+		"environment variable %v should be one of %v, got: %q",
+		name, englishList(append(values, "default"), "or"), value)
+}
+
+func englishList(items []string, conjunction string) string {
+	switch len(items) {
+	case 0:
+		return ""
+	case 1:
+		return items[0]
+	case 2:
+		return strings.Join(items, " and ")
+	default:
+		last := len(items) - 1
+		list := strings.Join(items[:last], ", ")
+		return fmt.Sprintf("%v %v %v", list, conjunction, items[last])
+	}
+}
+
 func newConfigResolver(
 	dsn string,
 	opts *Options,
@@ -636,7 +696,7 @@ func newConfigResolver(
 	if len(names) > 1 {
 		return nil, fmt.Errorf(
 			"mutually exclusive connection options specified: %v",
-			strings.Join(names, ", "))
+			englishList(names, "and"))
 	}
 
 	if e := cfg.resolveOptions(opts); e != nil {
@@ -769,6 +829,10 @@ func parseDSN(dsn string) (*url.URL, map[string]string, error) {
 		return nil, nil, e
 	}
 
+	if e := validateQueryArg(vals, "tls_security", ""); e != nil {
+		return nil, nil, e
+	}
+
 	return uri, vals, nil
 }
 
@@ -779,6 +843,7 @@ var dsnKeyLookup = map[string][]string{
 	"user":          {"user", "user_env", "user_file"},
 	"password":      {"password", "password_env", "password_file"},
 	"tls_cert_file": {"tls_cert_file", "tls_cert_file_env"},
+	"tls_security":  {"tls_security", "tls_security_env", "tls_security_file"},
 	"tls_verify_hostname": {
 		"tls_verify_hostname",
 		"tls_verify_hostname_env",
@@ -802,7 +867,7 @@ func validateQueryArg(query map[string]string, name string, val string) error {
 	if len(msgs) > 1 {
 		return fmt.Errorf(
 			"mutually exclusive query arguments specified: %v",
-			strings.Join(msgs, " "))
+			englishList(msgs, "and"))
 	}
 
 	return nil
@@ -882,18 +947,6 @@ func stashPath(p string, paths *cfgPaths) (string, error) {
 	}
 
 	return filepath.Join(cfgDir, "projects", dirName), nil
-}
-
-func parseVerifyHostname(s string) (bool, error) {
-	switch strings.ToLower(s) {
-	case "true", "t", "yes", "y", "1", "on":
-		return true, nil
-	case "false", "f", "no", "n", "0", "off":
-		return false, nil
-	default:
-		return false, fmt.Errorf(
-			"tls_verify_hostname can only be one of yes/no, got %q", s)
-	}
 }
 
 func oldConfigDir() (string, error) {

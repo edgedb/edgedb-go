@@ -89,7 +89,7 @@ type Options struct {
 	TLSCAFile string
 
 	// If false don't verify the server's hostname when using TLS.
-	TLSVerifyHostname OptionalBool
+	TLSSecurity string
 
 	// ServerSettings is currently unused.
 	ServerSettings map[string]string

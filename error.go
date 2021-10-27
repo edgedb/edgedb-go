@@ -254,3 +254,13 @@ func wrapNetError(err error) error {
 		return &clientConnectionFailedError{err: err}
 	}
 }
+
+func invalidTLSSecurity(val string) error {
+	return fmt.Errorf(
+		"invalid TLSSecurity value: expected one of %v, got: %q",
+		englishList(
+			[]string{"insecure", "no_host_verification", "strict"},
+			"or"),
+		val,
+	)
+}

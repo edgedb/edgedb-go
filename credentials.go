@@ -25,13 +25,13 @@ import (
 )
 
 type credentials struct {
-	host           OptionalStr
-	port           OptionalInt32
-	user           string
-	database       OptionalStr
-	password       OptionalStr
-	certData       OptionalBytes
-	verifyHostname OptionalBool
+	host        OptionalStr
+	port        OptionalInt32
+	user        string
+	database    OptionalStr
+	password    OptionalStr
+	certData    OptionalBytes
+	tlsSecurity OptionalStr
 }
 
 func readCredentials(path string) (*credentials, error) {
@@ -73,13 +73,12 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		result.port.Set(int32(port))
 	}
 
-	user, ok := data["user"]
-	if !ok {
+	if user, ok := data["user"]; ok {
+		if result.user, ok = user.(string); !ok {
+			return nil, errors.New("`user` must be a string")
+		}
+	} else {
 		return nil, errors.New("`user` key is required")
-	}
-	result.user, ok = user.(string)
-	if !ok {
-		return nil, errors.New("`user` must be a string")
 	}
 
 	if host, ok := data["host"]; ok && host != "" {
@@ -119,7 +118,41 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		if !ok {
 			return nil, errors.New("`tls_verify_hostname` must be a boolean")
 		}
-		result.verifyHostname.Set(val)
+		v := "strict"
+		if !val {
+			v = "no_host_verification"
+		}
+		result.tlsSecurity.Set(v)
+	}
+
+	if tlsSecurity, ok := data["tls_security"]; ok {
+		val, ok := tlsSecurity.(string)
+		if !ok {
+			return nil, errors.New("`tls_security` must be a string")
+		}
+		result.tlsSecurity.Set(val)
+	}
+
+	verify, ok := data["tls_verify_hostname"].(bool)
+	if !ok {
+		return result, nil
+	}
+
+	security, ok := data["tls_security"].(string)
+	if !ok {
+		return result, nil
+	}
+
+	switch {
+	case verify && security == "insecure":
+		fallthrough
+	case verify && security == "no_host_verification":
+		fallthrough
+	case !verify && security == "strict":
+		return nil, fmt.Errorf(
+			"values tls_verify_hostname=%v and "+
+				"tls_security=%q are incompatible",
+			verify, security)
 	}
 
 	return result, nil
