@@ -270,7 +270,7 @@ func TestConUtils(t *testing.T) {
 				err: &configurationError{},
 				errMessage: `edgedb.ConfigurationError: ` +
 					`mutually exclusive connection options specified: ` +
-					`dsn, edgedb.Options.Host`,
+					`dsn and edgedb.Options.Host`,
 			},
 		},
 		{
@@ -388,8 +388,8 @@ var testcaseErrorMapping = map[string]string{
 	"env_not_found":                "environment variable .* is not set",
 	"file_not_found": "no such file or directory|" +
 		"cannot find the (?:file|path) specified",
-	"invalid_tls_verify_hostname": "tls_verify_hostname can only be one " +
-		"of yes/no",
+	"invalid_tls_security": "invalid TLSSecurity value|tls_verify_hostname" +
+		"=.* and tls_security=.* are incompatible",
 }
 
 func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
@@ -552,13 +552,7 @@ func TestConnectionParameterResoultion(t *testing.T) {
 				if file != "" {
 					options.TLSCAFile = filepath.Join(tmpDir, file)
 				}
-				if opts["tlsVerifyHostname"] != nil {
-					if verify, ok := opts["tlsVerifyHostname"].(bool); ok {
-						options.TLSVerifyHostname.Set(verify)
-					} else {
-						t.Skip("tlsVerifyHostname is not boolean")
-					}
-				}
+				options.TLSSecurity = getStr(t, opts, "tlsSecurity")
 				if opts["serverSettings"] != nil {
 					ss := opts["serverSettings"].(map[string]interface{})
 					options.ServerSettings = make(map[string]string, len(ss))

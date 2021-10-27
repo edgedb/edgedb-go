@@ -49,13 +49,13 @@ func TestTutorial(t *testing.T) {
 	edb, err := CreateClient(
 		ctx,
 		Options{
-			Host:              opts.Host,
-			Port:              opts.Port,
-			User:              opts.User,
-			Password:          opts.Password,
-			Database:          dbName,
-			TLSCAFile:         opts.TLSCAFile,
-			TLSVerifyHostname: opts.TLSVerifyHostname,
+			Host:        opts.Host,
+			Port:        opts.Port,
+			User:        opts.User,
+			Password:    opts.Password,
+			Database:    dbName,
+			TLSCAFile:   opts.TLSCAFile,
+			TLSSecurity: opts.TLSSecurity,
 		},
 	)
 	require.NoError(t, err)
