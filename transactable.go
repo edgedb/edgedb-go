@@ -90,7 +90,7 @@ func (c *transactableConn) granularFlow(
 	)
 
 	for i := 1; true; i++ {
-		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldReconnect) {
+		if errors.As(err, &edbErr) && c.conn.soc.Closed() {
 			err = c.reconnect(ctx, true)
 			if err != nil {
 				goto Error
@@ -136,7 +136,7 @@ func (c *transactableConn) Tx(
 
 	var edbErr Error
 	for i := 1; true; i++ {
-		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldReconnect) {
+		if errors.As(err, &edbErr) && c.conn.soc.Closed() {
 			err = c.reconnect(ctx, true)
 			if err != nil {
 				goto Error
