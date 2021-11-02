@@ -206,7 +206,7 @@ func (t *Tx) QueryJSON(
 func (t *Tx) QuerySingleJSON(
 	ctx context.Context,
 	cmd string,
-	out *[]byte,
+	out interface{},
 	args ...interface{},
 ) error {
 	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args)

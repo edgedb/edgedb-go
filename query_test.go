@@ -337,6 +337,6 @@ func TestQueryTimesOut(t *testing.T) {
 func TestNilResultValue(t *testing.T) {
 	ctx := context.Background()
 	err := client.Query(ctx, "SELECT 1", nil)
-	assert.EqualError(t, err,
+	assert.EqualError(t, err, "edgedb.InterfaceError: "+
 		"the \"out\" argument must be a pointer, got untyped nil")
 }

@@ -327,7 +327,7 @@ func (p *Client) QueryJSON(
 func (p *Client) QuerySingleJSON(
 	ctx context.Context,
 	cmd string,
-	out *[]byte,
+	out interface{},
 	args ...interface{},
 ) error {
 	conn, err := p.acquire(ctx)

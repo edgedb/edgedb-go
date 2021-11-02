@@ -163,7 +163,7 @@ func (t *Subtx) QueryJSON(
 func (t *Subtx) QuerySingleJSON(
 	ctx context.Context,
 	cmd string,
-	out *[]byte,
+	out interface{},
 	args ...interface{},
 ) error {
 	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args)

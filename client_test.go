@@ -133,3 +133,56 @@ func TestClientTx(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(693), result, "Client.Tx() failed")
 }
+
+func TestQuerySingleMissingResult(t *testing.T) {
+	ctx := context.Background()
+
+	var result string
+	err := client.QuerySingle(ctx, "SELECT <str>{}", &result)
+	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+
+	optionalResult := NewOptionalStr("this should be set to missing")
+	err = client.QuerySingle(ctx, "SELECT <str>{}", &optionalResult)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalStr{}, optionalResult)
+
+	var objectResult struct {
+		Name string `edgedb:"name"`
+	}
+	err = client.QuerySingle(ctx,
+		"SELECT sys::Database { name } FILTER .name = 'does not exist'",
+		&objectResult,
+	)
+	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+
+	var optionalObjectResult struct {
+		Optional
+		Name string `edgedb:"name"`
+	}
+	optionalObjectResult.SetMissing(false)
+	err = client.QuerySingle(ctx,
+		"SELECT sys::Database { name } FILTER .name = 'does not exist'",
+		&optionalObjectResult,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, "", optionalObjectResult.Name)
+	assert.True(t, optionalObjectResult.Missing())
+}
+
+func TestQuerySingleJSONMissingResult(t *testing.T) {
+	ctx := context.Background()
+
+	var result []byte
+	err := client.QuerySingleJSON(ctx, "SELECT <str>{}", &result)
+	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+
+	optionalResult := NewOptionalBytes([]byte("this should be set to missing"))
+	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &optionalResult)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalBytes{}, optionalResult)
+
+	var wrongType string
+	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &wrongType)
+	assert.EqualError(t, err, "edgedb.InterfaceError: "+
+		"the \"out\" argument must be *[]byte or *OptionalBytes, got *string")
+}
