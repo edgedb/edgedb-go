@@ -88,7 +88,7 @@ func TestConnectClientZeroConcurrency(t *testing.T) {
 	require.NoError(t, p.EnsureConnected(ctx))
 
 	expected, err := strconv.Atoi(
-		client.cfg.serverSettings["suggested_pool_concurrency"])
+		string(client.cfg.serverSettings["suggested_pool_concurrency"]))
 	if err != nil {
 		expected = defaultConcurrency
 	}

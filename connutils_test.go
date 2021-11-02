@@ -99,7 +99,7 @@ func TestConUtils(t *testing.T) {
 					addr:               dialArgs{"tcp", "localhost:5656"},
 					user:               "user",
 					database:           "edgedb",
-					serverSettings:     map[string]string{},
+					serverSettings:     map[string][]byte{},
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -120,7 +120,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user",
 					password:           "passw",
 					database:           "testdb",
-					serverSettings:     map[string]string{},
+					serverSettings:     map[string][]byte{},
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -148,7 +148,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
-					serverSettings:     map[string]string{},
+					serverSettings:     map[string][]byte{},
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -169,15 +169,17 @@ func TestConUtils(t *testing.T) {
 				User:           "user2",
 				Password:       NewOptionalStr("passw2"),
 				Database:       "db2",
-				ServerSettings: map[string]string{"ssl": "False"},
+				ServerSettings: map[string][]byte{"ssl": []byte("False")},
 			},
 			expected: Result{
 				cfg: connConfig{
-					addr:               dialArgs{"tcp", "localhost:5656"},
-					user:               "user2",
-					password:           "passw2",
-					database:           "db2",
-					serverSettings:     map[string]string{"ssl": "False"},
+					addr:     dialArgs{"tcp", "localhost:5656"},
+					user:     "user2",
+					password: "passw2",
+					database: "db2",
+					serverSettings: map[string][]byte{
+						"ssl": []byte("False"),
+					},
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -199,7 +201,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
-					serverSettings:     map[string]string{},
+					serverSettings:     map[string][]byte{},
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -214,7 +216,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
-					serverSettings:     map[string]string{},
+					serverSettings:     map[string][]byte{},
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -290,8 +292,10 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				cfg: connConfig{
-					addr:               dialArgs{"tcp", "testhost:2222"},
-					serverSettings:     map[string]string{"param": "123"},
+					addr: dialArgs{"tcp", "testhost:2222"},
+					serverSettings: map[string][]byte{
+						"param": []byte("123"),
+					},
 					user:               "me",
 					password:           "ask",
 					database:           "db",
@@ -308,14 +312,14 @@ func TestConUtils(t *testing.T) {
 				User:           "me",
 				Password:       NewOptionalStr("ask"),
 				Database:       "db",
-				ServerSettings: map[string]string{"aa": "bb"},
+				ServerSettings: map[string][]byte{"aa": []byte("bb")},
 			},
 			expected: Result{
 				cfg: connConfig{
 					addr: dialArgs{"tcp", "testhost:2222"},
-					serverSettings: map[string]string{
-						"aa":    "bb",
-						"param": "123",
+					serverSettings: map[string][]byte{
+						"aa":    []byte("bb"),
+						"param": []byte("123"),
 					},
 					user:               "me",
 					password:           "ask",
@@ -561,15 +565,15 @@ func TestConnectionParameterResolution(t *testing.T) {
 				options.TLSSecurity = getStr(t, opts, "tlsSecurity")
 				if opts["serverSettings"] != nil {
 					ss := opts["serverSettings"].(map[string]interface{})
-					options.ServerSettings = make(map[string]string, len(ss))
+					options.ServerSettings = make(map[string][]byte, len(ss))
 					for k, v := range ss {
-						options.ServerSettings[k] = v.(string)
+						options.ServerSettings[k] = []byte(v.(string))
 					}
 				}
 			}
 
 			expectedResult := connConfig{
-				serverSettings:     map[string]string{},
+				serverSettings:     map[string][]byte{},
 				waitUntilAvailable: 30 * time.Second,
 			}
 
@@ -594,7 +598,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 
 				ss := res["serverSettings"].(map[string]interface{})
 				for k, v := range ss {
-					expectedResult.serverSettings[k] = v.(string)
+					expectedResult.serverSettings[k] = []byte(v.(string))
 				}
 			}
 

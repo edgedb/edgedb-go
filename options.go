@@ -92,7 +92,7 @@ type Options struct {
 	TLSSecurity string
 
 	// ServerSettings is currently unused.
-	ServerSettings map[string]string
+	ServerSettings map[string][]byte
 }
 
 // RetryBackoff returns the duration to wait after the nth attempt

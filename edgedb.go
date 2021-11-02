@@ -31,7 +31,7 @@ import (
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type cacheCollection struct {
-	serverSettings    map[string]string
+	serverSettings    map[string][]byte
 	typeIDCache       *cache.Cache
 	inCodecCache      *cache.Cache
 	outCodecCache     *cache.Cache
