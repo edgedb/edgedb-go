@@ -74,7 +74,7 @@ func (c *transactableConn) QueryJSON(
 func (c *transactableConn) QuerySingleJSON(
 	ctx context.Context,
 	cmd string,
-	out *[]byte,
+	out interface{},
 	args ...interface{},
 ) error {
 	return runQuery(ctx, c, "QuerySingleJSON", cmd, out, args)

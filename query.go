@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -96,7 +97,7 @@ func newQuery(
 	}
 
 	if err != nil {
-		return &gfQuery{}, err
+		return &gfQuery{}, &interfaceError{err: err}
 	}
 
 	q.outType = q.out.Type()
@@ -124,6 +125,10 @@ type queryable interface {
 	granularFlow(context.Context, *gfQuery) error
 }
 
+type unseter interface {
+	Unset()
+}
+
 func runQuery(
 	ctx context.Context,
 	c queryable,
@@ -131,10 +136,31 @@ func runQuery(
 	out interface{},
 	args []interface{},
 ) error {
+	if method == "QuerySingleJSON" {
+		switch out.(type) {
+		case *[]byte, *OptionalBytes:
+		default:
+			return &interfaceError{msg: fmt.Sprintf(
+				`the "out" argument must be *[]byte or *OptionalBytes, got %T`,
+				out)}
+		}
+	}
 	q, err := newQuery(method, cmd, args, c.headers(), out)
 	if err != nil {
 		return err
 	}
 
-	return c.granularFlow(ctx, q)
+	err = c.granularFlow(ctx, q)
+
+	var edbErr Error
+	if errors.As(err, &edbErr) &&
+		edbErr.Category(NoDataError) &&
+		(q.method == "QuerySingle" || q.method == "QuerySingleJSON") {
+		if opt, ok := out.(unseter); ok {
+			opt.Unset()
+			return nil
+		}
+	}
+
+	return err
 }
