@@ -45,8 +45,59 @@ type connConfig struct {
 	database           string
 	connectTimeout     time.Duration
 	waitUntilAvailable time.Duration
+	tlsCAData          []byte
+	tlsSecurity        string
 	serverSettings     map[string]string
-	tlsConfig          *tls.Config
+}
+
+func (c *connConfig) tlsConfig() (*tls.Config, error) {
+	var roots *x509.CertPool
+	if len(c.tlsCAData) != 0 {
+		roots = x509.NewCertPool()
+		if ok := roots.AppendCertsFromPEM(c.tlsCAData); !ok {
+			return nil, errors.New("invalid certificate data")
+		}
+	} else {
+		var err error
+		roots, err = getSystemCertPool()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:    roots,
+		NextProtos: []string{"edgedb-binary"},
+	}
+
+	security, err := getEnvVarSetting(
+		"EDGEDB_CLIENT_SECURITY", "default", "default", "insecure_dev_mode")
+	if err != nil {
+		return nil, err
+	}
+
+	switch {
+	case security == "insecure_dev_mode" || c.tlsSecurity == "insecure":
+		tlsConfig.InsecureSkipVerify = true
+	case c.tlsSecurity == "no_host_verification":
+		// Set InsecureSkipVerify to skip the default validation we are
+		// replacing. This will not disable VerifyConnection.
+		tlsConfig.InsecureSkipVerify = true
+
+		tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
+			opts := x509.VerifyOptions{
+				Intermediates: x509.NewCertPool(),
+				Roots:         roots,
+			}
+			for _, cert := range cs.PeerCertificates[1:] {
+				opts.Intermediates.AddCert(cert)
+			}
+			_, err := cs.PeerCertificates[0].Verify(opts)
+			return err
+		}
+	}
+
+	return tlsConfig, nil
 }
 
 type dialArgs struct {
@@ -161,7 +212,7 @@ func (r *configResolver) setTLSSecurity(val string, source string) error {
 	}
 
 	switch val {
-	case "insecure", "no_host_verification", "strict":
+	case "insecure", "no_host_verification", "strict", "default":
 	default:
 		return invalidTLSSecurity(val)
 	}
@@ -558,59 +609,17 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		certData = r.tlsCAData.val.([]byte)
 	}
 
-	var roots *x509.CertPool
-	if len(certData) != 0 {
-		roots = x509.NewCertPool()
-		if ok := roots.AppendCertsFromPEM(certData); !ok {
-			return nil, errors.New("invalid certificate data")
-		}
-	} else {
-		var err error
-		roots, err = getSystemCertPool()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var tlsSecurity string
-	switch {
-	case r.tlsSecurity.val != nil:
+	tlsSecurity := "default"
+	if r.tlsSecurity.val != nil {
 		tlsSecurity = r.tlsSecurity.val.(string)
-	case len(certData) > 0:
-		tlsSecurity = "no_host_verification"
-	default:
-		tlsSecurity = "strict"
 	}
 
-	tlsConfig := &tls.Config{
-		RootCAs:    roots,
-		NextProtos: []string{"edgedb-binary"},
-	}
-
-	security, err := getEnvVarSetting(
-		"EDGEDB_CLIENT_SECURITY", "default", "default", "insecure_dev_mode")
-	if err != nil {
-		return nil, err
-	}
-
-	switch {
-	case security == "insecure_dev_mode" || tlsSecurity == "insecure":
-		tlsConfig.InsecureSkipVerify = true
-	case tlsSecurity == "no_host_verification":
-		// Set InsecureSkipVerify to skip the default validation we are
-		// replacing. This will not disable VerifyConnection.
-		tlsConfig.InsecureSkipVerify = true
-
-		tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
-			opts := x509.VerifyOptions{
-				Intermediates: x509.NewCertPool(),
-				Roots:         roots,
-			}
-			for _, cert := range cs.PeerCertificates[1:] {
-				opts.Intermediates.AddCert(cert)
-			}
-			_, err := cs.PeerCertificates[0].Verify(opts)
-			return err
+	if tlsSecurity == "default" {
+		switch len(certData) {
+		case 0:
+			tlsSecurity = "strict"
+		default:
+			tlsSecurity = "no_host_verification"
 		}
 	}
 
@@ -632,7 +641,8 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		connectTimeout:     opts.ConnectTimeout,
 		waitUntilAvailable: waitUntilAvailable,
 		serverSettings:     r.serverSettings,
-		tlsConfig:          tlsConfig,
+		tlsCAData:          certData,
+		tlsSecurity:        tlsSecurity,
 	}, nil
 }
 

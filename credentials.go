@@ -133,26 +133,21 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		result.tlsSecurity.Set(val)
 	}
 
-	verify, ok := data["tls_verify_hostname"].(bool)
-	if !ok {
-		return result, nil
-	}
+	security, securityOk := data["tls_security"].(string)
+	verify, verifyOk := data["tls_verify_hostname"].(bool)
 
-	security, ok := data["tls_security"].(string)
-	if !ok {
-		return result, nil
-	}
-
-	switch {
-	case verify && security == "insecure":
-		fallthrough
-	case verify && security == "no_host_verification":
-		fallthrough
-	case !verify && security == "strict":
-		return nil, fmt.Errorf(
-			"values tls_verify_hostname=%v and "+
-				"tls_security=%q are incompatible",
-			verify, security)
+	if securityOk && verifyOk {
+		switch {
+		case verify && security == "insecure":
+			fallthrough
+		case verify && security == "no_host_verification":
+			fallthrough
+		case !verify && security == "strict":
+			return nil, fmt.Errorf(
+				"values tls_verify_hostname=%v and "+
+					"tls_security=%q are incompatible",
+				verify, security)
+		}
 	}
 
 	return result, nil

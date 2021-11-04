@@ -54,7 +54,12 @@ func connectTLS(
 	ctx context.Context,
 	cfg *connConfig,
 ) (net.Conn, error) {
-	d := tls.Dialer{Config: cfg.tlsConfig}
+	tlsConfig, err := cfg.tlsConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	d := tls.Dialer{Config: tlsConfig}
 	conn, err := d.DialContext(ctx, cfg.addr.network, cfg.addr.address)
 	if err != nil {
 		return nil, wrapNetError(err)
