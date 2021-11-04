@@ -101,6 +101,7 @@ func TestConUtils(t *testing.T) {
 					database:           "edgedb",
 					serverSettings:     map[string]string{},
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -121,6 +122,7 @@ func TestConUtils(t *testing.T) {
 					database:           "testdb",
 					serverSettings:     map[string]string{},
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -148,6 +150,7 @@ func TestConUtils(t *testing.T) {
 					database:           "db2",
 					serverSettings:     map[string]string{},
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -176,6 +179,7 @@ func TestConUtils(t *testing.T) {
 					database:           "db2",
 					serverSettings:     map[string]string{"ssl": "False"},
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -197,6 +201,7 @@ func TestConUtils(t *testing.T) {
 					database:           "abcdef",
 					serverSettings:     map[string]string{},
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -211,6 +216,7 @@ func TestConUtils(t *testing.T) {
 					database:           "abcdef",
 					serverSettings:     map[string]string{},
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -290,6 +296,7 @@ func TestConUtils(t *testing.T) {
 					password:           "ask",
 					database:           "db",
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -314,6 +321,7 @@ func TestConUtils(t *testing.T) {
 					password:           "ask",
 					database:           "db",
 					waitUntilAvailable: 30 * time.Second,
+					tlsSecurity:        "strict",
 				},
 			},
 		},
@@ -362,8 +370,6 @@ func TestConUtils(t *testing.T) {
 				assert.Nil(t, config)
 			} else {
 				require.NoError(t, err)
-				// tlsConfigs cannot be compared reliably
-				config.tlsConfig = nil
 				assert.Equal(t, c.expected.cfg, *config)
 			}
 		})
@@ -488,7 +494,7 @@ func createFile(tmpDir, file, data string) error {
 	return ioutil.WriteFile(file, []byte(data), 0644)
 }
 
-func TestConnectionParameterResoultion(t *testing.T) {
+func TestConnectionParameterResolution(t *testing.T) {
 	data, err := ioutil.ReadFile(
 		"./shared-client-testcases/connection_testcases.json",
 	)
@@ -581,6 +587,11 @@ func TestConnectionParameterResoultion(t *testing.T) {
 					expectedResult.password = res["password"].(string)
 				}
 
+				expectedResult.tlsSecurity = res["tlsSecurity"].(string)
+				if data := res["tlsCAData"]; data != nil {
+					expectedResult.tlsCAData = []byte(data.(string))
+				}
+
 				ss := res["serverSettings"].(map[string]interface{})
 				for k, v := range ss {
 					expectedResult.serverSettings[k] = v.(string)
@@ -600,8 +611,6 @@ func TestConnectionParameterResoultion(t *testing.T) {
 				assert.Nil(t, config)
 			} else {
 				require.NoError(t, err)
-				// tlsConfigs cannot be compared reliably
-				config.tlsConfig = nil
 				assert.Equal(t, expectedResult, *config)
 			}
 		})
