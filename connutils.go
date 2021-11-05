@@ -71,7 +71,8 @@ func (c *connConfig) tlsConfig() (*tls.Config, error) {
 	}
 
 	security, err := getEnvVarSetting(
-		"EDGEDB_CLIENT_SECURITY", "default", "default", "insecure_dev_mode")
+		"EDGEDB_CLIENT_SECURITY", "default", "default", "insecure_dev_mode",
+		"strict")
 	if err != nil {
 		return nil, err
 	}
