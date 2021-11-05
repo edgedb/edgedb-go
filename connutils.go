@@ -70,17 +70,10 @@ func (c *connConfig) tlsConfig() (*tls.Config, error) {
 		NextProtos: []string{"edgedb-binary"},
 	}
 
-	security, err := getEnvVarSetting(
-		"EDGEDB_CLIENT_SECURITY", "default", "default", "insecure_dev_mode",
-		"strict")
-	if err != nil {
-		return nil, err
-	}
-
-	switch {
-	case security == "insecure_dev_mode" || c.tlsSecurity == "insecure":
+	switch c.tlsSecurity {
+	case "insecure_dev_mode", "insecure":
 		tlsConfig.InsecureSkipVerify = true
-	case c.tlsSecurity == "no_host_verification":
+	case "no_host_verification":
 		// Set InsecureSkipVerify to skip the default validation we are
 		// replacing. This will not disable VerifyConnection.
 		tlsConfig.InsecureSkipVerify = true
@@ -615,11 +608,34 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		tlsSecurity = r.tlsSecurity.val.(string)
 	}
 
-	if tlsSecurity == "default" {
-		switch len(certData) {
-		case 0:
+	security, err := getEnvVarSetting("EDGEDB_CLIENT_SECURITY", "default",
+		"default", "insecure_dev_mode", "strict")
+	if err != nil {
+		return nil, err
+	}
+
+	switch security {
+	case "default":
+	case "insecure_dev_mode":
+		if tlsSecurity == "default" {
+			tlsSecurity = "insecure"
+		}
+	case "strict":
+		switch tlsSecurity {
+		case "default":
 			tlsSecurity = "strict"
-		default:
+		case "no_host_verification", "insecure":
+			return nil, fmt.Errorf(
+				"EDGEDB_CLIENT_SECURITY=strict but tls_security=%v, "+
+					"tls_security must be set to strict "+
+					"when EDGEDB_CLIENT_SECURITY is strict", tlsSecurity)
+		}
+	}
+
+	if tlsSecurity == "default" {
+		if len(certData) == 0 {
+			tlsSecurity = "strict"
+		} else {
 			tlsSecurity = "no_host_verification"
 		}
 	}
