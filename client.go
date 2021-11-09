@@ -20,12 +20,18 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"reflect"
 	"runtime"
 	"strconv"
 	"sync"
 	"time"
+	"unsafe"
 
+	"github.com/edgedb/edgedb-go/internal"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
 
 const defaultIdleConnectionTimeout = 30 * time.Second // is this right?
@@ -203,6 +209,43 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 	}
 }
 
+type systemConfig struct {
+	ID                 UUID     `edgedb:"id"`
+	SessionIdleTimeout Duration `edgedb:"session_idle_timeout"`
+}
+
+func parseSystemConfig(
+	b []byte,
+	version internal.ProtocolVersion,
+) (systemConfig, error) {
+	r := buff.SimpleReader(b)
+	u := r.PopSlice(r.PopUint32())
+	u.PopUUID()
+	dsc, err := descriptor.Pop(u, version)
+	if err != nil {
+		return systemConfig{}, err
+	}
+
+	var cfg systemConfig
+	typ := reflect.TypeOf(cfg)
+	dec, err := codecs.BuildDecoder(dsc, typ, codecs.Path("system_config"))
+	if err != nil {
+		return systemConfig{}, err
+	}
+
+	err = dec.Decode(r.PopSlice(r.PopUint32()), unsafe.Pointer(&cfg))
+	if err != nil {
+		return systemConfig{}, err
+	}
+
+	if len(r.Buf) != 0 {
+		return systemConfig{}, fmt.Errorf(
+			"%v bytes left in buffer", len(r.Buf))
+	}
+
+	return cfg, nil
+}
+
 func (p *Client) release(conn *transactableConn, err error) error {
 	if isClientConnectionError(err) {
 		p.potentialConns <- struct{}{}
@@ -210,10 +253,12 @@ func (p *Client) release(conn *transactableConn, err error) error {
 	}
 
 	timeout := defaultIdleConnectionTimeout
-	if str, ok := p.serverSettings["client_idle_timeout"]; ok {
-		m, err := strconv.Atoi(str)
-		if err == nil {
-			timeout = time.Duration(m) * time.Millisecond
+	if b, ok := p.serverSettings["system_config"]; ok {
+		x, err := parseSystemConfig(b, conn.conn.protocolVersion)
+		if err != nil {
+			log.Println(err)
+		} else {
+			timeout = time.Duration(x.SessionIdleTimeout) * time.Millisecond
 		}
 	}
 
