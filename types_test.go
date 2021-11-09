@@ -6454,9 +6454,12 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		RelativeDuration        RelativeDuration
 		OptRelativeDuration     OptionalRelativeDuration
 		OptRelativeDurationNull OptionalRelativeDuration
+		Memory                  Memory
+		OptMemory               OptionalMemory
+		OptMemoryNull           OptionalMemory
 	}
 
-	testJSON := []byte(`{
+	testJSON := `{
 		"Str": "test str",
 		"OptStr": "null test str",
 		"OptStrNull": null,
@@ -6504,8 +6507,11 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		"OptDurationNull": null,
 		"RelativeDuration": "P2Y3M-4DT23M12.345678S",
 		"OptRelativeDuration": "P2Y3M-4DT23M12.345678S",
-		"OptRelativeDurationNull": null
-	}`)
+		"OptRelativeDurationNull": null,
+		"Memory": "5TiB",
+		"OptMemory": "5TiB",
+		"OptMemoryNull": null
+	}`
 
 	bigInt, _ := (&big.Int{}).SetString("123456789012345678901234567890", 10)
 	uuid, _ := ParseUUID("759637d8-6635-11e9-b9d4-098002d459d5")
@@ -6515,6 +6521,7 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 	localDate := NewLocalDate(2021, 10, 1)
 	duration := Duration(1234567)
 	relDuration := NewRelativeDuration(27, -4, 1392345678)
+	memory := Memory(5 * 1_024 * 1_024 * 1_024 * 1_024)
 
 	decoded := testJSONStruct{
 		OptStrNull:              NewOptionalStr("string"),
@@ -6533,8 +6540,9 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		OptLocalDateNull:        NewOptionalLocalDate(localDate),
 		OptDurationNull:         NewOptionalDuration(duration),
 		OptRelativeDurationNull: NewOptionalRelativeDuration(relDuration),
+		OptMemoryNull:           NewOptionalMemory(memory),
 	}
-	err := json.Unmarshal(testJSON, &decoded)
+	err := json.Unmarshal([]byte(testJSON), &decoded)
 	assert.NoError(t, err)
 
 	expected := testJSONStruct{
@@ -6570,10 +6578,310 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 		OptLocalDate:        NewOptionalLocalDate(localDate),
 		RelativeDuration:    relDuration,
 		OptRelativeDuration: NewOptionalRelativeDuration(relDuration),
+		Memory:              memory,
+		OptMemory:           NewOptionalMemory(memory),
 	}
 	assert.Equal(t, expected, decoded)
 
 	encoded, err := json.MarshalIndent(decoded, "\t", "\t")
 	assert.NoError(t, err)
-	assert.Equal(t, testJSON, encoded)
+	assert.Equal(t, testJSON, string(encoded))
+}
+
+func TestCfgMemory(t *testing.T) {
+	ctx := context.Background()
+	var result []Memory
+	err := client.Query(ctx, "SELECT <cfg::memory>$0", &result, Memory(1000))
+	require.NoError(t, err)
+	assert.Equal(t, []Memory{1000}, result)
+}
+
+func TestSendAndReceiveMemory(t *testing.T) {
+	ctx := context.Background()
+
+	memories := []Memory{
+		Memory(1),
+		Memory(0),
+		Memory(11),
+		Memory(15),
+		Memory(22),
+		Memory(113),
+		Memory(5120),
+		Memory(110000),
+		Memory(6291456),
+		Memory(7516192768),
+		Memory(346456723423),
+		Memory(8796093022208),
+		Memory(281474976710656),
+		Memory(2251799813685125),
+		Memory(9007199254740992),
+		Memory(10133099161583616),
+		Memory(1152921504594725865),
+	}
+
+	for i := 0; i < 1000; i++ {
+		memories = append(memories, Memory(rand.Int63n(9223372036854775807)))
+	}
+
+	strings := make([]string, len(memories))
+	for i, n := range memories {
+		strings[i] = fmt.Sprint(n)
+	}
+
+	type Result struct {
+		Encoded   string `edgedb:"encoded"`
+		Decoded   Memory `edgedb:"decoded"`
+		RoundTrip Memory `edgedb:"round_trip"`
+		IsEqual   bool   `edgedb:"is_equal"`
+		String    string `edgedb:"string"`
+	}
+
+	query := `
+		WITH
+			sample := (
+				WITH
+					m := enumerate(array_unpack(<array<cfg::memory>>$0)),
+					s := enumerate(array_unpack(<array<str>>$1)),
+				SELECT (
+					m := m.1,
+					str := s.1,
+				)
+				FILTER m.0 = s.0
+			)
+		SELECT (
+			encoded := <str>sample.m,
+			decoded := <cfg::memory>sample.str,
+			round_trip := sample.m,
+			is_equal := <str><cfg::memory>sample.str = <str>sample.m,
+			string := <str><cfg::memory>sample.str,
+		)
+	`
+
+	var results []Result
+	err := client.Query(ctx, query, &results, memories, strings)
+	require.NoError(t, err)
+	require.Equal(t, len(memories), len(results), "wrong number of results")
+
+	for i, s := range strings {
+		t.Run(strconv.Itoa(int(memories[i])), func(t *testing.T) {
+			m := memories[i]
+			result := results[i]
+
+			assert.True(t, result.IsEqual, "equality check faild")
+			assert.Equal(t, s, result.Encoded, "encoding failed")
+			assert.Equal(t, m, result.Decoded, "decoding failed")
+			assert.Equal(t, m, result.RoundTrip, "round trip failed")
+			assert.Equal(t, s, result.String)
+		})
+	}
+}
+
+type CustomMemory struct {
+	data []byte
+}
+
+func (m CustomMemory) MarshalEdgeDBMemory() ([]byte, error) {
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomMemory) UnmarshalEdgeDBMemory(data []byte) error {
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func TestReceiveMemoryUnmarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val CustomMemory `edgedb:"val"`
+	}
+
+	// Decode value
+	err := client.QuerySingle(ctx, `
+		SELECT { val := <cfg::memory>123_456_789_987_654_321 }`,
+		&result,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cfg::memory>$0 }`,
+		&result,
+		OptionalMemory{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomMemory at "+
+		"struct { Val edgedb.CustomMemory \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendMemoryMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalMemory `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := client.QuerySingle(ctx, `
+		SELECT { val := <cfg::memory>$0 }`,
+		&result,
+		CustomMemory{
+			data: []byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+		},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalMemory(123_456_789_987_654_321), result.Val)
+
+	// encode value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cfg::memory>$0 }`,
+		&result,
+		CustomMemory{
+			data: []byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+		},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalMemory(123_456_789_987_654_321), result.Val)
+
+	// encode wrong number of bytes
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <cfg::memory>$0 }`,
+		&result,
+		CustomMemory{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomMemory "+
+		"at args[0] expected 8, got 1")
+}
+
+type CustomOptionalMemory struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalMemory) MarshalEdgeDBMemory() ([]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalMemory) UnmarshalEdgeDBMemory(data []byte) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalMemory) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalMemory) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
+	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cfg::memory; };`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalMemory `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			SELECT { val := <cfg::memory>123_456_789_987_654_321 }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1},
+			result.Val.data,
+		)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalMemory{}, result.Val)
+	})
+}
+
+func TestSendOptionalMemoryMarshaler(t *testing.T) {
+	ctx := context.Background()
+	var result struct {
+		Val OptionalMemory `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalMemory {
+		return CustomOptionalMemory{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := client.QuerySingle(ctx, `
+		SELECT { val := <cfg::memory>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalMemory(123_456_789_987_654_321), result.Val)
+
+	// encode value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cfg::memory>$0 }`,
+		&result,
+		newValue([]byte{0x01, 0xb6, 0x9b, 0x4b, 0xe0, 0x52, 0xfa, 0xb1}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, NewOptionalMemory(123_456_789_987_654_321), result.Val)
+
+	if protocolVersion.GTE(protocolVersion0p12) {
+		// encode missing value into optional argument
+		err = client.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL cfg::memory>$0 }`,
+			&result,
+			CustomOptionalMemory{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalMemory{}, result.Val)
+	}
+
+	// encode missing value into required argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <cfg::memory>$0 }`,
+		&result,
+		CustomOptionalMemory{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalMemory at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <cfg::memory>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalMemory "+
+		"at args[0] expected 8, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cfg::memory>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomOptionalMemory "+
+		"at args[0] expected 8, got 1")
 }
