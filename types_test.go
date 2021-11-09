@@ -6588,15 +6588,11 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 	assert.Equal(t, testJSON, string(encoded))
 }
 
-func TestCfgMemory(t *testing.T) {
-	ctx := context.Background()
-	var result []Memory
-	err := client.Query(ctx, "SELECT <cfg::memory>$0", &result, Memory(1000))
-	require.NoError(t, err)
-	assert.Equal(t, []Memory{1000}, result)
-}
-
 func TestSendAndReceiveMemory(t *testing.T) {
+	if protocolVersion.LT(protocolVersion0p13) {
+		t.Skip()
+	}
+
 	ctx := context.Background()
 
 	memories := []Memory{
@@ -6693,6 +6689,10 @@ func (m *CustomMemory) UnmarshalEdgeDBMemory(data []byte) error {
 }
 
 func TestReceiveMemoryUnmarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion0p13) {
+		t.Skip()
+	}
+
 	ctx := context.Background()
 	var result struct {
 		Val CustomMemory `edgedb:"val"`
@@ -6724,6 +6724,10 @@ func TestReceiveMemoryUnmarshaler(t *testing.T) {
 }
 
 func TestSendMemoryMarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion0p13) {
+		t.Skip()
+	}
+
 	ctx := context.Background()
 	var result struct {
 		Val OptionalMemory `edgedb:"val"`
@@ -6791,6 +6795,10 @@ func (m *CustomOptionalMemory) SetMissing(missing bool) {
 func (m CustomOptionalMemory) Missing() bool { return !m.isSet }
 
 func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion0p13) {
+		t.Skip()
+	}
+
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cfg::memory; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
@@ -6817,6 +6825,10 @@ func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
 }
 
 func TestSendOptionalMemoryMarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion0p13) {
+		t.Skip()
+	}
+
 	ctx := context.Background()
 	var result struct {
 		Val OptionalMemory `edgedb:"val"`

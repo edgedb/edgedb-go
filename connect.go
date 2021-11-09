@@ -32,6 +32,7 @@ var (
 	protocolVersion0p10 = internal.ProtocolVersion{Major: 0, Minor: 10}
 	protocolVersion0p11 = internal.ProtocolVersion{Major: 0, Minor: 11}
 	protocolVersion0p12 = internal.ProtocolVersion{Major: 0, Minor: 12}
+	protocolVersion0p13 = internal.ProtocolVersion{Major: 0, Minor: 13}
 )
 
 func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
