@@ -484,22 +484,31 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 	headers := decodeHeaders(r)
 	card := r.PopUint8()
 
-	var descs descPair
+	var (
+		descs descPair
+		err   error
+	)
 	id := r.PopUUID() // in descriptor id
-	descs.in = descriptor.Pop(
+	descs.in, err = descriptor.Pop(
 		r.PopSlice(r.PopUint32()),
 		c.protocolVersion,
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	if descs.in.ID != id {
 		return nil, nil, &clientError{msg: fmt.Sprintf(
 			"unexpected in descriptor id: %v", descs.in.ID)}
 	}
 
 	id = r.PopUUID() // output descriptor ID
-	descs.out = descriptor.Pop(
+	descs.out, err = descriptor.Pop(
 		r.PopSlice(r.PopUint32()),
 		c.protocolVersion,
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	if descs.out.ID != id {
 		return nil, nil, &clientError{msg: fmt.Sprintf(
 			"unexpected out descriptor id: %v", descs.in.ID)}
