@@ -118,7 +118,7 @@ var optionalUnmarshalerType = getType((*marshal.OptionalUnmarshaler)(nil))
 func buildUnmarshaler(
 	desc descriptor.Descriptor,
 	typ reflect.Type,
-) (Decoder, bool) {
+) (Decoder, bool, error) {
 	var id types.UUID
 	switch desc.Type {
 	case descriptor.BaseScalar:
@@ -126,26 +126,27 @@ func buildUnmarshaler(
 	case descriptor.Enum:
 		id = strID
 	default:
-		panic(fmt.Sprintf("unexpected descriptor type 0x%x", desc.Type))
+		return nil, false, fmt.Errorf(
+			"unexpected descriptor type 0x%x", desc.Type)
 	}
 
 	iface, ok := unmarshalers[id]
 	if !ok {
-		return nil, false
+		return nil, false, nil
 	}
 
 	ptr := reflect.PtrTo(typ)
 	if !ptr.Implements(iface.typ) {
-		return nil, false
+		return nil, false, nil
 	}
 
 	var decoder = unmarshalerDecoder{desc.ID, typ, iface.methodName}
 
 	if ptr.Implements(optionalUnmarshalerType) {
-		return &optionalUnmarshalerDecoder{decoder}, true
+		return &optionalUnmarshalerDecoder{decoder}, true, nil
 	}
 
-	return &decoder, true
+	return &decoder, true, nil
 }
 
 type unmarshalerDecoder struct {
@@ -156,10 +157,15 @@ type unmarshalerDecoder struct {
 
 func (c *unmarshalerDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *unmarshalerDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *unmarshalerDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	val := reflect.NewAt(c.typ, out)
 	method := val.MethodByName(c.methodName)
-	method.Call([]reflect.Value{reflect.ValueOf(r.Buf)})
+	result := method.Call([]reflect.Value{reflect.ValueOf(r.Buf)})
+	err := result[0].Interface()
+	if err != nil {
+		return err.(error)
+	}
+	return nil
 }
 
 type optionalUnmarshalerDecoder struct {
@@ -175,10 +181,10 @@ func (c *optionalUnmarshalerDecoder) DecodeMissing(out unsafe.Pointer) {
 func (c *optionalUnmarshalerDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
-) {
+) error {
 	// todo: should SetMissing be called with false?
 	val := reflect.NewAt(c.unmarshalerDecoder.typ, out)
 	method := val.MethodByName("SetMissing")
 	method.Call([]reflect.Value{falseValue})
-	c.unmarshalerDecoder.Decode(r, out)
+	return c.unmarshalerDecoder.Decode(r, out)
 }

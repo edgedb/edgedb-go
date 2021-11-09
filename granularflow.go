@@ -296,7 +296,14 @@ func (c *protocolConnection) execute(
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.Data:
-			val, ok := decodeDataMsg(r, q, cdcs)
+			val, ok, e := decodeDataMsg(r, q, cdcs)
+			if e != nil {
+				if err == errZeroResults {
+					err = e
+				} else {
+					err = wrapAll(err, e)
+				}
+			}
 			if ok {
 				tmp = reflect.Append(tmp, val)
 			}
@@ -376,7 +383,14 @@ func (c *protocolConnection) optimistic(
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.Data:
-			val, ok := decodeDataMsg(r, q, cdcs)
+			val, ok, e := decodeDataMsg(r, q, cdcs)
+			if e != nil {
+				if err == errZeroResults {
+					err = e
+				} else {
+					err = wrapAll(err, e)
+				}
+			}
 			if ok {
 				tmp = reflect.Append(tmp, val)
 			}
@@ -432,31 +446,35 @@ func decodeDataMsg(
 	r *buff.Reader,
 	q *gfQuery,
 	cdcs *codecPair,
-) (reflect.Value, bool) {
+) (reflect.Value, bool, error) {
 	elmCount := r.PopUint16()
 	if elmCount != 1 {
-		panic(fmt.Sprintf(
-			"unexpected number of elements: expected 1, got %v",
-			elmCount,
-		))
+		return reflect.Value{}, false, fmt.Errorf(
+			"unexpected number of elements: expected 1, got %v", elmCount)
 	}
 	elmLen := r.PopUint32()
 
 	if !q.flat() {
 		val := reflect.New(q.outType).Elem()
-		cdcs.out.Decode(
+		err := cdcs.out.Decode(
 			r.PopSlice(elmLen),
 			unsafe.Pointer(val.UnsafeAddr()),
 		)
-		return val, true
+		if err != nil {
+			return reflect.Value{}, false, err
+		}
+		return val, true, nil
 	}
 
-	cdcs.out.Decode(
+	err := cdcs.out.Decode(
 		r.PopSlice(elmLen),
 		unsafe.Pointer(q.out.UnsafeAddr()),
 	)
+	if err != nil {
+		return reflect.Value{}, false, err
+	}
 
-	return reflect.Value{}, false
+	return reflect.Value{}, false, nil
 }
 
 func (c *protocolConnection) decodeCommandDataDescriptionMsg(

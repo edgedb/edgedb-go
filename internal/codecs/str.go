@@ -41,9 +41,10 @@ func (c *strCodec) Type() reflect.Type { return strType }
 
 func (c *strCodec) DescriptorID() types.UUID { return c.id }
 
-func (c *strCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *strCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*string)(out) = string(r.Buf)
 	r.Discard(len(r.Buf))
+	return nil
 }
 
 type optionalStrMarshaler interface {
@@ -109,11 +110,12 @@ type optionalStrDecoder struct {
 
 func (c *optionalStrDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalStrDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalStrDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	opstr := (*optionalStr)(out)
 	opstr.val = string(r.Buf)
 	opstr.set = true
 	r.Discard(len(r.Buf))
+	return nil
 }
 
 func (c *optionalStrDecoder) DecodeMissing(out unsafe.Pointer) {

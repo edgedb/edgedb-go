@@ -39,8 +39,9 @@ func (c *memoryCodec) Type() reflect.Type { return memoryType }
 
 func (c *memoryCodec) DescriptorID() types.UUID { return memoryID }
 
-func (c *memoryCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *memoryCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
+	return nil
 }
 
 type optionalMemoryMarshaler interface {
@@ -99,10 +100,14 @@ type optionalMemoryDecoder struct{}
 
 func (c *optionalMemoryDecoder) DescriptorID() types.UUID { return int64ID }
 
-func (c *optionalMemoryDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalMemoryDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint64 := (*optionalMemory)(out)
 	opint64.val = r.PopUint64()
 	opint64.set = true
+	return nil
 }
 
 func (c *optionalMemoryDecoder) DecodeMissing(out unsafe.Pointer) {

@@ -45,7 +45,7 @@ func (c *bigIntCodec) Type() reflect.Type { return bigIntType }
 
 func (c *bigIntCodec) DescriptorID() types.UUID { return bigIntID }
 
-func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	n := int(r.PopUint16())
 	weight := big.NewInt(int64(r.PopUint16()))
 	sign := r.PopUint16()
@@ -75,6 +75,7 @@ func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	if sign == 0x4000 {
 		(*result).Neg(*result)
 	}
+	return nil
 }
 
 type optionalBigIntMarshaler interface {
@@ -176,7 +177,10 @@ type optionalBigIntDecoder struct {
 
 func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalBigIntDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalBigIntDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint := (*optionalBigInt)(out)
 	opint.isSet = true
 
@@ -208,6 +212,7 @@ func (c *optionalBigIntDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	if sign == 0x4000 {
 		opint.val.Neg(opint.val)
 	}
+	return nil
 }
 
 func (c *optionalBigIntDecoder) DecodeMissing(out unsafe.Pointer) {

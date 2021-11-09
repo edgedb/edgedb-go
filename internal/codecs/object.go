@@ -115,14 +115,12 @@ type objectDecoder struct {
 
 func (c *objectDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *objectDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *objectDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	elmCount := int(r.PopUint32())
 	if elmCount != len(c.fields) {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"wrong number of object fields: expected %v, got %v",
-			len(c.fields),
-			elmCount,
-		))
+			len(c.fields), elmCount)
 	}
 
 	for _, field := range c.fields {
@@ -135,9 +133,13 @@ func (c *objectDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 			// https://www.edgedb.com/docs/internals/protocol/dataformats
 			field.decoder.(OptionalDecoder).DecodeMissing(p)
 		} else {
-			field.decoder.Decode(r.PopSlice(elmLen), p)
+			err := field.decoder.Decode(r.PopSlice(elmLen), p)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 type optionalObjectDecoder struct {
@@ -159,9 +161,9 @@ func (c *optionalObjectDecoder) DecodeMissing(out unsafe.Pointer) {
 func (c *optionalObjectDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
-) {
+) error {
 	val := reflect.NewAt(c.typ, out)
 	method := val.MethodByName("SetMissing")
 	method.Call([]reflect.Value{falseValue})
-	c.objectDecoder.Decode(r, out)
+	return c.objectDecoder.Decode(r, out)
 }

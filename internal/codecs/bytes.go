@@ -47,7 +47,7 @@ func (c *bytesCodec) Type() reflect.Type { return bytesType }
 
 func (c *bytesCodec) DescriptorID() types.UUID { return c.id }
 
-func (c *bytesCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *bytesCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	n := len(r.Buf)
 
 	p := (*[]byte)(out)
@@ -59,6 +59,7 @@ func (c *bytesCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 
 	copy(*p, r.Buf)
 	r.Discard(len(r.Buf))
+	return nil
 }
 
 type optionalBytesMarshaler interface {
@@ -123,7 +124,10 @@ type optionalBytesDecoder struct {
 
 func (c *optionalBytesDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalBytesDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalBytesDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opbytes := (*optionalBytesLayout)(out)
 	n := len(r.Buf)
 
@@ -136,6 +140,7 @@ func (c *optionalBytesDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 	copy(opbytes.val, r.Buf)
 	opbytes.set = true
 	r.Discard(len(r.Buf))
+	return nil
 }
 
 func (c *optionalBytesDecoder) DecodeMissing(out unsafe.Pointer) {

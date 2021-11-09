@@ -45,7 +45,7 @@ type EncoderField struct {
 // Decoder can decode the data wire format into objects.
 type Decoder interface {
 	DescriptorID() types.UUID
-	Decode(*buff.Reader, unsafe.Pointer)
+	Decode(*buff.Reader, unsafe.Pointer) error
 }
 
 // OptionalDecoder is used when decoding optional shape fields.
@@ -194,7 +194,10 @@ func buildScalarDecoder(
 	typ reflect.Type,
 	path Path,
 ) (Decoder, error) {
-	decoder, ok := buildUnmarshaler(desc, typ)
+	decoder, ok, err := buildUnmarshaler(desc, typ)
+	if err != nil {
+		return decoder, err
+	}
 	if ok {
 		return decoder, nil
 	}

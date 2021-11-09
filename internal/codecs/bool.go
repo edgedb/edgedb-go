@@ -39,8 +39,9 @@ func (c *boolCodec) Type() reflect.Type { return boolType }
 
 func (c *boolCodec) DescriptorID() types.UUID { return boolID }
 
-func (c *boolCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *boolCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint8)(out) = r.PopUint8()
+	return nil
 }
 
 type optionalBoolMarshaler interface {
@@ -103,10 +104,14 @@ type optionalBoolDecoder struct{}
 
 func (c *optionalBoolDecoder) DescriptorID() types.UUID { return boolID }
 
-func (c *optionalBoolDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalBoolDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opbool := (*optionalBoolLayout)(out)
 	opbool.val = r.PopUint8()
 	opbool.set = true
+	return nil
 }
 
 func (c *optionalBoolDecoder) DecodeMissing(out unsafe.Pointer) {

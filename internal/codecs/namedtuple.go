@@ -158,13 +158,12 @@ type namedTupleDecoder struct {
 
 func (c *namedTupleDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *namedTupleDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *namedTupleDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	elmCount := int(int32(r.PopUint32()))
 	if elmCount != len(c.fields) {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"wrong number of elements expected %v got %v",
-			len(c.fields), elmCount,
-		))
+			len(c.fields), elmCount)
 	}
 
 	for _, field := range c.fields {
@@ -175,8 +174,15 @@ func (c *namedTupleDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 			continue
 		}
 
-		field.decoder.Decode(r.PopSlice(elmLen), pAdd(out, field.offset))
+		err := field.decoder.Decode(
+			r.PopSlice(elmLen),
+			pAdd(out, field.offset),
+		)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 type optionalNamedTupleDecoder struct {
@@ -193,9 +199,9 @@ func (c *optionalNamedTupleDecoder) DecodeMissing(out unsafe.Pointer) {
 func (c *optionalNamedTupleDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
-) {
+) error {
 	val := reflect.NewAt(c.typ, out)
 	method := val.MethodByName("SetMissing")
 	method.Call([]reflect.Value{falseValue})
-	c.namedTupleDecoder.Decode(r, out)
+	return c.namedTupleDecoder.Decode(r, out)
 }
