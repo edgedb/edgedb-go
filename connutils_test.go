@@ -399,7 +399,8 @@ var testcaseErrorMapping = map[string]string{
 	"file_not_found": "no such file or directory|" +
 		"cannot find the (?:file|path) specified",
 	"invalid_tls_security": "invalid TLSSecurity value|tls_verify_hostname" +
-		"=.* and tls_security=.* are incompatible",
+		"=.* and tls_security=.* are incompatible" +
+		"|tls_security must be set to strict",
 }
 
 func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
