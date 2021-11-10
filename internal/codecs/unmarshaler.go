@@ -107,6 +107,10 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.UUIDUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBUUID",
 	},
+	memoryID: {
+		typ:        getType((*marshal.MemoryUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBMemory",
+	},
 }
 
 var optionalUnmarshalerType = getType((*marshal.OptionalUnmarshaler)(nil))

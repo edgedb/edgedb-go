@@ -420,3 +420,24 @@ type Float64Marshaler interface {
 type Float64Unmarshaler interface {
 	UnmarshalEdgeDBFloat64(data []byte) error
 }
+
+// MemoryMarshaler is the interface implemented by an object
+// that can marshal itself into the memory wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-memory
+//
+// MarshalEdgeDBMemory encodes the receiver
+// into a binary form and returns the result.
+type MemoryMarshaler interface {
+	MarshalEdgeDBMemory() ([]byte, error)
+}
+
+// MemoryUnmarshaler is the interface implemented by an object
+// that can unmarshal the memory wire format representation of itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-memory
+//
+// UnmarshalEdgeDBMemory must be able to decode the memory wire format.
+// UnmarshalEdgeDBMemory must copy the data if it wishes to retain the data
+// after returning.
+type MemoryUnmarshaler interface {
+	UnmarshalEdgeDBMemory(data []byte) error
+}

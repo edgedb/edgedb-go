@@ -47,7 +47,7 @@ type connConfig struct {
 	waitUntilAvailable time.Duration
 	tlsCAData          []byte
 	tlsSecurity        string
-	serverSettings     map[string]string
+	serverSettings     map[string][]byte
 }
 
 func (c *connConfig) tlsConfig() (*tls.Config, error) {
@@ -112,7 +112,7 @@ type configResolver struct {
 	password       cfgVal // OptionalStr
 	tlsCAData      cfgVal // []byte
 	tlsSecurity    cfgVal // string
-	serverSettings map[string]string
+	serverSettings map[string][]byte
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -214,10 +214,18 @@ func (r *configResolver) setTLSSecurity(val string, source string) error {
 	return nil
 }
 
-func (r *configResolver) addServerSettings(s map[string]string) {
+func (r *configResolver) addServerSettings(s map[string][]byte) {
 	for k, v := range s {
 		if _, ok := r.serverSettings[k]; !ok {
 			r.serverSettings[k] = v
+		}
+	}
+}
+
+func (r *configResolver) addServerSettingsStr(s map[string]string) {
+	for k, v := range s {
+		if _, ok := r.serverSettings[k]; !ok {
+			r.serverSettings[k] = []byte(v)
 		}
 	}
 }
@@ -378,7 +386,7 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 		}
 	}
 
-	r.addServerSettings(query)
+	r.addServerSettingsStr(query)
 	return nil
 }
 
@@ -700,7 +708,7 @@ func newConfigResolver(
 	opts *Options,
 	paths *cfgPaths,
 ) (*configResolver, error) {
-	cfg := &configResolver{serverSettings: map[string]string{}}
+	cfg := &configResolver{serverSettings: map[string][]byte{}}
 
 	var instance string
 	if !isDSNLike.MatchString(dsn) {

@@ -54,7 +54,7 @@ func (o OptionalBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
-// UnmarshalJSON unmarshales bytes into *o.
+// UnmarshalJSON unmarshals bytes into *o.
 func (o *OptionalBytes) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()

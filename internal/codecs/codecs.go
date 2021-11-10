@@ -153,6 +153,8 @@ func buildScalarEncoder(desc descriptor.Descriptor) (Encoder, error) {
 		return &bigIntCodec{}, nil
 	case relativeDurationID:
 		return &relativeDurationCodec{}, nil
+	case memoryID:
+		return &memoryCodec{}, nil
 	default:
 		s := fmt.Sprintf("%#v\n", desc)
 		return nil, fmt.Errorf("unknown scalar type id %v %v", desc.ID, s)
@@ -370,6 +372,15 @@ func buildScalarDecoder(
 		default:
 			expectedType = "edgedb.RealtiveDuration or " +
 				"edgedb.OptionalRelativeDuration"
+		}
+	case memoryID:
+		switch typ {
+		case memoryType:
+			return &memoryCodec{}, nil
+		case optionalMemoryType:
+			return &optionalMemoryDecoder{}, nil
+		default:
+			expectedType = "edgedb.Memory or edgedb.OptionalMemory"
 		}
 	default:
 		s := fmt.Sprintf("%#v\n", desc)

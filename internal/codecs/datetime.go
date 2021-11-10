@@ -438,8 +438,6 @@ func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 	r.Discard(8) // reserved
 }
 
-func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
-
 type optionalDurationMarshaler interface {
 	marshal.DurationMarshaler
 	marshal.OptionalMarshaler
@@ -497,6 +495,8 @@ type optionalDuration struct {
 type optionalDurationDecoder struct {
 	id types.UUID
 }
+
+func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
 
 func (c *optionalDurationDecoder) DescriptorID() types.UUID { return c.id }
 
