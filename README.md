@@ -1,12 +1,15 @@
 # The Go driver for EdgeDB
+
 [![Build Status](https://github.com/edgedb/edgedb-go/workflows/Tests/badge.svg?event=push&branch=master)](https://github.com/edgedb/edgedb-go/actions)
 [![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
 ## Installation
+
 $ go get github.com/edgedb/edgedb-go
 
 ## Basic Usage
-Follow the [EdgeDB tutorial](https://edgedb.com/docs/quickstart)
+
+Follow the [EdgeDB tutorial](https://www.edgedb.com/docs/guides/quickstart)
 to get EdgeDB installed and minimally configured.
 
 ```go
@@ -47,11 +50,12 @@ func main() {
 ## Development
 
 A local installation of EdgeDB is required to run tests.
-Download EdgeDB from [here](https://edgedb.com/download)
-or [build it manually](https://edgedb.com/docs/internals/dev/).
+Download EdgeDB from [here](https://www.edgedb.com/download)
+or [build it manually](https://www.edgedb.com/docs/reference/dev).
 
 To run the test suite run `make test`.
 To run lints `make lint`.
 
 ## License
+
 edgedb-go is developed and distributed under the Apache 2.0 license.

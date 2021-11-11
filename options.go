@@ -228,7 +228,7 @@ func (o RetryOptions) ruleForException(err Error) RetryRule { // nolint:gocritic
 }
 
 // IsolationLevel documentation can be found here
-// https://www.edgedb.com/docs/edgeql/commands/tx_start#parameters
+// https://www.edgedb.com/docs/reference/edgeql/tx_start#parameters
 type IsolationLevel string
 
 // The available levels are:
