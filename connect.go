@@ -67,7 +67,7 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 
 			// The client _MUST_ close the connection
 			// if the protocol version can't be supported.
-			// https://edgedb.com/docs/internals/protocol/overview
+			// https://www.edgedb.com/docs/internals/protocol/overview
 			if protocolVersion.LT(protocolVersionMin) ||
 				protocolVersion.GT(protocolVersionMax) {
 				_ = c.soc.Close()

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package edgedb is the official Go EdgeDB driver. https://edgedb.com
+// Package edgedb is the official Go EdgeDB driver. https://www.edgedb.com
 //
 // Typical usage looks like this:
 //

@@ -69,7 +69,7 @@ func CreateClient(ctx context.Context, opts Options) (*Client, error) { // nolin
 // CreateClientDSN returns a new client. See also CreateClient.
 //
 // dsn is either an instance name
-// https://www.edgedb.com/docs/clients/00_python/instances/#edgedb-instances
+// https://www.edgedb.com/docs/clients/connection
 // or it specifies a single string in the following format:
 //
 //     edgedb://user:password@host:port/database?option=value.
