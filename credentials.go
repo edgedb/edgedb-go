@@ -35,17 +35,22 @@ type credentials struct {
 }
 
 func readCredentials(path string) (*credentials, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		msg := fmt.Sprintf("cannot read credentials at %q: %v", path, err)
+		return nil, &configurationError{msg: msg}
+	}
+
+	return parseCredentials(data, path)
+}
+
+func parseCredentials(data []byte, source string) (*credentials, error) {
 	var (
 		values map[string]interface{}
 		creds  *credentials
 	)
 
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		goto Failed
-	}
-
-	err = json.Unmarshal(data, &values)
+	err := json.Unmarshal(data, &values)
 	if err != nil {
 		goto Failed
 	}
@@ -58,7 +63,15 @@ func readCredentials(path string) (*credentials, error) {
 	return creds, nil
 
 Failed:
-	msg := fmt.Sprintf("cannot read credentials at %q: %v", path, err)
+	var msg string
+	if source != "" {
+		msg = fmt.Sprintf(
+			"cannot parse credentials in %q: %v", source, err)
+	} else {
+		msg = fmt.Sprintf(
+			"cannot parse credentials: %v", err)
+	}
+
 	return nil, &configurationError{msg: msg}
 }
 

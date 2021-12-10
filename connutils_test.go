@@ -385,7 +385,7 @@ var testcaseErrorMapping = map[string]string{
 	"project_not_initialised":    "project is not initialized",
 	"no_options_or_toml": "no `edgedb.toml` found and no connection options " +
 		"specified either",
-	"invalid_credentials_file":     "cannot read credentials",
+	"invalid_credentials_file":     "cannot parse credentials",
 	"invalid_dsn_or_instance_name": "invalid DSN|invalid instance name",
 	"invalid_dsn":                  "invalid DSN",
 	"unix_socket_unsupported":      "unix socket paths not supported",
@@ -393,6 +393,7 @@ var testcaseErrorMapping = map[string]string{
 	"invalid_host":                 "invalid host",
 	"invalid_user":                 "invalid user",
 	"invalid_database":             "invalid database",
+	"exclusive_options":            "mutually exclusive options",
 	"multiple_compound_opts":       "mutually exclusive connection options",
 	"multiple_compound_env":        "mutually exclusive environment variables",
 	"env_not_found":                "environment variable .* is not set",
@@ -416,6 +417,15 @@ func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
 	}
 
 	return str
+}
+
+func getBytes(t *testing.T, lookup map[string]interface{}, key string) []byte {
+	str := getStr(t, lookup, key)
+	if str == "" {
+		return nil
+	}
+
+	return []byte(str)
 }
 
 func configureFileSystem(
@@ -547,6 +557,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 				if file != "" {
 					options.CredentialsFile = filepath.Join(tmpDir, file)
 				}
+				options.Credentials = getBytes(t, opts, "credentials")
 				options.Host = getStr(t, opts, "host")
 				if opts["port"] != nil {
 					options.Port, _ = opts["port"].(int)
@@ -561,9 +572,11 @@ func TestConnectionParameterResolution(t *testing.T) {
 				}
 				file = getStr(t, opts, "tlsCAFile")
 				if file != "" {
-					options.TLSCAFile = filepath.Join(tmpDir, file)
+					options.TLSOptions.CAFile = filepath.Join(tmpDir, file)
 				}
-				options.TLSSecurity = getStr(t, opts, "tlsSecurity")
+				options.TLSOptions.CA = getBytes(t, opts, "tlsCA")
+				options.TLSOptions.SecurityMode = TLSSecurityMode(
+					getStr(t, opts, "tlsSecurity"))
 				if opts["serverSettings"] != nil {
 					ss := opts["serverSettings"].(map[string]interface{})
 					options.ServerSettings = make(map[string][]byte, len(ss))
