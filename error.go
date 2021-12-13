@@ -199,14 +199,21 @@ func wrapAll(errs ...error) error {
 }
 
 func isTLSError(err error) bool {
-	switch err.(type) {
-	case x509.HostnameError, x509.CertificateInvalidError,
-		x509.UnknownAuthorityError, x509.ConstraintViolationError,
-		x509.InsecureAlgorithmError, x509.UnhandledCriticalExtension:
-		return true
-	default:
-		return false
-	}
+	var (
+		x509HostnameError              x509.HostnameError
+		x509CertificateInvalidError    x509.CertificateInvalidError
+		x509UnknownAuthorityError      x509.UnknownAuthorityError
+		x509ConstraintViolationError   x509.ConstraintViolationError
+		x509InsecureAlgorithmError     x509.InsecureAlgorithmError
+		x509UnhandledCriticalExtension x509.UnhandledCriticalExtension
+	)
+
+	return (errors.As(err, &x509HostnameError) ||
+		errors.As(err, &x509CertificateInvalidError) ||
+		errors.As(err, &x509UnknownAuthorityError) ||
+		errors.As(err, &x509ConstraintViolationError) ||
+		errors.As(err, &x509InsecureAlgorithmError) ||
+		errors.As(err, &x509UnhandledCriticalExtension))
 }
 
 func isClientConnectionError(err error) bool {
