@@ -265,18 +265,57 @@ func (r *configResolver) resolveOptions(opts *Options) (err error) {
 		r.setPassword(pwd, "Password option")
 	}
 
+	var caSources []string
+
 	if opts.TLSCAFile != "" {
+		caSources = append(caSources, "TLSCAFile")
 		if e := r.setTLSCAFile(opts.TLSCAFile, "TLSCAFile option"); e != nil {
 			return e
 		}
 	}
 
+	if opts.TLSOptions.CA != nil {
+		caSources = append(caSources, "TLSOptions.CA")
+		r.setTLSCAData(opts.TLSOptions.CA, "TLSOptions.CA option")
+	}
+
+	if opts.TLSOptions.CAFile != "" {
+		caSources = append(caSources, "TLSOptions.CAFile")
+		if e := r.setTLSCAFile(
+			opts.TLSOptions.CAFile, "TLSOptions.CAFile option"); e != nil {
+			return e
+		}
+	}
+
+	if len(caSources) > 1 {
+		return fmt.Errorf(
+			"mutually exclusive options set in Options: %v",
+			englishList(caSources, "and"))
+	}
+
+	var secSources []string
+
 	if opts.TLSSecurity != "" {
-		err = r.setTLSSecurity(opts.TLSSecurity, "TLSVerifyHostname option")
+		secSources = append(secSources, "TLSSecurity")
+		err = r.setTLSSecurity(opts.TLSSecurity, "TLSSecurity option")
 		if err != nil {
 			return err
 		}
 	}
+
+	if opts.TLSOptions.SecurityMode != "" {
+		secSources = append(secSources, "TLSOptions.SecurityMode")
+		err = r.setTLSSecurity(
+			string(opts.TLSOptions.SecurityMode),
+			"TLSOptions.SecurityMode option")
+	}
+
+	if len(secSources) > 1 {
+		return fmt.Errorf(
+			"mutually exclusive options set in Options: %v",
+			englishList(secSources, "and"))
+	}
+
 	r.addServerSettings(opts.ServerSettings)
 	return nil
 }
@@ -348,7 +387,7 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 		r.setPassword(val.val.(string), source+val.source)
 	}
 
-	val, err = popDSNValue(query, "", "tls_cert_file", r.tlsCAData.val == nil)
+	val, err = popDSNValue(query, "", "tls_ca_file", r.tlsCAData.val == nil)
 	if err != nil {
 		return err
 	}
@@ -415,10 +454,15 @@ func (r *configResolver) resolveCredentials(
 			return fmt.Errorf(
 				"cannot read credentials for instance %q: %w", instance, err)
 		}
-		return fmt.Errorf(
-			"cannot read credentials for file %q: %w", credentials, err)
+		return err
 	}
 
+	return r.applyCredentials(creds, source)
+}
+
+func (r *configResolver) applyCredentials(
+	creds *credentials, source string,
+) error {
 	if host, ok := creds.host.Get(); ok && host != "" {
 		if e := r.setHost(host, source); e != nil {
 			return e
@@ -477,11 +521,25 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		r.setPassword(pwd, "EDGEDB_PASSWORD environment variable")
 	}
 
+	var tlsCaSources []string
+
+	if caString, ok := os.LookupEnv("EDGEDB_TLS_CA"); ok {
+		r.setTLSCAData([]byte(caString), "EDGEDB_TLS_CA environment variable")
+		tlsCaSources = append(tlsCaSources, "EDGEDB_TLS_CA")
+	}
+
 	if file, ok := os.LookupEnv("EDGEDB_TLS_CA_FILE"); ok {
 		e := r.setTLSCAFile(file, "EDGEDB_TLS_CA_FILE environment variable")
+		tlsCaSources = append(tlsCaSources, "EDGEDB_TLS_CA_FILE")
 		if e != nil {
 			return false, e
 		}
+	}
+
+	if len(tlsCaSources) > 1 {
+		return false, fmt.Errorf(
+			"mutually exclusive environment variables set: %v",
+			englishList(tlsCaSources, "and"))
 	}
 
 	if verify, ok := os.LookupEnv("EDGEDB_CLIENT_TLS_SECURITY"); ok {
@@ -695,7 +753,7 @@ func englishList(items []string, conjunction string) string {
 	case 1:
 		return items[0]
 	case 2:
-		return strings.Join(items, " and ")
+		return strings.Join(items, fmt.Sprintf(" %v ", conjunction))
 	default:
 		last := len(items) - 1
 		list := strings.Join(items[:last], ", ")
@@ -719,6 +777,9 @@ func newConfigResolver(
 	var names []string
 	if dsn != "" || instance != "" {
 		names = append(names, "dsn")
+	}
+	if opts.Credentials != nil {
+		names = append(names, "edgedb.Options.Credentials")
 	}
 	if opts.CredentialsFile != "" {
 		names = append(names, "edgedb.Options.CredentialsFile")
@@ -752,6 +813,16 @@ func newConfigResolver(
 		}
 		err := cfg.resolveCredentials(
 			instance, opts.CredentialsFile, source, paths)
+		if err != nil {
+			return nil, err
+		}
+	case opts.Credentials != nil:
+		source := "Credentials option"
+		creds, err := parseCredentials(opts.Credentials, source)
+		if err != nil {
+			return nil, err
+		}
+		err = cfg.applyCredentials(creds, source)
 		if err != nil {
 			return nil, err
 		}
@@ -856,7 +927,7 @@ func parseDSN(dsn string) (*url.URL, map[string]string, error) {
 		return nil, nil, e
 	}
 
-	if e := validateQueryArg(vals, "tls_cert_file", ""); e != nil {
+	if e := validateQueryArg(vals, "tls_ca_file", ""); e != nil {
 		return nil, nil, e
 	}
 
@@ -872,13 +943,13 @@ func parseDSN(dsn string) (*url.URL, map[string]string, error) {
 }
 
 var dsnKeyLookup = map[string][]string{
-	"host":          {"host", "host_env", "host_file"},
-	"port":          {"port", "port_env", "port_file"},
-	"database":      {"database", "database_env", "database_file"},
-	"user":          {"user", "user_env", "user_file"},
-	"password":      {"password", "password_env", "password_file"},
-	"tls_cert_file": {"tls_cert_file", "tls_cert_file_env"},
-	"tls_security":  {"tls_security", "tls_security_env", "tls_security_file"},
+	"host":         {"host", "host_env", "host_file"},
+	"port":         {"port", "port_env", "port_file"},
+	"database":     {"database", "database_env", "database_file"},
+	"user":         {"user", "user_env", "user_file"},
+	"password":     {"password", "password_env", "password_file"},
+	"tls_ca_file":  {"tls_ca_file", "tls_ca_file_env"},
+	"tls_security": {"tls_security", "tls_security_env", "tls_security_file"},
 	"tls_verify_hostname": {
 		"tls_verify_hostname",
 		"tls_verify_hostname_env",
@@ -935,7 +1006,7 @@ func popDSNValue(
 	}
 
 	switch {
-	case ok && key == "tls_cert_file":
+	case ok && key == "tls_ca_file":
 		source := fmt.Sprintf(" (%v: %q)", key, val)
 		return cfgVal{val: val, source: source}, nil
 	case ok && strings.HasSuffix(key, "_env"):

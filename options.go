@@ -42,11 +42,18 @@ type Options struct {
 	// their defaults.
 	Port int
 
+	// Credentials is a JSON string containing connection credentials.
+	//
+	// Credentials cannot be specified alongside the 'dsn' argument, Host,
+	// Port, or CredentialsFile.  Credentials will override all other
+	// credentials not present in the credentials string with their defaults.
+	Credentials []byte
+
 	// CredentialsFile is a path to a file containing connection credentials.
 	//
 	// CredentialsFile cannot be specified alongside the 'dsn' argument, Host,
-	// or Port. CredentialsFile will override all other credentials not
-	// present in the credentials file with their defaults.
+	// Port, or Credentials.  CredentialsFile will override all other
+	// credentials not present in the credentials file with their defaults.
 	CredentialsFile string
 
 	// User is the name of the database role used for authentication.
@@ -85,15 +92,46 @@ type Options struct {
 	// Has no effect for single connections.
 	Concurrency uint
 
-	// Read the TLS certificate from this file
+	// Parameters used to configure TLS connections to EdgeDB server.
+	TLSOptions TLSOptions
+
+	// Read the TLS certificate from this file.
+	// DEPRECATED, use TLSOptions.CAFile instead.
 	TLSCAFile string
 
-	// If false don't verify the server's hostname when using TLS.
+	// Specifies how strict TLS validation is.
+	// DEPRECATED, use TLSOptions.SecurityMode instead.
 	TLSSecurity string
 
 	// ServerSettings is currently unused.
 	ServerSettings map[string][]byte
 }
+
+// TLSOptions contains the parameters needed to configure TLS on EdgeDB
+// server connections.
+type TLSOptions struct {
+	// PEM-encoded CA certificate
+	CA []byte
+	// Path to a PEM-encoded CA certificate file
+	CAFile string
+	// Determines how strict we are with TLS checks
+	SecurityMode TLSSecurityMode
+}
+
+// TLSSecurityMode specifies how strict TLS validation is.
+type TLSSecurityMode string
+
+const (
+	// TLSModeDefault makes security mode inferred from other options
+	TLSModeDefault TLSSecurityMode = "default"
+	// TLSModeInsecure results in no certificate verification whatsoever
+	TLSModeInsecure TLSSecurityMode = "insecure"
+	// TLSModeNoHostVerification enables certificate verification
+	// against CAs, but hostname matching is not performed.
+	TLSModeNoHostVerification TLSSecurityMode = "no_host_verification"
+	// TLSModeStrict enables full certificate and hostname verification.
+	TLSModeStrict TLSSecurityMode = "strict"
+)
 
 // RetryBackoff returns the duration to wait after the nth attempt
 // before making the next attempt when retrying a transaction.

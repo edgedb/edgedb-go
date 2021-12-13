@@ -106,7 +106,7 @@ func startServer() {
 
 	serverBin := os.Getenv("EDGEDB_SERVER_BIN")
 	if serverBin == "" {
-		log.Fatal("EDGEDB_SERVER_BIN not set")
+		serverBin = "edgedb-server"
 	}
 
 	dir, err := ioutil.TempDir("", "")
@@ -191,13 +191,15 @@ func startServer() {
 	}
 
 	opts = Options{
-		Host:        "127.0.0.1",
-		Port:        info.Port,
-		User:        "test",
-		Password:    NewOptionalStr("shhh"),
-		Database:    "edgedb",
-		TLSCAFile:   info.TLSCertFile,
-		TLSSecurity: "no_host_verification",
+		Host:     "127.0.0.1",
+		Port:     info.Port,
+		User:     "test",
+		Password: NewOptionalStr("shhh"),
+		Database: "edgedb",
+		TLSOptions: TLSOptions{
+			CAFile:       info.TLSCertFile,
+			SecurityMode: TLSModeNoHostVerification,
+		},
 	}
 
 	log.Print("server started")
