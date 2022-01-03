@@ -489,7 +489,7 @@ func (r *configResolver) applyCredentials(
 		r.setPassword(pwd, source)
 	}
 
-	if data, ok := creds.certData.Get(); ok && len(data) > 0 {
+	if data, ok := creds.ca.Get(); ok && len(data) > 0 {
 		r.setTLSCAData(data, source)
 	}
 
