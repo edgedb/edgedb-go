@@ -17,6 +17,7 @@
 package edgedb
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,7 +31,7 @@ type credentials struct {
 	user        string
 	database    OptionalStr
 	password    OptionalStr
-	certData    OptionalBytes
+	ca          OptionalBytes
 	tlsSecurity OptionalStr
 }
 
@@ -118,12 +119,25 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		result.password.Set(pwd)
 	}
 
+	if ca, ok := data["tls_ca"]; ok {
+		str, ok := ca.(string)
+		if !ok {
+			return nil, errors.New("`tls_ca` must be a string")
+		}
+		result.ca.Set([]byte(str))
+	}
+
 	if certData, ok := data["tls_cert_data"]; ok {
 		str, ok := certData.(string)
 		if !ok {
 			return nil, errors.New("`tls_cert_data` must be a string")
 		}
-		result.certData.Set([]byte(str))
+		certBytes := []byte(str)
+		if ca, ok := result.ca.Get(); ok && !bytes.Equal(ca, certBytes) {
+			return nil, errors.New(
+				"`tls_ca` and `tls_cert_data` are both set and disagree")
+		}
+		result.ca.Set(certBytes)
 	}
 
 	if verifyHostname, ok := data["tls_verify_hostname"]; ok {
