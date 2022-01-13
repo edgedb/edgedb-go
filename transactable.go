@@ -101,11 +101,14 @@ func (c *transactableConn) granularFlow(
 
 	Error:
 		// q is a read only query if it has no capabilities
-		// i.e. capabilities == 0. Read only queries are retryable.
+		// i.e. capabilities == 0. Read only queries are always
+		// retryable, mutation queries are retryable if the
+		// error explicitly indicates a transaction conflict.
 		capabilities, ok := c.getCachedCapabilities(q)
-		if ok && capabilities == 0 &&
+		if ok &&
 			errors.As(err, &edbErr) &&
-			edbErr.HasTag(ShouldRetry) {
+			edbErr.HasTag(ShouldRetry) &&
+			(capabilities == 0 || edbErr.Category(TransactionConflictError)) {
 			rule := c.retryOpts.ruleForException(edbErr)
 
 			if i >= rule.attempts {
