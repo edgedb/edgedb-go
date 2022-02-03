@@ -229,6 +229,11 @@ func TestMain(m *testing.M) {
 	log.Println("connected")
 
 	defer client.Close() // nolint:errcheck
+	err = client.Execute(ctx,
+		"configure instance set session_idle_timeout := <duration>'50ms'")
+	if err != nil {
+		panic(err)
+	}
 	conn, err := client.acquire(ctx)
 	if err != nil {
 		panic(err)

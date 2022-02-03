@@ -34,7 +34,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
 
-const defaultIdleConnectionTimeout = 30 * time.Second // is this right?
+const defaultIdleConnectionTimeout = 30 * time.Second
 
 var (
 	defaultConcurrency = max(4, runtime.NumCPU())
@@ -256,9 +256,10 @@ func (p *Client) release(conn *transactableConn, err error) error {
 	if b, ok := p.serverSettings["system_config"]; ok {
 		x, err := parseSystemConfig(b, conn.conn.protocolVersion)
 		if err != nil {
-			log.Println(err)
+			log.Println("error parsing system_config:", err)
 		} else {
-			timeout = time.Duration(x.SessionIdleTimeout) * time.Millisecond
+			// convert milliseconds to nanoseconds
+			timeout = time.Duration(x.SessionIdleTimeout * 1_000)
 		}
 	}
 
