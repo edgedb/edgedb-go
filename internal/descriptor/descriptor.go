@@ -17,6 +17,7 @@
 package descriptor
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -74,9 +75,12 @@ type Field struct {
 }
 
 // Pop builds a descriptor tree from a describe statement type description.
-func Pop(r *buff.Reader, version internal.ProtocolVersion) Descriptor {
+func Pop(
+	r *buff.Reader,
+	version internal.ProtocolVersion,
+) (Descriptor, error) {
 	if len(r.Buf) == 0 {
-		return Descriptor{Type: Tuple, ID: IDZero}
+		return Descriptor{Type: Tuple, ID: IDZero}, nil
 	}
 
 	descriptors := []Descriptor{}
@@ -92,7 +96,10 @@ func Pop(r *buff.Reader, version internal.ProtocolVersion) Descriptor {
 			}}
 			desc = Descriptor{Set, id, fields}
 		case Object:
-			fields := objectFields(r, descriptors, version)
+			fields, err := objectFields(r, descriptors, version)
+			if err != nil {
+				return Descriptor{}, err
+			}
 			desc = Descriptor{Object, id, fields}
 		case BaseScalar:
 			desc = Descriptor{BaseScalar, id, nil}
@@ -108,7 +115,10 @@ func Pop(r *buff.Reader, version internal.ProtocolVersion) Descriptor {
 			fields := []*Field{{
 				Desc: descriptors[r.PopUint16()],
 			}}
-			assertArrayDimensions(r)
+			err := assertArrayDimensions(r)
+			if err != nil {
+				return Descriptor{}, err
+			}
 			desc = Descriptor{typ, id, fields}
 		case Enum:
 			discardEnumMemberNames(r)
@@ -120,20 +130,21 @@ func Pop(r *buff.Reader, version internal.ProtocolVersion) Descriptor {
 				break
 			}
 
-			panic(fmt.Sprintf("unknown descriptor type 0x%x", typ))
+			return Descriptor{}, fmt.Errorf(
+				"unknown descriptor type 0x%x", typ)
 		}
 
 		descriptors = append(descriptors, desc)
 	}
 
-	return descriptors[len(descriptors)-1]
+	return descriptors[len(descriptors)-1], nil
 }
 
 func objectFields(
 	r *buff.Reader,
 	descriptors []Descriptor,
 	version internal.ProtocolVersion,
-) []*Field {
+) ([]*Field, error) {
 	n := int(r.PopUint16())
 	fields := make([]*Field, n)
 
@@ -148,7 +159,7 @@ func objectFields(
 			case 0x41, 0x4d:
 				required = true
 			default:
-				panic(fmt.Errorf("unexpected cardinality: %v", card))
+				return nil, fmt.Errorf("unexpected cardinality: %v", card)
 			}
 		} else {
 			r.Discard(1) // flags
@@ -166,7 +177,7 @@ func objectFields(
 		}
 	}
 
-	return fields
+	return fields, nil
 }
 
 func tupleFields(r *buff.Reader, descriptors []Descriptor) []*Field {
@@ -197,13 +208,15 @@ func namedTupleFields(r *buff.Reader, descriptors []Descriptor) []*Field {
 	return fields
 }
 
-func assertArrayDimensions(r *buff.Reader) {
+func assertArrayDimensions(r *buff.Reader) error {
 	n := int(r.PopUint16()) // number of array dimensions
 	if n == 0 {
-		panic("too few array dimensions: expected at least 1, got 0")
+		return errors.New(
+			"too few array dimensions: expected at least 1, got 0")
 	}
 
 	r.Discard(4 * n) // array dimension
+	return nil
 }
 
 func discardEnumMemberNames(r *buff.Reader) {

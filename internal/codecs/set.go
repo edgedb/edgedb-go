@@ -82,13 +82,13 @@ func setSliceLen(slice *sliceHeader, typ reflect.Type, n int) {
 	}
 }
 
-func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	// number of dimensions, either 0 or 1
 	if r.PopUint32() == 0 {
 		r.Discard(8) // skip 2 reserved fields
 		slice := (*sliceHeader)(out)
 		setSliceLen(slice, c.typ, 0)
-		return
+		return nil
 	}
 
 	r.Discard(8) // reserved
@@ -108,11 +108,15 @@ func (c *setDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 		}
 
 		elmLen := r.PopUint32()
-		c.child.Decode(
+		err := c.child.Decode(
 			r.PopSlice(elmLen),
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (c *setDecoder) DecodeMissing(out unsafe.Pointer) {

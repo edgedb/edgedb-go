@@ -52,8 +52,9 @@ func (c *int16Codec) Type() reflect.Type { return int16Type }
 
 func (c *int16Codec) DescriptorID() types.UUID { return int16ID }
 
-func (c *int16Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *int16Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint16)(out) = r.PopUint16()
+	return nil
 }
 
 type optionalInt16Marshaler interface {
@@ -106,10 +107,14 @@ type optionalInt16Decoder struct{}
 
 func (c *optionalInt16Decoder) DescriptorID() types.UUID { return int16ID }
 
-func (c *optionalInt16Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalInt16Decoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint16 := (*optionalInt16)(out)
 	opint16.val = r.PopUint16()
 	opint16.set = true
+	return nil
 }
 
 func (c *optionalInt16Decoder) DecodeMissing(out unsafe.Pointer) {
@@ -124,8 +129,9 @@ func (c *int32Codec) Type() reflect.Type { return int32Type }
 
 func (c *int32Codec) DescriptorID() types.UUID { return int32ID }
 
-func (c *int32Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *int32Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint32)(out) = r.PopUint32()
+	return nil
 }
 
 type optionalInt32Marshaler interface {
@@ -178,10 +184,14 @@ type optionalInt32Decoder struct{}
 
 func (c *optionalInt32Decoder) DescriptorID() types.UUID { return int32ID }
 
-func (c *optionalInt32Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalInt32Decoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint32 := (*optionalInt32)(out)
 	opint32.val = r.PopUint32()
 	opint32.set = true
+	return nil
 }
 
 func (c *optionalInt32Decoder) DecodeMissing(out unsafe.Pointer) {
@@ -196,8 +206,9 @@ func (c *int64Codec) Type() reflect.Type { return int64Type }
 
 func (c *int64Codec) DescriptorID() types.UUID { return int64ID }
 
-func (c *int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
+	return nil
 }
 
 type optionalInt64Marshaler interface {
@@ -250,10 +261,14 @@ type optionalInt64Decoder struct{}
 
 func (c *optionalInt64Decoder) DescriptorID() types.UUID { return int64ID }
 
-func (c *optionalInt64Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalInt64Decoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint64 := (*optionalInt64)(out)
 	opint64.val = r.PopUint64()
 	opint64.set = true
+	return nil
 }
 
 func (c *optionalInt64Decoder) DecodeMissing(out unsafe.Pointer) {
@@ -268,8 +283,9 @@ func (c *float32Codec) Type() reflect.Type { return float32Type }
 
 func (c *float32Codec) DescriptorID() types.UUID { return float32ID }
 
-func (c *float32Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *float32Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint32)(out) = r.PopUint32()
+	return nil
 }
 
 type optionalFloat32Marshaler interface {
@@ -322,10 +338,14 @@ type optionalFloat32Decoder struct{}
 
 func (c *optionalFloat32Decoder) DescriptorID() types.UUID { return float32ID }
 
-func (c *optionalFloat32Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalFloat32Decoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint32 := (*optionalFloat32)(out)
 	opint32.val = r.PopUint32()
 	opint32.set = true
+	return nil
 }
 
 func (c *optionalFloat32Decoder) DecodeMissing(out unsafe.Pointer) {
@@ -340,8 +360,9 @@ func (c *float64Codec) Type() reflect.Type { return float64Type }
 
 func (c *float64Codec) DescriptorID() types.UUID { return float64ID }
 
-func (c *float64Codec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *float64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
+	return nil
 }
 
 type optionalFloat64Marshaler interface {
@@ -394,10 +415,14 @@ type optionalFloat64Decoder struct{}
 
 func (c *optionalFloat64Decoder) DescriptorID() types.UUID { return float64ID }
 
-func (c *optionalFloat64Decoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalFloat64Decoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opint64 := (*optionalFloat64)(out)
 	opint64.val = r.PopUint64()
 	opint64.set = true
+	return nil
 }
 
 func (c *optionalFloat64Decoder) DecodeMissing(out unsafe.Pointer) {

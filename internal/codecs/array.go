@@ -125,13 +125,13 @@ type arrayDecoder struct {
 
 func (c *arrayDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	// number of dimensions is 1 or 0
 	if r.PopUint32() == 0 {
 		r.Discard(8) // reserved
 		slice := (*sliceHeader)(out)
 		setSliceLen(slice, c.typ, 0)
-		return
+		return nil
 	}
 
 	r.Discard(8) // reserved
@@ -149,11 +149,15 @@ func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 			continue
 		}
 
-		c.child.Decode(
+		err := c.child.Decode(
 			r.PopSlice(elmLen),
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
+		if err != nil {
+			return nil
+		}
 	}
+	return nil
 }
 
 func (c *arrayDecoder) DecodeMissing(out unsafe.Pointer) {

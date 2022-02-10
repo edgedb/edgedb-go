@@ -66,7 +66,7 @@ func (c *dateTimeCodec) Type() reflect.Type { return dateTimeType }
 
 func (c *dateTimeCodec) DescriptorID() types.UUID { return dateTimeID }
 
-func (c *dateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *dateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	val := int64(r.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
@@ -74,6 +74,7 @@ func (c *dateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 		946_684_800+seconds,
 		1_000*microseconds,
 	).UTC()
+	return nil
 }
 
 type optionalDateTimeMarshaler interface {
@@ -137,7 +138,10 @@ type optionalDateTimeDecoder struct {
 
 func (c *optionalDateTimeDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalDateTimeDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalDateTimeDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	op := (*optionalDateTime)(out)
 	op.set = true
 
@@ -148,6 +152,7 @@ func (c *optionalDateTimeDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 		946_684_800+seconds,
 		1_000*microseconds,
 	).UTC()
+	return nil
 }
 
 func (c *optionalDateTimeDecoder) DecodeMissing(out unsafe.Pointer) {
@@ -219,8 +224,9 @@ func (c *localDateTimeCodec) encodeMarshaler(
 	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalDateTime, 8, path)
 }
 
-func (c *localDateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *localDateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
+	return nil
 }
 
 type optionalLocalDateTime struct {
@@ -239,10 +245,11 @@ func (c *optionalLocalDateTimeDecoder) DescriptorID() types.UUID {
 func (c *optionalLocalDateTimeDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
-) {
+) error {
 	op := (*optionalLocalDateTime)(out)
 	op.set = true
 	op.val.usec = r.PopUint64() + 63_082_281_600_000_000
+	return nil
 }
 
 func (c *optionalLocalDateTimeDecoder) DecodeMissing(out unsafe.Pointer) {
@@ -312,8 +319,9 @@ func (c *localDateCodec) encodeMarshaler(
 	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalDate, 4, path)
 }
 
-func (c *localDateCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *localDateCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	(*localDateLayout)(out).days = r.PopUint32() + 730119
+	return nil
 }
 
 type optionalLocalDate struct {
@@ -327,10 +335,14 @@ type optionalLocalDateDecoder struct {
 
 func (c *optionalLocalDateDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalLocalDateDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalLocalDateDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	op := (*optionalLocalDate)(out)
 	op.set = true
 	op.val.days = r.PopUint32() + 730119
+	return nil
 }
 
 func (c *optionalLocalDateDecoder) DecodeMissing(out unsafe.Pointer) {
@@ -400,8 +412,9 @@ func (c *localTimeCodec) encodeMarshaler(
 	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalTime, 8, path)
 }
 
-func (c *localTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *localTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	(*localTimeLayout)(out).usec = r.PopUint64()
+	return nil
 }
 
 type optionalLocalTime struct {
@@ -415,10 +428,14 @@ type optionalLocalTimeDecoder struct {
 
 func (c *optionalLocalTimeDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalLocalTimeDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalLocalTimeDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	op := (*optionalLocalTime)(out)
 	op.set = true
 	op.val.usec = r.PopUint64()
+	return nil
 }
 
 func (c *optionalLocalTimeDecoder) DecodeMissing(out unsafe.Pointer) {
@@ -433,9 +450,10 @@ func (c *durationCodec) Type() reflect.Type { return durationType }
 
 func (c *durationCodec) DescriptorID() types.UUID { return durationID }
 
-func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
 	r.Discard(8) // reserved
+	return nil
 }
 
 type optionalDurationMarshaler interface {
@@ -500,11 +518,15 @@ func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
 
 func (c *optionalDurationDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalDurationDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalDurationDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	op := (*optionalDuration)(out)
 	op.set = true
 	op.val = r.PopUint64()
 	r.Discard(8) // reserved
+	return nil
 }
 
 func (c *optionalDurationDecoder) DecodeMissing(out unsafe.Pointer) {
@@ -530,11 +552,12 @@ type relativeDurationLayout struct {
 func (c *relativeDurationCodec) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
-) {
+) error {
 	rd := (*relativeDurationLayout)(out)
 	rd.microseconds = r.PopUint64()
 	rd.days = r.PopUint32()
 	rd.months = r.PopUint32()
+	return nil
 }
 
 type optionalRelativeDurationMarshaler interface {
@@ -610,12 +633,13 @@ func (c *optionalRelativeDurationDecoder) DescriptorID() types.UUID {
 func (c *optionalRelativeDurationDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
-) {
+) error {
 	op := (*optionalRelativeDuration)(out)
 	op.set = true
 	op.val.microseconds = r.PopUint64()
 	op.val.days = r.PopUint32()
 	op.val.months = r.PopUint32()
+	return nil
 }
 
 func (c *optionalRelativeDurationDecoder) DecodeMissing(out unsafe.Pointer) {

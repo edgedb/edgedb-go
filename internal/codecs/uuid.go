@@ -39,10 +39,11 @@ func (c *uuidCodec) Type() reflect.Type { return uuidType }
 
 func (c *uuidCodec) DescriptorID() types.UUID { return uuidID }
 
-func (c *uuidCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *uuidCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	p := (*types.UUID)(out)
 	copy((*p)[:], r.Buf[:16])
 	r.Discard(16)
+	return nil
 }
 
 type optionalUUIDMarshaler interface {
@@ -95,11 +96,15 @@ type optionalUUIDDecoder struct{}
 
 func (c *optionalUUIDDecoder) DescriptorID() types.UUID { return uuidID }
 
-func (c *optionalUUIDDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalUUIDDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opuuid := (*optionalUUID)(out)
 	opuuid.set = true
 	copy(opuuid.val[:], r.Buf[:16])
 	r.Discard(16)
+	return nil
 }
 
 func (c *optionalUUIDDecoder) DecodeMissing(out unsafe.Pointer) {

@@ -36,12 +36,11 @@ func (c *jsonCodec) Type() reflect.Type { return bytesType }
 
 func (c *jsonCodec) DescriptorID() types.UUID { return jsonID }
 
-func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	format := r.PopUint8()
 	if format != 1 {
-		panic(fmt.Sprintf(
-			"unexpected json format: expected 1, got %v", format,
-		))
+		return fmt.Errorf(
+			"unexpected json format: expected 1, got %v", format)
 	}
 
 	n := len(r.Buf)
@@ -54,6 +53,7 @@ func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) {
 
 	copy(*p, r.Buf)
 	r.Discard(n)
+	return nil
 }
 
 type optionalJSONMarshaler interface {
@@ -121,7 +121,10 @@ type optionalJSONDecoder struct {
 
 func (c *optionalJSONDecoder) DescriptorID() types.UUID { return c.id }
 
-func (c *optionalJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
+func (c *optionalJSONDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	opbytes := (*optionalBytesLayout)(out)
 	opbytes.set = true
 
@@ -134,6 +137,7 @@ func (c *optionalJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) {
 
 	copy(opbytes.val, r.Buf)
 	r.Discard(n)
+	return nil
 }
 
 func (c *optionalJSONDecoder) DecodeMissing(out unsafe.Pointer) {

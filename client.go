@@ -19,12 +19,22 @@ package edgedb
 import (
 	"context"
 	"fmt"
+	"log"
+	"reflect"
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
+	"unsafe"
 
+	"github.com/edgedb/edgedb-go/internal"
+	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
+
+const defaultIdleConnectionTimeout = 30 * time.Second
 
 var (
 	defaultConcurrency = max(4, runtime.NumCPU())
@@ -44,7 +54,7 @@ type Client struct {
 	isClosedMutex *sync.RWMutex // locks isClosed
 
 	// A buffered channel of connections ready for use.
-	freeConns chan transactableConn
+	freeConns chan func() *transactableConn
 
 	// A buffered channel of structs representing unconnected capacity.
 	// This field remains nil until the first connection is acquired.
@@ -88,7 +98,7 @@ func CreateClientDSN(ctx context.Context, dsn string, opts Options) (*Client, er
 		cfg:                  cfg,
 		txOpts:               NewTxOptions(),
 		concurrency:          int(opts.Concurrency),
-		freeConns:            make(chan transactableConn, 1),
+		freeConns:            make(chan func() *transactableConn, 1),
 		potentialConnsMutext: &sync.Mutex{},
 		retryOpts: RetryOptions{
 			txConflict: RetryRule{attempts: 3, backoff: defaultBackoff},
@@ -106,7 +116,7 @@ func CreateClientDSN(ctx context.Context, dsn string, opts Options) (*Client, er
 	return p, nil
 }
 
-func (p *Client) newConn(ctx context.Context) (transactableConn, error) {
+func (p *Client) newConn(ctx context.Context) (*transactableConn, error) {
 	conn := transactableConn{
 		txOpts:    p.txOpts,
 		retryOpts: p.retryOpts,
@@ -117,18 +127,18 @@ func (p *Client) newConn(ctx context.Context) (transactableConn, error) {
 	}
 
 	if err := conn.reconnect(ctx, false); err != nil {
-		return transactableConn{}, err
+		return nil, err
 	}
 
-	return conn, nil
+	return &conn, nil
 }
 
-func (p *Client) acquire(ctx context.Context) (transactableConn, error) {
+func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 	p.isClosedMutex.RLock()
 	defer p.isClosedMutex.RUnlock()
 
 	if *p.isClosed {
-		return transactableConn{}, &interfaceError{msg: "client closed"}
+		return nil, &interfaceError{msg: "client closed"}
 	}
 
 	p.potentialConnsMutext.Lock()
@@ -136,7 +146,7 @@ func (p *Client) acquire(ctx context.Context) (transactableConn, error) {
 		conn, err := p.newConn(ctx)
 		if err != nil {
 			p.potentialConnsMutext.Unlock()
-			return transactableConn{}, err
+			return nil, err
 		}
 
 		if p.concurrency == 0 {
@@ -164,30 +174,76 @@ func (p *Client) acquire(ctx context.Context) (transactableConn, error) {
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
-		return transactableConn{}, fmt.Errorf("edgedb: %w", ctx.Err())
+		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
 	default:
 	}
 
 	// force using an existing connection over connecting a new socket.
 	select {
-	case conn := <-p.freeConns:
-		return conn, nil
+	case acquireIfNotTimedout := <-p.freeConns:
+		conn := acquireIfNotTimedout()
+		if conn != nil {
+			return conn, nil
+		}
 	default:
 	}
 
-	select {
-	case conn := <-p.freeConns:
-		return conn, nil
-	case <-p.potentialConns:
-		conn, err := p.newConn(ctx)
-		if err != nil {
-			p.potentialConns <- struct{}{}
-			return transactableConn{}, err
+	for {
+		select {
+		case acquireIfNotTimedout := <-p.freeConns:
+			conn := acquireIfNotTimedout()
+			if conn != nil {
+				return conn, nil
+			}
+			continue
+		case <-p.potentialConns:
+			conn, err := p.newConn(ctx)
+			if err != nil {
+				p.potentialConns <- struct{}{}
+				return nil, err
+			}
+			return conn, nil
+		case <-ctx.Done():
+			return nil, fmt.Errorf("edgedb: %w", ctx.Err())
 		}
-		return conn, nil
-	case <-ctx.Done():
-		return transactableConn{}, fmt.Errorf("edgedb: %w", ctx.Err())
 	}
+}
+
+type systemConfig struct {
+	ID                 UUID     `edgedb:"id"`
+	SessionIdleTimeout Duration `edgedb:"session_idle_timeout"`
+}
+
+func parseSystemConfig(
+	b []byte,
+	version internal.ProtocolVersion,
+) (systemConfig, error) {
+	r := buff.SimpleReader(b)
+	u := r.PopSlice(r.PopUint32())
+	u.PopUUID()
+	dsc, err := descriptor.Pop(u, version)
+	if err != nil {
+		return systemConfig{}, err
+	}
+
+	var cfg systemConfig
+	typ := reflect.TypeOf(cfg)
+	dec, err := codecs.BuildDecoder(dsc, typ, codecs.Path("system_config"))
+	if err != nil {
+		return systemConfig{}, err
+	}
+
+	err = dec.Decode(r.PopSlice(r.PopUint32()), unsafe.Pointer(&cfg))
+	if err != nil {
+		return systemConfig{}, err
+	}
+
+	if len(r.Buf) != 0 {
+		return systemConfig{}, fmt.Errorf(
+			"%v bytes left in buffer", len(r.Buf))
+	}
+
+	return cfg, nil
 }
 
 func (p *Client) release(conn *transactableConn, err error) error {
@@ -196,8 +252,50 @@ func (p *Client) release(conn *transactableConn, err error) error {
 		return conn.Close()
 	}
 
+	timeout := defaultIdleConnectionTimeout
+	if b, ok := p.serverSettings["system_config"]; ok {
+		x, err := parseSystemConfig(b, conn.conn.protocolVersion)
+		if err != nil {
+			log.Println("error parsing system_config:", err)
+		} else {
+			// convert milliseconds to nanoseconds
+			timeout = time.Duration(x.SessionIdleTimeout * 1_000)
+		}
+	}
+
+	// 0 or less disables the idle timeout
+	if timeout <= 0 {
+		select {
+		case p.freeConns <- func() *transactableConn { return conn }:
+			return nil
+		default:
+			// we have MinConns idle so no need to keep this connection.
+			p.potentialConns <- struct{}{}
+			return conn.Close()
+		}
+	}
+
+	cancel := make(chan struct{}, 1)
+	connChan := make(chan *transactableConn, 1)
+
+	acquireIfNotTimedout := func() *transactableConn {
+		cancel <- struct{}{}
+		return <-connChan
+	}
+
 	select {
-	case p.freeConns <- *conn:
+	case p.freeConns <- acquireIfNotTimedout:
+		go func() {
+			select {
+			case <-cancel:
+				connChan <- conn
+			case <-time.After(timeout):
+				connChan <- nil
+				if e := conn.Close(); e != nil {
+					log.Println("error while closing idle connection:", e)
+				}
+			}
+		}()
 	default:
 		// we have MinConns idle so no need to keep this connection.
 		p.potentialConns <- struct{}{}
@@ -214,7 +312,7 @@ func (p *Client) EnsureConnected(ctx context.Context) error {
 		return err
 	}
 
-	return p.release(&conn, nil)
+	return p.release(conn, nil)
 }
 
 // Close closes all connections in the pool.
@@ -241,10 +339,13 @@ func (p *Client) Close() error {
 	errs := make([]error, p.concurrency)
 	for i := 0; i < p.concurrency; i++ {
 		select {
-		case conn := <-p.freeConns:
+		case acquireIfNotTimedout := <-p.freeConns:
 			wg.Add(1)
 			go func(i int) {
-				errs[i] = conn.Close()
+				conn := acquireIfNotTimedout()
+				if conn != nil {
+					errs[i] = conn.Close()
+				}
 				wg.Done()
 			}(i)
 		case <-p.potentialConns:
@@ -268,7 +369,7 @@ func (p *Client) Execute(ctx context.Context, cmd string) error {
 	}
 
 	err = conn.scriptFlow(ctx, q)
-	return firstError(err, p.release(&conn, err))
+	return firstError(err, p.release(conn, err))
 }
 
 // Query runs a query and returns the results.
@@ -283,8 +384,8 @@ func (p *Client) Query(
 		return err
 	}
 
-	err = runQuery(ctx, &conn, "Query", cmd, out, args)
-	return firstError(err, p.release(&conn, err))
+	err = runQuery(ctx, conn, "Query", cmd, out, args)
+	return firstError(err, p.release(conn, err))
 }
 
 // QuerySingle runs a singleton-returning query and returns its element.
@@ -301,8 +402,8 @@ func (p *Client) QuerySingle(
 		return err
 	}
 
-	err = runQuery(ctx, &conn, "QuerySingle", cmd, out, args)
-	return firstError(err, p.release(&conn, err))
+	err = runQuery(ctx, conn, "QuerySingle", cmd, out, args)
+	return firstError(err, p.release(conn, err))
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -317,8 +418,8 @@ func (p *Client) QueryJSON(
 		return err
 	}
 
-	err = runQuery(ctx, &conn, "QueryJSON", cmd, out, args)
-	return firstError(err, p.release(&conn, err))
+	err = runQuery(ctx, conn, "QueryJSON", cmd, out, args)
+	return firstError(err, p.release(conn, err))
 }
 
 // QuerySingleJSON runs a singleton-returning query.
@@ -335,8 +436,8 @@ func (p *Client) QuerySingleJSON(
 		return err
 	}
 
-	err = runQuery(ctx, &conn, "QuerySingleJSON", cmd, out, args)
-	return firstError(err, p.release(&conn, err))
+	err = runQuery(ctx, conn, "QuerySingleJSON", cmd, out, args)
+	return firstError(err, p.release(conn, err))
 }
 
 // Tx runs an action in a transaction retrying failed actions
@@ -360,5 +461,5 @@ func (p *Client) Tx(ctx context.Context, action TxBlock) error {
 	}
 
 	err = conn.Tx(ctx, action)
-	return firstError(err, p.release(&conn, err))
+	return firstError(err, p.release(conn, err))
 }
