@@ -56,26 +56,21 @@ func (c *reconnectingConn) reconnect(
 	}
 
 	var edbErr Error
-	for i := 1; true; i++ {
+	for {
 		c.conn, err = connectWithTimeout(ctx, c.cfg, c.cacheCollection)
 		if err == nil ||
+			single ||
 			errors.Is(err, context.Canceled) ||
 			errors.Is(err, context.DeadlineExceeded) ||
 			!errors.As(err, &edbErr) ||
 			!edbErr.Category(ClientConnectionError) ||
-			!edbErr.HasTag("SHOULD_RECONNECT") ||
-			(i > 1 && time.Now().After(maxTime)) {
-			return err
-		}
-
-		if single {
+			!edbErr.HasTag(ShouldReconnect) ||
+			time.Now().After(maxTime) {
 			return err
 		}
 
 		time.Sleep(time.Duration(10+rnd.Intn(200)) * time.Millisecond)
 	}
-
-	return &clientError{msg: "unreachable"}
 }
 
 // ensureConnection reconnects to the server if not connected.
