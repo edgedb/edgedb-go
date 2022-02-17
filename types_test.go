@@ -5611,13 +5611,21 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 func TestSendAndReceiveCustomScalars(t *testing.T) {
 	query := `
 		WITH
-			i := <CustomInt64>$0,
-			s := <str>$1,
+			x := (
+				WITH
+					i := enumerate(array_unpack(<array<CustomInt64>>$0)),
+					s := enumerate(array_unpack(<array<str>>$1)),
+				SELECT (
+					i := i.1,
+					s := s.1,
+				)
+				FILTER i.0 = s.0
+			)
 		SELECT (
-			encoded := <str>i,
-			decoded := <CustomInt64>s,
-			round_trip := i,
-			is_equal := i = <CustomInt64>s,
+			encoded := <str>x.i,
+			decoded := <CustomInt64>x.s,
+			round_trip := x.i,
+			is_equal := <CustomInt64>x.s = x.i,
 		)
 	`
 
@@ -5629,25 +5637,31 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 	}
 
 	samples := []int64{0, 1, 9223372036854775807, -9223372036854775808}
-
 	for i := 0; i < 1000; i++ {
 		samples = append(samples, int64(rand.Uint64()))
 	}
 
+	strings := make([]string, len(samples))
+	for i, n := range samples {
+		strings[i] = fmt.Sprint(n)
+	}
+
 	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
 	inRolledBackTx(t, ddl, func(c context.Context, tx *Tx) {
-		for _, i := range samples {
-			s := fmt.Sprint(i)
+		var results []Result
+		err := tx.Query(c, query, &results, samples, strings)
+		require.NoError(t, err)
+		require.Equal(t, len(samples), len(results), "unexpected result count")
+
+		for i, s := range strings {
 			t.Run(s, func(t *testing.T) {
-				var result Result
+				n := samples[i]
+				r := results[i]
 
-				e := tx.QuerySingle(c, query, &result, i, s)
-
-				assert.NoError(t, e)
-				assert.Equal(t, s, result.Encoded)
-				assert.Equal(t, i, result.Decoded)
-				assert.Equal(t, i, result.Decoded)
-				assert.True(t, result.IsEqual)
+				assert.True(t, r.IsEqual, "equality check failed")
+				assert.Equal(t, s, r.Encoded, "encoding failed")
+				assert.Equal(t, n, r.Decoded, "decoding failed")
+				assert.Equal(t, n, r.RoundTrip, "round trip failed")
 			})
 		}
 	})
