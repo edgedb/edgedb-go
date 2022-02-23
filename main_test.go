@@ -285,6 +285,26 @@ func TestMain(m *testing.M) {
 		`)
 
 	rand.Seed(time.Now().Unix())
+
+	// Some tests explicitly wait for the session idle timeout to expire.
+	// When this happens the server will immediately shutdown if there are no
+	// active connections. Start a background go routine that keeps an active
+	// connection to the database while the tests run so that the server
+	// doesn't shutdown.
+	done := make(chan struct{}, 1)
+	go func() {
+		var result int64
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				_ = client.QuerySingle(ctx, "SELECT 1", &result)
+			}
+		}
+	}()
+	defer func() { done <- struct{}{} }()
+
 	log.Println("starting tests")
 	code = m.Run()
 }
