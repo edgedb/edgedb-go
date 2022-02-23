@@ -49,19 +49,19 @@ func newServerSettings() *serverSettingsCache {
 // serverSettingsCache manually.
 type serverSettingsCache struct {
 	settings map[string][]byte
-	mx       sync.Mutex
+	mx       sync.RWMutex
 }
 
 func (s *serverSettingsCache) getOk(key string) ([]byte, bool) {
-	s.mx.Lock()
-	defer s.mx.Unlock()
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	val, ok := s.settings[key]
 	return val, ok
 }
 
 func (s *serverSettingsCache) get(key string) []byte {
-	s.mx.Lock()
-	defer s.mx.Unlock()
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	return s.settings[key]
 }
 
