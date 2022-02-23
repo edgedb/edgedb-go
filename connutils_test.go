@@ -74,6 +74,10 @@ func setenv(key, val string) func() {
 	}
 }
 
+func newServerSettingValues(settings map[string][]byte) *serverSettingsCache {
+	return &serverSettingsCache{settings: settings}
+}
+
 func TestConUtils(t *testing.T) {
 	type Result struct {
 		cfg        connConfig
@@ -99,7 +103,7 @@ func TestConUtils(t *testing.T) {
 					addr:               dialArgs{"tcp", "localhost:5656"},
 					user:               "user",
 					database:           "edgedb",
-					serverSettings:     map[string][]byte{},
+					serverSettings:     newServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -120,7 +124,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user",
 					password:           "passw",
 					database:           "testdb",
-					serverSettings:     map[string][]byte{},
+					serverSettings:     newServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -148,7 +152,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
-					serverSettings:     map[string][]byte{},
+					serverSettings:     newServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -177,9 +181,9 @@ func TestConUtils(t *testing.T) {
 					user:     "user2",
 					password: "passw2",
 					database: "db2",
-					serverSettings: map[string][]byte{
+					serverSettings: newServerSettingValues(map[string][]byte{
 						"ssl": []byte("False"),
-					},
+					}),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -201,7 +205,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
-					serverSettings:     map[string][]byte{},
+					serverSettings:     newServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -216,7 +220,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
-					serverSettings:     map[string][]byte{},
+					serverSettings:     newServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -293,9 +297,9 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				cfg: connConfig{
 					addr: dialArgs{"tcp", "testhost:2222"},
-					serverSettings: map[string][]byte{
+					serverSettings: newServerSettingValues(map[string][]byte{
 						"param": []byte("123"),
-					},
+					}),
 					user:               "me",
 					password:           "ask",
 					database:           "db",
@@ -317,10 +321,10 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				cfg: connConfig{
 					addr: dialArgs{"tcp", "testhost:2222"},
-					serverSettings: map[string][]byte{
+					serverSettings: newServerSettingValues(map[string][]byte{
 						"aa":    []byte("bb"),
 						"param": []byte("123"),
-					},
+					}),
 					user:               "me",
 					password:           "ask",
 					database:           "db",
@@ -587,7 +591,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 			}
 
 			expectedResult := connConfig{
-				serverSettings:     map[string][]byte{},
+				serverSettings:     newServerSettings(),
 				waitUntilAvailable: 30 * time.Second,
 			}
 
@@ -612,7 +616,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 
 				ss := res["serverSettings"].(map[string]interface{})
 				for k, v := range ss {
-					expectedResult.serverSettings[k] = []byte(v.(string))
+					expectedResult.serverSettings.set(k, []byte(v.(string)))
 				}
 			}
 
