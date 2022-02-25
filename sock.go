@@ -103,11 +103,15 @@ func (s *autoClosingSocket) Closed() bool {
 	return s.isClosed
 }
 
-func (s *autoClosingSocket) Close() (err error) {
+func (s *autoClosingSocket) Close() error {
+	var err error
 	s.mu.Lock()
-	s.isClosed = true
+	if !s.isClosed {
+		s.isClosed = true
+		err = s.conn.Close()
+	}
 	s.mu.Unlock()
-	return wrapNetError(s.conn.Close())
+	return wrapNetError(err)
 }
 
 func (s *autoClosingSocket) Read(p []byte) (int, error) {
