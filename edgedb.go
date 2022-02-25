@@ -48,7 +48,7 @@ type protocolConnection struct {
 	cacheCollection
 }
 
-// connectWithTimeout makes a single attempt to connect to `addr`.
+// connectWithTimeout makes a single attempt to connect to `addr` .
 func connectWithTimeout(
 	ctx context.Context,
 	cfg *connConfig,
