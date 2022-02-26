@@ -31,6 +31,78 @@ type SomeStruct struct {
 	Third  []byte `edgedb:"First"`
 }
 
+type InlinedSomeStruct struct {
+	SomeStruct `edgedb:"$inline"`
+	Zebra      string
+}
+
+type InnerOne struct {
+	One         string `edgedb:"one"`
+	OnePointOne string `edgedb:"one_point_one"`
+}
+
+type InnerTwo struct {
+	Two string `edgedb:"two"`
+}
+
+type InnerThree struct {
+	Three string `edgedb:"three"`
+}
+
+type InlinedMultipleStructs struct {
+	InnerOne   `edgedb:"$inline"`
+	InnerTwo   `edgedb:"$inline"`
+	InnerThree `edgedb:"$inline"`
+}
+
+type InlinedMultipleLayers struct {
+	InlinedSomeStruct      `edgedb:"$inline"`
+	InlinedMultipleStructs `edgedb:"$inline"`
+}
+
+func checkInlinedSomeStruct(t *testing.T, typ reflect.Type, offset uintptr) {
+	// Nested field
+	field, ok := StructField(typ, "First")
+	require.True(t, ok)
+	assert.Equal(t, "Third", field.Name)
+	assert.Equal(t, offset+16+8, field.Offset)
+
+	field, ok = StructField(typ, "Second")
+	require.True(t, ok)
+	assert.Equal(t, "Second", field.Name)
+	assert.Equal(t, offset+16, field.Offset)
+
+	// Top level field
+	field, ok = StructField(typ, "Zebra")
+	require.True(t, ok)
+	assert.Equal(t, "Zebra", field.Name)
+	assert.Equal(t, offset+16+8+24, field.Offset)
+}
+
+func checkInlinedMultipleStructs(
+	t *testing.T, typ reflect.Type, offset uintptr,
+) {
+	field, ok := StructField(typ, "one")
+	require.True(t, ok)
+	assert.Equal(t, "One", field.Name)
+	assert.Equal(t, offset+16*0, field.Offset)
+
+	field, ok = StructField(typ, "one_point_one")
+	require.True(t, ok)
+	assert.Equal(t, "OnePointOne", field.Name)
+	assert.Equal(t, offset+16*1, field.Offset)
+
+	field, ok = StructField(typ, "two")
+	require.True(t, ok)
+	assert.Equal(t, "Two", field.Name)
+	assert.Equal(t, offset+16*2, field.Offset)
+
+	field, ok = StructField(typ, "three")
+	require.True(t, ok)
+	assert.Equal(t, "Three", field.Name)
+	assert.Equal(t, offset+16*3, field.Offset)
+}
+
 func TestStructFieldTagPrefered(t *testing.T) {
 	typ := reflect.TypeOf(SomeStruct{})
 	field, ok := StructField(typ, "First")
@@ -43,6 +115,22 @@ func TestStructFieldByName(t *testing.T) {
 	field, ok := StructField(typ, "Second")
 	require.True(t, ok)
 	assert.Equal(t, "Second", field.Name)
+}
+
+func TestStructFieldTagInline(t *testing.T) {
+	typ := reflect.TypeOf(InlinedSomeStruct{})
+	checkInlinedSomeStruct(t, typ, 0)
+}
+
+func TestStructFieldTagInlineNestedMultiple(t *testing.T) {
+	typ := reflect.TypeOf(InlinedMultipleStructs{})
+	checkInlinedMultipleStructs(t, typ, 0)
+}
+
+func TestStructFieldTagInlineThreeLayers(t *testing.T) {
+	typ := reflect.TypeOf(InlinedMultipleLayers{})
+	checkInlinedSomeStruct(t, typ, 0)
+	checkInlinedMultipleStructs(t, typ, 16+8+24+16)
 }
 
 func TestStructFieldMissingField(t *testing.T) {
