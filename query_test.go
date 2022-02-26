@@ -298,6 +298,44 @@ func TestQuerySingleZeroResults(t *testing.T) {
 	assert.Equal(t, errZeroResults, err)
 }
 
+func TestQuerySingleNestedSlice(t *testing.T) {
+	ctx := context.Background()
+	type IDField struct {
+		ID UUID `edgedb:"id"`
+	}
+	type NameField struct {
+		Name OptionalStr `edgedb:"name"`
+	}
+	type UserModel struct {
+		IDField   `edgedb:"$inline"`
+		NameField `edgedb:"$inline"`
+	}
+	type UsersField struct {
+		Users []UserModel `edgedb:"users"`
+	}
+	type ViewModel struct {
+		UsersField `edgedb:"$inline"`
+	}
+	result := ViewModel{}
+	err := client.QuerySingle(
+		ctx,
+		`
+with a := (INSERT User { name := 'a' }), b := (INSERT User { name := 'b' })
+SELECT { users := (SELECT { a, b } { id, name }) }`,
+		&result,
+	)
+	assert.NoError(t, err)
+
+	assert.NotEqual(t, result.Users[0].ID, UUID{})
+	a, _ := result.Users[0].Name.Get()
+	assert.Equal(t, a, "a")
+
+	assert.NotEqual(t, result.Users[1].ID, UUID{})
+	assert.NotEqual(t, result.Users[0].ID, result.Users[1].ID)
+	b, _ := result.Users[1].Name.Get()
+	assert.Equal(t, b, "b")
+}
+
 func TestError(t *testing.T) {
 	ctx := context.Background()
 	err := client.Execute(ctx, "malformed query;")

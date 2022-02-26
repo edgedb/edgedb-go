@@ -24,8 +24,15 @@ import (
 func fieldByTag(t reflect.Type, name string) (reflect.StructField, bool) {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		if field.Tag.Get("edgedb") == name {
+		switch field.Tag.Get("edgedb") {
+		case name:
 			return field, true
+		case "$inline":
+			if f, ok := fieldByTag(field.Type, name); ok {
+				// Accumulate offsets from nested paths.
+				f.Offset += field.Offset
+				return f, true
+			}
 		}
 	}
 
