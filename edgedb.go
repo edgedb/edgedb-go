@@ -19,19 +19,19 @@ package edgedb
 import (
 	"context"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
-var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
+var rnd = snc.NewRand()
 
 type cacheCollection struct {
-	serverSettings    *serverSettingsCache
+	serverSettings    *snc.ServerSettings
 	typeIDCache       *cache.Cache
 	inCodecCache      *cache.Cache
 	outCodecCache     *cache.Cache

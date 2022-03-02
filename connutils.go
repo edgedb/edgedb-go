@@ -31,45 +31,14 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/edgedb/edgedb-go/internal/snc"
 )
 
 var errNoTOMLFound = errors.New("no edgedb.toml found")
 var isDSNLike = regexp.MustCompile(`(?i)^[a-z]+://`)
 var isIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9]*$`)
-
-// newServerSettings returns an empty serverSettingsCache.
-func newServerSettings() *serverSettingsCache {
-	return &serverSettingsCache{settings: make(map[string][]byte)}
-}
-
-// serverSettingsCache is a concurrency safe map. A serverSettingsCache must
-// not be copied after first use. Use newServerSettings() instead of creating
-// serverSettingsCache manually.
-type serverSettingsCache struct {
-	settings map[string][]byte
-	mx       sync.RWMutex
-}
-
-func (s *serverSettingsCache) getOk(key string) ([]byte, bool) {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
-	val, ok := s.settings[key]
-	return val, ok
-}
-
-func (s *serverSettingsCache) get(key string) []byte {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
-	return s.settings[key]
-}
-
-func (s *serverSettingsCache) set(key string, val []byte) {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	s.settings[key] = val
-}
 
 type connConfig struct {
 	addr               dialArgs
@@ -80,7 +49,7 @@ type connConfig struct {
 	waitUntilAvailable time.Duration
 	tlsCAData          []byte
 	tlsSecurity        string
-	serverSettings     *serverSettingsCache
+	serverSettings     *snc.ServerSettings
 }
 
 func (c *connConfig) tlsConfig() (*tls.Config, error) {
@@ -145,7 +114,7 @@ type configResolver struct {
 	password       cfgVal // OptionalStr
 	tlsCAData      cfgVal // []byte
 	tlsSecurity    cfgVal // string
-	serverSettings *serverSettingsCache
+	serverSettings *snc.ServerSettings
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -249,16 +218,16 @@ func (r *configResolver) setTLSSecurity(val string, source string) error {
 
 func (r *configResolver) addServerSettings(s map[string][]byte) {
 	for k, v := range s {
-		if _, ok := r.serverSettings.getOk(k); !ok {
-			r.serverSettings.set(k, v)
+		if _, ok := r.serverSettings.GetOk(k); !ok {
+			r.serverSettings.Set(k, v)
 		}
 	}
 }
 
 func (r *configResolver) addServerSettingsStr(s map[string]string) {
 	for k, v := range s {
-		if _, ok := r.serverSettings.getOk(k); !ok {
-			r.serverSettings.set(k, []byte(v))
+		if _, ok := r.serverSettings.GetOk(k); !ok {
+			r.serverSettings.Set(k, []byte(v))
 		}
 	}
 }
@@ -799,7 +768,7 @@ func newConfigResolver(
 	opts *Options,
 	paths *cfgPaths,
 ) (*configResolver, error) {
-	cfg := &configResolver{serverSettings: newServerSettings()}
+	cfg := &configResolver{serverSettings: snc.NewServerSettings()}
 
 	var instance string
 	if !isDSNLike.MatchString(dsn) {

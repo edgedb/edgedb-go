@@ -32,6 +32,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,8 +75,12 @@ func setenv(key, val string) func() {
 	}
 }
 
-func newServerSettingValues(settings map[string][]byte) *serverSettingsCache {
-	return &serverSettingsCache{settings: settings}
+func newServerSettingValues(settings map[string][]byte) *snc.ServerSettings {
+	s := snc.NewServerSettings()
+	for k, v := range settings {
+		s.Set(k, v)
+	}
+	return s
 }
 
 func TestConUtils(t *testing.T) {
@@ -103,7 +108,7 @@ func TestConUtils(t *testing.T) {
 					addr:               dialArgs{"tcp", "localhost:5656"},
 					user:               "user",
 					database:           "edgedb",
-					serverSettings:     newServerSettings(),
+					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -124,7 +129,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user",
 					password:           "passw",
 					database:           "testdb",
-					serverSettings:     newServerSettings(),
+					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -152,7 +157,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
-					serverSettings:     newServerSettings(),
+					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -205,7 +210,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
-					serverSettings:     newServerSettings(),
+					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -220,7 +225,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
-					serverSettings:     newServerSettings(),
+					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -591,7 +596,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 			}
 
 			expectedResult := connConfig{
-				serverSettings:     newServerSettings(),
+				serverSettings:     snc.NewServerSettings(),
 				waitUntilAvailable: 30 * time.Second,
 			}
 
@@ -616,7 +621,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 
 				ss := res["serverSettings"].(map[string]interface{})
 				for k, v := range ss {
-					expectedResult.serverSettings.set(k, []byte(v.(string)))
+					expectedResult.serverSettings.Set(k, []byte(v.(string)))
 				}
 			}
 

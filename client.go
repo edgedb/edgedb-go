@@ -153,7 +153,7 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 			// The user did not set Concurrency in provided Options.
 			// See if the server sends a suggested max size.
 			suggested, err := strconv.Atoi(
-				string(conn.cfg.serverSettings.get(
+				string(conn.cfg.serverSettings.Get(
 					"suggested_pool_concurrency")))
 			if err == nil {
 				p.concurrency = suggested
@@ -254,7 +254,7 @@ func (p *Client) release(conn *transactableConn, err error) error {
 	}
 
 	timeout := defaultIdleConnectionTimeout
-	if b, ok := p.serverSettings.getOk("system_config"); ok {
+	if b, ok := p.serverSettings.GetOk("system_config"); ok {
 		x, err := parseSystemConfig(b, conn.conn.protocolVersion)
 		if err != nil {
 			log.Println("error parsing system_config:", err)

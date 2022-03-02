@@ -38,7 +38,7 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 		value := r.PopBytes()
 		valueCopy := make([]byte, len(value))
 		copy(valueCopy, value)
-		c.serverSettings.set(name, valueCopy)
+		c.serverSettings.Set(name, valueCopy)
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()
