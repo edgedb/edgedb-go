@@ -124,29 +124,14 @@ func startServer() {
 		args = append([]string{"wsl", "-u", "edgedb"}, args...)
 	}
 
-	helpArgs := args
-	helpArgs = append(helpArgs, "--help")
-	out, err := exec.Command(helpArgs[0], helpArgs[1:]...).Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if strings.Contains(string(out), "--generate-self-signed-cert") {
-		args = append(args, "--generate-self-signed-cert")
-	}
-
-	if strings.Contains(string(out), "--auto-shutdown-after") {
-		args = append(args, "--auto-shutdown-after=0")
-	} else {
-		args = append(args, "--auto-shutdown")
-	}
-
 	args = append(
 		args,
 		"--temp-dir",
 		"--testmode",
-		"--emit-server-status="+statusFileUnix,
 		"--port=auto",
+		"--emit-server-status="+statusFileUnix,
+		"--tls-cert-mode=generate_self_signed",
+		"--auto-shutdown-after=0",
 		`--bootstrap-command=`+
 			`CREATE SUPERUSER ROLE test { SET password := "shhh" }`,
 	)
