@@ -199,7 +199,7 @@ func TestSessionIdleTimeout(t *testing.T) {
 	err = p.QuerySingle(ctx,
 		"SELECT assert_single(cfg::Config.session_idle_timeout)", &result)
 	require.NoError(t, err)
-	require.Equal(t, Duration(50_000), result)
+	require.Equal(t, Duration(1_000_000), result)
 
 	// The client keeps one connection in the pool.
 	// Get a reference to that connection.
@@ -222,7 +222,7 @@ func TestSessionIdleTimeout(t *testing.T) {
 	// If the pooled connection is not used for longer than the
 	// session_idle_timeout then the next acquired connection should be a new
 	// connection.
-	time.Sleep(60 * time.Millisecond)
+	time.Sleep(1_200 * time.Millisecond)
 
 	con3, err := p.acquire(ctx)
 	require.NoError(t, err)

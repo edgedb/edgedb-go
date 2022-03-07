@@ -217,7 +217,7 @@ func TestMain(m *testing.M) {
 
 	defer client.Close() // nolint:errcheck
 	err = client.Execute(ctx,
-		"configure instance set session_idle_timeout := <duration>'50ms'")
+		"configure instance set session_idle_timeout := <duration>'1s'")
 	if err != nil {
 		panic(err)
 	}
