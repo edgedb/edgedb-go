@@ -252,9 +252,7 @@ func wrapNetError(err error) error {
 	case errors.Is(err, syscall.ENOENT):
 		return &clientConnectionFailedTemporarilyError{err: err}
 
-	// when go 1.15 is no longer supported this check can be changed to:
-	// case errors.Is(err, net.ErrClosed):
-	case err.Error() == "use of closed network connection":
+	case errors.Is(err, net.ErrClosed):
 		return &clientConnectionClosedError{err: err}
 
 	default:

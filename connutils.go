@@ -32,6 +32,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/edgedb/edgedb-go/internal/snc"
 )
 
 var errNoTOMLFound = errors.New("no edgedb.toml found")
@@ -47,7 +49,7 @@ type connConfig struct {
 	waitUntilAvailable time.Duration
 	tlsCAData          []byte
 	tlsSecurity        string
-	serverSettings     map[string][]byte
+	serverSettings     *snc.ServerSettings
 }
 
 func (c *connConfig) tlsConfig() (*tls.Config, error) {
@@ -112,7 +114,7 @@ type configResolver struct {
 	password       cfgVal // OptionalStr
 	tlsCAData      cfgVal // []byte
 	tlsSecurity    cfgVal // string
-	serverSettings map[string][]byte
+	serverSettings *snc.ServerSettings
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -216,16 +218,16 @@ func (r *configResolver) setTLSSecurity(val string, source string) error {
 
 func (r *configResolver) addServerSettings(s map[string][]byte) {
 	for k, v := range s {
-		if _, ok := r.serverSettings[k]; !ok {
-			r.serverSettings[k] = v
+		if _, ok := r.serverSettings.GetOk(k); !ok {
+			r.serverSettings.Set(k, v)
 		}
 	}
 }
 
 func (r *configResolver) addServerSettingsStr(s map[string]string) {
 	for k, v := range s {
-		if _, ok := r.serverSettings[k]; !ok {
-			r.serverSettings[k] = []byte(v)
+		if _, ok := r.serverSettings.GetOk(k); !ok {
+			r.serverSettings.Set(k, []byte(v))
 		}
 	}
 }
@@ -766,7 +768,7 @@ func newConfigResolver(
 	opts *Options,
 	paths *cfgPaths,
 ) (*configResolver, error) {
-	cfg := &configResolver{serverSettings: map[string][]byte{}}
+	cfg := &configResolver{serverSettings: snc.NewServerSettings()}
 
 	var instance string
 	if !isDSNLike.MatchString(dsn) {

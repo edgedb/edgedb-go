@@ -124,29 +124,14 @@ func startServer() {
 		args = append([]string{"wsl", "-u", "edgedb"}, args...)
 	}
 
-	helpArgs := args
-	helpArgs = append(helpArgs, "--help")
-	out, err := exec.Command(helpArgs[0], helpArgs[1:]...).Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if strings.Contains(string(out), "--generate-self-signed-cert") {
-		args = append(args, "--generate-self-signed-cert")
-	}
-
-	if strings.Contains(string(out), "--auto-shutdown-after") {
-		args = append(args, "--auto-shutdown-after=0")
-	} else {
-		args = append(args, "--auto-shutdown")
-	}
-
 	args = append(
 		args,
 		"--temp-dir",
 		"--testmode",
-		"--emit-server-status="+statusFileUnix,
 		"--port=auto",
+		"--emit-server-status="+statusFileUnix,
+		"--tls-cert-mode=generate_self_signed",
+		"--auto-shutdown-after=0",
 		`--bootstrap-command=`+
 			`CREATE SUPERUSER ROLE test { SET password := "shhh" }`,
 	)
@@ -285,6 +270,26 @@ func TestMain(m *testing.M) {
 		`)
 
 	rand.Seed(time.Now().Unix())
+
+	// Some tests explicitly wait for the session idle timeout to expire.
+	// When this happens the server will immediately shutdown if there are no
+	// active connections. Start a background go routine that keeps an active
+	// connection to the database while the tests run so that the server
+	// doesn't shutdown.
+	done := make(chan struct{}, 1)
+	go func() {
+		var result int64
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				_ = client.QuerySingle(ctx, "SELECT 1", &result)
+			}
+		}
+	}()
+	defer func() { done <- struct{}{} }()
+
 	log.Println("starting tests")
 	code = m.Run()
 }
