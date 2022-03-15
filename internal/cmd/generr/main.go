@@ -119,12 +119,12 @@ func errorFromCode(code uint32, msg string) error {
 			typ.privateName(),
 		)
 	}
-
-	fmt.Print(`
+	code := `
 	default:
-		panic(fmt.Sprintf("invalid error code 0x%` + `x", code))
+		panic(fmt.Sprintf("invalid error code 0x%x", code))
 	}
-}`)
+}`
+	fmt.Print(code)
 }
 
 func printTags(tags []errorTag) {
