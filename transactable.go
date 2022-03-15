@@ -161,7 +161,13 @@ func (c *transactableConn) Tx(
 
 			err = action(ctx, tx)
 			if err == nil {
-				return tx.commit(ctx)
+				err = tx.commit(ctx)
+				if errors.As(err, &edbErr) &&
+					edbErr.Category(TransactionError) &&
+					edbErr.HasTag(ShouldRetry) {
+					goto Error
+				}
+				return err
 			} else if isClientConnectionError(err) {
 				goto Error
 			}
