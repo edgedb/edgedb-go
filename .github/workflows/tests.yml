@@ -37,7 +37,7 @@ jobs:
           go build .
 
       - name: Setup WSL
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ startswith(matrix.os, 'windows') }}
         uses: vampire/setup-wsl@v1
         with:
           wsl-shell-user: edgedb
