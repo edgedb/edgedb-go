@@ -342,10 +342,14 @@ func TestConUtils(t *testing.T) {
 			name: "DSN with unix socket",
 			dsn:  "edgedb:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
-				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`invalid host: unix socket paths not supported, ` +
-					`got "/unix_sock/test"`,
+				cfg: connConfig{
+					addr:               dialArgs{"unix", "/unix_sock/test"},
+					database:           "dbname",
+					user:               "spam",
+					serverSettings:     snc.NewServerSettings(),
+					tlsSecurity:        "strict",
+					waitUntilAvailable: 30 * time.Second,
+				},
 			},
 		},
 		{
@@ -361,10 +365,14 @@ func TestConUtils(t *testing.T) {
 			name: "DSN query parameter with unix socket",
 			dsn:  "edgedb://user@?port=56226&host=%2Ftmp",
 			expected: Result{
-				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
-					`invalid host: unix socket paths not supported, ` +
-					`got "/tmp"`,
+				cfg: connConfig{
+					addr:               dialArgs{"unix", "/tmp"},
+					database:           "edgedb",
+					user:               "user",
+					serverSettings:     snc.NewServerSettings(),
+					tlsSecurity:        "strict",
+					waitUntilAvailable: 30 * time.Second,
+				},
 			},
 		},
 	}
@@ -627,6 +635,11 @@ func TestConnectionParameterResolution(t *testing.T) {
 
 			config, err := parseConnectDSNAndArgs(dsn, &options, paths)
 
+			if config != nil && config.addr.network == "unix" {
+				// The shared testcases expect no unix connection support.
+				t.Skip("golang driver supports unix connections")
+			}
+
 			if testcase["error"] != nil {
 				errType := &configurationError{}
 				require.IsType(t, errType, err)
@@ -751,7 +764,9 @@ func TestConnectRefusedUnixSocket(t *testing.T) {
 	require.True(t, errors.As(err, &edbErr), "wrong error: %v", err)
 	assert.True(
 		t,
-		edbErr.Category(ConfigurationError),
+		edbErr.Category(ClientConnectionFailedTemporarilyError) ||
+			(runtime.GOOS == "windows" &&
+				edbErr.Category(ClientConnectionFailedError)),
 		"wrong error: %v",
 		err,
 	)

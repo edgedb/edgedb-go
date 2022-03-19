@@ -122,10 +122,8 @@ func (r *configResolver) setHost(val, source string) error {
 		return nil
 	}
 	if strings.Contains(val, "/") {
-		return fmt.Errorf(
-			"invalid host: unix socket paths not supported, got %q", val)
-	}
-	if val == "" || strings.Contains(val, ",") {
+		// unix socket
+	} else if val == "" || strings.Contains(val, ",") {
 		return fmt.Errorf(`invalid host: %q`, val)
 	}
 	r.host = cfgVal{val: val, source: source}
@@ -718,8 +716,17 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		password = r.password.val.(string)
 	}
 
+	var addr dialArgs
+	if strings.Contains(host, "/") {
+		addr = dialArgs{network: "unix", address: host}
+	} else {
+		addr = dialArgs{
+			network: "tcp", address: fmt.Sprintf("%v:%v", host, port),
+		}
+	}
+
 	return &connConfig{
-		addr:               dialArgs{"tcp", fmt.Sprintf("%v:%v", host, port)},
+		addr:               addr,
 		user:               user,
 		password:           password,
 		database:           database,

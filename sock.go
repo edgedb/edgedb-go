@@ -34,16 +34,24 @@ func connectAutoClosingSocket(
 		defer cancel()
 	}
 
-	conn, err := connectTLS(ctx, cfg)
-	if err != nil {
-		if isTLSError(err) {
+	var conn net.Conn
+	var err error
+	if cfg.addr.network == "unix" {
+		if conn, err = connectNet(ctx, cfg.addr); err != nil {
 			return nil, err
 		}
+	} else {
+		conn, err = connectTLS(ctx, cfg)
+		if err != nil {
+			if isTLSError(err) {
+				return nil, err
+			}
 
-		var e error
-		conn, e = connectNet(ctx, cfg.addr)
-		if e != nil {
-			return nil, err
+			var e error
+			conn, e = connectNet(ctx, cfg.addr)
+			if e != nil {
+				return nil, err
+			}
 		}
 	}
 

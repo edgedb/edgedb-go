@@ -124,7 +124,9 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 	}
 
 	_, isTLS := c.soc.conn.(*tls.Conn)
-	if !isTLS && c.protocolVersion.GTE(protocolVersion0p11) {
+	if !isTLS &&
+		c.soc.conn.RemoteAddr().Network() != "unix" &&
+		c.protocolVersion.GTE(protocolVersion0p11) {
 		_ = c.soc.Close()
 		return &clientConnectionError{msg: fmt.Sprintf(
 			"server claims to use protocol version %v.%v without using TLS",
