@@ -357,6 +357,11 @@ func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
 // as an int64 microsecond count.
 type Duration int64
 
+// ToStdDuration returns the duration as time.Duration (in ns).
+func (d Duration) ToStdDuration() time.Duration {
+	return time.Duration(d) * time.Microsecond
+}
+
 func (d Duration) String() string {
 	if d == 0 {
 		return "PT0S"

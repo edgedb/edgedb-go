@@ -199,7 +199,7 @@ func TestSessionIdleTimeout(t *testing.T) {
 	err = p.QuerySingle(ctx,
 		"SELECT assert_single(cfg::Config.session_idle_timeout)", &result)
 	require.NoError(t, err)
-	require.Equal(t, Duration(1_000_000), result)
+	require.Equal(t, time.Second, result.ToStdDuration())
 
 	// The client keeps one connection in the pool.
 	// Get a reference to that connection.

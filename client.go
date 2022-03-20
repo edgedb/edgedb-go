@@ -259,8 +259,7 @@ func (p *Client) release(conn *transactableConn, err error) error {
 		if err != nil {
 			log.Println("error parsing system_config:", err)
 		} else {
-			// convert milliseconds to nanoseconds
-			timeout = time.Duration(x.SessionIdleTimeout * 1_000)
+			timeout = x.SessionIdleTimeout.ToStdDuration()
 		}
 	}
 
