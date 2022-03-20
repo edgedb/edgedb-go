@@ -36,9 +36,10 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 	case message.ParameterStatus:
 		name := r.PopString()
 		value := r.PopBytes()
-		valueCopy := make([]byte, len(value))
-		copy(valueCopy, value)
-		c.serverSettings.Set(name, valueCopy)
+		err := c.serverSettings.Set(name, value, c.protocolVersion)
+		if err != nil {
+			log.Printf("invalid server setting: %s", err.Error())
+		}
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()

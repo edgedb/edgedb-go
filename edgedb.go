@@ -24,6 +24,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/serverSettings"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
@@ -31,7 +32,7 @@ import (
 var rnd = snc.NewRand()
 
 type cacheCollection struct {
-	serverSettings    *snc.ServerSettings
+	serverSettings    *serverSettings.ServerSettings
 	typeIDCache       *cache.Cache
 	inCodecCache      *cache.Cache
 	outCodecCache     *cache.Cache

@@ -33,7 +33,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/snc"
+	"github.com/edgedb/edgedb-go/internal/serverSettings"
 )
 
 var errNoTOMLFound = errors.New("no edgedb.toml found")
@@ -49,7 +49,7 @@ type connConfig struct {
 	waitUntilAvailable time.Duration
 	tlsCAData          []byte
 	tlsSecurity        string
-	serverSettings     *snc.ServerSettings
+	serverSettings     *serverSettings.ServerSettings
 }
 
 func (c *connConfig) tlsConfig() (*tls.Config, error) {
@@ -114,7 +114,7 @@ type configResolver struct {
 	password       cfgVal // OptionalStr
 	tlsCAData      cfgVal // []byte
 	tlsSecurity    cfgVal // string
-	serverSettings *snc.ServerSettings
+	serverSettings serverSettings.ServerSettings
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -216,20 +216,23 @@ func (r *configResolver) setTLSSecurity(val string, source string) error {
 	return nil
 }
 
-func (r *configResolver) addServerSettings(s map[string][]byte) {
+func (r *configResolver) addServerSettings(s map[string][]byte) error {
 	for k, v := range s {
-		if _, ok := r.serverSettings.GetOk(k); !ok {
-			r.serverSettings.Set(k, v)
+		if err := r.serverSettings.Set(k, v, protocolVersionMin); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
-func (r *configResolver) addServerSettingsStr(s map[string]string) {
+func (r *configResolver) addServerSettingsStr(s map[string]string) error {
 	for k, v := range s {
-		if _, ok := r.serverSettings.GetOk(k); !ok {
-			r.serverSettings.Set(k, []byte(v))
+		err := r.serverSettings.Set(k, []byte(v), protocolVersionMin)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 func (r *configResolver) resolveOptions(opts *Options) (err error) {
@@ -318,7 +321,9 @@ func (r *configResolver) resolveOptions(opts *Options) (err error) {
 			englishList(secSources, "and"))
 	}
 
-	r.addServerSettings(opts.ServerSettings)
+	if err = r.addServerSettings(opts.ServerSettings); err != nil {
+		return fmt.Errorf("invalid ServerSettings: %w", err)
+	}
 	return nil
 }
 
@@ -427,7 +432,9 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 		}
 	}
 
-	r.addServerSettingsStr(query)
+	if err = r.addServerSettingsStr(query); err != nil {
+		return fmt.Errorf("invalid ServerSettings: %w", err)
+	}
 	return nil
 }
 
@@ -725,7 +732,7 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		database:           database,
 		connectTimeout:     opts.ConnectTimeout,
 		waitUntilAvailable: waitUntilAvailable,
-		serverSettings:     r.serverSettings,
+		serverSettings:     &r.serverSettings,
 		tlsCAData:          certData,
 		tlsSecurity:        tlsSecurity,
 	}, nil
@@ -768,7 +775,7 @@ func newConfigResolver(
 	opts *Options,
 	paths *cfgPaths,
 ) (*configResolver, error) {
-	cfg := &configResolver{serverSettings: snc.NewServerSettings()}
+	cfg := &configResolver{}
 
 	var instance string
 	if !isDSNLike.MatchString(dsn) {
