@@ -158,8 +158,6 @@ func TestTxKinds(t *testing.T) {
 	}
 }
 
-var ctx = context.Background()
-
 // Transactions can be executed using the Tx() method. Note that queries are
 // executed on the Tx object. Queries executed on the client in a transaction
 // callback will not run in the transaction and will be applied immediately. In
@@ -168,6 +166,7 @@ var ctx = context.Background()
 // configured with TxOptions and the retrying behavior can be configured with
 // RetryOptions.
 func ExampleTx() {
+	ctx := context.Background()
 	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		return tx.Execute(ctx, "INSERT User { name := 'Don' }")
 	})
