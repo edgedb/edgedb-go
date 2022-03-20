@@ -28,8 +28,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
-var rnd = snc.NewRand()
-
 type cacheCollection struct {
 	serverSettings    *snc.ServerSettings
 	typeIDCache       *cache.Cache
