@@ -212,6 +212,11 @@ func (r RetryRule) WithBackoff(fn RetryBackoff) RetryRule {
 	return r
 }
 
+// NewRetryOptions returns the default retry options.
+func NewRetryOptions() RetryOptions {
+	return RetryOptions{fromFactory: true}.WithDefault(NewRetryRule())
+}
+
 // RetryOptions configures how Tx() retries failed transactions.  Use
 // NewRetryOptions to get a default RetryOptions value instead of creating one
 // yourself.

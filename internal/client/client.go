@@ -90,10 +90,7 @@ func CreateClientDSN(_ context.Context, dsn string, opts Options) (*Client, erro
 		concurrency:          int(opts.Concurrency),
 		freeConns:            make(chan func() *transactableConn, 1),
 		potentialConnsMutext: &sync.Mutex{},
-		retryOpts: RetryOptions{
-			txConflict: RetryRule{attempts: 3, backoff: defaultBackoff},
-			network:    RetryRule{attempts: 3, backoff: defaultBackoff},
-		},
+		retryOpts:            NewRetryOptions(),
 		cacheCollection: cacheCollection{
 			serverSettings:    cfg.serverSettings,
 			typeIDCache:       cache.New(1_000),
