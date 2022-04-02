@@ -121,6 +121,9 @@ func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 	}
 
 	lines := strings.Split(query, "\n")
+	if pos.lineNo >= len(lines) {
+		return errorFromCode(code, msg)
+	}
 
 	// replace tabs with a single space
 	// because we don't know how they will be printed.
@@ -128,6 +131,10 @@ func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 
 	for i := 0; i < pos.lineNo; i++ {
 		pos.byteNo -= 1 + len(lines[i])
+	}
+
+	if pos.byteNo >= len(line) {
+		pos.byteNo = 0
 	}
 
 	runeCount := utf8.RuneCountInString(line[:pos.byteNo])
