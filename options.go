@@ -271,15 +271,14 @@ type IsolationLevel string
 
 // The available levels are:
 const (
-	Serializable   IsolationLevel = "serializable"
-	RepeatableRead IsolationLevel = "repeatable_read"
+	Serializable IsolationLevel = "serializable"
 )
 
 // NewTxOptions returns the default TxOptions value.
 func NewTxOptions() TxOptions {
 	return TxOptions{
 		fromFactory: true,
-		isolation:   RepeatableRead,
+		isolation:   Serializable,
 	}
 }
 
@@ -299,7 +298,7 @@ type TxOptions struct {
 // WithIsolation returns a copy of the TxOptions
 // with the isolation level set to i.
 func (o TxOptions) WithIsolation(i IsolationLevel) TxOptions {
-	if i != Serializable && i != RepeatableRead {
+	if i != Serializable {
 		panic(fmt.Sprintf("unknown isolation level: %q", i))
 	}
 
@@ -325,8 +324,6 @@ func (o TxOptions) startTxQuery() string { // nolint:gocritic
 	query := "START TRANSACTION"
 
 	switch o.isolation {
-	case RepeatableRead:
-		query += " ISOLATION REPEATABLE READ"
 	case Serializable:
 		query += " ISOLATION SERIALIZABLE"
 	default:
