@@ -122,6 +122,20 @@
 // query results. The edgedb.Optional struct can be embedded to make structs
 // optional.
 //
+//   type User Struct {
+//       edgedb.Optional
+//       Email string `edgedb:"email"`
+//   }
+//
+//   var result User
+//   err := client.QuerySingle(ctx, `SELECT User { email } LIMIT 0`, $result)
+//   fmt.Println(result.Missing())
+//   // Output: true
+//
+//   err := client.QuerySingle(ctx, `SELECT User { email } LIMIT 1`, $result)
+//   fmt.Println(result.Missing())
+//   // Output: false
+//
 // Custom Marshalers
 //
 // Interfaces for user defined marshaler/unmarshalers  are documented in the

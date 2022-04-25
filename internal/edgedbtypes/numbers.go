@@ -32,7 +32,7 @@ func (o *Optional) Missing() bool { return !o.isSet }
 // means present.
 func (o *Optional) SetMissing(missing bool) { o.isSet = !missing }
 
-// Unset marks the value a missing
+// Unset marks the value as missing
 func (o *Optional) Unset() { o.isSet = false }
 
 // OptionalInt16 is an optional int16. Optional types must be used for out
