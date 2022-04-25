@@ -45,7 +45,11 @@ type (
 	// Memory represents memory in bytes
 	Memory = edgedbtypes.Memory
 
-	// Optional ...
+	// Optional is embedded in structs to make them optional. For example:
+	//   type User struct {
+	//       edgedb.Optional
+	//       Name string `edgedb:"name"`
+	//   }
 	Optional = edgedbtypes.Optional
 
 	// OptionalBool is a bool value that is not required.
