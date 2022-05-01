@@ -19,10 +19,11 @@ package buff
 import (
 	"testing"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/soc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/soc"
 )
 
 func TestNext(t *testing.T) {
@@ -34,7 +35,8 @@ func TestNext(t *testing.T) {
 	assert.Equal(t, uint8(0xa), r.MsgType)
 
 	expected := "cannot finish: unread data in buffer (message type: 0xa)"
-	assert.PanicsWithValue(t, expected, func() { r.Next(nil) })
+	assert.False(t, r.Next(nil))
+	assert.Equal(t, expected, r.Err.Error())
 
 	assert.Equal(t, uint32(0x1020304), r.PopUint32())
 	assert.Panics(t, func() { r.Discard(1) })

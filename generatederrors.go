@@ -3470,6 +3470,8 @@ func errorFromCode(code uint32, msg string) error {
 	case 0xff_03_00_00:
 		return &noDataError{msg: msg}
 	default:
-		panic(fmt.Sprintf("invalid error code 0x%x", code))
+		return &unexpectedMessageError{
+			msg: fmt.Sprintf("invalid error code 0x%x", code),
+		}
 	}
 }

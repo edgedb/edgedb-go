@@ -66,34 +66,34 @@ const (
 	lineStart     = 0xfff3
 )
 
-func atoiOrPanic(s string) int {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		panic(err)
-	}
-
-	return i
-}
-
 type position struct {
 	lineNo int
 	byteNo int
 }
 
 func positionFromHeaders(headers map[uint16]string) (position, bool) {
-	lineNo, ok := headers[lineStart]
+	lineNoRaw, ok := headers[lineStart]
 	if !ok {
 		return position{}, false
 	}
 
-	byteNo, ok := headers[positionStart]
+	byteNoRaw, ok := headers[positionStart]
 	if !ok {
+		return position{}, false
+	}
+
+	lineNo, err := strconv.Atoi(lineNoRaw)
+	if err != nil {
+		return position{}, false
+	}
+	byteNo, err := strconv.Atoi(byteNoRaw)
+	if err != nil {
 		return position{}, false
 	}
 
 	return position{
-		lineNo: atoiOrPanic(lineNo) - 1,
-		byteNo: atoiOrPanic(byteNo),
+		lineNo: lineNo - 1,
+		byteNo: byteNo,
 	}, true
 }
 

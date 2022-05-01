@@ -17,7 +17,6 @@
 package edgedb
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -249,19 +248,14 @@ func (o RetryOptions) WithCondition( // nolint:gocritic
 	return o
 }
 
-func (o RetryOptions) ruleForException(err Error) RetryRule { // nolint:gocritic,lll
-	var edbErr Error
-	if !errors.As(err, &edbErr) {
-		panic(fmt.Sprintf("unexpected error type: %T", err))
-	}
-
+func (o RetryOptions) ruleForException(err Error) (RetryRule, error) {
 	switch {
-	case edbErr.Category(TransactionConflictError):
-		return o.txConflict
-	case edbErr.Category(ClientError):
-		return o.network
+	case err.Category(TransactionConflictError):
+		return o.txConflict, nil
+	case err.Category(ClientError):
+		return o.network, nil
 	default:
-		panic(fmt.Sprintf("unexpected error type: %T", err))
+		return RetryRule{}, fmt.Errorf("unexpected error type: %T", err)
 	}
 }
 
