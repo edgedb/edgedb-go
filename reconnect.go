@@ -45,7 +45,7 @@ type reconnectingConn struct {
 func (c *reconnectingConn) reconnect(
 	ctx context.Context,
 	single bool,
-) (err error) {
+) error {
 	if c.isClosed {
 		return &interfaceError{msg: "Connection is closed"}
 	}
@@ -57,9 +57,12 @@ func (c *reconnectingConn) reconnect(
 
 	var edbErr Error
 	for {
-		c.conn, err = connectWithTimeout(ctx, c.cfg, c.cacheCollection)
-		if err == nil ||
-			single ||
+		conn, err := connectWithTimeout(ctx, c.cfg, c.cacheCollection)
+		if err == nil {
+			c.conn = conn
+			return nil
+		}
+		if single ||
 			errors.Is(err, context.Canceled) ||
 			errors.Is(err, context.DeadlineExceeded) ||
 			!errors.As(err, &edbErr) ||
