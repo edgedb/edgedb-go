@@ -247,6 +247,8 @@ func wrapNetError(err error) error {
 		fallthrough
 	case errors.Is(err, syscall.ECONNRESET):
 		fallthrough
+	case errors.Is(err, syscall.EADDRINUSE):
+		fallthrough
 	case errors.As(err, &errDSN):
 		fallthrough
 	case errors.Is(err, syscall.ENOENT):
