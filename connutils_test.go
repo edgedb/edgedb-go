@@ -722,12 +722,13 @@ func TestConnectInvalidName(t *testing.T) {
 		"wrong error: %v",
 		err,
 	)
-	assert.EqualError(
-		t,
-		err,
+	// Match lookup error agnostic to OS. Examples:
+	// dial tcp: lookup invalid.example.org: no such host
+	// dial tcp: lookup invalid.example.org on 127.0.0.1:53: no such host
+	assert.Contains(t, err.Error(),
 		"edgedb.ClientConnectionFailedTemporarilyError: "+
-			"dial tcp: lookup invalid.example.org: no such host",
-	)
+			"dial tcp: lookup invalid.example.org")
+	assert.Contains(t, err.Error(), "no such host")
 
 	var errNotFound *net.DNSError
 	assert.True(t, errors.As(err, &errNotFound))
