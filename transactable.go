@@ -109,7 +109,10 @@ func (c *transactableConn) granularFlow(
 			errors.As(err, &edbErr) &&
 			edbErr.HasTag(ShouldRetry) &&
 			(capabilities == 0 || edbErr.Category(TransactionConflictError)) {
-			rule := c.retryOpts.ruleForException(edbErr)
+			rule, e := c.retryOpts.ruleForException(edbErr)
+			if e != nil {
+				return e
+			}
 
 			if i >= rule.attempts {
 				return err
@@ -179,7 +182,10 @@ func (c *transactableConn) Tx(
 
 	Error:
 		if errors.As(err, &edbErr) && edbErr.HasTag(ShouldRetry) {
-			rule := c.retryOpts.ruleForException(edbErr)
+			rule, e := c.retryOpts.ruleForException(edbErr)
+			if e != nil {
+				return e
+			}
 
 			if i >= rule.attempts {
 				return err

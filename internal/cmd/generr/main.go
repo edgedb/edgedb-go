@@ -121,7 +121,11 @@ func errorFromCode(code uint32, msg string) error {
 	}
 	code := `
 	default:
-		panic(fmt.Sprintf("invalid error code 0x%x", code))
+		return &unexpectedMessageError{
+			msg: fmt.Sprintf(
+				"invalid error code 0x%x with message %q", code, msg,
+			),
+		}
 	}
 }`
 	fmt.Print(code)

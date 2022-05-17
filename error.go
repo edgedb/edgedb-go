@@ -66,35 +66,39 @@ const (
 	lineStart     = 0xfff3
 )
 
-func atoiOrPanic(s string) int {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		panic(err)
-	}
-
-	return i
-}
-
 type position struct {
 	lineNo int
 	byteNo int
 }
 
-func positionFromHeaders(headers map[uint16]string) (position, bool) {
-	lineNo, ok := headers[lineStart]
+func positionFromHeaders(headers map[uint16]string) (position, bool, error) {
+	lineNoRaw, ok := headers[lineStart]
 	if !ok {
-		return position{}, false
+		return position{}, false, nil
 	}
 
-	byteNo, ok := headers[positionStart]
+	byteNoRaw, ok := headers[positionStart]
 	if !ok {
-		return position{}, false
+		return position{}, false, nil
+	}
+
+	lineNo, err := strconv.Atoi(lineNoRaw)
+	if err != nil {
+		return position{}, false, &binaryProtocolError{
+			err: fmt.Errorf("decode lineNo: %q: %w", lineNoRaw, err),
+		}
+	}
+	byteNo, err := strconv.Atoi(byteNoRaw)
+	if err != nil {
+		return position{}, false, &binaryProtocolError{
+			err: fmt.Errorf("decode byteNo: %q: %w", byteNoRaw, err),
+		}
 	}
 
 	return position{
-		lineNo: atoiOrPanic(lineNo) - 1,
-		byteNo: atoiOrPanic(byteNo),
-	}, true
+		lineNo: lineNo - 1,
+		byteNo: byteNo,
+	}, true, nil
 }
 
 // decodeErrorResponseMsg decodes an error response
@@ -110,7 +114,10 @@ func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 		headers[r.PopUint16()] = r.PopString()
 	}
 
-	pos, ok := positionFromHeaders(headers)
+	pos, ok, err := positionFromHeaders(headers)
+	if err != nil {
+		return err
+	}
 	if !ok {
 		return errorFromCode(code, msg)
 	}
