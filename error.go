@@ -85,13 +85,13 @@ func positionFromHeaders(headers map[uint16]string) (position, bool, error) {
 	lineNo, err := strconv.Atoi(lineNoRaw)
 	if err != nil {
 		return position{}, false, &binaryProtocolError{
-			msg: fmt.Sprintf("decode lineNo: %q: %s", lineNoRaw, err.Error()),
+			err: fmt.Errorf("decode lineNo: %q: %w", lineNoRaw, err),
 		}
 	}
 	byteNo, err := strconv.Atoi(byteNoRaw)
 	if err != nil {
 		return position{}, false, &binaryProtocolError{
-			msg: fmt.Sprintf("decode byteNo: %q: %s", byteNoRaw, err.Error()),
+			err: fmt.Errorf("decode byteNo: %q: %w", byteNoRaw, err),
 		}
 	}
 
