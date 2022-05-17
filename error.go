@@ -71,30 +71,34 @@ type position struct {
 	byteNo int
 }
 
-func positionFromHeaders(headers map[uint16]string) (position, bool) {
+func positionFromHeaders(headers map[uint16]string) (position, bool, error) {
 	lineNoRaw, ok := headers[lineStart]
 	if !ok {
-		return position{}, false
+		return position{}, false, nil
 	}
 
 	byteNoRaw, ok := headers[positionStart]
 	if !ok {
-		return position{}, false
+		return position{}, false, nil
 	}
 
 	lineNo, err := strconv.Atoi(lineNoRaw)
 	if err != nil {
-		return position{}, false
+		return position{}, false, &binaryProtocolError{
+			msg: fmt.Sprintf("decode lineNo: %q: %s", lineNoRaw, err.Error()),
+		}
 	}
 	byteNo, err := strconv.Atoi(byteNoRaw)
 	if err != nil {
-		return position{}, false
+		return position{}, false, &binaryProtocolError{
+			msg: fmt.Sprintf("decode byteNo: %q: %s", byteNoRaw, err.Error()),
+		}
 	}
 
 	return position{
 		lineNo: lineNo - 1,
 		byteNo: byteNo,
-	}, true
+	}, true, nil
 }
 
 // decodeErrorResponseMsg decodes an error response
@@ -110,7 +114,10 @@ func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 		headers[r.PopUint16()] = r.PopString()
 	}
 
-	pos, ok := positionFromHeaders(headers)
+	pos, ok, err := positionFromHeaders(headers)
+	if err != nil {
+		return err
+	}
 	if !ok {
 		return errorFromCode(code, msg)
 	}

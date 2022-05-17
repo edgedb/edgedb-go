@@ -255,7 +255,9 @@ func (o RetryOptions) ruleForException(err Error) (RetryRule, error) {
 	case err.Category(ClientError):
 		return o.network, nil
 	default:
-		return RetryRule{}, fmt.Errorf("unexpected error type: %T", err)
+		return RetryRule{}, &clientError{
+			msg: fmt.Sprintf("unexpected error type: %T", err),
+		}
 	}
 }
 

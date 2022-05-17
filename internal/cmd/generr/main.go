@@ -122,7 +122,9 @@ func errorFromCode(code uint32, msg string) error {
 	code := `
 	default:
 		return &unexpectedMessageError{
-			msg: fmt.Sprintf("invalid error code 0x%x", code),
+			msg: fmt.Sprintf(
+				"invalid error code 0x%x with message %q", code, msg,
+			),
 		}
 	}
 }`

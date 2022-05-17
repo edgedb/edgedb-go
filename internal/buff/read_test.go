@@ -36,7 +36,7 @@ func TestNext(t *testing.T) {
 
 	expected := "cannot finish: unread data in buffer (message type: 0xa)"
 	assert.False(t, r.Next(nil))
-	assert.Equal(t, expected, r.Err.Error())
+	assert.EqualError(t, r.Err, expected)
 
 	assert.Equal(t, uint32(0x1020304), r.PopUint32())
 	assert.Panics(t, func() { r.Discard(1) })

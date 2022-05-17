@@ -3471,7 +3471,9 @@ func errorFromCode(code uint32, msg string) error {
 		return &noDataError{msg: msg}
 	default:
 		return &unexpectedMessageError{
-			msg: fmt.Sprintf("invalid error code 0x%x", code),
+			msg: fmt.Sprintf(
+				"invalid error code 0x%x with message %q", code, msg,
+			),
 		}
 	}
 }
