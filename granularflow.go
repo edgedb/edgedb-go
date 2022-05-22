@@ -184,7 +184,6 @@ func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 
 	var (
 		err error
-		ids idPair
 	)
 
 	done := buff.NewSignal()
@@ -193,8 +192,9 @@ func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 		switch r.MsgType {
 		case message.PrepareComplete:
 			c.cacheCapabilities(q, decodeHeaders(r))
-			r.Discard(1) // cardianlity
-			ids = idPair{in: [16]byte(r.PopUUID()), out: [16]byte(r.PopUUID())}
+			r.Discard(1) // cardinality
+			ids := idPair{in: r.PopUUID(), out: r.PopUUID()}
+			c.cacheTypeIDs(q, ids)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -211,9 +211,6 @@ func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 	if r.Err != nil {
 		return r.Err
 	}
-
-	c.cacheTypeIDs(q, ids)
-
 	return err
 }
 
