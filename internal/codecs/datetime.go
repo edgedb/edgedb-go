@@ -132,11 +132,11 @@ type optionalDateTime struct {
 	set bool
 }
 
-type optionalDateTimeDecoder struct {
-	id types.UUID
-}
+type optionalDateTimeDecoder struct{}
 
-func (c *optionalDateTimeDecoder) DescriptorID() types.UUID { return c.id }
+func (c *optionalDateTimeDecoder) DescriptorID() types.UUID {
+	return dateTimeID
+}
 
 func (c *optionalDateTimeDecoder) Decode(
 	r *buff.Reader,
@@ -234,12 +234,10 @@ type optionalLocalDateTime struct {
 	set bool
 }
 
-type optionalLocalDateTimeDecoder struct {
-	id types.UUID
-}
+type optionalLocalDateTimeDecoder struct{}
 
 func (c *optionalLocalDateTimeDecoder) DescriptorID() types.UUID {
-	return c.id
+	return localDTID
 }
 
 func (c *optionalLocalDateTimeDecoder) Decode(
@@ -329,11 +327,11 @@ type optionalLocalDate struct {
 	set bool
 }
 
-type optionalLocalDateDecoder struct {
-	id types.UUID
-}
+type optionalLocalDateDecoder struct{}
 
-func (c *optionalLocalDateDecoder) DescriptorID() types.UUID { return c.id }
+func (c *optionalLocalDateDecoder) DescriptorID() types.UUID {
+	return localDateID
+}
 
 func (c *optionalLocalDateDecoder) Decode(
 	r *buff.Reader,
@@ -422,11 +420,11 @@ type optionalLocalTime struct {
 	set bool
 }
 
-type optionalLocalTimeDecoder struct {
-	id types.UUID
-}
+type optionalLocalTimeDecoder struct{}
 
-func (c *optionalLocalTimeDecoder) DescriptorID() types.UUID { return c.id }
+func (c *optionalLocalTimeDecoder) DescriptorID() types.UUID {
+	return localTimeID
+}
 
 func (c *optionalLocalTimeDecoder) Decode(
 	r *buff.Reader,
@@ -510,13 +508,13 @@ type optionalDuration struct {
 	set bool
 }
 
-type optionalDurationDecoder struct {
-	id types.UUID
-}
+type optionalDurationDecoder struct{}
 
 func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
 
-func (c *optionalDurationDecoder) DescriptorID() types.UUID { return c.id }
+func (c *optionalDurationDecoder) DescriptorID() types.UUID {
+	return durationID
+}
 
 func (c *optionalDurationDecoder) Decode(
 	r *buff.Reader,
@@ -622,12 +620,10 @@ type optionalRelativeDuration struct {
 	set bool
 }
 
-type optionalRelativeDurationDecoder struct {
-	id types.UUID
-}
+type optionalRelativeDurationDecoder struct{}
 
 func (c *optionalRelativeDurationDecoder) DescriptorID() types.UUID {
-	return c.id
+	return relativeDurationID
 }
 
 func (c *optionalRelativeDurationDecoder) Decode(

@@ -302,16 +302,14 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL int64>$0 }`,
-			&result,
-			CustomOptionalInt64{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalInt64{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int64>$0 }`,
+		&result,
+		CustomOptionalInt64{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalInt64{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -560,16 +558,14 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt32(655_665), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL int32>$0 }`,
-			&result,
-			CustomOptionalInt32{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalInt32{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int32>$0 }`,
+		&result,
+		CustomOptionalInt32{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalInt32{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -632,20 +628,18 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QuerySingle(ctx, `
-				# encode unset optional
-				SELECT Int32FieldHolder {
-					int32 := <OPTIONAL int32>$0
-				} LIMIT 1`,
-				&result,
-				OptionalInt32{},
-			)
-			if e != nil {
-				return e
-			}
-			assert.Equal(t, Result{}, result)
+		e = tx.QuerySingle(ctx, `
+			# encode unset optional
+			SELECT Int32FieldHolder {
+				int32 := <OPTIONAL int32>$0
+			} LIMIT 1`,
+			&result,
+			OptionalInt32{},
+		)
+		if e != nil {
+			return e
 		}
+		assert.Equal(t, Result{}, result)
 
 		e = tx.QuerySingle(ctx, `
 			# encode set optional
@@ -898,16 +892,14 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalInt16(6_556), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL int16>$0 }`,
-			&result,
-			CustomOptionalInt16{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalInt16{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL int16>$0 }`,
+		&result,
+		CustomOptionalInt16{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalInt16{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -970,20 +962,18 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QuerySingle(ctx, `
-				# encode unset optional
-				SELECT Int16FieldHolder {
-					int16 := <OPTIONAL int16>$0
-				} LIMIT 1`,
-				&result,
-				OptionalInt16{},
-			)
-			if e != nil {
-				return e
-			}
-			assert.Equal(t, Result{}, result)
+		e = tx.QuerySingle(ctx, `
+			# encode unset optional
+			SELECT Int16FieldHolder {
+				int16 := <OPTIONAL int16>$0
+			} LIMIT 1`,
+			&result,
+			OptionalInt16{},
+		)
+		if e != nil {
+			return e
 		}
+		assert.Equal(t, Result{}, result)
 
 		e = tx.QuerySingle(ctx, `
 			# encode set optional
@@ -1216,16 +1206,14 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBool(true), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL bool>$0 }`,
-			&result,
-			CustomOptionalBool{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalBool{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bool>$0 }`,
+		&result,
+		CustomOptionalBool{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalBool{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -1487,16 +1475,14 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalFloat64(-15.625), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL float64>$0 }`,
-			&result,
-			CustomOptionalFloat64{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalFloat64{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float64>$0 }`,
+		&result,
+		CustomOptionalFloat64{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalFloat64{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -1559,20 +1545,18 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QuerySingle(ctx, `
-				# encode unset optional
-				SELECT Float64FieldHolder {
-					float64 := <OPTIONAL float64>$0
-				} LIMIT 1`,
-				&result,
-				OptionalFloat64{},
-			)
-			if e != nil {
-				return e
-			}
-			assert.Equal(t, Result{}, result)
+		e = tx.QuerySingle(ctx, `
+			# encode unset optional
+			SELECT Float64FieldHolder {
+				float64 := <OPTIONAL float64>$0
+			} LIMIT 1`,
+			&result,
+			OptionalFloat64{},
+		)
+		if e != nil {
+			return e
 		}
+		assert.Equal(t, Result{}, result)
 
 		e = tx.QuerySingle(ctx, `
 			# encode set optional
@@ -1835,16 +1819,14 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalFloat32(-15.625), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL float32>$0 }`,
-			&result,
-			CustomOptionalFloat32{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalFloat32{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL float32>$0 }`,
+		&result,
+		CustomOptionalFloat32{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalFloat32{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -1975,16 +1957,14 @@ func TestSendBytesMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL bytes>$0 }`,
-			&result,
-			CustomOptionalBytes{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalBytes{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bytes>$0 }`,
+		&result,
+		CustomOptionalBytes{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalBytes{}, result.Val)
 
 	// encode missing value into optional argument
 	err = client.QuerySingle(ctx, `
@@ -2075,16 +2055,14 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBytes([]byte{0x01, 0x02, 0x03}), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL bytes>$0 }`,
-			&result,
-			CustomOptionalBytes{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalBytes{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL bytes>$0 }`,
+		&result,
+		CustomOptionalBytes{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalBytes{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -2267,16 +2245,14 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalStr("Hi 🙂"), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL str>$0 }`,
-			&result,
-			CustomOptionalStr{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalStr{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL str>$0 }`,
+		&result,
+		CustomOptionalStr{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalStr{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -2319,18 +2295,16 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 		assert.Equal(t, Result{}, result)
 
-		if protocolVersion.GTE(protocolVersion0p12) {
-			e = tx.QuerySingle(ctx, `
-				# encode unset optional
-				SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
-				&result,
-				OptionalStr{},
-			)
-			if e != nil {
-				return e
-			}
-			assert.Equal(t, Result{}, result)
+		e = tx.QuerySingle(ctx, `
+			# encode unset optional
+			SELECT StrFieldHolder { str := <OPTIONAL str>$0 } LIMIT 1`,
+			&result,
+			OptionalStr{},
+		)
+		if e != nil {
+			return e
 		}
+		assert.Equal(t, Result{}, result)
 
 		e = tx.QuerySingle(ctx, `
 			# encode set optional
@@ -2649,16 +2623,14 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL json>$0 }`,
-			&result,
-			CustomOptionalJSON{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalBytes{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL json>$0 }`,
+		&result,
+		CustomOptionalJSON{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalBytes{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -2849,16 +2821,14 @@ func TestSendOptionalEnumMarshaler(t *testing.T) {
 		assert.NoError(t, e)
 		assert.Equal(t, NewOptionalStr("Red"), result.Val)
 
-		if protocolVersion.GTE(protocolVersion0p12) {
-			// encode missing value into optional argument
-			e = tx.QuerySingle(ctx, `
-				SELECT { val := <OPTIONAL Color>$0 }`,
-				&result,
-				CustomOptionalStr{},
-			)
-			assert.NoError(t, e)
-			assert.Equal(t, OptionalStr{}, result.Val)
-		}
+		// encode missing value into optional argument
+		e = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL Color>$0 }`,
+			&result,
+			CustomOptionalStr{},
+		)
+		assert.NoError(t, e)
+		assert.Equal(t, OptionalStr{}, result.Val)
 
 		// encode missing value into required argument
 		e = tx.QuerySingle(ctx, `
@@ -3126,16 +3096,14 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalDuration(0x28dd117280), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL duration>$0 }`,
-			&result,
-			CustomOptionalDuration{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalDuration{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL duration>$0 }`,
+		&result,
+		CustomOptionalDuration{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalDuration{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -3437,16 +3405,14 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
-			&result,
-			CustomOptionalRelativeDuration{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalRelativeDuration{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::relative_duration>$0 }`,
+		&result,
+		CustomOptionalRelativeDuration{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalRelativeDuration{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -3739,16 +3705,14 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-		SELECT { val := <OPTIONAL cal::local_time>$0 }`,
-			&result,
-			CustomOptionalLocalTime{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalLocalTime{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+	SELECT { val := <OPTIONAL cal::local_time>$0 }`,
+		&result,
+		CustomOptionalLocalTime{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalLocalTime{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -4023,16 +3987,14 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL cal::local_date>$0 }`,
-			&result,
-			CustomOptionalLocalDate{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalLocalDate{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::local_date>$0 }`,
+		&result,
+		CustomOptionalLocalDate{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalLocalDate{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -4327,16 +4289,14 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-		SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
-			&result,
-			CustomOptionalLocalDateTime{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalLocalDateTime{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+	SELECT { val := <OPTIONAL cal::local_datetime>$0 }`,
+		&result,
+		CustomOptionalLocalDateTime{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalLocalDateTime{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -4627,16 +4587,14 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL datetime>$0 }`,
-			&result,
-			CustomOptionalDateTime{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalDateTime{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL datetime>$0 }`,
+		&result,
+		CustomOptionalDateTime{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalDateTime{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -5077,16 +5035,14 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalBigInt(big.NewInt(-15000)), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
 		SELECT { val := <OPTIONAL bigint>$0 }`,
-			&result,
-			CustomOptionalBigInt{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalBigInt{}, result.Val)
-	}
+		&result,
+		CustomOptionalBigInt{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalBigInt{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -5351,16 +5307,14 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL decimal>$0 }`,
-			&result,
-			CustomOptionalDecimal{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, CustomOptionalDecimal{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL decimal>$0 }`,
+		&result,
+		CustomOptionalDecimal{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, CustomOptionalDecimal{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -5655,16 +5609,14 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		result.Val,
 	)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL uuid>$0 }`,
-			&result,
-			CustomOptionalUUID{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalUUID{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL uuid>$0 }`,
+		&result,
+		CustomOptionalUUID{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalUUID{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -5890,16 +5842,14 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, NewOptionalInt64(123_456_789_987_654_321), result.Val)
 
-		if protocolVersion.GTE(protocolVersion0p12) {
-			// encode missing value into optional argument
-			err = tx.QuerySingle(ctx, `
-				SELECT { val := <OPTIONAL CustomInt64>$0 }`,
-				&result,
-				CustomOptionalInt64{},
-			)
-			assert.NoError(t, err)
-			assert.Equal(t, OptionalInt64{}, result.Val)
-		}
+		// encode missing value into optional argument
+		err = tx.QuerySingle(ctx, `
+			SELECT { val := <OPTIONAL CustomInt64>$0 }`,
+			&result,
+			CustomOptionalInt64{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, OptionalInt64{}, result.Val)
 
 		// encode missing value into required argument
 		err = tx.QuerySingle(ctx, `
@@ -6357,16 +6307,14 @@ func TestSendOptioanlArray(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-		SELECT { val := <OPTIONAL array<int64>>$0 }`,
-			&result,
-			[]int64(nil),
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, []int64(nil), result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+	SELECT { val := <OPTIONAL array<int64>>$0 }`,
+		&result,
+		[]int64(nil),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, []int64(nil), result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `
@@ -6385,10 +6333,6 @@ type OtherSample struct {
 }
 
 func TestMissingObjectFields(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p11) {
-		t.Skip()
-	}
-
 	ddl := `
 		CREATE TYPE Sample {
 			CREATE PROPERTY simple_scalar -> int64;
@@ -6692,10 +6636,6 @@ func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
 }
 
 func TestSendAndReceiveMemory(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p13) {
-		t.Skip()
-	}
-
 	ctx := context.Background()
 
 	memories := []Memory{
@@ -6792,10 +6732,6 @@ func (m *CustomMemory) UnmarshalEdgeDBMemory(data []byte) error {
 }
 
 func TestReceiveMemoryUnmarshaler(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p13) {
-		t.Skip()
-	}
-
 	ctx := context.Background()
 	var result struct {
 		Val CustomMemory `edgedb:"val"`
@@ -6827,10 +6763,6 @@ func TestReceiveMemoryUnmarshaler(t *testing.T) {
 }
 
 func TestSendMemoryMarshaler(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p13) {
-		t.Skip()
-	}
-
 	ctx := context.Background()
 	var result struct {
 		Val OptionalMemory `edgedb:"val"`
@@ -6898,10 +6830,6 @@ func (m *CustomOptionalMemory) SetMissing(missing bool) {
 func (m CustomOptionalMemory) Missing() bool { return !m.isSet }
 
 func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p13) {
-		t.Skip()
-	}
-
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cfg::memory; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
@@ -6928,10 +6856,6 @@ func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
 }
 
 func TestSendOptionalMemoryMarshaler(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p13) {
-		t.Skip()
-	}
-
 	ctx := context.Background()
 	var result struct {
 		Val OptionalMemory `edgedb:"val"`
@@ -6959,16 +6883,14 @@ func TestSendOptionalMemoryMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, NewOptionalMemory(123_456_789_987_654_321), result.Val)
 
-	if protocolVersion.GTE(protocolVersion0p12) {
-		// encode missing value into optional argument
-		err = client.QuerySingle(ctx, `
-			SELECT { val := <OPTIONAL cfg::memory>$0 }`,
-			&result,
-			CustomOptionalMemory{},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, OptionalMemory{}, result.Val)
-	}
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cfg::memory>$0 }`,
+		&result,
+		CustomOptionalMemory{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalMemory{}, result.Val)
 
 	// encode missing value into required argument
 	err = client.QuerySingle(ctx, `

@@ -17,7 +17,6 @@
 package edgedb
 
 import (
-	"crypto/tls"
 	"fmt"
 
 	"github.com/edgedb/edgedb-go/internal"
@@ -27,12 +26,10 @@ import (
 )
 
 var (
-	protocolVersionMin  = internal.ProtocolVersion{Major: 0, Minor: 9}
-	protocolVersionMax  = internal.ProtocolVersion{Major: 0, Minor: 13}
-	protocolVersion0p10 = internal.ProtocolVersion{Major: 0, Minor: 10}
-	protocolVersion0p11 = internal.ProtocolVersion{Major: 0, Minor: 11}
-	protocolVersion0p12 = internal.ProtocolVersion{Major: 0, Minor: 12}
+	protocolVersionMin  = protocolVersion0p13
+	protocolVersionMax  = protocolVersion1p0
 	protocolVersion0p13 = internal.ProtocolVersion{Major: 0, Minor: 13}
+	protocolVersion1p0  = internal.ProtocolVersion{Major: 1, Minor: 0}
 )
 
 func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
@@ -121,14 +118,6 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 
 	if r.Err != nil {
 		return r.Err
-	}
-
-	_, isTLS := c.soc.conn.(*tls.Conn)
-	if !isTLS && c.protocolVersion.GTE(protocolVersion0p11) {
-		_ = c.soc.Close()
-		return &clientConnectionError{msg: fmt.Sprintf(
-			"server claims to use protocol version %v.%v without using TLS",
-			c.protocolVersion.Major, c.protocolVersion.Minor)}
 	}
 
 	return err

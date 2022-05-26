@@ -67,10 +67,6 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 }
 
 func TestObjectWithoutID(t *testing.T) {
-	if protocolVersion.LT(protocolVersion0p10) {
-		t.Skip("not expected to pass on protocol versions below 0.10")
-	}
-
 	ctx := context.Background()
 
 	type Database struct {

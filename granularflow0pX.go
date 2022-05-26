@@ -31,42 +31,49 @@ import (
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
-func (c *protocolConnection) execGranularFlow(
+func (c *protocolConnection) execGranularFlow0pX(
 	r *buff.Reader,
 	q *gfQuery,
 ) error {
 	ids, ok := c.getCachedTypeIDs(q)
 	if !ok {
-		return c.pesimistic(r, q)
+		return c.pesimistic0pX(r, q)
 	}
 
 	cdcs, err := c.codecsFromIDs(ids, q)
 	if err != nil {
 		return err
 	} else if cdcs == nil {
-		return c.pesimistic(r, q)
+		return c.pesimistic0pX(r, q)
 	}
 
 	// When descriptors are returned the codec ids sent didn't match the
 	// server's.  The codecs should be rebuilt with the new descriptors and the
 	// execution retried.
-	descs, err := c.optimistic(r, q, cdcs)
-	if err != nil {
+	descs, err := c.optimistic0pX(r, q, cdcs)
+	switch {
+	case err == errZeroResults && descs != nil:
+		goto Retry
+	case err != nil:
 		return err
-	} else if descs == nil { // optimistic execute succeeded
+	case descs != nil:
+		// todo: correct error type
+		return fmt.Errorf("unreachable")
+	default: // optimistic execute succeeded
 		return nil
 	}
 
+Retry:
 	cdcs, err = c.codecsFromDescriptors(q, descs)
 	if err != nil {
 		return err
 	}
 
-	return c.execute(r, q, cdcs)
+	return c.execute0pX(r, q, cdcs)
 }
 
-func (c *protocolConnection) pesimistic(r *buff.Reader, q *gfQuery) error {
-	err := c.prepare(r, q)
+func (c *protocolConnection) pesimistic0pX(r *buff.Reader, q *gfQuery) error {
+	err := c.prepare0pX(r, q)
 	if err != nil {
 		return err
 	}
@@ -81,7 +88,7 @@ func (c *protocolConnection) pesimistic(r *buff.Reader, q *gfQuery) error {
 		return err
 	}
 
-	return c.execute(r, q, cdcs)
+	return c.execute0pX(r, q, cdcs)
 }
 
 func (c *protocolConnection) codecsFromIDs(
@@ -159,15 +166,12 @@ func (c *protocolConnection) codecsFromDescriptors(
 	return &cdcs, nil
 }
 
-func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
+func (c *protocolConnection) prepare0pX(r *buff.Reader, q *gfQuery) error {
 	headers := copyHeaders(q.headers)
-
-	if c.protocolVersion.GTE(protocolVersion0p10) {
-		headers[header.ExplicitObjectIDs] = []byte("true")
-	}
+	headers[header.ExplicitObjectIDs] = []byte("true")
 
 	w := buff.NewWriter(c.writeMemory[:0])
-	w.BeginMessage(message.Prepare)
+	w.BeginMessage(message.Parse)
 	writeHeaders(w, headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
@@ -190,7 +194,7 @@ func (c *protocolConnection) prepare(r *buff.Reader, q *gfQuery) error {
 
 	for r.Next(done.Chan) {
 		switch r.MsgType {
-		case message.PrepareComplete:
+		case message.ParseComplete:
 			c.cacheCapabilities(q, decodeHeaders(r))
 			r.Discard(1) // cardinality
 			ids := idPair{in: r.PopUUID(), out: r.PopUUID()}
@@ -262,13 +266,13 @@ func (c *protocolConnection) describe(
 	return descs, err
 }
 
-func (c *protocolConnection) execute(
+func (c *protocolConnection) execute0pX(
 	r *buff.Reader,
 	q *gfQuery,
 	cdcs *codecPair,
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
-	w.BeginMessage(message.Execute)
+	w.BeginMessage(message.Execute0pX)
 	writeHeaders(w, q.headers)
 	w.PushUint32(0) // no statement name
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args"), true); e != nil {
@@ -338,19 +342,16 @@ func (c *protocolConnection) execute(
 	return err
 }
 
-func (c *protocolConnection) optimistic(
+func (c *protocolConnection) optimistic0pX(
 	r *buff.Reader,
 	q *gfQuery,
 	cdcs *codecPair,
 ) (*descPair, error) {
 	headers := copyHeaders(q.headers)
-
-	if c.protocolVersion.GTE(protocolVersion0p10) {
-		headers[header.ExplicitObjectIDs] = []byte("true")
-	}
+	headers[header.ExplicitObjectIDs] = []byte("true")
 
 	w := buff.NewWriter(c.writeMemory[:0])
-	w.BeginMessage(message.OptimisticExecute)
+	w.BeginMessage(message.Execute)
 	writeHeaders(w, headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
@@ -398,8 +399,16 @@ func (c *protocolConnection) optimistic(
 		case message.CommandComplete:
 			decodeCommandCompleteMsg(r)
 		case message.CommandDataDescription:
-			var headers msgHeaders
-			descs, headers, err = c.decodeCommandDataDescriptionMsg(r, q)
+			var (
+				headers msgHeaders
+				e       error
+			)
+
+			descs, headers, e = c.decodeCommandDataDescriptionMsg(r, q)
+			if e != nil {
+				err = wrapAll(err, e)
+			}
+
 			c.cacheCapabilities(q, headers)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
@@ -508,7 +517,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 	}
 	if descs.out.ID != id {
 		return nil, nil, &clientError{msg: fmt.Sprintf(
-			"unexpected out descriptor id: %v", descs.in.ID)}
+			"unexpected out descriptor id: %v", descs.out.ID)}
 	}
 
 	if q.expCard == cardinality.AtMostOne && card == cardinality.Many {
