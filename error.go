@@ -18,7 +18,6 @@ package edgedb
 
 import (
 	"context"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -210,24 +209,6 @@ func wrapAll(errs ...error) error {
 	}
 
 	return err
-}
-
-func isTLSError(err error) bool {
-	var (
-		x509HostnameError              x509.HostnameError
-		x509CertificateInvalidError    x509.CertificateInvalidError
-		x509UnknownAuthorityError      x509.UnknownAuthorityError
-		x509ConstraintViolationError   x509.ConstraintViolationError
-		x509InsecureAlgorithmError     x509.InsecureAlgorithmError
-		x509UnhandledCriticalExtension x509.UnhandledCriticalExtension
-	)
-
-	return (errors.As(err, &x509HostnameError) ||
-		errors.As(err, &x509CertificateInvalidError) ||
-		errors.As(err, &x509UnknownAuthorityError) ||
-		errors.As(err, &x509ConstraintViolationError) ||
-		errors.As(err, &x509InsecureAlgorithmError) ||
-		errors.As(err, &x509UnhandledCriticalExtension))
 }
 
 func isClientConnectionError(err error) bool {

@@ -278,13 +278,13 @@ func TestMain(m *testing.M) {
 	// doesn't shutdown.
 	done := make(chan struct{}, 1)
 	go func() {
-		var result int64
+		var result string
 		for {
 			select {
 			case <-done:
 				return
 			default:
-				_ = client.QuerySingle(ctx, "SELECT 1", &result)
+				_ = client.QuerySingle(ctx, "SELECT 'keep alive'", &result)
 			}
 		}
 	}()

@@ -171,11 +171,9 @@ type optionalBigInt struct {
 	isSet bool
 }
 
-type optionalBigIntDecoder struct {
-	id types.UUID
-}
+type optionalBigIntDecoder struct{}
 
-func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return c.id }
+func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return bigIntID }
 
 func (c *optionalBigIntDecoder) Decode(
 	r *buff.Reader,

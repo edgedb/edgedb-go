@@ -47,7 +47,7 @@ func decodeHeaders(r *buff.Reader) msgHeaders {
 func copyHeaders(h msgHeaders) msgHeaders {
 	cpy := make(msgHeaders, len(h))
 
-	for key, val := range cpy {
+	for key, val := range h {
 		cpy[key] = val
 	}
 

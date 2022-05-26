@@ -36,15 +36,7 @@ func connectAutoClosingSocket(
 
 	conn, err := connectTLS(ctx, cfg)
 	if err != nil {
-		if isTLSError(err) {
-			return nil, err
-		}
-
-		var e error
-		conn, e = connectNet(ctx, cfg.addr)
-		if e != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	return &autoClosingSocket{conn: conn}, nil
@@ -71,19 +63,6 @@ func connectTLS(
 		return nil, &clientConnectionFailedError{
 			msg: "The server doesn't support the edgedb-binary protocol.",
 		}
-	}
-
-	return conn, nil
-}
-
-func connectNet(
-	ctx context.Context,
-	addr dialArgs,
-) (net.Conn, error) {
-	var d net.Dialer
-	conn, err := d.DialContext(ctx, addr.network, addr.address)
-	if err != nil {
-		return nil, wrapNetError(err)
 	}
 
 	return conn, nil

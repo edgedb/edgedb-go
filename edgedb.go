@@ -193,5 +193,10 @@ func (c *protocolConnection) granularFlow(
 		return err
 	}
 
-	return firstError(c.execGranularFlow(r, q), c.releaseReader(r))
+	if c.protocolVersion.GTE(protocolVersion1p0) {
+		err = c.execGranularFlow1pX(r, q)
+	} else {
+		err = c.execGranularFlow0pX(r, q)
+	}
+	return firstError(err, c.releaseReader(r))
 }
