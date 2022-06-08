@@ -90,7 +90,12 @@ func (t *Tx) execute(
 	cmd string,
 	sucessState txStatus,
 ) error {
-	err := t.borrowableConn.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	err = t.borrowableConn.scriptFlow(ctx, q)
 
 	switch err {
 	case nil:
@@ -144,7 +149,7 @@ func (t *Tx) Subtx(ctx context.Context, action SubtxBlock) error {
 	return runSubtx(ctx, action, t)
 }
 
-func (t *Tx) scriptFlow(ctx context.Context, q sfQuery) error {
+func (t *Tx) scriptFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
 	}
@@ -152,7 +157,7 @@ func (t *Tx) scriptFlow(ctx context.Context, q sfQuery) error {
 	return t.borrowableConn.scriptFlow(ctx, q)
 }
 
-func (t *Tx) granularFlow(ctx context.Context, q *gfQuery) error {
+func (t *Tx) granularFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted(q.method); e != nil {
 		return e
 	}
@@ -161,11 +166,17 @@ func (t *Tx) granularFlow(ctx context.Context, q *gfQuery) error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (t *Tx) Execute(ctx context.Context, cmd string) error {
-	return t.scriptFlow(ctx, sfQuery{
-		cmd:     cmd,
-		headers: t.headers(),
-	})
+func (t *Tx) Execute(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
+	q, err := newQuery("Execute", cmd, args, t.headers(), nil)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 // Query runs a query and returns the results.

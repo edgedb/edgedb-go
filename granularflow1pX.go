@@ -24,13 +24,14 @@ import (
 	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
+	"github.com/edgedb/edgedb-go/internal/format"
 	"github.com/edgedb/edgedb-go/internal/header"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
 func (c *protocolConnection) execGranularFlow1pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 ) error {
 	ids, ok := c.getCachedTypeIDs(q)
 	if !ok {
@@ -47,13 +48,13 @@ func (c *protocolConnection) execGranularFlow1pX(
 	return c.optimistic1pX(r, q, cdcs)
 }
 
-func (c *protocolConnection) pesimistic1pX(r *buff.Reader, q *gfQuery) error {
+func (c *protocolConnection) pesimistic1pX(r *buff.Reader, q *query) error {
 	desc, err := c.parse1pX(r, q)
 	if err != nil {
 		return err
 	}
 
-	cdcs, err := c.codecsFromDescriptors(q, desc)
+	cdcs, err := c.codecsFromDescriptors1pX(q, desc)
 	if err != nil {
 		return err
 	}
@@ -64,7 +65,7 @@ func (c *protocolConnection) pesimistic1pX(r *buff.Reader, q *gfQuery) error {
 
 func (c *protocolConnection) optimistic1pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 	cdcs *codecPair,
 ) error {
 	// When descriptors are returned the codec ids sent didn't match the
@@ -84,7 +85,7 @@ func (c *protocolConnection) optimistic1pX(
 	}
 
 Retry:
-	cdcs, err = c.codecsFromDescriptors(q, descs)
+	cdcs, err = c.codecsFromDescriptors1pX(q, descs)
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ Retry:
 
 func (c *protocolConnection) parse1pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 ) (*descPair, error) {
 	headers := copyHeaders(q.headers)
 	headers[header.ExplicitObjectIDs] = []byte("true")
@@ -155,7 +156,7 @@ func (c *protocolConnection) parse1pX(
 
 func (c *protocolConnection) decodeParseCompleteMsg1pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 ) (*descPair, error) {
 	c.cacheCapabilities(q, decodeHeaders(r))
 	card := r.PopUint8()
@@ -212,7 +213,7 @@ func (c *protocolConnection) decodeParseCompleteMsg1pX(
 
 func (c *protocolConnection) execute1pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 	cdcs *codecPair,
 ) (*descPair, error) {
 	headers := copyHeaders(q.headers)
@@ -293,9 +294,50 @@ func (c *protocolConnection) execute1pX(
 		return nil, r.Err
 	}
 
-	if !q.flat() {
+	if !q.flat() && q.fmt != format.Null {
 		q.out.Set(tmp)
 	}
 
 	return descs, err
+}
+
+func (c *protocolConnection) codecsFromDescriptors1pX(
+	q *query,
+	descs *descPair,
+) (*codecPair, error) {
+	var cdcs codecPair
+	var err error
+	cdcs.in, err = codecs.BuildEncoder(descs.in, c.protocolVersion)
+	if err != nil {
+		return nil, &invalidArgumentError{msg: err.Error()}
+	}
+
+	if q.fmt == format.JSON {
+		cdcs.out = codecs.JSONBytes
+	} else {
+		var path codecs.Path
+		if q.fmt == format.Null {
+			// There is no outType value for Null output format queries.
+			path = "null"
+		} else {
+			path = codecs.Path(q.outType.String())
+		}
+
+		cdcs.out, err = codecs.BuildDecoder(descs.out, q.outType, path)
+		if err != nil {
+			err = fmt.Errorf(
+				"the \"out\" argument does not match query schema: %v",
+				err,
+			)
+			return nil, &invalidArgumentError{msg: err.Error()}
+		}
+	}
+
+	c.inCodecCache.Put(cdcs.in.DescriptorID(), cdcs.in)
+	c.outCodecCache.Put(
+		codecKey{ID: cdcs.out.DescriptorID(), Type: q.outType},
+		cdcs.out,
+	)
+
+	return &cdcs, nil
 }

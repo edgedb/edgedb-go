@@ -358,15 +358,19 @@ func (p *Client) Close() error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (p *Client) Execute(ctx context.Context, cmd string) error {
+func (p *Client) Execute(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
 
-	q := sfQuery{
-		cmd:     cmd,
-		headers: conn.headers(),
+	q, err := newQuery("Execute", cmd, args, conn.headers(), nil)
+	if err != nil {
+		return err
 	}
 
 	err = conn.scriptFlow(ctx, q)

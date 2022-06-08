@@ -64,7 +64,7 @@ func writeHeaders(w *buff.Writer, headers msgHeaders) {
 	}
 }
 
-func (c *protocolConnection) execScriptFlow(r *buff.Reader, q sfQuery) error {
+func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
 	writeHeaders(w, q.headers)

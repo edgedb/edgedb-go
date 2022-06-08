@@ -27,16 +27,9 @@ import (
 	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
-// sfQuery is a script flow query
-type sfQuery struct {
-	cmd     string
-	headers msgHeaders
-}
-
 type msgHeaders map[uint16][]byte
 
-// gfQuery is a granular flow query
-type gfQuery struct {
+type query struct {
 	out     reflect.Value
 	outType reflect.Type
 	method  string
@@ -53,13 +46,22 @@ func newQuery(
 	args []interface{},
 	headers msgHeaders,
 	out interface{},
-) (*gfQuery, error) {
+) (*query, error) {
 	var (
 		expCard uint8
 		frmt    uint8
 	)
 
 	switch method {
+	case "Execute":
+		return &query{
+			method:  method,
+			cmd:     cmd,
+			fmt:     format.Null,
+			expCard: cardinality.Many,
+			args:    args,
+			headers: headers,
+		}, nil
 	case "Query":
 		expCard = cardinality.Many
 		frmt = format.Binary
@@ -76,7 +78,7 @@ func newQuery(
 		return nil, fmt.Errorf("unknown query method %q", method)
 	}
 
-	q := gfQuery{
+	q := query{
 		method:  method,
 		cmd:     cmd,
 		fmt:     frmt,
@@ -97,7 +99,7 @@ func newQuery(
 	}
 
 	if err != nil {
-		return &gfQuery{}, &interfaceError{err: err}
+		return &query{}, &interfaceError{err: err}
 	}
 
 	q.outType = q.out.Type()
@@ -108,7 +110,7 @@ func newQuery(
 	return &q, nil
 }
 
-func (q *gfQuery) flat() bool {
+func (q *query) flat() bool {
 	if q.expCard != cardinality.Many {
 		return true
 	}
@@ -122,7 +124,7 @@ func (q *gfQuery) flat() bool {
 
 type queryable interface {
 	headers() msgHeaders
-	granularFlow(context.Context, *gfQuery) error
+	granularFlow(context.Context, *query) error
 }
 
 type unseter interface {

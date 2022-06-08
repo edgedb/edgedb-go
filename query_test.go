@@ -158,12 +158,14 @@ func TestParseAllMessagesAfterError(t *testing.T) {
 
 	// cause error during prepare
 	var number float64
-	err := client.QuerySingle(ctx, "SELECT 1 / $0", &number, int64(5))
-	expected := `edgedb.QueryError: missing a type cast before the parameter
-query:1:12
+	err := client.QuerySingle(ctx, "SELECT 1 / <str>$0", &number, int64(5))
 
-SELECT 1 / $0
-           ^ error`
+	// nolint:lll
+	expected := `edgedb.InvalidTypeError: operator '/' cannot be applied to operands of type 'std::int64' and 'std::str'
+query:1:8
+
+SELECT 1 / <str>$0
+       ^ Consider using an explicit type cast or a conversion function.`
 	assert.EqualError(t, err, expected)
 
 	// cause erroy during execute
@@ -373,4 +375,38 @@ func TestNilResultValue(t *testing.T) {
 	err := client.Query(ctx, "SELECT 1", nil)
 	assert.EqualError(t, err, "edgedb.InterfaceError: "+
 		"the \"out\" argument must be a pointer, got untyped nil")
+}
+
+func TestExecutWithArgs(t *testing.T) {
+	ctx := context.Background()
+
+	conn, err := client.acquire(ctx)
+	require.NoError(t, err)
+	defer client.release(conn, nil) // nolint:errcheck
+	if conn.conn.protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	err = client.Execute(ctx, "select <int64>$0; select <int64>$0;", int64(1))
+	assert.NoError(t, err)
+
+	err = client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
+		err = tx.Execute(ctx, "select <int64>$0; select <int64>$0;", int64(1))
+		assert.NoError(t, err)
+
+		err = tx.Subtx(ctx, func(ctx context.Context, subtx *Subtx) error {
+			err = subtx.Execute(
+				ctx,
+				"select <int64>$0; select <int64>$0;",
+				int64(1),
+			)
+			assert.NoError(t, err)
+
+			return nil
+		})
+		assert.NoError(t, err)
+
+		return nil
+	})
+	assert.NoError(t, err)
 }

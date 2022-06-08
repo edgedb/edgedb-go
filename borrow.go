@@ -90,7 +90,7 @@ func (c *borrowableConn) headers() msgHeaders {
 	return msgHeaders{header.AllowCapabilities: noTxCapabilities}
 }
 
-func (c *borrowableConn) scriptFlow(ctx context.Context, q sfQuery) error {
+func (c *borrowableConn) scriptFlow(ctx context.Context, q *query) error {
 	if e := c.assertUnborrowed(); e != nil {
 		return e
 	}
@@ -98,7 +98,7 @@ func (c *borrowableConn) scriptFlow(ctx context.Context, q sfQuery) error {
 	return c.conn.scriptFlow(ctx, q)
 }
 
-func (c *borrowableConn) granularFlow(ctx context.Context, q *gfQuery) error {
+func (c *borrowableConn) granularFlow(ctx context.Context, q *query) error {
 	if e := c.assertUnborrowed(); e != nil {
 		return e
 	}

@@ -33,7 +33,7 @@ import (
 
 func (c *protocolConnection) execGranularFlow0pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 ) error {
 	ids, ok := c.getCachedTypeIDs(q)
 	if !ok {
@@ -64,7 +64,7 @@ func (c *protocolConnection) execGranularFlow0pX(
 	}
 
 Retry:
-	cdcs, err = c.codecsFromDescriptors(q, descs)
+	cdcs, err = c.codecsFromDescriptors0pX(q, descs)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ Retry:
 	return c.execute0pX(r, q, cdcs)
 }
 
-func (c *protocolConnection) pesimistic0pX(r *buff.Reader, q *gfQuery) error {
+func (c *protocolConnection) pesimistic0pX(r *buff.Reader, q *query) error {
 	err := c.prepare0pX(r, q)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (c *protocolConnection) pesimistic0pX(r *buff.Reader, q *gfQuery) error {
 		return err
 	}
 
-	cdcs, err := c.codecsFromDescriptors(q, descs)
+	cdcs, err := c.codecsFromDescriptors0pX(q, descs)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (c *protocolConnection) pesimistic0pX(r *buff.Reader, q *gfQuery) error {
 
 func (c *protocolConnection) codecsFromIDs(
 	ids *idPair,
-	q *gfQuery,
+	q *query,
 ) (*codecPair, error) {
 	var err error
 
@@ -132,8 +132,8 @@ func (c *protocolConnection) codecsFromIDs(
 	return &codecPair{in: in.(codecs.Encoder), out: out.(codecs.Decoder)}, nil
 }
 
-func (c *protocolConnection) codecsFromDescriptors(
-	q *gfQuery,
+func (c *protocolConnection) codecsFromDescriptors0pX(
+	q *query,
 	descs *descPair,
 ) (*codecPair, error) {
 	var cdcs codecPair
@@ -166,7 +166,7 @@ func (c *protocolConnection) codecsFromDescriptors(
 	return &cdcs, nil
 }
 
-func (c *protocolConnection) prepare0pX(r *buff.Reader, q *gfQuery) error {
+func (c *protocolConnection) prepare0pX(r *buff.Reader, q *query) error {
 	headers := copyHeaders(q.headers)
 	headers[header.ExplicitObjectIDs] = []byte("true")
 
@@ -220,7 +220,7 @@ func (c *protocolConnection) prepare0pX(r *buff.Reader, q *gfQuery) error {
 
 func (c *protocolConnection) describe(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 ) (*descPair, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.DescribeStatement)
@@ -268,7 +268,7 @@ func (c *protocolConnection) describe(
 
 func (c *protocolConnection) execute0pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 	cdcs *codecPair,
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
@@ -344,7 +344,7 @@ func (c *protocolConnection) execute0pX(
 
 func (c *protocolConnection) optimistic0pX(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 	cdcs *codecPair,
 ) (*descPair, error) {
 	headers := copyHeaders(q.headers)
@@ -450,7 +450,7 @@ func decodeReadyForCommandMsg(r *buff.Reader) {
 
 func decodeDataMsg(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 	cdcs *codecPair,
 ) (reflect.Value, bool, error) {
 	elmCount := r.PopUint16()
@@ -485,7 +485,7 @@ func decodeDataMsg(
 
 func (c *protocolConnection) decodeCommandDataDescriptionMsg(
 	r *buff.Reader,
-	q *gfQuery,
+	q *query,
 ) (*descPair, msgHeaders, error) {
 	headers := decodeHeaders(r)
 	card := r.PopUint8()

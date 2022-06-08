@@ -82,7 +82,7 @@ type queryKey struct {
 	outType reflect.Type
 }
 
-func makeKey(q *gfQuery) queryKey {
+func makeKey(q *query) queryKey {
 	return queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
@@ -91,7 +91,7 @@ func makeKey(q *gfQuery) queryKey {
 	}
 }
 
-func (c *protocolConnection) getCachedTypeIDs(q *gfQuery) (*idPair, bool) {
+func (c *protocolConnection) getCachedTypeIDs(q *query) (*idPair, bool) {
 	if val, ok := c.typeIDCache.Get(makeKey(q)); ok {
 		x := val.(idPair)
 		return &x, true
@@ -100,12 +100,12 @@ func (c *protocolConnection) getCachedTypeIDs(q *gfQuery) (*idPair, bool) {
 	return nil, false
 }
 
-func (c *protocolConnection) cacheTypeIDs(q *gfQuery, ids idPair) {
+func (c *protocolConnection) cacheTypeIDs(q *query, ids idPair) {
 	c.typeIDCache.Put(makeKey(q), ids)
 }
 
 func (c *protocolConnection) cacheCapabilities(
-	q *gfQuery,
+	q *query,
 	headers msgHeaders,
 ) {
 	if capabilities, ok := headers[header.Capabilities]; ok {
@@ -114,7 +114,7 @@ func (c *protocolConnection) cacheCapabilities(
 	}
 }
 
-func (c *reconnectingConn) getCachedCapabilities(q *gfQuery) (uint64, bool) {
+func (c *reconnectingConn) getCachedCapabilities(q *query) (uint64, bool) {
 	if val, ok := c.capabilitiesCache.Get(makeKey(q)); ok {
 		x := val.(uint64)
 		return x, true
