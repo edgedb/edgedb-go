@@ -85,7 +85,7 @@ func (c *reconnectingConn) ensureConnection(ctx context.Context) error {
 	return c.reconnect(ctx, false)
 }
 
-func (c *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
+func (c *reconnectingConn) scriptFlow(ctx context.Context, q *query) error {
 	if e := c.ensureConnection(ctx); e != nil {
 		return e
 	}
@@ -95,7 +95,7 @@ func (c *reconnectingConn) scriptFlow(ctx context.Context, q sfQuery) error {
 
 func (c *reconnectingConn) granularFlow(
 	ctx context.Context,
-	q *gfQuery,
+	q *query,
 ) error {
 	if e := c.ensureConnection(ctx); e != nil {
 		return e

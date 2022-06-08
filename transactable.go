@@ -28,62 +28,7 @@ type transactableConn struct {
 	retryOpts RetryOptions
 }
 
-// Execute an EdgeQL command (or commands).
-func (c *transactableConn) Execute(ctx context.Context, cmd string) error {
-	return c.scriptFlow(ctx, sfQuery{
-		cmd:     cmd,
-		headers: c.headers(),
-	})
-}
-
-// Query runs a query and returns the results.
-func (c *transactableConn) Query(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return runQuery(ctx, c, "Query", cmd, out, args)
-}
-
-// QuerySingle runs a singleton-returning query and returns its element.
-// If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
-func (c *transactableConn) QuerySingle(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return runQuery(ctx, c, "QuerySingle", cmd, out, args)
-}
-
-// QueryJSON runs a query and return the results as JSON.
-func (c *transactableConn) QueryJSON(
-	ctx context.Context,
-	cmd string,
-	out *[]byte,
-	args ...interface{},
-) error {
-	return runQuery(ctx, c, "QueryJSON", cmd, out, args)
-}
-
-// QuerySingleJSON runs a singleton-returning query.
-// If the query executes successfully but doesn't have a result
-// a NoDataError is returned.
-func (c *transactableConn) QuerySingleJSON(
-	ctx context.Context,
-	cmd string,
-	out interface{},
-	args ...interface{},
-) error {
-	return runQuery(ctx, c, "QuerySingleJSON", cmd, out, args)
-}
-
-func (c *transactableConn) granularFlow(
-	ctx context.Context,
-	q *gfQuery,
-) error {
+func (c *transactableConn) granularFlow(ctx context.Context, q *query) error {
 	var (
 		err    error
 		edbErr Error

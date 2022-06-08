@@ -73,7 +73,12 @@ func (t *Subtx) declare(ctx context.Context) error {
 
 	t.name = t.nextSavepointName()
 	cmd := "DECLARE SAVEPOINT " + t.name
-	return t.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 func (t *Subtx) release(ctx context.Context) error {
@@ -82,7 +87,12 @@ func (t *Subtx) release(ctx context.Context) error {
 	}
 
 	cmd := "RELEASE SAVEPOINT " + t.name
-	return t.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 func (t *Subtx) rollback(ctx context.Context) error {
@@ -91,7 +101,12 @@ func (t *Subtx) rollback(ctx context.Context) error {
 	}
 
 	cmd := "ROLLBACK TO SAVEPOINT " + t.name
-	return t.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 func (t *Subtx) txOptions() TxOptions { return t.options }
@@ -106,18 +121,24 @@ func (t *Subtx) Subtx(ctx context.Context, action SubtxBlock) error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (t *Subtx) Execute(ctx context.Context, cmd string) error {
+func (t *Subtx) Execute(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
 	}
 
-	return t.scriptFlow(ctx, sfQuery{
-		cmd:     cmd,
-		headers: t.headers(),
-	})
+	q, err := newQuery("Execute", cmd, args, t.headers(), nil)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
-func (t *Subtx) granularFlow(ctx context.Context, q *gfQuery) error {
+func (t *Subtx) granularFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted(q.method); e != nil {
 		return e
 	}
