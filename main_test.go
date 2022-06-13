@@ -251,9 +251,9 @@ func TestMain(m *testing.M) {
 				SET password := 'secret';
 			};
 		`)
-	executeOrPanic("CONFIGURE SYSTEM RESET Auth;")
+	executeOrPanic("CONFIGURE INSTANCE RESET Auth;")
 	executeOrPanic(`
-			CONFIGURE SYSTEM INSERT Auth {
+			CONFIGURE INSTANCE INSERT Auth {
 				comment := "no password",
 				priority := 1,
 				method := (INSERT Trust),
@@ -261,7 +261,7 @@ func TestMain(m *testing.M) {
 			};
 		`)
 	executeOrPanic(`
-			CONFIGURE SYSTEM INSERT Auth {
+			CONFIGURE INSTANCE INSERT Auth {
 				comment := "password required",
 				priority := 0,
 				method := (INSERT SCRAM),
