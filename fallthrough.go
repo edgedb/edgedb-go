@@ -19,8 +19,10 @@ package edgedb
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
@@ -35,10 +37,57 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 	switch r.MsgType {
 	case message.ParameterStatus:
 		name := r.PopString()
-		value := r.PopBytes()
-		valueCopy := make([]byte, len(value))
-		copy(valueCopy, value)
-		c.serverSettings.Set(name, valueCopy)
+		switch name {
+		case "session_state_description":
+			outerSlice := r.PopSlice(r.PopUint32())
+			id := outerSlice.PopUUID() // descriptor type id
+
+			innerSlice := outerSlice.PopSlice(outerSlice.PopUint32())
+			desc, err := descriptor.PopStateDescriptor(
+				innerSlice,
+				c.protocolVersion,
+			)
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding Parameter Status message: %w",
+					err,
+				)}
+			}
+
+			if desc.ID != id {
+				return &binaryProtocolError{
+					msg: "miss matched type descriptor IDs",
+				}
+			}
+
+			c.serverSettings.Set(name, desc)
+		case "pgaddr":
+			r.PopBytes() // ignore for now
+		case "suggested_pool_concurrency":
+			val, err := strconv.Atoi(string(r.PopBytes()))
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"parsing %v: %w",
+					name,
+					err,
+				)}
+			}
+
+			c.serverSettings.Set(name, val)
+		case "system_config":
+			cfg, err := parseSystemConfig(r.PopBytes(), c.protocolVersion)
+			if err != nil {
+				return err
+			}
+
+			c.serverSettings.Set(name, cfg)
+		default:
+			r.PopBytes()
+			return &binaryProtocolError{msg: fmt.Sprintf(
+				"unknown Parameter Status name: %q",
+				name,
+			)}
+		}
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()

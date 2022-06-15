@@ -22,7 +22,6 @@ import (
 	"log"
 	"reflect"
 	"runtime"
-	"strconv"
 	"sync"
 	"time"
 	"unsafe"
@@ -152,11 +151,11 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 		if p.concurrency == 0 {
 			// The user did not set Concurrency in provided Options.
 			// See if the server sends a suggested max size.
-			suggested, err := strconv.Atoi(
-				string(conn.cfg.serverSettings.Get(
-					"suggested_pool_concurrency")))
-			if err == nil {
-				p.concurrency = suggested
+			suggested, ok := conn.cfg.serverSettings.GetOk(
+				"suggested_pool_concurrency",
+			)
+			if ok {
+				p.concurrency = suggested.(int)
 			} else {
 				p.concurrency = defaultConcurrency
 			}
@@ -255,13 +254,8 @@ func (p *Client) release(conn *transactableConn, err error) error {
 
 	timeout := defaultIdleConnectionTimeout
 	if b, ok := p.serverSettings.GetOk("system_config"); ok {
-		x, err := parseSystemConfig(b, conn.conn.protocolVersion)
-		if err != nil {
-			log.Println("error parsing system_config:", err)
-		} else {
-			// convert milliseconds to nanoseconds
-			timeout = time.Duration(x.SessionIdleTimeout * 1_000)
-		}
+		x := b.(systemConfig)
+		timeout = time.Duration(x.SessionIdleTimeout * 1_000)
 	}
 
 	// 0 or less disables the idle timeout

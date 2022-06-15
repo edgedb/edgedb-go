@@ -313,7 +313,7 @@ func (c *protocolConnection) execute0pX(
 				err = nil
 			}
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg0pX(r)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -397,7 +397,7 @@ func (c *protocolConnection) optimistic0pX(
 				err = nil
 			}
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg0pX(r)
 		case message.CommandDataDescription:
 			var (
 				headers msgHeaders
@@ -438,7 +438,7 @@ func (c *protocolConnection) optimistic0pX(
 	return descs, err
 }
 
-func decodeCommandCompleteMsg(r *buff.Reader) {
+func decodeCommandCompleteMsg0pX(r *buff.Reader) {
 	ignoreHeaders(r)
 	r.PopBytes() // command status
 }

@@ -57,6 +57,9 @@ const (
 
 	// Enum represents the enum descriptor type.
 	Enum
+
+	// ConfigObject is only used at the protocol level to send state
+	ConfigObject
 )
 
 // Descriptor is a type descriptor
@@ -140,6 +143,76 @@ func Pop(
 	return descriptors[len(descriptors)-1], nil
 }
 
+// PopStateDescriptor builds a descriptor tree from a ParameterStatus
+// session_state_description
+func PopStateDescriptor(
+	r *buff.Reader,
+	version internal.ProtocolVersion,
+) (Descriptor, error) {
+	if len(r.Buf) == 0 {
+		return Descriptor{Type: Tuple, ID: IDZero}, nil
+	}
+
+	descriptors := []Descriptor{}
+	for len(r.Buf) > 0 {
+		typ := Type(r.PopUint8())
+		id := r.PopUUID()
+		var desc Descriptor
+
+		switch typ {
+		case Set:
+			fields := []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}
+			desc = Descriptor{Set, id, fields}
+		case Object:
+			fields, err := objectFields(r, descriptors, version)
+			if err != nil {
+				return Descriptor{}, err
+			}
+			desc = Descriptor{Object, id, fields}
+		case BaseScalar:
+			desc = Descriptor{BaseScalar, id, nil}
+		case Scalar:
+			desc = descriptors[r.PopUint16()]
+		case Tuple:
+			fields := tupleFields(r, descriptors)
+			desc = Descriptor{Tuple, id, fields}
+		case NamedTuple:
+			fields := namedTupleFields(r, descriptors)
+			desc = Descriptor{typ, id, fields}
+		case Array:
+			fields := []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}
+			err := assertArrayDimensions(r)
+			if err != nil {
+				return Descriptor{}, err
+			}
+			desc = Descriptor{typ, id, fields}
+		case Enum:
+			discardEnumMemberNames(r)
+			desc = Descriptor{typ, id, nil}
+		case ConfigObject:
+			fields := configObjectFields(r, descriptors)
+			desc = Descriptor{ConfigObject, id, fields}
+		default:
+			if 0x80 <= typ && typ <= 0xff {
+				// ignore unknown type annotations
+				r.PopBytes()
+				break
+			}
+
+			return Descriptor{}, fmt.Errorf(
+				"unknown descriptor type 0x%x", typ)
+		}
+
+		descriptors = append(descriptors, desc)
+	}
+
+	return descriptors[len(descriptors)-1], nil
+}
+
 func objectFields(
 	r *buff.Reader,
 	descriptors []Descriptor,
@@ -178,6 +251,23 @@ func objectFields(
 	}
 
 	return fields, nil
+}
+
+func configObjectFields(
+	r *buff.Reader,
+	descriptors []Descriptor,
+) []*Field {
+	n := int(r.PopUint16())
+	fields := make([]*Field, n)
+
+	for i := 0; i < n; i++ {
+		fields[i] = &Field{
+			Name: r.PopString(),
+			Desc: descriptors[r.PopUint16()],
+		}
+	}
+
+	return fields
 }
 
 func tupleFields(r *buff.Reader, descriptors []Descriptor) []*Field {

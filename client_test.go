@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"errors"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -90,10 +89,10 @@ func TestConnectClientZeroConcurrency(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, p.EnsureConnected(ctx))
 
-	expected, err := strconv.Atoi(
-		string(client.cfg.serverSettings.Get("suggested_pool_concurrency")))
-	if err != nil {
-		expected = defaultConcurrency
+	expected := defaultConcurrency
+	val, ok := client.cfg.serverSettings.GetOk("suggested_pool_concurrency")
+	if ok {
+		expected = val.(int)
 	}
 	require.Equal(t, expected, p.concurrency)
 

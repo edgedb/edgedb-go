@@ -78,8 +78,7 @@ func (c *protocolConnection) optimistic1pX(
 	case err != nil:
 		return err
 	case descs != nil:
-		// todo: correct error type
-		return fmt.Errorf("unreachable")
+		return &binaryProtocolError{msg: "unreachable"}
 	default:
 		return nil
 	}
@@ -106,12 +105,26 @@ func (c *protocolConnection) parse1pX(
 	headers := copyHeaders(q.headers)
 	headers[header.ExplicitObjectIDs] = []byte("true")
 
+	stateEncoder, ok := c.serverSettings.GetOk("session_state_description")
+	if !ok {
+		return nil, &binaryProtocolError{
+			msg: "session_state_description was not received",
+		}
+	}
+
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Parse)
 	writeHeaders(w, headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
+
+	// todo: this seems wrong. Why does this work?
+	w.PushUUID(stateEncoder.(descriptor.Descriptor).ID)
+	w.PushUint16(1)
+	w.PushUint32(4)
+	w.PushUint32(0)
+
 	w.EndMessage()
 
 	w.BeginMessage(message.Sync)
@@ -219,12 +232,25 @@ func (c *protocolConnection) execute1pX(
 	headers := copyHeaders(q.headers)
 	headers[header.ExplicitObjectIDs] = []byte("true")
 
+	stateDescriptor, ok := c.serverSettings.GetOk("session_state_description")
+	if !ok {
+		return nil, &binaryProtocolError{
+			msg: "session_state_description was not recived",
+		}
+	}
+
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
 	writeHeaders(w, headers)
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
+
+	w.PushUUID(stateDescriptor.(descriptor.Descriptor).ID)
+	w.PushUint16(1)
+	w.PushUint32(4)
+	w.PushUint32(0)
+
 	w.PushUUID(cdcs.in.DescriptorID())
 	w.PushUUID(cdcs.out.DescriptorID())
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args"), true); e != nil {
@@ -266,7 +292,7 @@ func (c *protocolConnection) execute1pX(
 				err = nil
 			}
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg1pX(r)
 		case message.CommandDataDescription:
 			fallthrough
 		case message.ParseComplete:
@@ -299,6 +325,16 @@ func (c *protocolConnection) execute1pX(
 	}
 
 	return descs, err
+}
+
+func decodeCommandCompleteMsg1pX(r *buff.Reader) {
+	ignoreHeaders(r)
+	r.PopBytes() // command status
+	if len(r.Buf) != 0 {
+		r.PopUUID()
+		r.PopUint16()
+		r.PopBytes()
+	}
 }
 
 func (c *protocolConnection) codecsFromDescriptors1pX(

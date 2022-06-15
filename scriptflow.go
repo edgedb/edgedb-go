@@ -81,7 +81,7 @@ func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg0pX(r)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
