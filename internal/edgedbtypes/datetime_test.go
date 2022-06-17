@@ -18,8 +18,10 @@ package edgedbtypes
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocalDateTimeString(t *testing.T) {
@@ -179,6 +181,114 @@ func TestNewLocalTimeErrors(t *testing.T) {
 			assert.Panics(t, func() {
 				_ = NewLocalTime(s.h, s.m, s.s, s.us)
 			})
+		})
+	}
+}
+
+func TestParseDuration(t *testing.T) {
+	samples := []struct {
+		str string
+		d   Duration
+	}{
+		{"PT1S", Duration(time.Second / 1_000)},
+		{"PT1.0S", Duration(time.Second / 1_000)},
+		{"PT1.S", Duration(time.Second / 1_000)},
+		{"PT.1S", Duration(time.Second / 10 / 1_000)},
+		{"PT1M", Duration(time.Minute / 1_000)},
+		{"PT1.0M", Duration(time.Minute / 1_000)},
+		{"PT1.M", Duration(time.Minute / 1_000)},
+		{"PT.1M", Duration(time.Minute / 10 / 1_000)},
+		{"PT1H", Duration(time.Hour / 1_000)},
+		{"PT1.0H", Duration(time.Hour / 1_000)},
+		{"PT1.H", Duration(time.Hour / 1_000)},
+		{"PT.1H", Duration(time.Hour / 10 / 1_000)},
+		{"PT2H46M39S", Duration(9999 * time.Second / 1_000)},
+		{"PT2.0H46.0M39.0S", Duration(9999 * time.Second / 1_000)},
+
+		{"1s", Duration(time.Second / 1_000)},
+		{"1.0s", Duration(time.Second / 1_000)},
+		{".1s", Duration(time.Second / 10 / 1_000)},
+		{"1ms", Duration(time.Millisecond / 1_000)},
+		{"1.0ms", Duration(time.Millisecond / 1_000)},
+		{".1ms", Duration(time.Millisecond / 10 / 1_000)},
+		{"1us", Duration(time.Microsecond / 1_000)},
+		{"1.0us", Duration(time.Microsecond / 1_000)},
+		{".1us", Duration(time.Microsecond / 10 / 1_000)},
+		{"1m", Duration(time.Minute / 1_000)},
+		{"1.0m", Duration(time.Minute / 1_000)},
+		{".1m", Duration(time.Minute / 10 / 1_000)},
+		{"1h", Duration(time.Hour / 1_000)},
+		{"1.0h", Duration(time.Hour / 1_000)},
+		{".1h", Duration(time.Hour / 10 / 1_000)},
+		{"2h46m39s", Duration(9999 * time.Second / 1_000)},
+		{"2h 46m 39s", Duration(9999 * time.Second / 1_000)},
+		{"2  h  46  m  39  s", Duration(9999 * time.Second / 1_000)},
+		{"2.0h46.0m39.0s", Duration(9999 * time.Second / 1_000)},
+		{"2.0h 46.0m 39.0s", Duration(9999 * time.Second / 1_000)},
+		{"2.0  h  46.0  m  39.0  s", Duration(9999 * time.Second / 1_000)},
+
+		{"1second", Duration(time.Second / 1_000)},
+		{"1.0second", Duration(time.Second / 1_000)},
+		{".1second", Duration(time.Second / 10 / 1_000)},
+		{"1minute", Duration(time.Minute / 1_000)},
+		{"1.0minute", Duration(time.Minute / 1_000)},
+		{".1minute", Duration(time.Minute / 10 / 1_000)},
+		{"1hour", Duration(time.Hour / 1_000)},
+		{"1.0hour", Duration(time.Hour / 1_000)},
+		{".1hour", Duration(time.Hour / 10 / 1_000)},
+		{"2hour46minute39second", Duration(9999 * time.Second / 1_000)},
+		{"2hour 46minute 39second", Duration(9999 * time.Second / 1_000)},
+		{
+			"2  hour  46  minute  39  second",
+			Duration(9999 * time.Second / 1_000),
+		},
+		{"2.0hour46.0minute39.0second", Duration(9999 * time.Second / 1_000)},
+		{
+			"2.0hour 46.0minute 39.0second",
+			Duration(9999 * time.Second / 1_000),
+		},
+		{
+			"2.0  hour  46.0  minute  39.0  second",
+			Duration(9999 * time.Second / 1_000),
+		},
+		{
+			"39.0\tsecond 2.0  hour  46.0  minute",
+			Duration(9999 * time.Second / 1_000),
+		},
+
+		{"1seconds", Duration(time.Second / 1_000)},
+		{"1.0seconds", Duration(time.Second / 1_000)},
+		{".1seconds", Duration(time.Second / 10 / 1_000)},
+		{"1minutes", Duration(time.Minute / 1_000)},
+		{"1.0minutes", Duration(time.Minute / 1_000)},
+		{".1minutes", Duration(time.Minute / 10 / 1_000)},
+		{"1hours", Duration(time.Hour / 1_000)},
+		{"1.0hours", Duration(time.Hour / 1_000)},
+		{".1hours", Duration(time.Hour / 10 / 1_000)},
+		{"2hours46minutes39seconds", Duration(9999 * time.Second / 1_000)},
+		{"2hours 46minutes 39seconds", Duration(9999 * time.Second / 1_000)},
+		{
+			"2  hours  46  minutes  39  seconds",
+			Duration(9999 * time.Second / 1_000),
+		},
+		{
+			"2.0hours46.0minutes39.0seconds",
+			Duration(9999 * time.Second / 1_000),
+		},
+		{
+			"2.0hours 46.0minutes 39.0seconds",
+			Duration(9999 * time.Second / 1_000),
+		},
+		{
+			"2.0  hours  46.0  minutes  39.0  seconds",
+			Duration(9999 * time.Second / 1_000),
+		},
+	}
+	for _, s := range samples {
+		t.Run(s.str, func(t *testing.T) {
+			d, err := ParseDuration(s.str)
+			require.NoError(t, err)
+			assert.Equal(t, s.d, d)
 		})
 	}
 }

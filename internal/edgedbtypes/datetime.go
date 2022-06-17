@@ -20,13 +20,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
 
-var zeroRelativeDuration = RelativeDuration{}
+// nolint:lll
+var (
+	zeroRelativeDuration      = RelativeDuration{}
+	isoDurationRegex          = regexp.MustCompile(`^PT(?:(?P<hours>\d*\.?\d*)H)?(?:(?P<minutes>\d*\.?\d*)M)?(?:(?P<seconds>\d*\.?\d*)S)?$`)
+	humanDurationHoursRegex   = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:h|hours?)(?:\s|$|\d)`)
+	humanDurationMinutesRegex = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:m|minutes?)(?:\s|$|\d)`)
+	humanDurationSecondsRegex = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:s|seconds?)(?:\s|$|\d)`)
+	humanDurationMSRegex      = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:ms|milliseconds?)(?:\s|$|\d)`)
+	humanDurationUSRegex      = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:us|microseconds?)(?:\s|$|\d)`)
+)
 
 const (
 	monthsPerYear  int32 = 12
@@ -351,6 +361,117 @@ func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
 	o.isSet = true
 
 	return nil
+}
+
+func parseDurationISO(s string) (Duration, error) {
+	match := isoDurationRegex.FindStringSubmatchIndex(s)
+	if match == nil {
+		return 0, fmt.Errorf("could not parse duration from %q", s)
+	}
+
+	var total Duration
+	for i, name := range isoDurationRegex.SubexpNames() {
+		if i == 0 {
+			// skip entire expression match
+			continue
+		}
+
+		f, err := getNumber(s, match[i*2], match[i*2+1])
+		if err != nil {
+			return 0, err
+		}
+
+		switch name {
+		case "hours":
+			total += Duration(math.Round(3_600_000_000 * f))
+		case "minutes":
+			total += Duration(math.Round(60_000_000 * f))
+		case "seconds":
+			total += Duration(math.Round(1_000_000 * f))
+		default:
+			return 0, fmt.Errorf(
+				"unexpected match group %q while parsing %q",
+				name,
+				s,
+			)
+		}
+	}
+
+	return total, nil
+}
+
+func getNumber(s string, left, right int) (float64, error) {
+	if left == -1 || right == -1 {
+		return 0, nil
+	}
+
+	f, err := strconv.ParseFloat(s[left:right], 64)
+	if err != nil {
+		return 0, fmt.Errorf("could not parse duration from %q: %w", s, err)
+	}
+
+	return f, nil
+}
+
+func parseDurationHuman(s string) (Duration, error) {
+	x := []struct {
+		match      []int
+		multiplier float64
+	}{
+		{
+			match:      humanDurationHoursRegex.FindStringSubmatchIndex(s),
+			multiplier: 3_600_000_000,
+		},
+		{
+			match:      humanDurationMinutesRegex.FindStringSubmatchIndex(s),
+			multiplier: 60_000_000,
+		},
+		{
+			match:      humanDurationSecondsRegex.FindStringSubmatchIndex(s),
+			multiplier: 1_000_000,
+		},
+		{
+			match:      humanDurationMSRegex.FindStringSubmatchIndex(s),
+			multiplier: 1_000,
+		},
+		{
+			match:      humanDurationUSRegex.FindStringSubmatchIndex(s),
+			multiplier: 1,
+		},
+	}
+
+	var total Duration
+	var matchCount int
+
+	for i := 0; i < len(x); i++ {
+		matchCount += len(x[i].match)
+		if len(x[i].match) > 4 {
+			return 0, fmt.Errorf("could not parse duration from %q", s)
+		}
+		if len(x[i].match) != 4 {
+			continue
+		}
+		f, err := getNumber(s, x[i].match[2], x[i].match[3])
+		if err != nil {
+			return 0, err
+		}
+		total += Duration(math.Round(x[i].multiplier * f))
+	}
+
+	if matchCount == 0 {
+		return 0, fmt.Errorf("could not parse duration from %q", s)
+	}
+
+	return total, nil
+}
+
+// ParseDuration parses an EdgeDB duration string.
+func ParseDuration(s string) (Duration, error) {
+	if strings.HasPrefix(s, "PT") {
+		return parseDurationISO(s)
+	}
+
+	return parseDurationHuman(s)
 }
 
 // Duration represents the elapsed time between two instants

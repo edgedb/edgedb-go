@@ -32,6 +32,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -437,6 +438,23 @@ func getBytes(t *testing.T, lookup map[string]interface{}, key string) []byte {
 	return []byte(str)
 }
 
+func getDuration(
+	t *testing.T,
+	lookup map[string]interface{},
+	key string,
+) time.Duration {
+	val, ok := lookup[key]
+	require.True(t, ok, "%q is missing", key)
+
+	str, ok := val.(string)
+	require.True(t, ok, "%q should be a string", key)
+
+	dur, err := edgedbtypes.ParseDuration(str)
+	require.NoError(t, err, "could not parse %q duration", key)
+
+	return time.Duration(1_000 * dur)
+}
+
 func configureFileSystem(
 	tmpDir string,
 	cfg map[string]interface{},
@@ -533,7 +551,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 	for i, testcase := range testcases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			if _, ok := testcase["platform"]; ok {
-				t.Skip("platform specific tests no supported")
+				t.Skip("platform specific tests not supported")
 			}
 			tmpDir, err := ioutil.TempDir(os.TempDir(), "edgedb-go-tests")
 			require.NoError(t, err)
@@ -593,6 +611,13 @@ func TestConnectionParameterResolution(t *testing.T) {
 						options.ServerSettings[k] = []byte(v.(string))
 					}
 				}
+				if opts["waitUntilAvailable"] != nil {
+					options.WaitUntilAvailable = getDuration(
+						t,
+						opts,
+						"waitUntilAvailable",
+					)
+				}
 			}
 
 			expectedResult := connConfig{
@@ -623,6 +648,12 @@ func TestConnectionParameterResolution(t *testing.T) {
 				for k, v := range ss {
 					expectedResult.serverSettings.Set(k, []byte(v.(string)))
 				}
+
+				expectedResult.waitUntilAvailable = getDuration(
+					t,
+					res,
+					"waitUntilAvailable",
+				)
 			}
 
 			config, err := parseConnectDSNAndArgs(dsn, &options, paths)

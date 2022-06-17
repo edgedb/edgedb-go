@@ -33,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/snc"
 )
 
@@ -107,14 +108,15 @@ type cfgVal struct {
 }
 
 type configResolver struct {
-	host           cfgVal // string
-	port           cfgVal // int
-	database       cfgVal // string
-	user           cfgVal // string
-	password       cfgVal // OptionalStr
-	tlsCAData      cfgVal // []byte
-	tlsSecurity    cfgVal // string
-	serverSettings *snc.ServerSettings
+	host               cfgVal // string
+	port               cfgVal // int
+	database           cfgVal // string
+	user               cfgVal // string
+	password           cfgVal // OptionalStr
+	tlsCAData          cfgVal // []byte
+	tlsSecurity        cfgVal // string
+	waitUntilAvailable cfgVal // time.Duration
+	serverSettings     *snc.ServerSettings
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -216,6 +218,27 @@ func (r *configResolver) setTLSSecurity(val string, source string) error {
 	return nil
 }
 
+func (r *configResolver) setWaitUntilAvailable(
+	val time.Duration,
+	source string,
+) error {
+	if r.waitUntilAvailable.val != nil {
+		return nil
+	}
+
+	r.waitUntilAvailable = cfgVal{val: val, source: source}
+	return nil
+}
+
+func (r *configResolver) setWaitUntilAvailableStr(val, source string) error {
+	d, err := edgedbtypes.ParseDuration(val)
+	if err != nil {
+		return fmt.Errorf("invalid WaitUntilAvailable: %w", err)
+	}
+
+	return r.setWaitUntilAvailable(time.Duration(1_000*d), source)
+}
+
 func (r *configResolver) addServerSettings(s map[string][]byte) {
 	for k, v := range s {
 		if _, ok := r.serverSettings.GetOk(k); !ok {
@@ -265,6 +288,16 @@ func (r *configResolver) resolveOptions(opts *Options) (err error) {
 
 	if pwd, ok := opts.Password.Get(); ok {
 		r.setPassword(pwd, "Password option")
+	}
+
+	if opts.WaitUntilAvailable != 0 {
+		e := r.setWaitUntilAvailable(
+			opts.WaitUntilAvailable,
+			"WaitUntilAvailable Options",
+		)
+		if e != nil {
+			return e
+		}
 	}
 
 	var caSources []string
@@ -427,6 +460,22 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 		}
 	}
 
+	val, err = popDSNValue(
+		query,
+		"",
+		"wait_until_available",
+		r.waitUntilAvailable.val == nil,
+	)
+	if err != nil {
+		return err
+	}
+	if val.val != nil {
+		err = r.setWaitUntilAvailableStr(val.val.(string), source+val.source)
+		if err != nil {
+			return err
+		}
+	}
+
 	r.addServerSettingsStr(query)
 	return nil
 }
@@ -521,6 +570,16 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 
 	if pwd, ok := os.LookupEnv("EDGEDB_PASSWORD"); ok {
 		r.setPassword(pwd, "EDGEDB_PASSWORD environment variable")
+	}
+
+	if wua, ok := os.LookupEnv("EDGEDB_WAIT_UNTIL_AVAILABLE"); ok {
+		err := r.setWaitUntilAvailableStr(
+			wua,
+			"EDGEDB_WAIT_UNTIL_AVAILABLE environment variable",
+		)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	var tlsCaSources []string
@@ -666,6 +725,11 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		user = r.user.val.(string)
 	}
 
+	waitUntilAvailable := 30 * time.Second
+	if r.waitUntilAvailable.val != nil {
+		waitUntilAvailable = r.waitUntilAvailable.val.(time.Duration)
+	}
+
 	var certData []byte
 	if r.tlsCAData.val != nil {
 		certData = r.tlsCAData.val.([]byte)
@@ -706,11 +770,6 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		} else {
 			tlsSecurity = "no_host_verification"
 		}
-	}
-
-	waitUntilAvailable := opts.WaitUntilAvailable
-	if waitUntilAvailable == 0 {
-		waitUntilAvailable = 30 * time.Second
 	}
 
 	password := ""
@@ -956,6 +1015,11 @@ var dsnKeyLookup = map[string][]string{
 		"tls_verify_hostname",
 		"tls_verify_hostname_env",
 		"tls_verify_hostname_file",
+	},
+	"wait_until_available": {
+		"wait_until_available",
+		"wait_until_available_env",
+		"wait_until_available_file",
 	},
 }
 
