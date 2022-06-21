@@ -349,7 +349,7 @@ func buildScalarDecoder(
 			expectedType = "edgedb.Duration or edgedb.OptionalDuration"
 		}
 	case jsonID:
-		ptr := reflect.PointerTo(typ)
+		ptr := reflect.PtrTo(typ)
 
 		switch {
 		case typ == bytesType:
