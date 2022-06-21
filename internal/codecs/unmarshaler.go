@@ -113,8 +113,11 @@ var unmarshalers = map[types.UUID]struct {
 	},
 }
 
-var optionalUnmarshalerType = getType((*marshal.OptionalUnmarshaler)(nil))
-var optionalScalarUnmarshalerType = getType((*marshal.OptionalScalarUnmarshaler)(nil))
+// nolint:lll
+var (
+	optionalUnmarshalerType       = getType((*marshal.OptionalUnmarshaler)(nil))
+	optionalScalarUnmarshalerType = getType((*marshal.OptionalScalarUnmarshaler)(nil))
+)
 
 func buildUnmarshaler(
 	desc descriptor.Descriptor,

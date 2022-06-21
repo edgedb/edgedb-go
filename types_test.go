@@ -2405,7 +2405,7 @@ type OptionalJSONObject struct {
 }
 
 func TestReceiveJSONAndUnmarshal(t *testing.T) {
-
+	// nolint:lll
 	type Result struct {
 		Interface                interface{}        `edgedb:"interface"`
 		MissingInterface         interface{}        `edgedb:"missing_interface"`
