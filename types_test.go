@@ -2370,7 +2370,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 	assert.EqualError(t, err, "rollback")
 }
 
-func TestSendAndReceiveJSON(t *testing.T) {
+func TestSendAndReceiveJSONBytes(t *testing.T) {
 	ctx := context.Background()
 
 	strings := []string{"123", "-3.14", "true", "false", "[1, 2, 3]", "null"}
@@ -2392,6 +2392,95 @@ func TestSendAndReceiveJSON(t *testing.T) {
 			assert.Equal(t, samples[i], results[i])
 		})
 	}
+}
+
+type JSONObject struct {
+	A float64 `json:"a"`
+	B string  `json:"b"`
+}
+
+type OptionalJSONObject struct {
+	Optional
+	JSONObject `edgedb:"$inline"`
+}
+
+func TestReceiveJSONAndUnmarshal(t *testing.T) {
+
+	type Result struct {
+		Interface                interface{}        `edgedb:"interface"`
+		MissingInterface         interface{}        `edgedb:"missing_interface"`
+		Scalar                   string             `edgedb:"scalar"`
+		Slice                    []string           `edgedb:"slice"`
+		MissingSlice             []string           `edgedb:"missing_slice"`
+		Object                   JSONObject         `edgedb:"object"`
+		MissingObject            OptionalJSONObject `edgedb:"missing_object"`
+		NotMissingOptionalObject OptionalJSONObject `edgedb:"not_missing_optional_object"`
+		MissingScalar            OptionalStr        `edgedb:"missing_scalar"`
+		NotMissingOptionalScalar OptionalStr        `edgedb:"not_missing_optional_scalar"`
+	}
+
+	result := Result{
+		MissingInterface: "the client should change this to nil",
+		MissingSlice:     []string{"the client should change this to nil"},
+	}
+	result.MissingObject.SetMissing(false)
+	result.MissingScalar.Set("the client should change this to missing")
+
+	err := client.QuerySingle(
+		context.Background(),
+		`SELECT {
+			interface := <json>123,
+			missing_interface := <json>{},
+			scalar := <json>"text",
+			slice := to_json('["a", "b"]'),
+			missing_slice := <json>{},
+			object := to_json('{"a": 1, "b": "two"}'),
+			missing_object := <json>{},
+			not_missing_optional_object := to_json('{"a": 1, "b": "two"}'),
+			missing_scalar := <json>{},
+			not_missing_optional_scalar := <json>"text",
+		}`,
+		&result,
+	)
+	require.NoError(t, err)
+
+	notMissing := OptionalJSONObject{
+		JSONObject: JSONObject{
+			A: float64(1),
+			B: "two",
+		},
+	}
+	notMissing.SetMissing(false)
+
+	require.Equal(
+		t,
+		Result{
+			Interface:                float64(123),
+			MissingInterface:         nil,
+			Scalar:                   "text",
+			Slice:                    []string{"a", "b"},
+			MissingSlice:             nil,
+			Object:                   JSONObject{A: float64(1), B: "two"},
+			NotMissingOptionalObject: notMissing,
+			NotMissingOptionalScalar: NewOptionalStr("text"),
+		},
+		result,
+	)
+}
+
+func TestReceiveJSONWrongType(t *testing.T) {
+	var result string
+	err := client.QuerySingle(
+		context.Background(),
+		`SELECT <json>123`,
+		&result,
+	)
+	require.EqualError(
+		t,
+		err,
+		"json: cannot unmarshal number into Go value of type string",
+	)
+	require.Equal(t, "", result)
 }
 
 type CustomJSON struct {

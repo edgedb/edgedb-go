@@ -36,6 +36,10 @@ type OptionalUnmarshaler interface {
 	SetMissing(bool)
 }
 
+type OptionalScalarUnmarshaler interface {
+	Unset()
+}
+
 // OptionalMarshaler is used for optional (not required) shape field values.
 type OptionalMarshaler interface {
 	// Missing returns true when the value is missing.

@@ -349,13 +349,23 @@ func buildScalarDecoder(
 			expectedType = "edgedb.Duration or edgedb.OptionalDuration"
 		}
 	case jsonID:
-		switch typ {
-		case bytesType:
-			return &jsonCodec{}, nil
-		case optionalBytesType:
-			return &optionalJSONDecoder{}, nil
+		ptr := reflect.PointerTo(typ)
+
+		switch {
+		case typ == bytesType:
+			return &jsonCodec{typ: typ}, nil
+		case typ == optionalBytesType:
+			return &optionalJSONDecoder{typ: typ}, nil
+		case ptr.Implements(optionalUnmarshalerType):
+			return &optionalUnmarshalerJSONDecoder{typ: typ}, nil
+		case ptr.Implements(optionalScalarUnmarshalerType):
+			return &optionalScalarUnmarshalerJSONDecoder{typ: typ}, nil
+		case typ.Kind() == reflect.Slice:
+			fallthrough
+		case typ.Kind() == reflect.Interface:
+			return &optionalNilableJSONDecoder{typ: typ}, nil
 		default:
-			expectedType = "[]byte or edgedb.OptionalBytes"
+			return &jsonCodec{typ: typ}, nil
 		}
 	case bigIntID:
 		switch typ {
