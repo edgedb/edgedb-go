@@ -36,6 +36,7 @@ type OptionalUnmarshaler interface {
 	SetMissing(bool)
 }
 
+// OptionalScalarUnmarshaler is implemented by optional scalar types.
 type OptionalScalarUnmarshaler interface {
 	Unset()
 }

@@ -137,7 +137,10 @@ type optionalNilableJSONDecoder struct {
 	typ reflect.Type
 }
 
-func (c *optionalNilableJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+func (c *optionalNilableJSONDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	if e := c.popFormat(r); e != nil {
 		return e
 	}
@@ -158,7 +161,10 @@ type optionalUnmarshalerJSONDecoder struct {
 	typ reflect.Type
 }
 
-func (c *optionalUnmarshalerJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+func (c *optionalUnmarshalerJSONDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	if e := c.popFormat(r); e != nil {
 		return e
 	}
@@ -178,7 +184,10 @@ type optionalScalarUnmarshalerJSONDecoder struct {
 	typ reflect.Type
 }
 
-func (c *optionalScalarUnmarshalerJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+func (c *optionalScalarUnmarshalerJSONDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
 	if e := c.popFormat(r); e != nil {
 		return e
 	}
@@ -187,7 +196,9 @@ func (c *optionalScalarUnmarshalerJSONDecoder) Decode(r *buff.Reader, out unsafe
 	return json.Unmarshal(r.Buf, ptr)
 }
 
-func (c *optionalScalarUnmarshalerJSONDecoder) DecodeMissing(out unsafe.Pointer) {
+func (c *optionalScalarUnmarshalerJSONDecoder) DecodeMissing(
+	out unsafe.Pointer,
+) {
 	ptr := reflect.NewAt(c.typ, out).Interface()
 	ptr.(marshal.OptionalScalarUnmarshaler).Unset()
 }
