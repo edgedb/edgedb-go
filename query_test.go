@@ -158,6 +158,7 @@ func TestMissmatchedResultType(t *testing.T) {
 // The client should read all messages through ReadyForCommand
 // before returning from a QueryX()
 func TestParseAllMessagesAfterError(t *testing.T) {
+	t.Skip()
 	ctx := context.Background()
 
 	// cause error during prepare
