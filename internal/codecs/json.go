@@ -17,6 +17,7 @@
 package codecs
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"unsafe"
@@ -26,21 +27,23 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	jsonID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}
-)
+var jsonID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}
 
-type jsonCodec struct{}
+type jsonCodec struct {
+	baseJSONDecoder
+	typ reflect.Type
+}
 
 func (c *jsonCodec) Type() reflect.Type { return bytesType }
 
-func (c *jsonCodec) DescriptorID() types.UUID { return jsonID }
-
 func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
-	format := r.PopUint8()
-	if format != 1 {
-		return fmt.Errorf(
-			"unexpected json format: expected 1, got %v", format)
+	if e := c.popFormat(r); e != nil {
+		return e
+	}
+
+	if c.typ != bytesType {
+		ptr := reflect.NewAt(c.typ, out).Interface()
+		return json.Unmarshal(r.Buf, ptr)
 	}
 
 	n := len(r.Buf)
@@ -115,11 +118,85 @@ func (c *jsonCodec) encodeMarshaler(
 	return nil
 }
 
-type optionalJSONDecoder struct {
-	id types.UUID
+type baseJSONDecoder struct{}
+
+func (c *baseJSONDecoder) popFormat(r *buff.Reader) error {
+	format := r.PopUint8()
+	if format != 1 {
+		return fmt.Errorf(
+			"unexpected json format: expected 1, got %v", format)
+	}
+
+	return nil
 }
 
-func (c *optionalJSONDecoder) DescriptorID() types.UUID { return c.id }
+func (c *baseJSONDecoder) DescriptorID() types.UUID { return jsonID }
+
+type optionalNilableJSONDecoder struct {
+	baseJSONDecoder
+	typ reflect.Type
+}
+
+func (c *optionalNilableJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+	if e := c.popFormat(r); e != nil {
+		return e
+	}
+
+	ptr := reflect.NewAt(c.typ, out).Interface()
+	return json.Unmarshal(r.Buf, ptr)
+}
+
+func (c *optionalNilableJSONDecoder) DecodeMissing(out unsafe.Pointer) {
+	val := reflect.NewAt(c.typ, out).Elem()
+	if !val.IsZero() {
+		val.Set(reflect.Zero(c.typ))
+	}
+}
+
+type optionalUnmarshalerJSONDecoder struct {
+	baseJSONDecoder
+	typ reflect.Type
+}
+
+func (c *optionalUnmarshalerJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+	if e := c.popFormat(r); e != nil {
+		return e
+	}
+
+	ptr := reflect.NewAt(c.typ, out).Interface()
+	ptr.(marshal.OptionalUnmarshaler).SetMissing(false)
+	return json.Unmarshal(r.Buf, ptr)
+}
+
+func (c *optionalUnmarshalerJSONDecoder) DecodeMissing(out unsafe.Pointer) {
+	ptr := reflect.NewAt(c.typ, out).Interface()
+	ptr.(marshal.OptionalUnmarshaler).SetMissing(true)
+}
+
+type optionalScalarUnmarshalerJSONDecoder struct {
+	baseJSONDecoder
+	typ reflect.Type
+}
+
+func (c *optionalScalarUnmarshalerJSONDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+	if e := c.popFormat(r); e != nil {
+		return e
+	}
+
+	ptr := reflect.NewAt(c.typ, out).Interface()
+	return json.Unmarshal(r.Buf, ptr)
+}
+
+func (c *optionalScalarUnmarshalerJSONDecoder) DecodeMissing(out unsafe.Pointer) {
+	ptr := reflect.NewAt(c.typ, out).Interface()
+	ptr.(marshal.OptionalScalarUnmarshaler).Unset()
+}
+
+type optionalJSONDecoder struct {
+	typ reflect.Type
+}
+
+func (c *optionalJSONDecoder) DescriptorID() types.UUID { return jsonID }
 
 func (c *optionalJSONDecoder) Decode(
 	r *buff.Reader,
