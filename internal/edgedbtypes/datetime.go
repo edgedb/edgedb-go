@@ -31,11 +31,11 @@ import (
 var (
 	zeroRelativeDuration      = RelativeDuration{}
 	isoDurationRegex          = regexp.MustCompile(`^PT(?:(?P<hours>\d*\.?\d*)H)?(?:(?P<minutes>\d*\.?\d*)M)?(?:(?P<seconds>\d*\.?\d*)S)?$`)
-	humanDurationHoursRegex   = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:h|hours?)(?:\s|$|\d)`)
-	humanDurationMinutesRegex = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:m|minutes?)(?:\s|$|\d)`)
-	humanDurationSecondsRegex = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:s|seconds?)(?:\s|$|\d)`)
-	humanDurationMSRegex      = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:ms|milliseconds?)(?:\s|$|\d)`)
-	humanDurationUSRegex      = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:us|microseconds?)(?:\s|$|\d)`)
+	humanDurationHoursRegex   = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:h|hours?)(?P<tail>\s|$|\d)`)
+	humanDurationMinutesRegex = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:m|minutes?)(?P<tail>\s|$|\d)`)
+	humanDurationSecondsRegex = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:s|seconds?)(?P<tail>\s|$|\d)`)
+	humanDurationMSRegex      = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:ms|milliseconds?)(?P<tail>\s|$|\d)`)
+	humanDurationUSRegex      = regexp.MustCompile(`(?P<number>\d+|\d+\.\d+|\.\d+)\s*(?:us|microseconds?)(?P<tail>\s|$|\d)`)
 )
 
 const (
@@ -363,106 +363,144 @@ func (o *OptionalLocalTime) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func parseDurationISO(s string) (Duration, error) {
-	match := isoDurationRegex.FindStringSubmatchIndex(s)
-	if match == nil {
-		return 0, fmt.Errorf("could not parse duration from %q", s)
+func parseDurationISOUnit(
+	match []int,
+	s,
+	name string,
+) (float64, error) {
+	literal := group(isoDurationRegex, match, s, name)
+	if literal == "." {
+		return 0, errors.New("\".\" is not a valid number")
 	}
-
-	var total Duration
-	for i, name := range isoDurationRegex.SubexpNames() {
-		if i == 0 {
-			// skip entire expression match
-			continue
-		}
-
-		f, err := getNumber(s, match[i*2], match[i*2+1])
-		if err != nil {
-			return 0, err
-		}
-
-		switch name {
-		case "hours":
-			total += Duration(math.Round(3_600_000_000 * f))
-		case "minutes":
-			total += Duration(math.Round(60_000_000 * f))
-		case "seconds":
-			total += Duration(math.Round(1_000_000 * f))
-		default:
-			return 0, fmt.Errorf(
-				"unexpected match group %q while parsing %q",
-				name,
-				s,
-			)
-		}
-	}
-
-	return total, nil
-}
-
-func getNumber(s string, left, right int) (float64, error) {
-	if left == -1 || right == -1 {
+	if literal == "" {
 		return 0, nil
 	}
 
-	f, err := strconv.ParseFloat(s[left:right], 64)
+	return strconv.ParseFloat(literal, 64)
+}
+
+func parseDurationISO(s string) (Duration, error) {
+	match := isoDurationRegex.FindStringSubmatchIndex(s)
+	if len(match) == 0 {
+		return 0, fmt.Errorf("could not parse duration from %q", s)
+	}
+
+	hours, err := parseDurationISOUnit(match, s, "hours")
 	if err != nil {
 		return 0, fmt.Errorf("could not parse duration from %q: %w", s, err)
 	}
 
-	return f, nil
+	minutes, err := parseDurationISOUnit(match, s, "minutes")
+	if err != nil {
+		return 0, fmt.Errorf("could not parse duration from %q: %w", s, err)
+	}
+
+	seconds, err := parseDurationISOUnit(match, s, "seconds")
+	if err != nil {
+		return 0, fmt.Errorf("could not parse duration from %q: %w", s, err)
+	}
+
+	return Duration(
+		math.Round(3_600_000_000*hours) +
+			math.Round(60_000_000*minutes) +
+			math.Round(1_000_000*seconds),
+	), nil
 }
 
-func parseDurationHuman(s string) (Duration, error) {
-	x := []struct {
-		match      []int
-		multiplier float64
-	}{
-		{
-			match:      humanDurationHoursRegex.FindStringSubmatchIndex(s),
-			multiplier: 3_600_000_000,
-		},
-		{
-			match:      humanDurationMinutesRegex.FindStringSubmatchIndex(s),
-			multiplier: 60_000_000,
-		},
-		{
-			match:      humanDurationSecondsRegex.FindStringSubmatchIndex(s),
-			multiplier: 1_000_000,
-		},
-		{
-			match:      humanDurationMSRegex.FindStringSubmatchIndex(s),
-			multiplier: 1_000,
-		},
-		{
-			match:      humanDurationUSRegex.FindStringSubmatchIndex(s),
-			multiplier: 1,
-		},
-	}
-
-	var total Duration
-	var matchCount int
-
-	for i := 0; i < len(x); i++ {
-		matchCount += len(x[i].match)
-		if len(x[i].match) > 4 {
-			return 0, fmt.Errorf("could not parse duration from %q", s)
-		}
-		if len(x[i].match) != 4 {
+func group(re *regexp.Regexp, match []int, s, name string) string {
+	for i, n := range re.SubexpNames() {
+		if n != name {
 			continue
 		}
-		f, err := getNumber(s, x[i].match[2], x[i].match[3])
-		if err != nil {
-			return 0, err
+
+		l := match[2*i]
+		r := match[2*i+1]
+		if l == -1 || r == -1 {
+			return ""
 		}
-		total += Duration(math.Round(x[i].multiplier * f))
+
+		return s[l:r]
 	}
 
-	if matchCount == 0 {
-		return 0, fmt.Errorf("could not parse duration from %q", s)
+	return "unreachable"
+}
+
+func popHumanDurationUnit(
+	s string,
+	re *regexp.Regexp,
+) (float64, bool, string, error) {
+	match := re.FindStringSubmatchIndex(s)
+	if len(match) == 0 {
+		return 0, false, s, nil
+	}
+	if len(match) != 6 {
+		return 0, false, s, fmt.Errorf("could not parse duration from %q", s)
 	}
 
-	return total, nil
+	var number float64
+	literal := group(re, match, s, "number")
+	if literal != "" {
+		var err error
+		number, err = strconv.ParseFloat(literal, 64)
+		if err != nil {
+			return 0, false, s, fmt.Errorf(
+				"could not parse duration from %q: %w",
+				s,
+				err,
+			)
+		}
+	}
+
+	whole := group(re, match, s, "")
+	tail := group(re, match, s, "tail")
+	s = strings.Replace(s, whole, tail, 1)
+
+	return number, true, s, nil
+}
+
+func parseDurationHuman(str string) (Duration, error) {
+	var found bool
+	hour, f, s, err := popHumanDurationUnit(str, humanDurationHoursRegex)
+	if err != nil {
+		return 0, err
+	}
+	found = found || f
+
+	minute, f, s, err := popHumanDurationUnit(s, humanDurationMinutesRegex)
+	if err != nil {
+		return 0, err
+	}
+	found = found || f
+
+	second, f, s, err := popHumanDurationUnit(s, humanDurationSecondsRegex)
+	if err != nil {
+		return 0, err
+	}
+	found = found || f
+
+	ms, f, s, err := popHumanDurationUnit(s, humanDurationMSRegex)
+	if err != nil {
+		return 0, err
+	}
+	found = found || f
+
+	us, f, s, err := popHumanDurationUnit(s, humanDurationUSRegex)
+	if err != nil {
+		return 0, err
+	}
+	found = found || f
+
+	if !found || strings.TrimSpace(s) != "" {
+		return 0, fmt.Errorf("could not parse duration from %q", str)
+	}
+
+	return Duration(
+		math.Round(3_600_000_000*hour) +
+			math.Round(60_000_000*minute) +
+			math.Round(1_000_000*second) +
+			math.Round(1_000*ms) +
+			math.Round(us),
+	), nil
 }
 
 // ParseDuration parses an EdgeDB duration string.

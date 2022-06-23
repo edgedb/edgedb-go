@@ -17,6 +17,8 @@
 package edgedbtypes
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -289,6 +291,43 @@ func TestParseDuration(t *testing.T) {
 			d, err := ParseDuration(s.str)
 			require.NoError(t, err)
 			assert.Equal(t, s.d, d)
+		})
+	}
+}
+
+func TestParseInvalidDuration(t *testing.T) {
+	cases := []string{
+		"not a duration",
+		"PT.S",
+		" PT1S",
+		"PT1S ",
+		".seconds",
+		".s",
+		"s",
+		"20 hours with other stuff should not be valid",
+		"20 seconds with other stuff should not be valid",
+		"20 minutes with other stuff should not be valid",
+		"20 ms with other stuff should not be valid",
+		"20 us with other stuff should not be valid",
+		"3 hours is longer than 10 seconds",
+		"",
+		"\t",
+		" ",
+	}
+
+	for _, s := range cases {
+		t.Run(s, func(t *testing.T) {
+			d, err := ParseDuration(s)
+			require.NotNil(t, err, "expected an error but got nil")
+			expected := fmt.Sprintf("could not parse duration from %q", s)
+			require.True(
+				t,
+				strings.Contains(err.Error(), expected),
+				`The error message %q should contain the text %q`,
+				err.Error(),
+				expected,
+			)
+			assert.Equal(t, Duration(0), d)
 		})
 	}
 }
