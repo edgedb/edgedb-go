@@ -10,7 +10,9 @@ $ go get github.com/edgedb/edgedb-go
 ## Basic Usage
 
 Follow the [EdgeDB tutorial](https://www.edgedb.com/docs/guides/quickstart)
-to get EdgeDB installed and minimally configured.
+to get EdgeDB installed and minimally configured. Can also read [EdgeDB Go Driver](https://www.edgedb.com/docs/clients/02_go/index) docs.
+
+Connecting to database and running a single query looks like this:
 
 ```go
 package main
@@ -20,7 +22,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/edgedb/edgedb-go"
+	edgedb "github.com/edgedb/edgedb-go"
 )
 
 func main() {
