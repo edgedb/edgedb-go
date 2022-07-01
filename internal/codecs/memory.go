@@ -26,18 +26,11 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	memoryID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x30}
-	memoryType         = reflect.TypeOf(types.Memory(0))
-	optionalMemoryType = reflect.TypeOf(types.OptionalMemory{})
-)
-
 type memoryCodec struct{}
 
 func (c *memoryCodec) Type() reflect.Type { return memoryType }
 
-func (c *memoryCodec) DescriptorID() types.UUID { return memoryID }
+func (c *memoryCodec) DescriptorID() types.UUID { return MemoryID }
 
 func (c *memoryCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
@@ -98,7 +91,7 @@ type optionalMemory struct {
 
 type optionalMemoryDecoder struct{}
 
-func (c *optionalMemoryDecoder) DescriptorID() types.UUID { return int64ID }
+func (c *optionalMemoryDecoder) DescriptorID() types.UUID { return MemoryID }
 
 func (c *optionalMemoryDecoder) Decode(
 	r *buff.Reader,

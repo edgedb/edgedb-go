@@ -57,6 +57,9 @@ const (
 
 	// Enum represents the enum descriptor type.
 	Enum
+
+	// InputShape represents the input shape descriptor type.
+	InputShape
 )
 
 // Descriptor is a type descriptor
@@ -95,12 +98,12 @@ func Pop(
 				Desc: descriptors[r.PopUint16()],
 			}}
 			desc = Descriptor{Set, id, fields}
-		case Object:
+		case Object, InputShape:
 			fields, err := objectFields(r, descriptors, version)
 			if err != nil {
 				return Descriptor{}, err
 			}
-			desc = Descriptor{Object, id, fields}
+			desc = Descriptor{typ, id, fields}
 		case BaseScalar:
 			desc = Descriptor{BaseScalar, id, nil}
 		case Scalar:

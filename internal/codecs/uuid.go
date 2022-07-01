@@ -26,13 +26,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	uuidType         = reflect.TypeOf(uuidID)
-	optionalUUIDType = reflect.TypeOf(types.OptionalUUID{})
-	uuidID           = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
-)
-
 type uuidCodec struct{}
 
 func (c *uuidCodec) Type() reflect.Type { return uuidType }

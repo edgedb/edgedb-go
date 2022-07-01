@@ -57,8 +57,7 @@ func (c *protocolConnection) execGranularFlow0pX(
 	case err != nil:
 		return err
 	case descs != nil:
-		// todo: correct error type
-		return fmt.Errorf("unreachable")
+		return &binaryProtocolError{msg: "unreachable 8109"}
 	default: // optimistic execute succeeded
 		return nil
 	}
@@ -167,7 +166,7 @@ func (c *protocolConnection) codecsFromDescriptors0pX(
 }
 
 func (c *protocolConnection) prepare0pX(r *buff.Reader, q *query) error {
-	headers := copyHeaders(q.headers)
+	headers := q.headers0pX()
 	headers[header.ExplicitObjectIDs] = []byte("true")
 
 	w := buff.NewWriter(c.writeMemory[:0])
@@ -195,7 +194,7 @@ func (c *protocolConnection) prepare0pX(r *buff.Reader, q *query) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.ParseComplete:
-			c.cacheCapabilities(q, decodeHeaders(r))
+			c.cacheCapabilities0pX(q, decodeHeaders(r))
 			r.Discard(1) // cardinality
 			ids := idPair{in: r.PopUUID(), out: r.PopUUID()}
 			c.cacheTypeIDs(q, ids)
@@ -245,7 +244,7 @@ func (c *protocolConnection) describe(
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandDataDescription:
-			descs, _, err = c.decodeCommandDataDescriptionMsg(r, q)
+			descs, _, err = c.decodeCommandDataDescriptionMsg0pX(r, q)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -273,7 +272,7 @@ func (c *protocolConnection) execute0pX(
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute0pX)
-	writeHeaders(w, q.headers)
+	writeHeaders(w, q.headers0pX())
 	w.PushUint32(0) // no statement name
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args"), true); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
@@ -313,7 +312,7 @@ func (c *protocolConnection) execute0pX(
 				err = nil
 			}
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg0pX(r)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -347,7 +346,7 @@ func (c *protocolConnection) optimistic0pX(
 	q *query,
 	cdcs *codecPair,
 ) (*descPair, error) {
-	headers := copyHeaders(q.headers)
+	headers := q.headers0pX()
 	headers[header.ExplicitObjectIDs] = []byte("true")
 
 	w := buff.NewWriter(c.writeMemory[:0])
@@ -397,19 +396,19 @@ func (c *protocolConnection) optimistic0pX(
 				err = nil
 			}
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg0pX(r)
 		case message.CommandDataDescription:
 			var (
-				headers msgHeaders
+				headers header.Header
 				e       error
 			)
 
-			descs, headers, e = c.decodeCommandDataDescriptionMsg(r, q)
+			descs, headers, e = c.decodeCommandDataDescriptionMsg0pX(r, q)
 			if e != nil {
 				err = wrapAll(err, e)
 			}
 
-			c.cacheCapabilities(q, headers)
+			c.cacheCapabilities0pX(q, headers)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -438,7 +437,7 @@ func (c *protocolConnection) optimistic0pX(
 	return descs, err
 }
 
-func decodeCommandCompleteMsg(r *buff.Reader) {
+func decodeCommandCompleteMsg0pX(r *buff.Reader) {
 	ignoreHeaders(r)
 	r.PopBytes() // command status
 }
@@ -483,10 +482,10 @@ func decodeDataMsg(
 	return reflect.Value{}, false, nil
 }
 
-func (c *protocolConnection) decodeCommandDataDescriptionMsg(
+func (c *protocolConnection) decodeCommandDataDescriptionMsg0pX(
 	r *buff.Reader,
 	q *query,
-) (*descPair, msgHeaders, error) {
+) (*descPair, header.Header, error) {
 	headers := decodeHeaders(r)
 	card := r.PopUint8()
 

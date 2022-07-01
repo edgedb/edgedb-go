@@ -90,7 +90,7 @@ func (t *Tx) execute(
 	cmd string,
 	sucessState txStatus,
 ) error {
-	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (t *Tx) Execute(
 	cmd string,
 	args ...interface{},
 ) error {
-	q, err := newQuery("Execute", cmd, args, t.headers(), nil)
+	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil)
 	if err != nil {
 		return err
 	}

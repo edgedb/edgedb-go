@@ -30,7 +30,10 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 )
 
-var errZeroResults error = &noDataError{msg: "zero results"}
+var (
+	errNoTOMLFound       = errors.New("no edgedb.toml found")
+	errZeroResults error = &noDataError{msg: "zero results"}
+)
 
 // ErrorTag is the argument type to Error.HasTag().
 type ErrorTag string

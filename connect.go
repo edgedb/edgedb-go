@@ -25,13 +25,6 @@ import (
 	"github.com/xdg/scram"
 )
 
-var (
-	protocolVersionMin  = protocolVersion0p13
-	protocolVersionMax  = protocolVersion1p0
-	protocolVersion0p13 = internal.ProtocolVersion{Major: 0, Minor: 13}
-	protocolVersion1p0  = internal.ProtocolVersion{Major: 1, Minor: 0}
-)
-
 func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ClientHandshake)

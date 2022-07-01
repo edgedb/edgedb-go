@@ -20,25 +20,13 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"reflect"
-	"runtime"
-	"strconv"
 	"sync"
 	"time"
-	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
 
 const defaultIdleConnectionTimeout = 30 * time.Second
-
-var (
-	defaultConcurrency = max(4, runtime.NumCPU())
-)
 
 func max(a, b int) int {
 	if a > b {
@@ -152,11 +140,10 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 		if p.concurrency == 0 {
 			// The user did not set Concurrency in provided Options.
 			// See if the server sends a suggested max size.
-			suggested, err := strconv.Atoi(
-				string(conn.cfg.serverSettings.Get(
-					"suggested_pool_concurrency")))
-			if err == nil {
-				p.concurrency = suggested
+			suggested, ok := conn.cfg.serverSettings.
+				GetOk("suggested_pool_concurrency")
+			if ok {
+				p.concurrency = suggested.(int)
 			} else {
 				p.concurrency = defaultConcurrency
 			}
@@ -211,40 +198,8 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 }
 
 type systemConfig struct {
-	ID                 UUID     `edgedb:"id"`
-	SessionIdleTimeout Duration `edgedb:"session_idle_timeout"`
-}
-
-func parseSystemConfig(
-	b []byte,
-	version internal.ProtocolVersion,
-) (systemConfig, error) {
-	r := buff.SimpleReader(b)
-	u := r.PopSlice(r.PopUint32())
-	u.PopUUID()
-	dsc, err := descriptor.Pop(u, version)
-	if err != nil {
-		return systemConfig{}, err
-	}
-
-	var cfg systemConfig
-	typ := reflect.TypeOf(cfg)
-	dec, err := codecs.BuildDecoder(dsc, typ, codecs.Path("system_config"))
-	if err != nil {
-		return systemConfig{}, err
-	}
-
-	err = dec.Decode(r.PopSlice(r.PopUint32()), unsafe.Pointer(&cfg))
-	if err != nil {
-		return systemConfig{}, err
-	}
-
-	if len(r.Buf) != 0 {
-		return systemConfig{}, fmt.Errorf(
-			"%v bytes left in buffer", len(r.Buf))
-	}
-
-	return cfg, nil
+	ID                 OptionalUUID     `edgedb:"id"`
+	SessionIdleTimeout OptionalDuration `edgedb:"session_idle_timeout"`
 }
 
 func (p *Client) release(conn *transactableConn, err error) error {
@@ -254,14 +209,8 @@ func (p *Client) release(conn *transactableConn, err error) error {
 	}
 
 	timeout := defaultIdleConnectionTimeout
-	if b, ok := p.serverSettings.GetOk("system_config"); ok {
-		x, err := parseSystemConfig(b, conn.conn.protocolVersion)
-		if err != nil {
-			log.Println("error parsing system_config:", err)
-		} else {
-			// convert milliseconds to nanoseconds
-			timeout = time.Duration(x.SessionIdleTimeout * 1_000)
-		}
+	if t, ok := conn.conn.systemConfig.SessionIdleTimeout.Get(); ok {
+		timeout = time.Duration(1_000 * t)
 	}
 
 	// 0 or less disables the idle timeout
@@ -368,7 +317,7 @@ func (p *Client) Execute(
 		return err
 	}
 
-	q, err := newQuery("Execute", cmd, args, conn.headers(), nil)
+	q, err := newQuery("Execute", cmd, args, conn.capabilities1pX(), nil)
 	if err != nil {
 		return err
 	}

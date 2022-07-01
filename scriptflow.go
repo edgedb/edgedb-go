@@ -18,6 +18,7 @@ package edgedb
 
 import (
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/header"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
@@ -30,10 +31,10 @@ func ignoreHeaders(r *buff.Reader) {
 	}
 }
 
-func decodeHeaders(r *buff.Reader) msgHeaders {
+func decodeHeaders(r *buff.Reader) header.Header {
 	n := int(r.PopUint16())
 
-	headers := make(msgHeaders, n)
+	headers := make(header.Header, n)
 	for i := 0; i < n; i++ {
 		key := r.PopUint16()
 		val := r.PopBytes()
@@ -44,17 +45,16 @@ func decodeHeaders(r *buff.Reader) msgHeaders {
 	return headers
 }
 
-func copyHeaders(h msgHeaders) msgHeaders {
-	cpy := make(msgHeaders, len(h))
+func discardHeaders(r *buff.Reader) {
+	n := int(r.PopUint16())
 
-	for key, val := range h {
-		cpy[key] = val
+	for i := 0; i < n; i++ {
+		r.PopUint16()
+		r.PopBytes()
 	}
-
-	return cpy
 }
 
-func writeHeaders(w *buff.Writer, headers msgHeaders) {
+func writeHeaders(w *buff.Writer, headers header.Header) {
 	w.PushUint16(uint16(len(headers)))
 
 	for key, val := range headers {
@@ -67,7 +67,7 @@ func writeHeaders(w *buff.Writer, headers msgHeaders) {
 func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
-	writeHeaders(w, q.headers)
+	writeHeaders(w, q.headers0pX())
 	w.PushString(q.cmd)
 	w.EndMessage()
 
@@ -81,7 +81,7 @@ func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
 	for r.Next(done.Chan) {
 		switch r.MsgType {
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			decodeCommandCompleteMsg0pX(r)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()

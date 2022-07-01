@@ -2190,7 +2190,6 @@ func (m *CustomOptionalStr) UnmarshalEdgeDBStr(data []byte) error {
 }
 
 func (m *CustomOptionalStr) SetMissing(missing bool) {
-	// todo: maybe this shouldn't take any arguments?
 	m.isSet = !missing
 	m.data = nil
 }

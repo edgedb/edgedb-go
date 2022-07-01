@@ -26,19 +26,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	bytesID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
-	bytesType         = reflect.TypeOf([]byte{})
-	optionalBytesType = reflect.TypeOf(types.OptionalBytes{})
-
-	// JSONBytes is a special case codec for json queries.
-	// In go query json should return bytes not str.
-	// but the descriptor type ID sent to the server
-	// should still be str.
-	JSONBytes = &bytesCodec{strID}
-)
-
 type bytesCodec struct {
 	id types.UUID
 }

@@ -27,39 +27,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	dateTimeType         = reflect.TypeOf(time.Time{})
-	localDateTimeType    = reflect.TypeOf(types.LocalDateTime{})
-	localDateType        = reflect.TypeOf(types.LocalDate{})
-	localTimeType        = reflect.TypeOf(types.LocalTime{})
-	durationType         = reflect.TypeOf(types.Duration(0))
-	relativeDurationType = reflect.TypeOf(types.RelativeDuration{})
-
-	optionalDateTimeType      = reflect.TypeOf(types.OptionalDateTime{})
-	optionalLocalDateTimeType = reflect.TypeOf(
-		types.OptionalLocalDateTime{})
-	optionalLocalDateType        = reflect.TypeOf(types.OptionalLocalDate{})
-	optionalLocalTimeType        = reflect.TypeOf(types.OptionalLocalTime{})
-	optionalDurationType         = reflect.TypeOf(types.OptionalDuration{})
-	optionalRelativeDurationType = reflect.TypeOf(
-		types.OptionalRelativeDuration{})
-)
-
-var (
-	dateTimeID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0a}
-	localDTID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0b}
-	localDateID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0c}
-	localTimeID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0d}
-	durationID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0e}
-	relativeDurationID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x11}
-)
-
 type dateTimeCodec struct{}
 
 func (c *dateTimeCodec) Type() reflect.Type { return dateTimeType }
@@ -446,7 +413,7 @@ type durationCodec struct{}
 
 func (c *durationCodec) Type() reflect.Type { return durationType }
 
-func (c *durationCodec) DescriptorID() types.UUID { return durationID }
+func (c *durationCodec) DescriptorID() types.UUID { return DurationID }
 
 func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
@@ -513,7 +480,7 @@ type optionalDurationDecoder struct{}
 func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
 
 func (c *optionalDurationDecoder) DescriptorID() types.UUID {
-	return durationID
+	return DurationID
 }
 
 func (c *optionalDurationDecoder) Decode(

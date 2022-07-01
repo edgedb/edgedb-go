@@ -26,9 +26,8 @@ import (
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/edgedb/edgedb-go/internal/soc"
+	"github.com/edgedb/edgedb-go/internal/state"
 )
-
-var rnd = snc.NewRand()
 
 type cacheCollection struct {
 	serverSettings    *snc.ServerSettings
@@ -46,6 +45,10 @@ type protocolConnection struct {
 
 	protocolVersion internal.ProtocolVersion
 	cacheCollection
+
+	systemConfig systemConfig
+	stateCodec   state.Codec
+	state        map[string]interface{}
 }
 
 // connectWithTimeout makes a single attempt to connect to `addr`.

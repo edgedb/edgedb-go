@@ -25,7 +25,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/format"
-	"github.com/edgedb/edgedb-go/internal/header"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
@@ -78,13 +77,16 @@ func (c *protocolConnection) optimistic1pX(
 	case err != nil:
 		return err
 	case descs != nil:
-		// todo: correct error type
-		return fmt.Errorf("unreachable")
+		return &binaryProtocolError{msg: "unreachable 9149"}
 	default:
 		return nil
 	}
 
 Retry:
+	if descs == nil {
+		return c.pesimistic1pX(r, q)
+	}
+
 	cdcs, err = c.codecsFromDescriptors1pX(q, descs)
 	if err != nil {
 		return err
@@ -92,8 +94,7 @@ Retry:
 
 	descs, err = c.execute1pX(r, q, cdcs)
 	if descs != nil {
-		// todo: correct error type
-		return fmt.Errorf("unexpected")
+		return &binaryProtocolError{msg: "unreachable 11854"}
 	}
 
 	return err
@@ -103,15 +104,19 @@ func (c *protocolConnection) parse1pX(
 	r *buff.Reader,
 	q *query,
 ) (*descPair, error) {
-	headers := copyHeaders(q.headers)
-	headers[header.ExplicitObjectIDs] = []byte("true")
-
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Parse)
-	writeHeaders(w, headers)
+	w.PushUint16(0) // no headers
+	w.PushUint64(q.capabilities)
+	w.PushUint64(0) // no compilation_flags
+	w.PushUint64(0) // no implicit limit
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
+	w.PushUUID(c.stateCodec.DescriptorID())
+	if e := c.stateCodec.Encode(w, codecs.Path("state"), c.state); e != nil {
+		return nil, e
+	}
 	w.EndMessage()
 
 	w.BeginMessage(message.Sync)
@@ -130,9 +135,9 @@ func (c *protocolConnection) parse1pX(
 
 	for r.Next(done.Chan) {
 		switch r.MsgType {
-		case message.ParseComplete:
+		case message.CommandDataDescription:
 			var e error
-			desc, e = c.decodeParseCompleteMsg1pX(r, q)
+			desc, e = c.decodeCommandDataDescriptionMsg1pX(r, q)
 			err = wrapAll(err, e)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
@@ -154,11 +159,12 @@ func (c *protocolConnection) parse1pX(
 	return desc, nil
 }
 
-func (c *protocolConnection) decodeParseCompleteMsg1pX(
+func (c *protocolConnection) decodeCommandDataDescriptionMsg1pX(
 	r *buff.Reader,
 	q *query,
 ) (*descPair, error) {
-	c.cacheCapabilities(q, decodeHeaders(r))
+	discardHeaders(r)
+	c.cacheCapabilities1pX(q, r.PopUint64())
 	card := r.PopUint8()
 
 	var (
@@ -173,8 +179,7 @@ func (c *protocolConnection) decodeParseCompleteMsg1pX(
 	)
 	if err != nil {
 		return nil, err
-	}
-	if descs.in.ID != id {
+	} else if descs.in.ID != id {
 		return nil, &clientError{msg: fmt.Sprintf(
 			"unexpected in descriptor id: %v",
 			descs.in.ID,
@@ -188,8 +193,7 @@ func (c *protocolConnection) decodeParseCompleteMsg1pX(
 	)
 	if err != nil {
 		return nil, err
-	}
-	if descs.out.ID != id {
+	} else if descs.out.ID != id {
 		return nil, &clientError{msg: fmt.Sprintf(
 			"unexpected out descriptor id: %v",
 			descs.out.ID,
@@ -216,15 +220,24 @@ func (c *protocolConnection) execute1pX(
 	q *query,
 	cdcs *codecPair,
 ) (*descPair, error) {
-	headers := copyHeaders(q.headers)
-	headers[header.ExplicitObjectIDs] = []byte("true")
-
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
-	writeHeaders(w, headers)
+	w.PushUint16(0) // no headers
+	w.PushUint64(q.capabilities)
+	w.PushUint64(0) // no compilation_flags
+	w.PushUint64(0) // no implicit limit
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
+
+	w.PushUUID(c.stateCodec.DescriptorID())
+	if e := c.stateCodec.Encode(w, codecs.Path("state"), c.state); e != nil {
+		return nil, &binaryProtocolError{err: fmt.Errorf(
+			"invalid connection state: %w",
+			e,
+		)}
+	}
+
 	w.PushUUID(cdcs.in.DescriptorID())
 	w.PushUUID(cdcs.out.DescriptorID())
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args"), true); e != nil {
@@ -266,12 +279,12 @@ func (c *protocolConnection) execute1pX(
 				err = nil
 			}
 		case message.CommandComplete:
-			decodeCommandCompleteMsg(r)
+			if e := c.decodeCommandCompleteMsg1pX(q, r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.CommandDataDescription:
-			fallthrough
-		case message.ParseComplete:
 			var e error
-			descs, e = c.decodeParseCompleteMsg1pX(r, q)
+			descs, e = c.decodeCommandDataDescriptionMsg1pX(r, q)
 			err = wrapAll(err, e)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
@@ -340,4 +353,23 @@ func (c *protocolConnection) codecsFromDescriptors1pX(
 	)
 
 	return &cdcs, nil
+}
+
+func (c *protocolConnection) decodeCommandCompleteMsg1pX(
+	q *query,
+	r *buff.Reader,
+) error {
+	discardHeaders(r)
+	c.cacheCapabilities1pX(q, r.PopUint64())
+	r.PopBytes() // discard command status
+	state, err := c.stateCodec.Decode(
+		r.PopSlice(r.PopUint32()),
+		codecs.Path("state"),
+	)
+	if err != nil {
+		return err
+	}
+
+	c.state = state.(map[string]interface{})
+	return nil
 }

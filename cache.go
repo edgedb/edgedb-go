@@ -47,13 +47,10 @@ import (
 	"encoding/binary"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/header"
 )
-
-var descCache = cache.New(1_000)
 
 type codecKey struct {
 	ID   UUID
@@ -104,14 +101,33 @@ func (c *protocolConnection) cacheTypeIDs(q *query, ids idPair) {
 	c.typeIDCache.Put(makeKey(q), ids)
 }
 
-func (c *protocolConnection) cacheCapabilities(
+func (c *protocolConnection) cacheCapabilities0pX(
 	q *query,
-	headers msgHeaders,
+	headers header.Header,
 ) {
 	if capabilities, ok := headers[header.Capabilities]; ok {
 		x := binary.BigEndian.Uint64(capabilities)
+		if x&capabilitiesDDL != 0 {
+			c.typeIDCache.Invalidate()
+			c.inCodecCache.Invalidate()
+			c.outCodecCache.Invalidate()
+			c.capabilitiesCache.Invalidate()
+		}
 		c.capabilitiesCache.Put(makeKey(q), x)
 	}
+}
+
+func (c *protocolConnection) cacheCapabilities1pX(
+	q *query,
+	capabilities uint64,
+) {
+	if capabilities&capabilitiesDDL != 0 {
+		c.typeIDCache.Invalidate()
+		c.inCodecCache.Invalidate()
+		c.outCodecCache.Invalidate()
+		c.capabilitiesCache.Invalidate()
+	}
+	c.capabilitiesCache.Put(makeKey(q), capabilities)
 }
 
 func (c *reconnectingConn) getCachedCapabilities(q *query) (uint64, bool) {

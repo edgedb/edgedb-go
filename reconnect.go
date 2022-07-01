@@ -20,14 +20,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/edgedb/edgedb-go/internal/header"
-)
-
-var (
-	noTxCapabilities = header.NewAllowCapabilitiesWithout(
-		header.AllowCapabilitieTransaction,
-	)
 )
 
 type reconnectingConn struct {

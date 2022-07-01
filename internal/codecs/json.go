@@ -27,8 +27,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var jsonID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xf}
-
 type jsonCodec struct {
 	baseJSONDecoder
 	typ reflect.Type

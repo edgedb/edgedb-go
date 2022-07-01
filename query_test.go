@@ -323,8 +323,11 @@ with a := (INSERT User { name := 'a' }), b := (INSERT User { name := 'b' })
 SELECT { users := (SELECT { a, b } { id, name }) }`,
 		&result,
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
+	require.Equal(
+		t, 2, len(result.Users),
+		"wrong number of users, expected 2 got %v", len(result.Users))
 	assert.NotEqual(t, result.Users[0].ID, UUID{})
 	a, _ := result.Users[0].Name.Get()
 	assert.Equal(t, a, "a")

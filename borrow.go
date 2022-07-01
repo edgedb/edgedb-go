@@ -19,8 +19,6 @@ package edgedb
 import (
 	"context"
 	"fmt"
-
-	"github.com/edgedb/edgedb-go/internal/header"
 )
 
 type borrowableConn struct {
@@ -86,8 +84,8 @@ func (c *borrowableConn) assertUnborrowed() error {
 	}
 }
 
-func (c *borrowableConn) headers() msgHeaders {
-	return msgHeaders{header.AllowCapabilities: noTxCapabilities}
+func (c *borrowableConn) capabilities1pX() uint64 {
+	return userCapabilities
 }
 
 func (c *borrowableConn) scriptFlow(ctx context.Context, q *query) error {

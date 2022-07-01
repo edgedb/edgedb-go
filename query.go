@@ -18,33 +18,52 @@ package edgedb
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/internal/cardinality"
 	"github.com/edgedb/edgedb-go/internal/format"
+	"github.com/edgedb/edgedb-go/internal/header"
 	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
-type msgHeaders map[uint16][]byte
-
 type query struct {
-	out     reflect.Value
-	outType reflect.Type
-	method  string
-	cmd     string
-	fmt     uint8
-	expCard uint8
-	args    []interface{}
-	headers msgHeaders
+	out          reflect.Value
+	outType      reflect.Type
+	method       string
+	cmd          string
+	fmt          uint8
+	expCard      uint8
+	args         []interface{}
+	capabilities uint64
+}
+
+func (q *query) flat() bool {
+	if q.expCard != cardinality.Many {
+		return true
+	}
+
+	if q.fmt == format.JSON {
+		return true
+	}
+
+	return false
+}
+
+func (q *query) headers0pX() header.Header {
+	bts := make([]byte, 8)
+	binary.BigEndian.PutUint64(bts, q.capabilities)
+
+	return header.Header{header.AllowCapabilities: bts}
 }
 
 // newQuery returns a new granular flow query.
 func newQuery(
 	method, cmd string,
 	args []interface{},
-	headers msgHeaders,
+	capabilities uint64,
 	out interface{},
 ) (*query, error) {
 	var (
@@ -55,12 +74,12 @@ func newQuery(
 	switch method {
 	case "Execute":
 		return &query{
-			method:  method,
-			cmd:     cmd,
-			fmt:     format.Null,
-			expCard: cardinality.Many,
-			args:    args,
-			headers: headers,
+			method:       method,
+			cmd:          cmd,
+			fmt:          format.Null,
+			expCard:      cardinality.Many,
+			args:         args,
+			capabilities: capabilities,
 		}, nil
 	case "Query":
 		expCard = cardinality.Many
@@ -79,12 +98,12 @@ func newQuery(
 	}
 
 	q := query{
-		method:  method,
-		cmd:     cmd,
-		fmt:     frmt,
-		expCard: expCard,
-		args:    args,
-		headers: headers,
+		method:       method,
+		cmd:          cmd,
+		fmt:          frmt,
+		expCard:      expCard,
+		args:         args,
+		capabilities: capabilities,
 	}
 
 	var err error
@@ -110,20 +129,8 @@ func newQuery(
 	return &q, nil
 }
 
-func (q *query) flat() bool {
-	if q.expCard != cardinality.Many {
-		return true
-	}
-
-	if q.fmt == format.JSON {
-		return true
-	}
-
-	return false
-}
-
 type queryable interface {
-	headers() msgHeaders
+	capabilities1pX() uint64
 	granularFlow(context.Context, *query) error
 }
 
@@ -147,7 +154,7 @@ func runQuery(
 				out)}
 		}
 	}
-	q, err := newQuery(method, cmd, args, c.headers(), out)
+	q, err := newQuery(method, cmd, args, c.capabilities1pX(), out)
 	if err != nil {
 		return err
 	}

@@ -32,6 +32,7 @@ const (
 	RestoreReady           = 0x2b
 	ServerHandshake        = 0x76
 	ServerKeyData          = 0x4b
+	StateDataDescription   = 0x73
 )
 
 // Message types sent by client

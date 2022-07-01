@@ -26,13 +26,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	strID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
-	strType         = reflect.TypeOf("")
-	optionalStrType = reflect.TypeOf(types.OptionalStr{})
-)
-
 type strCodec struct {
 	id types.UUID
 }

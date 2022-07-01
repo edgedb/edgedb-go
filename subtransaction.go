@@ -73,7 +73,7 @@ func (t *Subtx) declare(ctx context.Context) error {
 
 	t.name = t.nextSavepointName()
 	cmd := "DECLARE SAVEPOINT " + t.name
-	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (t *Subtx) release(ctx context.Context) error {
 	}
 
 	cmd := "RELEASE SAVEPOINT " + t.name
-	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (t *Subtx) rollback(ctx context.Context) error {
 	}
 
 	cmd := "ROLLBACK TO SAVEPOINT " + t.name
-	q, err := newQuery("Execute", cmd, nil, nil, nil)
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (t *Subtx) Execute(
 		return e
 	}
 
-	q, err := newQuery("Execute", cmd, args, t.headers(), nil)
+	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil)
 	if err != nil {
 		return err
 	}
