@@ -321,6 +321,28 @@ type RelativeDurationUnmarshaler interface {
 	UnmarshalEdgeDBRelativeDuration(data []byte) error
 }
 
+// DateDurationMarshaler is the interface implemented by an object that can
+// marshal itself into the cal::relative_duration wire format.
+// https://www.edgedb.com/docs/internals/protocol/dataformats
+//
+// MarshalEdgeDBDateDuration encodes the receiver into a binary form and
+// returns the result.
+type DateDurationMarshaler interface {
+	MarshalEdgeDBDateDuration() ([]byte, error)
+}
+
+// DateDurationUnmarshaler is the interface implemented by an object that
+// can unmarshal the cal::relative_duration wire format representation of
+// itself.
+// https://www.edgedb.com/docs/internals/protocol/dataformats#std-duration
+//
+// UnmarshalEdgeDBDateDuration must be able to decode the
+// cal::relative_duration wire format.  UnmarshalEdgeDBDateDuration must
+// copy the data if it wishes to retain the data after returning.
+type DateDurationUnmarshaler interface {
+	UnmarshalEdgeDBDateDuration(data []byte) error
+}
+
 // Int16Marshaler is the interface implemented by an object
 // that can marshal itself into the int16 wire format.
 // https://www.edgedb.com/docs/internals/protocol/dataformats#std-int16

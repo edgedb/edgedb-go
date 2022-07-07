@@ -610,3 +610,115 @@ func (c *optionalRelativeDurationDecoder) DecodeMissing(out unsafe.Pointer) {
 }
 
 func (c *optionalRelativeDurationDecoder) DecodePresent(out unsafe.Pointer) {}
+
+type dateDurationCodec struct{}
+
+func (c *dateDurationCodec) Type() reflect.Type {
+	return dateDurationType
+}
+
+func (c *dateDurationCodec) DescriptorID() types.UUID {
+	return dateDurationID
+}
+
+type dateDurationLayout struct {
+	days   uint32
+	months uint32
+}
+
+func (c *dateDurationCodec) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
+	rd := (*dateDurationLayout)(out)
+	r.Discard(8) // microseconds are unused
+	rd.days = r.PopUint32()
+	rd.months = r.PopUint32()
+	return nil
+}
+
+type optionalDateDurationMarshaler interface {
+	marshal.DateDurationMarshaler
+	marshal.OptionalMarshaler
+}
+
+func (c *dateDurationCodec) Encode(
+	w *buff.Writer,
+	val interface{},
+	path Path,
+	required bool,
+) error {
+	switch in := val.(type) {
+	case types.DateDuration:
+		return c.encodeData(w, in)
+	case types.OptionalDateDuration:
+		data, ok := in.Get()
+		return encodeOptional(w, !ok, required,
+			func() error { return c.encodeData(w, data) },
+			func() error {
+				return missingValueError(
+					"edgedb.OptionalDateDuration",
+					path,
+				)
+			})
+	case optionalDateDurationMarshaler:
+		return encodeOptional(w, in.Missing(), required,
+			func() error { return c.encodeMarshaler(w, in, path) },
+			func() error { return missingValueError(val, path) })
+	case marshal.DateDurationMarshaler:
+		return c.encodeMarshaler(w, in, path)
+	default:
+		return fmt.Errorf("expected %v to be edgedb.DateDuration, "+
+			"edgedb.OptionalDateDuration or "+
+			"DateDurationMarshaler got %T", path, val)
+	}
+}
+
+func (c *dateDurationCodec) encodeData(
+	w *buff.Writer,
+	data types.DateDuration,
+) error {
+	d := (*dateDurationLayout)(unsafe.Pointer(&data))
+	w.PushUint32(16) // data length
+	w.PushUint64(0)  // microseconds are unused
+	w.PushUint32(d.days)
+	w.PushUint32(d.months)
+	return nil
+}
+
+func (c *dateDurationCodec) encodeMarshaler(
+	w *buff.Writer,
+	val marshal.DateDurationMarshaler,
+	path Path,
+) error {
+	return encodeMarshaler(w, val, val.MarshalEdgeDBDateDuration, 16, path)
+}
+
+type optionalDateDuration struct {
+	val dateDurationLayout
+	set bool
+}
+
+type optionalDateDurationDecoder struct{}
+
+func (c *optionalDateDurationDecoder) DescriptorID() types.UUID {
+	return dateDurationID
+}
+
+func (c *optionalDateDurationDecoder) Decode(
+	r *buff.Reader,
+	out unsafe.Pointer,
+) error {
+	op := (*optionalDateDuration)(out)
+	op.set = true
+	r.Discard(8)
+	op.val.days = r.PopUint32()
+	op.val.months = r.PopUint32()
+	return nil
+}
+
+func (c *optionalDateDurationDecoder) DecodeMissing(out unsafe.Pointer) {
+	(*types.OptionalDateDuration)(out).Unset()
+}
+
+func (c *optionalDateDurationDecoder) DecodePresent(out unsafe.Pointer) {}

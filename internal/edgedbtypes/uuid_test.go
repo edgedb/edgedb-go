@@ -90,3 +90,60 @@ func TestUUIDUnmarshalJSONInvalid(t *testing.T) {
 		})
 	}
 }
+
+func TestMarshalOptionalUUID(t *testing.T) {
+	cases := []struct {
+		input    OptionalUUID
+		expected string
+	}{
+		{OptionalUUID{}, "null"},
+		{
+			OptionalUUID{
+				UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+				true,
+			},
+			`"00010203-0405-0607-0809-0a0b0c0d0e0f"`,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.expected, func(t *testing.T) {
+			b, err := json.Marshal(c.input)
+			require.NoError(t, err)
+			assert.Equal(t, c.expected, string(b))
+		})
+	}
+}
+
+func TestUnmarshalOptionalUUID(t *testing.T) {
+	cases := []struct {
+		expected OptionalUUID
+		input    string
+	}{
+		{OptionalUUID{}, "null"},
+		{
+			OptionalUUID{
+				UUID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+				true,
+			},
+			`"00010203-0405-0607-0809-0a0b0c0d0e0f"`,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.input, func(t *testing.T) {
+			var empty OptionalUUID
+			err := json.Unmarshal([]byte(c.input), &empty)
+			require.NoError(t, err)
+			assert.Equal(t, c.expected, empty)
+
+			notEmpty := OptionalUUID{
+				UUID{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+				true,
+			}
+			err = json.Unmarshal([]byte(c.input), &notEmpty)
+			require.NoError(t, err)
+			assert.Equal(t, c.expected, notEmpty)
+		})
+	}
+}

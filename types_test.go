@@ -19,7 +19,6 @@ package edgedb
 import (
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -3445,6 +3444,330 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		"at args[0] expected 16, got 1")
 }
 
+func TestSendAndReceiveDateDuration(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+
+	var duration DateDuration
+	err := client.QuerySingle(ctx,
+		"SELECT <cal::date_duration>'1y'",
+		&duration,
+	)
+	assert.NoError(t, err)
+
+	rds := []DateDuration{
+		NewDateDuration(0, 0),
+		NewDateDuration(0, 1),
+		NewDateDuration(0, -1),
+		NewDateDuration(1, 0),
+		NewDateDuration(-1, 0),
+		NewDateDuration(1, 1),
+		NewDateDuration(-1, -1),
+		NewDateDuration(1, -1),
+		NewDateDuration(-1, 1),
+	}
+
+	for i := 0; i < 5_000; i++ {
+		rds = append(rds, NewDateDuration(
+			rand.Int31n(101)-int32(50),
+			rand.Int31n(1_001)-int32(500),
+		))
+	}
+
+	type Result struct {
+		RoundTrip DateDuration `edgedb:"round_trip"`
+		Str       string       `edgedb:"str"`
+	}
+
+	query := `
+		WITH args := array_unpack(<array<cal::date_duration>>$0)
+		SELECT (
+			round_trip := args,
+			str := <str>args,
+		)
+	`
+
+	var results []Result
+	err = client.Query(ctx, query, &results, rds)
+	require.NoError(t, err)
+	require.Equal(t, len(rds), len(results), "wrong number of results")
+
+	for i, rd := range rds {
+		t.Run(rd.String(), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, rd, result.RoundTrip, "round trip failed")
+			assert.Equal(t, rd.String(), result.Str, "incorrect String() val")
+		})
+	}
+}
+
+type CustomDateDuration struct {
+	data []byte
+}
+
+func (m CustomDateDuration) MarshalEdgeDBDateDuration() (
+	[]byte, error) {
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomDateDuration) UnmarshalEdgeDBDateDuration(
+	data []byte,
+) error {
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func TestReceiveDateDurationUnmarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+	ctx := context.Background()
+	var result struct {
+		Val CustomDateDuration `edgedb:"val"`
+	}
+
+	// Decode value
+	err := client.QuerySingle(ctx,
+		`SELECT { val := <cal::date_duration> '8 months 5 days' }`,
+		&result,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		[]byte{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		},
+		result.Val.data,
+	)
+
+	// Decode missing value
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::date_duration>$0 }`,
+		&result,
+		OptionalDateDuration{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"the \"out\" argument does not match query schema: "+
+		"expected edgedb.CustomDateDuration at struct "+
+		"{ Val edgedb.CustomDateDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"to be OptionalUnmarshaler interface "+
+		"because the field is not required")
+}
+
+func TestSendDateDurationMarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result struct {
+		Val OptionalDateDuration `edgedb:"val"`
+	}
+
+	// encode value into required argument
+	err := client.QuerySingle(ctx, `
+		SELECT { val := <cal::date_duration>$0 }`,
+		&result,
+		CustomDateDuration{data: []byte{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateDuration(NewDateDuration(8, 5)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::date_duration>$0 }`,
+		&result,
+		CustomDateDuration{data: []byte{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateDuration(NewDateDuration(8, 5)),
+		result.Val,
+	)
+
+	// encode wrong number of bytes
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <cal::date_duration>$0 }`,
+		&result,
+		CustomDateDuration{data: []byte{0x01}},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by edgedb.CustomDateDuration "+
+		"at args[0] expected 16, got 1")
+}
+
+type CustomOptionalDateDuration struct {
+	data  []byte
+	isSet bool
+}
+
+func (m CustomOptionalDateDuration) MarshalEdgeDBDateDuration() (
+	[]byte, error) {
+	if !m.isSet {
+		return nil, fmt.Errorf("%T is not set", m)
+	}
+	data := make([]byte, len(m.data))
+	copy(data, m.data)
+	return data, nil
+}
+
+func (m *CustomOptionalDateDuration) UnmarshalEdgeDBDateDuration(
+	data []byte,
+) error {
+	m.isSet = true
+	m.data = make([]byte, len(data))
+	copy(m.data, data)
+	return nil
+}
+
+func (m *CustomOptionalDateDuration) SetMissing(missing bool) {
+	m.isSet = !missing
+	m.data = nil
+}
+
+func (m CustomOptionalDateDuration) Missing() bool { return !m.isSet }
+
+func TestReceiveOptionalDateDurationUnmarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ddl := `CREATE TYPE Sample {
+		CREATE PROPERTY val -> cal::date_duration;
+	};`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val CustomOptionalDateDuration `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx,
+			`SELECT { val := <cal::date_duration>'8 months 5 days' }`,
+			&result,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t,
+			[]byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // microseconds
+				0x00, 0x00, 0x00, 0x05, // days
+				0x00, 0x00, 0x00, 0x08, // months
+			},
+			result.Val.data,
+		)
+
+		// Decode missing value
+		query := `WITH inserted := (INSERT Sample) SELECT inserted { val }`
+		err = tx.QuerySingle(ctx, query, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, CustomOptionalDateDuration{}, result.Val)
+	})
+}
+
+func TestSendOptionalDateDurationMarshaler(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result struct {
+		Val OptionalDateDuration `edgedb:"val"`
+	}
+
+	newValue := func(data []byte) CustomOptionalDateDuration {
+		return CustomOptionalDateDuration{isSet: true, data: data}
+	}
+
+	// encode value into required argument
+	err := client.QuerySingle(ctx, `
+		SELECT { val := <cal::date_duration>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateDuration(NewDateDuration(8, 5)),
+		result.Val,
+	)
+
+	// encode value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::date_duration>$0 }`,
+		&result,
+		newValue([]byte{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // microseconds
+			0x00, 0x00, 0x00, 0x05, // days
+			0x00, 0x00, 0x00, 0x08, // months
+		}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		NewOptionalDateDuration(NewDateDuration(8, 5)),
+		result.Val,
+	)
+
+	// encode missing value into optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::date_duration>$0 }`,
+		&result,
+		CustomOptionalDateDuration{},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, OptionalDateDuration{}, result.Val)
+
+	// encode missing value into required argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <cal::date_duration>$0 }`,
+		&result,
+		CustomOptionalDateDuration{},
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"cannot encode edgedb.CustomOptionalDateDuration at args[0] "+
+		"because its value is missing")
+
+	// encode wrong number of bytes with required argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <cal::date_duration>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded by "+
+		"edgedb.CustomOptionalDateDuration at args[0] expected 16, got 1")
+
+	// encode wrong number of bytes with optional argument
+	err = client.QuerySingle(ctx, `
+		SELECT { val := <OPTIONAL cal::date_duration>$0 }`,
+		&result,
+		newValue([]byte{0x01}),
+	)
+	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		"wrong number of bytes encoded "+
+		"by edgedb.CustomOptionalDateDuration "+
+		"at args[0] expected 16, got 1")
+}
+
 func TestSendAndReceiveLocalTime(t *testing.T) {
 	ctx := context.Background()
 
@@ -6448,190 +6771,6 @@ func TestMissingObjectFields(t *testing.T) {
 			`expected int64 at edgedb.WrongType.simple_scalar to be `+
 			`edgedb.OptionalInt64 because the field is not required`)
 	})
-}
-
-func TestOptionalMarshalUnmarshalJSON(t *testing.T) {
-	type testJSONStruct struct {
-		Str                     string
-		OptStr                  OptionalStr
-		OptStrNull              OptionalStr
-		Bool                    bool
-		OptBool                 OptionalBool
-		OptBoolNull             OptionalBool
-		Int16                   int16
-		OptInt16                OptionalInt16
-		OptInt16Null            OptionalInt16
-		Int32                   int32
-		OptInt32                OptionalInt32
-		OptInt32Null            OptionalInt32
-		Int64                   int64
-		OptInt64                OptionalInt64
-		OptInt64Null            OptionalInt64
-		Float32                 float32
-		OptFloat32              OptionalFloat32
-		OptFloat32Null          OptionalFloat32
-		Float64                 float64
-		OptFloat64              OptionalFloat64
-		OptFloat64Null          OptionalFloat64
-		BigInt                  *big.Int
-		OptBigInt               OptionalBigInt
-		OptBigIntNull           OptionalBigInt
-		UUID                    UUID
-		OptUUID                 OptionalUUID
-		OptUUIDNull             OptionalUUID
-		Bytes                   []byte
-		OptBytes                OptionalBytes
-		OptBytesNull            OptionalBytes
-		DateTime                time.Time
-		OptDateTime             OptionalDateTime
-		OptDateTimeNull         OptionalDateTime
-		LocalDateTime           LocalDateTime
-		OptLocalDateTime        OptionalLocalDateTime
-		OptLocalDateTimeNull    OptionalLocalDateTime
-		LocalTime               LocalTime
-		OptLocalTime            OptionalLocalTime
-		OptLocalTimeNull        OptionalLocalTime
-		LocalDate               LocalDate
-		OptLocalDate            OptionalLocalDate
-		OptLocalDateNull        OptionalLocalDate
-		Duration                Duration
-		OptDuration             OptionalDuration
-		OptDurationNull         OptionalDuration
-		RelativeDuration        RelativeDuration
-		OptRelativeDuration     OptionalRelativeDuration
-		OptRelativeDurationNull OptionalRelativeDuration
-		Memory                  Memory
-		OptMemory               OptionalMemory
-		OptMemoryNull           OptionalMemory
-	}
-
-	testJSON := `{
-		"Str": "test str",
-		"OptStr": "null test str",
-		"OptStrNull": null,
-		"Bool": true,
-		"OptBool": true,
-		"OptBoolNull": null,
-		"Int16": 12345,
-		"OptInt16": 12345,
-		"OptInt16Null": null,
-		"Int32": 12345,
-		"OptInt32": 12345,
-		"OptInt32Null": null,
-		"Int64": 12345,
-		"OptInt64": 12345,
-		"OptInt64Null": null,
-		"Float32": 12345,
-		"OptFloat32": 12345,
-		"OptFloat32Null": null,
-		"Float64": 12345,
-		"OptFloat64": 12345,
-		"OptFloat64Null": null,
-		"BigInt": 123456789012345678901234567890,
-		"OptBigInt": 123456789012345678901234567890,
-		"OptBigIntNull": null,
-		"UUID": "759637d8-6635-11e9-b9d4-098002d459d5",
-		"OptUUID": "759637d8-6635-11e9-b9d4-098002d459d5",
-		"OptUUIDNull": null,
-		"Bytes": "cXdlcnR5Cgl1aW9w",
-		"OptBytes": "cXdlcnR5Cgl1aW9w",
-		"OptBytesNull": null,
-		"DateTime": "2021-10-01T12:34:56.123456789Z",
-		"OptDateTime": "2021-10-01T12:34:56.123456789Z",
-		"OptDateTimeNull": null,
-		"LocalDateTime": "2021-10-01T12:34:56.123456",
-		"OptLocalDateTime": "2021-10-01T12:34:56.123456",
-		"OptLocalDateTimeNull": null,
-		"LocalTime": "12:34:56.123456",
-		"OptLocalTime": "12:34:56.123456",
-		"OptLocalTimeNull": null,
-		"LocalDate": "2021-10-01",
-		"OptLocalDate": "2021-10-01",
-		"OptLocalDateNull": null,
-		"Duration": 1234567,
-		"OptDuration": 1234567,
-		"OptDurationNull": null,
-		"RelativeDuration": "P2Y3M-4DT23M12.345678S",
-		"OptRelativeDuration": "P2Y3M-4DT23M12.345678S",
-		"OptRelativeDurationNull": null,
-		"Memory": "5TiB",
-		"OptMemory": "5TiB",
-		"OptMemoryNull": null
-	}`
-
-	bigInt, _ := (&big.Int{}).SetString("123456789012345678901234567890", 10)
-	uuid, _ := ParseUUID("759637d8-6635-11e9-b9d4-098002d459d5")
-	dt := time.Date(2021, 10, 1, 12, 34, 56, 123456789, time.UTC)
-	localDatetime := NewLocalDateTime(2021, 10, 1, 12, 34, 56, 123456)
-	localTime := NewLocalTime(12, 34, 56, 123456)
-	localDate := NewLocalDate(2021, 10, 1)
-	duration := Duration(1234567)
-	relDuration := NewRelativeDuration(27, -4, 1392345678)
-	memory := Memory(5 * 1_024 * 1_024 * 1_024 * 1_024)
-
-	decoded := testJSONStruct{
-		OptStrNull:              NewOptionalStr("string"),
-		OptBoolNull:             NewOptionalBool(true),
-		OptInt16Null:            NewOptionalInt16(12345),
-		OptInt32Null:            NewOptionalInt32(12345),
-		OptInt64Null:            NewOptionalInt64(12345),
-		OptFloat32Null:          NewOptionalFloat32(12345),
-		OptFloat64Null:          NewOptionalFloat64(12345),
-		OptBigIntNull:           NewOptionalBigInt(bigInt),
-		OptUUIDNull:             NewOptionalUUID(uuid),
-		OptBytesNull:            NewOptionalBytes([]byte("abcd")),
-		OptDateTimeNull:         NewOptionalDateTime(time.Now()),
-		OptLocalDateTimeNull:    NewOptionalLocalDateTime(localDatetime),
-		OptLocalTimeNull:        NewOptionalLocalTime(localTime),
-		OptLocalDateNull:        NewOptionalLocalDate(localDate),
-		OptDurationNull:         NewOptionalDuration(duration),
-		OptRelativeDurationNull: NewOptionalRelativeDuration(relDuration),
-		OptMemoryNull:           NewOptionalMemory(memory),
-	}
-	err := json.Unmarshal([]byte(testJSON), &decoded)
-	assert.NoError(t, err)
-
-	expected := testJSONStruct{
-		Str:                 "test str",
-		OptStr:              NewOptionalStr("null test str"),
-		Bool:                true,
-		OptBool:             NewOptionalBool(true),
-		Int16:               12345,
-		OptInt16:            NewOptionalInt16(12345),
-		Int32:               12345,
-		OptInt32:            NewOptionalInt32(12345),
-		Int64:               12345,
-		OptInt64:            NewOptionalInt64(12345),
-		Float32:             12345,
-		OptFloat32:          NewOptionalFloat32(12345),
-		Float64:             12345,
-		OptFloat64:          NewOptionalFloat64(12345),
-		BigInt:              bigInt,
-		OptBigInt:           NewOptionalBigInt(bigInt),
-		UUID:                uuid,
-		OptUUID:             NewOptionalUUID(uuid),
-		Bytes:               []byte("qwerty\n\tuiop"),
-		OptBytes:            NewOptionalBytes([]byte("qwerty\n\tuiop")),
-		DateTime:            dt,
-		OptDateTime:         NewOptionalDateTime(dt),
-		Duration:            duration,
-		OptDuration:         NewOptionalDuration(duration),
-		LocalDateTime:       localDatetime,
-		OptLocalDateTime:    NewOptionalLocalDateTime(localDatetime),
-		LocalTime:           localTime,
-		OptLocalTime:        NewOptionalLocalTime(localTime),
-		LocalDate:           localDate,
-		OptLocalDate:        NewOptionalLocalDate(localDate),
-		RelativeDuration:    relDuration,
-		OptRelativeDuration: NewOptionalRelativeDuration(relDuration),
-		Memory:              memory,
-		OptMemory:           NewOptionalMemory(memory),
-	}
-	assert.Equal(t, expected, decoded)
-
-	encoded, err := json.MarshalIndent(decoded, "\t", "\t")
-	assert.NoError(t, err)
-	assert.Equal(t, testJSON, string(encoded))
 }
 
 func TestSendAndReceiveMemory(t *testing.T) {

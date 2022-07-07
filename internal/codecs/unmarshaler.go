@@ -67,6 +67,10 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.RelativeDurationUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBRelativeDuration",
 	},
+	dateDurationID: {
+		typ:        getType((*marshal.DateDurationUnmarshaler)(nil)),
+		methodName: "UnmarshalEdgeDBDateDuration",
+	},
 	jsonID: {
 		typ:        getType((*marshal.JSONUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBJSON",
