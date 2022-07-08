@@ -44,7 +44,7 @@ func (c *protocolConnection) execGranularFlow1pX(
 		return c.pesimistic1pX(r, q)
 	}
 
-	return c.optimistic1pX(r, q, cdcs)
+	return c.execute1pX(r, q, cdcs)
 }
 
 func (c *protocolConnection) pesimistic1pX(r *buff.Reader, q *query) error {
@@ -58,46 +58,7 @@ func (c *protocolConnection) pesimistic1pX(r *buff.Reader, q *query) error {
 		return err
 	}
 
-	_, err = c.execute1pX(r, q, cdcs)
-	return err
-}
-
-func (c *protocolConnection) optimistic1pX(
-	r *buff.Reader,
-	q *query,
-	cdcs *codecPair,
-) error {
-	// When descriptors are returned the codec ids sent didn't match the
-	// server's.  The codecs should be rebuilt with the new descriptors and the
-	// execution retried.
-	descs, err := c.execute1pX(r, q, cdcs)
-	switch {
-	case err == errZeroResults && descs != nil:
-		goto Retry
-	case err != nil:
-		return err
-	case descs != nil:
-		return &binaryProtocolError{msg: "unreachable 9149"}
-	default:
-		return nil
-	}
-
-Retry:
-	if descs == nil {
-		return c.pesimistic1pX(r, q)
-	}
-
-	cdcs, err = c.codecsFromDescriptors1pX(q, descs)
-	if err != nil {
-		return err
-	}
-
-	descs, err = c.execute1pX(r, q, cdcs)
-	if descs != nil {
-		return &binaryProtocolError{msg: "unreachable 11854"}
-	}
-
-	return err
+	return c.execute1pX(r, q, cdcs)
 }
 
 func (c *protocolConnection) parse1pX(
@@ -219,7 +180,7 @@ func (c *protocolConnection) execute1pX(
 	r *buff.Reader,
 	q *query,
 	cdcs *codecPair,
-) (*descPair, error) {
+) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.Execute)
 	w.PushUint16(0) // no headers
@@ -232,16 +193,14 @@ func (c *protocolConnection) execute1pX(
 
 	w.PushUUID(c.stateCodec.DescriptorID())
 	if e := c.stateCodec.Encode(w, codecs.Path("state"), c.state); e != nil {
-		return nil, &binaryProtocolError{err: fmt.Errorf(
-			"invalid connection state: %w",
-			e,
-		)}
+		return &binaryProtocolError{err: fmt.Errorf(
+			"invalid connection state: %w", e)}
 	}
 
 	w.PushUUID(cdcs.in.DescriptorID())
 	w.PushUUID(cdcs.out.DescriptorID())
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args"), true); e != nil {
-		return nil, &invalidArgumentError{msg: e.Error()}
+		return &invalidArgumentError{msg: e.Error()}
 	}
 	w.EndMessage()
 
@@ -249,7 +208,7 @@ func (c *protocolConnection) execute1pX(
 	w.EndMessage()
 
 	if e := c.soc.WriteAll(w.Unwrap()); e != nil {
-		return nil, &clientConnectionClosedError{err: e}
+		return &clientConnectionClosedError{err: e}
 	}
 
 	tmp := q.out
@@ -259,9 +218,13 @@ func (c *protocolConnection) execute1pX(
 	}
 	done := buff.NewSignal()
 
-	var descs *descPair
 	for r.Next(done.Chan) {
 		switch r.MsgType {
+		case message.CommandDataDescription:
+			descs, e := c.decodeCommandDataDescriptionMsg1pX(r, q)
+			err = wrapAll(err, e)
+			cdcs, e = c.codecsFromDescriptors1pX(q, descs)
+			err = wrapAll(err, e)
 		case message.Data:
 			val, ok, e := decodeDataMsg(r, q, cdcs)
 			if e != nil {
@@ -282,10 +245,6 @@ func (c *protocolConnection) execute1pX(
 			if e := c.decodeCommandCompleteMsg1pX(q, r); e != nil {
 				err = wrapAll(err, e)
 			}
-		case message.CommandDataDescription:
-			var e error
-			descs, e = c.decodeCommandDataDescriptionMsg1pX(r, q)
-			err = wrapAll(err, e)
 		case message.ReadyForCommand:
 			decodeReadyForCommandMsg(r)
 			done.Signal()
@@ -298,20 +257,20 @@ func (c *protocolConnection) execute1pX(
 		default:
 			if e := c.fallThrough(r); e != nil {
 				// the connection will not be usable after this x_x
-				return nil, e
+				return e
 			}
 		}
 	}
 
 	if r.Err != nil {
-		return nil, r.Err
+		return r.Err
 	}
 
 	if !q.flat() && q.fmt != format.Null {
 		q.out.Set(tmp)
 	}
 
-	return descs, err
+	return err
 }
 
 func (c *protocolConnection) codecsFromDescriptors1pX(
