@@ -361,7 +361,13 @@ func (c *protocolConnection) decodeCommandCompleteMsg1pX(
 ) error {
 	discardHeaders(r)
 	c.cacheCapabilities1pX(q, r.PopUint64())
-	r.PopBytes() // discard command status
+	r.Discard(int(r.PopUint32())) // discard command status
+	if r.PopUUID() == descriptor.IDZero {
+		// empty state data
+		r.Discard(4)
+		return nil
+	}
+
 	state, err := c.stateCodec.Decode(
 		r.PopSlice(r.PopUint32()),
 		codecs.Path("state"),
