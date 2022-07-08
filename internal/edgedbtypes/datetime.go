@@ -1083,7 +1083,7 @@ type DateDuration struct {
 
 func (dd DateDuration) String() string {
 	if dd == zeroDateDuration {
-		return "PT0S"
+		return "P0D"
 	}
 
 	buf := []string{"P"}
