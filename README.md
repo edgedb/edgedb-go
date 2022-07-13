@@ -24,14 +24,8 @@ import (
 )
 
 func main() {
-	opts := edgedb.Options{
-		Database:    "edgedb",
-		User:        "edgedb",
-		Concurrency: 4,
-	}
-
 	ctx := context.Background()
-	client, err := edgedb.CreateClient(ctx, opts)
+	client, err := edgedb.CreateClient(ctx, edgedb.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
