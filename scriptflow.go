@@ -65,6 +65,10 @@ func writeHeaders(w *buff.Writer, headers header.Header) {
 }
 
 func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
+	if len(q.state) != 0 {
+		return errStateNotSupported
+	}
+
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(message.ExecuteScript)
 	writeHeaders(w, q.headers0pX())

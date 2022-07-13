@@ -218,18 +218,36 @@ func TestMain(m *testing.M) {
 	}
 
 	log.Println("running migration")
-	executeOrFatal(`
-		START MIGRATION TO {
-			module default {
-				type User {
-					property name -> str;
+	if protocolVersion.GTE(protocolVersion1p0) {
+		executeOrFatal(`
+			START MIGRATION TO {
+				module default {
+					required global global_value -> str {
+						default := "default";
+					};
+					type User {
+						property name -> str;
+					}
+					type TxTest {
+						required property name -> str;
+					}
 				}
-				type TxTest {
-					required property name -> str;
+			};
+		`)
+	} else {
+		executeOrFatal(`
+			START MIGRATION TO {
+				module default {
+					type User {
+						property name -> str;
+					}
+					type TxTest {
+						required property name -> str;
+					}
 				}
-			}
-		};
-	`)
+			};
+		`)
+	}
 	executeOrFatal(`POPULATE MIGRATION;`)
 	executeOrFatal(`COMMIT MIGRATION;`)
 	executeOrFatal(`

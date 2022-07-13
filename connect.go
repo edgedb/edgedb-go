@@ -98,6 +98,10 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 			}
 
 			done.Signal()
+		case message.StateDataDescription:
+			if e := c.decodeStateDataDescription(r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeErrorResponseMsg(r, ""))
 			done.Signal()
@@ -216,6 +220,10 @@ func (c *protocolConnection) authenticate(
 			ignoreHeaders(r)
 			r.Discard(1) // transaction state
 			done.Signal()
+		case message.StateDataDescription:
+			if e := c.decodeStateDataDescription(r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.ErrorResponse:
 			err = wrapAll(decodeErrorResponseMsg(r, ""))
 		default:

@@ -35,6 +35,10 @@ func (c *protocolConnection) execGranularFlow0pX(
 	r *buff.Reader,
 	q *query,
 ) error {
+	if len(q.state) != 0 {
+		return errStateNotSupported
+	}
+
 	ids, ok := c.getCachedTypeIDs(q)
 	if !ok {
 		return c.pesimistic0pX(r, q)

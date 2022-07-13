@@ -26,6 +26,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/format"
 	"github.com/edgedb/edgedb-go/internal/message"
+	"github.com/edgedb/edgedb-go/internal/state"
 )
 
 func (c *protocolConnection) execGranularFlow1pX(
@@ -74,9 +75,11 @@ func (c *protocolConnection) parse1pX(
 	w.PushUint8(q.fmt)
 	w.PushUint8(q.expCard)
 	w.PushString(q.cmd)
+
 	w.PushUUID(c.stateCodec.DescriptorID())
-	if e := c.stateCodec.Encode(w, codecs.Path("state"), c.state); e != nil {
-		return nil, e
+	if e := c.stateCodec.Encode(w, codecs.Path("state"), q.state); e != nil {
+		return nil, &binaryProtocolError{err: fmt.Errorf(
+			"invalid connection state: %w", e)}
 	}
 	w.EndMessage()
 
@@ -96,6 +99,10 @@ func (c *protocolConnection) parse1pX(
 
 	for r.Next(done.Chan) {
 		switch r.MsgType {
+		case message.StateDataDescription:
+			if e := c.decodeStateDataDescription(r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.CommandDataDescription:
 			var e error
 			desc, e = c.decodeCommandDataDescriptionMsg1pX(r, q)
@@ -192,7 +199,7 @@ func (c *protocolConnection) execute1pX(
 	w.PushString(q.cmd)
 
 	w.PushUUID(c.stateCodec.DescriptorID())
-	if e := c.stateCodec.Encode(w, codecs.Path("state"), c.state); e != nil {
+	if e := c.stateCodec.Encode(w, codecs.Path("state"), q.state); e != nil {
 		return &binaryProtocolError{err: fmt.Errorf(
 			"invalid connection state: %w", e)}
 	}
@@ -220,6 +227,10 @@ func (c *protocolConnection) execute1pX(
 
 	for r.Next(done.Chan) {
 		switch r.MsgType {
+		case message.StateDataDescription:
+			if e := c.decodeStateDataDescription(r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.CommandDataDescription:
 			descs, e := c.decodeCommandDataDescriptionMsg1pX(r, q)
 			err = wrapAll(err, e)
@@ -327,14 +338,31 @@ func (c *protocolConnection) decodeCommandCompleteMsg1pX(
 		return nil
 	}
 
-	state, err := c.stateCodec.Decode(
+	r.Discard(int(r.PopUint32())) // state data
+	return nil
+}
+
+func (c *protocolConnection) decodeStateDataDescription(r *buff.Reader) error {
+	id := r.PopUUID()
+	desc, err := descriptor.Pop(
 		r.PopSlice(r.PopUint32()),
-		codecs.Path("state"),
+		c.protocolVersion,
 	)
 	if err != nil {
-		return err
+		return &binaryProtocolError{err: fmt.Errorf(
+			"decoding ParameterStatus state_description: %w", err)}
+	} else if desc.ID != id {
+		return &binaryProtocolError{err: fmt.Errorf(
+			"state_description ids don't match: %v != %v", id, desc.ID)}
 	}
 
-	c.state = state.(map[string]interface{})
+	codec, err := state.BuildCodec(desc, codecs.Path("state"))
+	if err != nil {
+		return &binaryProtocolError{err: fmt.Errorf(
+			"building decoder from ParameterStatus state_description: %w",
+			err)}
+	}
+
+	c.stateCodec = codec
 	return nil
 }

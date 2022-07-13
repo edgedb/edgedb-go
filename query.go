@@ -38,6 +38,7 @@ type query struct {
 	expCard      uint8
 	args         []interface{}
 	capabilities uint64
+	state        map[string]interface{}
 }
 
 func (q *query) flat() bool {
@@ -64,6 +65,7 @@ func newQuery(
 	method, cmd string,
 	args []interface{},
 	capabilities uint64,
+	state map[string]interface{},
 	out interface{},
 ) (*query, error) {
 	var (
@@ -80,6 +82,7 @@ func newQuery(
 			expCard:      cardinality.Many,
 			args:         args,
 			capabilities: capabilities,
+			state:        state,
 		}, nil
 	case "Query":
 		expCard = cardinality.Many
@@ -104,6 +107,7 @@ func newQuery(
 		expCard:      expCard,
 		args:         args,
 		capabilities: capabilities,
+		state:        state,
 	}
 
 	var err error
@@ -144,6 +148,7 @@ func runQuery(
 	method, cmd string,
 	out interface{},
 	args []interface{},
+	state map[string]interface{},
 ) error {
 	if method == "QuerySingleJSON" {
 		switch out.(type) {
@@ -154,7 +159,8 @@ func runQuery(
 				out)}
 		}
 	}
-	q, err := newQuery(method, cmd, args, c.capabilities1pX(), out)
+
+	q, err := newQuery(method, cmd, args, c.capabilities1pX(), state, out)
 	if err != nil {
 		return err
 	}
@@ -172,4 +178,38 @@ func runQuery(
 	}
 
 	return err
+}
+
+func copyState(in map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(in))
+
+	for k, v := range in {
+		switch val := v.(type) {
+		case map[string]interface{}:
+			out[k] = copyState(val)
+		case []interface{}:
+			out[k] = copyStateSlice(val)
+		default:
+			out[k] = val
+		}
+	}
+
+	return out
+}
+
+func copyStateSlice(in []interface{}) []interface{} {
+	out := make([]interface{}, len(in))
+
+	for i, v := range in {
+		switch val := v.(type) {
+		case map[string]interface{}:
+			out[i] = copyState(val)
+		case []interface{}:
+			out[i] = copyStateSlice(val)
+		default:
+			out[i] = val
+		}
+	}
+
+	return out
 }

@@ -73,11 +73,10 @@ func (c *transactableConn) granularFlow(ctx context.Context, q *query) error {
 	return &clientError{msg: "unreachable"}
 }
 
-// Tx runs an action in a transaction retrying failed actions if they might
-// succeed on a subsequent attempt.
-func (c *transactableConn) Tx(
+func (c *transactableConn) tx(
 	ctx context.Context,
 	action TxBlock,
+	state map[string]interface{},
 ) (err error) {
 	conn, err := c.borrow("transaction")
 	if err != nil {
@@ -101,6 +100,7 @@ func (c *transactableConn) Tx(
 				borrowableConn: borrowableConn{conn: conn},
 				txState:        &txState{},
 				options:        c.txOpts,
+				state:          state,
 			}
 			err = tx.start(ctx)
 			if err != nil {

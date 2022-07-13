@@ -48,7 +48,6 @@ type protocolConnection struct {
 
 	systemConfig systemConfig
 	stateCodec   state.Codec
-	state        map[string]interface{}
 }
 
 // connectWithTimeout makes a single attempt to connect to `addr`.

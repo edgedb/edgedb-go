@@ -56,6 +56,7 @@ type Client struct {
 
 	cfg *connConfig
 	cacheCollection
+	state map[string]interface{}
 }
 
 // CreateClient returns a new client. The client connects lazily. Call
@@ -99,6 +100,7 @@ func CreateClientDSN(ctx context.Context, dsn string, opts Options) (*Client, er
 			outCodecCache:     cache.New(1_000),
 			capabilitiesCache: cache.New(1_000),
 		},
+		state: make(map[string]interface{}),
 	}
 
 	return p, nil
@@ -317,7 +319,14 @@ func (p *Client) Execute(
 		return err
 	}
 
-	q, err := newQuery("Execute", cmd, args, conn.capabilities1pX(), nil)
+	q, err := newQuery(
+		"Execute",
+		cmd,
+		args,
+		conn.capabilities1pX(),
+		copyState(p.state),
+		nil,
+	)
 	if err != nil {
 		return err
 	}
@@ -338,7 +347,7 @@ func (p *Client) Query(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "Query", cmd, out, args)
+	err = runQuery(ctx, conn, "Query", cmd, out, args, p.state)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -356,7 +365,7 @@ func (p *Client) QuerySingle(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QuerySingle", cmd, out, args)
+	err = runQuery(ctx, conn, "QuerySingle", cmd, out, args, p.state)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -372,7 +381,7 @@ func (p *Client) QueryJSON(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QueryJSON", cmd, out, args)
+	err = runQuery(ctx, conn, "QueryJSON", cmd, out, args, p.state)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -390,7 +399,7 @@ func (p *Client) QuerySingleJSON(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QuerySingleJSON", cmd, out, args)
+	err = runQuery(ctx, conn, "QuerySingleJSON", cmd, out, args, p.state)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -414,6 +423,6 @@ func (p *Client) Tx(ctx context.Context, action TxBlock) error {
 		return err
 	}
 
-	err = conn.Tx(ctx, action)
+	err = conn.tx(ctx, action, p.state)
 	return firstError(err, p.release(conn, err))
 }

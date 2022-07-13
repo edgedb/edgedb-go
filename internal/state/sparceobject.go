@@ -93,6 +93,7 @@ func (c *sparceObjectCodec) Encode(
 	w.PushUint32(uint32(elmCount))
 
 	var err error
+	seen := 0
 	for i, field := range c.fields {
 		fieldValue, ok := in[field.name]
 		if !ok {
@@ -104,8 +105,28 @@ func (c *sparceObjectCodec) Encode(
 		if err != nil {
 			return err
 		}
+		seen++
 	}
 
+	if seen != elmCount {
+		missing := make(map[string]struct{}, elmCount)
+		for name := range in {
+			missing[name] = struct{}{}
+		}
+
+		for _, field := range c.fields {
+			if _, ok := in[field.name]; ok {
+				delete(missing, field.name)
+			}
+		}
+
+		for name := range missing {
+			return fmt.Errorf(
+				"found unknown state value %v",
+				path.AddField(name),
+			)
+		}
+	}
 	w.EndBytes()
 	return nil
 }

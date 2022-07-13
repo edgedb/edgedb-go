@@ -27,7 +27,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/message"
-	"github.com/edgedb/edgedb-go/internal/state"
 )
 
 var logMsgSeverityLookup = map[uint8]string{
@@ -90,28 +89,6 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 			return &unexpectedMessageError{msg: fmt.Sprintf(
 				"got ParameterStatus for unknown parameter %q", name)}
 		}
-	case message.StateDataDescription:
-		id := r.PopUUID()
-		desc, err := descriptor.Pop(
-			r.PopSlice(r.PopUint32()),
-			c.protocolVersion,
-		)
-		if err != nil {
-			return &binaryProtocolError{err: fmt.Errorf(
-				"decoding ParameterStatus state_description: %w", err)}
-		} else if desc.ID != id {
-			return &binaryProtocolError{err: fmt.Errorf(
-				"state_description ids don't match: %v != %v", id, desc.ID)}
-		}
-
-		codec, err := state.BuildCodec(desc, codecs.Path("state"))
-		if err != nil {
-			return &binaryProtocolError{err: fmt.Errorf(
-				"building decoder from ParameterStatus state_description: %w",
-				err)}
-		}
-
-		c.stateCodec = codec
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()

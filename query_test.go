@@ -382,16 +382,12 @@ func TestNilResultValue(t *testing.T) {
 }
 
 func TestExecutWithArgs(t *testing.T) {
-	ctx := context.Background()
-
-	conn, err := client.acquire(ctx)
-	require.NoError(t, err)
-	defer client.release(conn, nil) // nolint:errcheck
-	if conn.conn.protocolVersion.LT(protocolVersion1p0) {
+	if protocolVersion.LT(protocolVersion1p0) {
 		t.Skip()
 	}
 
-	err = client.Execute(ctx, "select <int64>$0; select <int64>$0;", int64(1))
+	ctx := context.Background()
+	err := client.Execute(ctx, "select <int64>$0; select <int64>$0;", int64(1))
 	assert.NoError(t, err)
 
 	err = client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
@@ -413,4 +409,388 @@ func TestExecutWithArgs(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
+}
+
+func TestClientRejectsSessionConfig(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	expected := "edgedb.DisabledCapabilityError: " +
+		"cannot execute session configuration queries"
+
+	ctx := context.Background()
+	err := client.Execute(ctx, "SET ALIAS bar AS MODULE std")
+	assert.EqualError(t, err, expected)
+
+	var result []byte
+	err = client.Query(ctx, "SET ALIAS bar AS MODULE std", &result)
+	assert.EqualError(t, err, expected)
+
+	err = client.QueryJSON(ctx, "SET ALIAS bar AS MODULE std", &result)
+	assert.EqualError(t, err, expected)
+
+	err = client.QuerySingle(ctx, "SET ALIAS bar AS MODULE std", &result)
+	assert.EqualError(t, err, expected)
+
+	err = client.QuerySingleJSON(ctx, "SET ALIAS bar AS MODULE std", &result)
+	assert.EqualError(t, err, expected)
+}
+
+func TestWithConfig(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	query := "SELECT assert_single(cfg::Config.query_execution_timeout)"
+
+	var result Duration
+	err := client.QuerySingle(ctx, query, &result)
+	require.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+
+	a := client.WithConfig(map[string]interface{}{
+		"query_execution_timeout": Duration(65_432_000),
+	})
+	err = a.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(65_432_000), result)
+
+	err = client.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+
+	b := a.WithConfig(map[string]interface{}{
+		"query_execution_timeout": Duration(32_100_000),
+	})
+	err = b.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(32_100_000), result)
+
+	err = a.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(65_432_000), result)
+
+	err = client.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+}
+
+func TestInvalidWithConfig(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result int64
+
+	err := client.QuerySingle(ctx, "select 1", &result)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), result)
+
+	c := client.WithConfig(map[string]interface{}{"hello": "world"})
+	err = c.QuerySingle(ctx, "select 1", &result)
+	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+		"invalid connection state: "+
+		"found unknown state value state.config.hello")
+
+	err = client.QuerySingle(ctx, "select 1", &result)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), result)
+
+	c = client.WithConfig(map[string]interface{}{
+		"query_execution_timeout": "this should be Duration not string",
+	})
+	err = c.QuerySingle(ctx, "select 1", &result)
+	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+		"invalid connection state: "+
+		"expected state.config.query_execution_timeout to be edgedb.Duration "+
+		"got: string")
+
+	err = client.QuerySingle(ctx, "select 1", &result)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), result)
+}
+
+func TestWithoutConfig(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	query := "SELECT assert_single(cfg::Config.query_execution_timeout)"
+
+	var result Duration
+	err := client.QuerySingle(ctx, query, &result)
+	require.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+
+	a := client.WithConfig(map[string]interface{}{
+		"query_execution_timeout": Duration(65_432_000),
+	})
+	err = a.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(65_432_000), result)
+
+	b := a.WithoutConfig("query_execution_timeout")
+	err = b.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+
+	err = a.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(65_432_000), result)
+
+	err = client.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+
+	b = client.WithoutConfig("some", "crazy", "names")
+	err = b.QuerySingle(ctx, query, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, Duration(0), result)
+}
+
+func TestWithModuleAliases(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result int64
+
+	err := client.QuerySingle(
+		ctx,
+		"SELECT <my_new_name_for_std::int64>1",
+		&result,
+	)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_new_name_for_std::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_new_name_for_std::int64>1\n"+
+		"        ^ error")
+
+	a := client.WithModuleAliases(ModuleAlias{"my_new_name_for_std", "std"})
+
+	err = a.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>2", &result)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(2), result)
+
+	err = client.QuerySingle(
+		ctx,
+		"SELECT <my_new_name_for_std::int64>3",
+		&result,
+	)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_new_name_for_std::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_new_name_for_std::int64>3\n"+
+		"        ^ error")
+
+	b := a.WithModuleAliases(ModuleAlias{"my_new_name_for_std", "math"})
+	err = b.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>4", &result)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_new_name_for_std::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_new_name_for_std::int64>4\n"+
+		"        ^ error")
+
+	err = a.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>5", &result)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(5), result)
+
+	err = client.QuerySingle(
+		ctx,
+		"SELECT <my_new_name_for_std::int64>6",
+		&result,
+	)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_new_name_for_std::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_new_name_for_std::int64>6\n"+
+		"        ^ error")
+}
+
+func TestInvalidWithModuleAliases(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result int64
+
+	a := client.WithModuleAliases(ModuleAlias{
+		"my_alias", "this_module_doesnt_exist"})
+
+	err := a.QuerySingle(ctx, "SELECT <my_alias::int64>1", &result)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_alias::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_alias::int64>1\n"+
+		"        ^ error")
+}
+
+func TestWithoutModuleAliases(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result int64
+
+	a := client.WithModuleAliases(ModuleAlias{"my_new_name_for_std", "std"})
+	b := a.WithoutModuleAliases("my_new_name_for_std")
+
+	err := b.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>4", &result)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_new_name_for_std::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_new_name_for_std::int64>4\n"+
+		"        ^ error")
+
+	err = a.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>5", &result)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(5), result)
+
+	err = client.QuerySingle(
+		ctx,
+		"SELECT <my_new_name_for_std::int64>6",
+		&result,
+	)
+	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+		"type 'my_new_name_for_std::int64' does not exist\n"+
+		"query:1:9\n\n"+
+		"SELECT <my_new_name_for_std::int64>6\n"+
+		"        ^ error")
+}
+
+func TestWithGlobals(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result string
+
+	err := client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "default", result)
+
+	a := client.WithGlobals(map[string]interface{}{
+		"default::global_value": "first",
+	})
+	err = a.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "first", result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "default", result)
+
+	b := a.WithGlobals(map[string]interface{}{
+		"default::global_value": "second",
+	})
+	err = b.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "second", result)
+
+	err = a.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "first", result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "default", result)
+}
+
+func TestInvalidWithGlobals(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result int64
+
+	a := client.WithGlobals(map[string]interface{}{
+		"default::this": "thing donesnt exist",
+	})
+
+	err := a.QuerySingle(ctx, "SELECT GLOBAL this", &result)
+	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+		"invalid connection state: "+
+		"found unknown state value state.globals.default::this")
+
+	b := client.WithGlobals(map[string]interface{}{
+		"default::global_value": 27,
+	})
+
+	err = b.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+		"invalid connection state: "+
+		"expected state.globals.default::global_value to be string "+
+		"got: int")
+}
+
+func TestWithoutGlobals(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result string
+
+	err := client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "default", result)
+
+	a := client.WithGlobals(map[string]interface{}{
+		"default::global_value": "first",
+	})
+
+	b := a.WithoutGlobals("default::global_value")
+	err = b.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "default", result)
+
+	err = a.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "first", result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	require.NoError(t, err)
+	assert.Equal(t, "default", result)
+}
+
+func TestWithConfigWrongServerVersion(t *testing.T) {
+	if protocolVersion.GTE(protocolVersion1p0) {
+		t.Skip()
+	}
+	ctx := context.Background()
+	var result int64
+
+	a := client.WithGlobals(map[string]interface{}{
+		"default::global_value": "first",
+	})
+	err := a.QuerySingle(ctx, "SELECT 1", &result)
+	require.EqualError(t, err, "edgedb.InterfaceError: "+
+		"client methods WithConfig, WithGlobals, and WithModuleAliases "+
+		"are not supported by the server. "+
+		"Upgrade your server to version 2.0 or greater to use these features.")
+
+	b := client.WithModuleAliases(ModuleAlias{"other_math", "math"})
+	err = b.QuerySingle(ctx, "SELECT 1", &result)
+	require.EqualError(t, err, "edgedb.InterfaceError: "+
+		"client methods WithConfig, WithGlobals, and WithModuleAliases "+
+		"are not supported by the server. "+
+		"Upgrade your server to version 2.0 or greater to use these features.")
+
+	c := client.WithConfig(map[string]interface{}{
+		"query_execution_timeout": Duration(65_432_000),
+	})
+	err = c.QuerySingle(ctx, "SELECT 1", &result)
+	require.EqualError(t, err, "edgedb.InterfaceError: "+
+		"client methods WithConfig, WithGlobals, and WithModuleAliases "+
+		"are not supported by the server. "+
+		"Upgrade your server to version 2.0 or greater to use these features.")
 }

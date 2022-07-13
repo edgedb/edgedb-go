@@ -83,6 +83,7 @@ type Tx struct {
 	borrowableConn
 	*txState
 	options TxOptions
+	state   map[string]interface{}
 }
 
 func (t *Tx) execute(
@@ -90,7 +91,7 @@ func (t *Tx) execute(
 	cmd string,
 	sucessState txStatus,
 ) error {
-	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil)
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil, t.state)
 	if err != nil {
 		return err
 	}
@@ -146,7 +147,7 @@ func (t *Tx) txstate() *txState { return t.txState }
 // If the action returns an error the savepoint is rolled back,
 // otherwise it is released.
 func (t *Tx) Subtx(ctx context.Context, action SubtxBlock) error {
-	return runSubtx(ctx, action, t)
+	return runSubtx(ctx, action, t, t.state)
 }
 
 func (t *Tx) scriptFlow(ctx context.Context, q *query) error {
@@ -171,7 +172,7 @@ func (t *Tx) Execute(
 	cmd string,
 	args ...interface{},
 ) error {
-	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil)
+	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil, t.state)
 	if err != nil {
 		return err
 	}
@@ -186,7 +187,7 @@ func (t *Tx) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "Query", cmd, out, args)
+	return runQuery(ctx, t, "Query", cmd, out, args, t.state)
 }
 
 // QuerySingle runs a singleton-returning query and returns its element.
@@ -198,7 +199,7 @@ func (t *Tx) QuerySingle(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingle", cmd, out, args)
+	return runQuery(ctx, t, "QuerySingle", cmd, out, args, t.state)
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -208,7 +209,7 @@ func (t *Tx) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QueryJSON", cmd, out, args)
+	return runQuery(ctx, t, "QueryJSON", cmd, out, args, t.state)
 }
 
 // QuerySingleJSON runs a singleton-returning query.
@@ -220,5 +221,5 @@ func (t *Tx) QuerySingleJSON(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args)
+	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args, t.state)
 }
