@@ -18,9 +18,12 @@ package header
 
 import "encoding/binary"
 
+// Header is a binary protocol header
+type Header map[uint16][]byte
+
 const (
 	// AllowCapabilities tells the server what capabilities it should allow.
-	AllowCapabilities        = 0xFF04
+	AllowCapabilities uint16 = 0xFF04
 	allCapabilities   uint64 = 0xffffffffffffffff
 
 	// ExplicitObjectIDs tells the server not to inject object ids.

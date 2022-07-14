@@ -147,11 +147,6 @@ type optionalObjectDecoder struct {
 	typ reflect.Type
 }
 
-var (
-	trueValue  = reflect.ValueOf(true)
-	falseValue = reflect.ValueOf(false)
-)
-
 func (c *optionalObjectDecoder) DecodeMissing(out unsafe.Pointer) {
 	val := reflect.NewAt(c.typ, out)
 	method := val.MethodByName("SetMissing")

@@ -74,12 +74,11 @@ func TestTutorial(t *testing.T) {
 					required property last_name -> str;
 				}
 			}
-		};
-
-		POPULATE MIGRATION;
-
-		COMMIT MIGRATION;
-	`)
+		};`)
+	require.NoError(t, err)
+	err = edb.Execute(ctx, `POPULATE MIGRATION;`)
+	require.NoError(t, err)
+	err = edb.Execute(ctx, `COMMIT MIGRATION;`)
 	require.NoError(t, err)
 
 	err = edb.Execute(ctx, `

@@ -154,7 +154,7 @@ func (c *arrayDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 	return nil

@@ -14,12 +14,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package format
+package state
 
-// IO Formats
-const (
-	Binary       = 0x62
-	JSON         = 0x6a
-	JSONElements = 0x4a
-	Null         = 0x6e
+import (
+	"fmt"
+
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
+
+type strCodec struct {
+	id edgedbtypes.UUID
+}
+
+func (c *strCodec) DescriptorID() edgedbtypes.UUID { return c.id }
+
+func (c *strCodec) Decode(
+	r *buff.Reader,
+	path codecs.Path,
+) (interface{}, error) {
+	return string(r.Buf), nil
+}
+
+func (c *strCodec) Encode(
+	w *buff.Writer,
+	path codecs.Path,
+	val interface{},
+) error {
+	in, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("expected %v to be string got: %T", path, val)
+	}
+
+	w.PushString(in)
+	return nil
+}

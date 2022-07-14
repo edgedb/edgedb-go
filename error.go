@@ -18,7 +18,6 @@ package edgedb
 
 import (
 	"context"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -31,7 +30,15 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 )
 
-var errZeroResults error = &noDataError{msg: "zero results"}
+var (
+	errNoTOMLFound             = errors.New("no edgedb.toml found")
+	errZeroResults       error = &noDataError{msg: "zero results"}
+	errStateNotSupported       = &interfaceError{msg: "client methods " +
+		"WithConfig, WithGlobals, and WithModuleAliases " +
+		"are not supported by the server. " +
+		"Upgrade your server to version 2.0 or greater " +
+		"to use these features."}
+)
 
 // ErrorTag is the argument type to Error.HasTag().
 type ErrorTag string
@@ -210,24 +217,6 @@ func wrapAll(errs ...error) error {
 	}
 
 	return err
-}
-
-func isTLSError(err error) bool {
-	var (
-		x509HostnameError              x509.HostnameError
-		x509CertificateInvalidError    x509.CertificateInvalidError
-		x509UnknownAuthorityError      x509.UnknownAuthorityError
-		x509ConstraintViolationError   x509.ConstraintViolationError
-		x509InsecureAlgorithmError     x509.InsecureAlgorithmError
-		x509UnhandledCriticalExtension x509.UnhandledCriticalExtension
-	)
-
-	return (errors.As(err, &x509HostnameError) ||
-		errors.As(err, &x509CertificateInvalidError) ||
-		errors.As(err, &x509UnknownAuthorityError) ||
-		errors.As(err, &x509ConstraintViolationError) ||
-		errors.As(err, &x509InsecureAlgorithmError) ||
-		errors.As(err, &x509UnhandledCriticalExtension))
 }
 
 func isClientConnectionError(err error) bool {

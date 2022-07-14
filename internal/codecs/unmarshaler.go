@@ -35,7 +35,7 @@ var unmarshalers = map[types.UUID]struct {
 	typ        reflect.Type
 	methodName string
 }{
-	boolID: {
+	BoolID: {
 		typ:        getType((*marshal.BoolUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBBool",
 	},
@@ -59,7 +59,7 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.LocalTimeUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBLocalTime",
 	},
-	durationID: {
+	DurationID: {
 		typ:        getType((*marshal.DurationUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBDuration",
 	},
@@ -79,7 +79,7 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.Int32Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBInt32",
 	},
-	int64ID: {
+	Int64ID: {
 		typ:        getType((*marshal.Int64Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBInt64",
 	},
@@ -99,7 +99,7 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.DecimalUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBDecimal",
 	},
-	strID: {
+	StrID: {
 		typ:        getType((*marshal.StrUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBStr",
 	},
@@ -107,17 +107,11 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.UUIDUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBUUID",
 	},
-	memoryID: {
+	MemoryID: {
 		typ:        getType((*marshal.MemoryUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBMemory",
 	},
 }
-
-// nolint:lll
-var (
-	optionalUnmarshalerType       = getType((*marshal.OptionalUnmarshaler)(nil))
-	optionalScalarUnmarshalerType = getType((*marshal.OptionalScalarUnmarshaler)(nil))
-)
 
 func buildUnmarshaler(
 	desc descriptor.Descriptor,
@@ -128,7 +122,7 @@ func buildUnmarshaler(
 	case descriptor.BaseScalar:
 		id = desc.ID
 	case descriptor.Enum:
-		id = strID
+		id = StrID
 	default:
 		return nil, false, fmt.Errorf(
 			"unexpected descriptor type 0x%x", desc.Type)
@@ -186,7 +180,6 @@ func (c *optionalUnmarshalerDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	// todo: should SetMissing be called with false?
 	val := reflect.NewAt(c.unmarshalerDecoder.typ, out)
 	method := val.MethodByName("SetMissing")
 	method.Call([]reflect.Value{falseValue})

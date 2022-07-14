@@ -26,18 +26,11 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	boolID = types.UUID{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
-	boolType         = reflect.TypeOf(false)
-	optionalBoolType = reflect.TypeOf(types.OptionalBool{})
-)
-
 type boolCodec struct{}
 
 func (c *boolCodec) Type() reflect.Type { return boolType }
 
-func (c *boolCodec) DescriptorID() types.UUID { return boolID }
+func (c *boolCodec) DescriptorID() types.UUID { return BoolID }
 
 func (c *boolCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint8)(out) = r.PopUint8()
@@ -102,7 +95,7 @@ type optionalBoolLayout struct {
 
 type optionalBoolDecoder struct{}
 
-func (c *optionalBoolDecoder) DescriptorID() types.UUID { return boolID }
+func (c *optionalBoolDecoder) DescriptorID() types.UUID { return BoolID }
 
 func (c *optionalBoolDecoder) Decode(
 	r *buff.Reader,

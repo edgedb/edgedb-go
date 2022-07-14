@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -44,11 +43,12 @@ var (
 	protocolVersion internal.ProtocolVersion
 )
 
-func executeOrPanic(command string) {
+func executeOrFatal(command string) {
 	ctx := context.Background()
 	err := client.Execute(ctx, command)
 	if err != nil {
-		panic(err)
+		debug.PrintStack()
+		log.Fatal(err)
 	}
 }
 
@@ -191,48 +191,51 @@ func startServer() {
 }
 
 func TestMain(m *testing.M) {
-	var err error
-	code := 1
-	defer func() {
-		if e := recover(); e != nil {
-			log.Println(e)
-			fmt.Println(string(debug.Stack()))
-		}
-
-		if err != nil {
-			log.Println("error while cleaning up: ", err)
-		}
-		os.Exit(code)
-	}()
-
 	startServer()
 
 	ctx := context.Background()
 	log.Println("connecting")
+	var err error
 	client, err = CreateClient(ctx, opts)
 	if err != nil {
-		panic(err)
+		debug.PrintStack()
+		log.Fatal(err)
 	}
 	log.Println("connected")
 
-	defer client.Close() // nolint:errcheck
-	err = client.Execute(ctx,
+	executeOrFatal(
 		"configure instance set session_idle_timeout := <duration>'1s'")
-	if err != nil {
-		panic(err)
-	}
 	conn, err := client.acquire(ctx)
 	if err != nil {
-		panic(err)
+		debug.PrintStack()
+		log.Fatal(err)
 	}
 	protocolVersion = conn.conn.protocolVersion
 	err = client.release(conn, nil)
 	if err != nil {
-		panic(err)
+		debug.PrintStack()
+		log.Fatal(err)
 	}
 
 	log.Println("running migration")
-	executeOrPanic(`
+	if protocolVersion.GTE(protocolVersion1p0) {
+		executeOrFatal(`
+			START MIGRATION TO {
+				module default {
+					required global global_value -> str {
+						default := "default";
+					};
+					type User {
+						property name -> str;
+					}
+					type TxTest {
+						required property name -> str;
+					}
+				}
+			};
+		`)
+	} else {
+		executeOrFatal(`
 			START MIGRATION TO {
 				module default {
 					type User {
@@ -243,16 +246,17 @@ func TestMain(m *testing.M) {
 					}
 				}
 			};
-			POPULATE MIGRATION;
-			COMMIT MIGRATION;
 		`)
-	executeOrPanic(`
+	}
+	executeOrFatal(`POPULATE MIGRATION;`)
+	executeOrFatal(`COMMIT MIGRATION;`)
+	executeOrFatal(`
 			CREATE SUPERUSER ROLE user_with_password {
 				SET password := 'secret';
 			};
 		`)
-	executeOrPanic("CONFIGURE INSTANCE RESET Auth;")
-	executeOrPanic(`
+	executeOrFatal("CONFIGURE INSTANCE RESET Auth;")
+	executeOrFatal(`
 			CONFIGURE INSTANCE INSERT Auth {
 				comment := "no password",
 				priority := 1,
@@ -260,7 +264,7 @@ func TestMain(m *testing.M) {
 				user := {'*'},
 			};
 		`)
-	executeOrPanic(`
+	executeOrFatal(`
 			CONFIGURE INSTANCE INSERT Auth {
 				comment := "password required",
 				priority := 0,
@@ -278,18 +282,25 @@ func TestMain(m *testing.M) {
 	// doesn't shutdown.
 	done := make(chan struct{}, 1)
 	go func() {
-		var result int64
+		var result string
 		for {
 			select {
 			case <-done:
 				return
 			default:
-				_ = client.QuerySingle(ctx, "SELECT 1", &result)
+				_ = client.QuerySingle(ctx, "SELECT 'keep alive'", &result)
+				time.Sleep(500 * time.Millisecond)
 			}
 		}
 	}()
-	defer func() { done <- struct{}{} }()
 
 	log.Println("starting tests")
-	code = m.Run()
+	code := m.Run()
+
+	// Only close the client if there were no panics.
+	// Closing can block forever if the client is broken.
+	done <- struct{}{}
+	client.Close() // nolint:errcheck
+
+	os.Exit(code)
 }

@@ -365,3 +365,131 @@ func (p Client) WithRetryOptions( // nolint:gocritic
 	p.retryOpts = opts
 	return &p
 }
+
+// WithConfig sets configuration values for the returned client.
+func (p Client) WithConfig( // nolint:gocritic
+	cfg map[string]interface{},
+) *Client {
+	state := copyState(p.state)
+
+	var config map[string]interface{}
+	if c, ok := state["config"]; ok {
+		config = c.(map[string]interface{})
+	} else {
+		config = make(map[string]interface{}, len(cfg))
+	}
+
+	for k, v := range cfg {
+		config[k] = v
+	}
+
+	state["config"] = config
+	p.state = state
+	return &p
+}
+
+// WithoutConfig unsets configuration values for the returned client.
+func (p Client) WithoutConfig(key ...string) *Client { // nolint:gocritic
+	state := copyState(p.state)
+
+	if c, ok := state["config"]; ok {
+		config := c.(map[string]interface{})
+		for _, k := range key {
+			delete(config, k)
+		}
+	}
+
+	p.state = state
+	return &p
+}
+
+// ModuleAlias is an alias name and module name pare.
+type ModuleAlias struct {
+	Alias  string
+	Module string
+}
+
+// WithModuleAliases sets module name aliases for the returned client.
+func (p Client) WithModuleAliases( // nolint:gocritic
+	aliases ...ModuleAlias,
+) *Client {
+	state := copyState(p.state)
+
+	var a []interface{}
+	if b, ok := state["aliases"]; ok {
+		a = b.([]interface{})
+	}
+
+	for i := 0; i < len(aliases); i++ {
+		a = append(a, []interface{}{aliases[i].Alias, aliases[i].Module})
+	}
+
+	state["aliases"] = a
+	p.state = state
+	return &p
+}
+
+// WithoutModuleAliases unsets module name aliases for the returned client.
+func (p Client) WithoutModuleAliases( // nolint:gocritic
+	aliases ...string,
+) *Client {
+	state := copyState(p.state)
+
+	if a, ok := state["aliases"]; ok {
+		blacklist := make(map[string]struct{}, len(aliases))
+		for _, name := range aliases {
+			blacklist[name] = struct{}{}
+		}
+
+		var without []interface{}
+		for _, p := range a.([]interface{}) {
+			pair := p.([]interface{})
+			key := pair[0].(string)
+			if _, ok := blacklist[key]; !ok {
+				without = append(without, []interface{}{key, pair[1]})
+			}
+		}
+
+		state["aliases"] = without
+	}
+
+	p.state = state
+	return &p
+}
+
+// WithGlobals sets values for global variables for the returned client.
+func (p Client) WithGlobals( // nolint:gocritic
+	globals map[string]interface{},
+) *Client {
+	state := copyState(p.state)
+
+	var g map[string]interface{}
+	if x, ok := state["globals"]; ok {
+		g = x.(map[string]interface{})
+	} else {
+		g = make(map[string]interface{}, len(globals))
+	}
+
+	for k, v := range globals {
+		g[k] = v
+	}
+
+	state["globals"] = g
+	p.state = state
+	return &p
+}
+
+// WithoutGlobals unsets values for global variables for the returned client.
+func (p Client) WithoutGlobals(globals ...string) *Client { // nolint:gocritic
+	state := copyState(p.state)
+
+	if c, ok := state["globals"]; ok {
+		config := c.(map[string]interface{})
+		for _, k := range globals {
+			delete(config, k)
+		}
+	}
+
+	p.state = state
+	return &p
+}

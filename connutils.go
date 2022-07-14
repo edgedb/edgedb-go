@@ -37,7 +37,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/snc"
 )
 
-var errNoTOMLFound = errors.New("no edgedb.toml found")
 var isDSNLike = regexp.MustCompile(`(?i)^[a-z]+://`)
 var isIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9]*$`)
 

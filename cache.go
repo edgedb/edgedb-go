@@ -47,13 +47,10 @@ import (
 	"encoding/binary"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/header"
 )
-
-var descCache = cache.New(1_000)
 
 type codecKey struct {
 	ID   UUID
@@ -82,7 +79,7 @@ type queryKey struct {
 	outType reflect.Type
 }
 
-func makeKey(q *gfQuery) queryKey {
+func makeKey(q *query) queryKey {
 	return queryKey{
 		cmd:     q.cmd,
 		fmt:     q.fmt,
@@ -91,7 +88,7 @@ func makeKey(q *gfQuery) queryKey {
 	}
 }
 
-func (c *protocolConnection) getCachedTypeIDs(q *gfQuery) (*idPair, bool) {
+func (c *protocolConnection) getCachedTypeIDs(q *query) (*idPair, bool) {
 	if val, ok := c.typeIDCache.Get(makeKey(q)); ok {
 		x := val.(idPair)
 		return &x, true
@@ -100,21 +97,40 @@ func (c *protocolConnection) getCachedTypeIDs(q *gfQuery) (*idPair, bool) {
 	return nil, false
 }
 
-func (c *protocolConnection) cacheTypeIDs(q *gfQuery, ids idPair) {
+func (c *protocolConnection) cacheTypeIDs(q *query, ids idPair) {
 	c.typeIDCache.Put(makeKey(q), ids)
 }
 
-func (c *protocolConnection) cacheCapabilities(
-	q *gfQuery,
-	headers msgHeaders,
+func (c *protocolConnection) cacheCapabilities0pX(
+	q *query,
+	headers header.Header,
 ) {
 	if capabilities, ok := headers[header.Capabilities]; ok {
 		x := binary.BigEndian.Uint64(capabilities)
+		if x&capabilitiesDDL != 0 {
+			c.typeIDCache.Invalidate()
+			c.inCodecCache.Invalidate()
+			c.outCodecCache.Invalidate()
+			c.capabilitiesCache.Invalidate()
+		}
 		c.capabilitiesCache.Put(makeKey(q), x)
 	}
 }
 
-func (c *reconnectingConn) getCachedCapabilities(q *gfQuery) (uint64, bool) {
+func (c *protocolConnection) cacheCapabilities1pX(
+	q *query,
+	capabilities uint64,
+) {
+	if capabilities&capabilitiesDDL != 0 {
+		c.typeIDCache.Invalidate()
+		c.inCodecCache.Invalidate()
+		c.outCodecCache.Invalidate()
+		c.capabilitiesCache.Invalidate()
+	}
+	c.capabilitiesCache.Put(makeKey(q), capabilities)
+}
+
+func (c *reconnectingConn) getCachedCapabilities(q *query) (uint64, bool) {
 	if val, ok := c.capabilitiesCache.Get(makeKey(q)); ok {
 		x := val.(uint64)
 		return x, true

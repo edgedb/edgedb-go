@@ -14,12 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package format
+package state
 
-// IO Formats
-const (
-	Binary       = 0x62
-	JSON         = 0x6a
-	JSONElements = 0x4a
-	Null         = 0x6e
+import (
+	"fmt"
+
+	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
+
+type int64Codec struct{}
+
+func (c *int64Codec) DescriptorID() edgedbtypes.UUID {
+	return codecs.MemoryID
+}
+
+func (c *int64Codec) Decode(
+	r *buff.Reader,
+	path codecs.Path,
+) (interface{}, error) {
+	return int64(r.PopUint64()), nil
+}
+
+func (c *int64Codec) Encode(
+	w *buff.Writer,
+	path codecs.Path,
+	val interface{},
+) error {
+	in, ok := val.(int64)
+	if !ok {
+		return fmt.Errorf("expected %v to be int64 got: %T", path, val)
+	}
+
+	w.PushUint32(8) // data length
+	w.PushUint64(uint64(in))
+	return nil
+}

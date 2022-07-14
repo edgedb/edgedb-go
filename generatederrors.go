@@ -35,6 +35,8 @@ const (
 	TypeSpecNotFoundError                  ErrorCategory = "errors::TypeSpecNotFoundError"
 	UnexpectedMessageError                 ErrorCategory = "errors::UnexpectedMessageError"
 	InputDataError                         ErrorCategory = "errors::InputDataError"
+	ParameterTypeMismatchError             ErrorCategory = "errors::ParameterTypeMismatchError"
+	StateMismatchError                     ErrorCategory = "errors::StateMismatchError"
 	ResultCardinalityMismatchError         ErrorCategory = "errors::ResultCardinalityMismatchError"
 	CapabilityError                        ErrorCategory = "errors::CapabilityError"
 	UnsupportedCapabilityError             ErrorCategory = "errors::UnsupportedCapabilityError"
@@ -79,11 +81,16 @@ const (
 	DuplicateFunctionDefinitionError       ErrorCategory = "errors::DuplicateFunctionDefinitionError"
 	DuplicateConstraintDefinitionError     ErrorCategory = "errors::DuplicateConstraintDefinitionError"
 	DuplicateCastDefinitionError           ErrorCategory = "errors::DuplicateCastDefinitionError"
+	SessionTimeoutError                    ErrorCategory = "errors::SessionTimeoutError"
+	IdleSessionTimeoutError                ErrorCategory = "errors::IdleSessionTimeoutError"
 	QueryTimeoutError                      ErrorCategory = "errors::QueryTimeoutError"
+	TransactionTimeoutError                ErrorCategory = "errors::TransactionTimeoutError"
+	IdleTransactionTimeoutError            ErrorCategory = "errors::IdleTransactionTimeoutError"
 	ExecutionError                         ErrorCategory = "errors::ExecutionError"
 	InvalidValueError                      ErrorCategory = "errors::InvalidValueError"
 	DivisionByZeroError                    ErrorCategory = "errors::DivisionByZeroError"
 	NumericOutOfRangeError                 ErrorCategory = "errors::NumericOutOfRangeError"
+	AccessPolicyError                      ErrorCategory = "errors::AccessPolicyError"
 	IntegrityError                         ErrorCategory = "errors::IntegrityError"
 	ConstraintViolationError               ErrorCategory = "errors::ConstraintViolationError"
 	CardinalityViolationError              ErrorCategory = "errors::CardinalityViolationError"
@@ -95,6 +102,10 @@ const (
 	ConfigurationError                     ErrorCategory = "errors::ConfigurationError"
 	AccessError                            ErrorCategory = "errors::AccessError"
 	AuthenticationError                    ErrorCategory = "errors::AuthenticationError"
+	AvailabilityError                      ErrorCategory = "errors::AvailabilityError"
+	BackendUnavailableError                ErrorCategory = "errors::BackendUnavailableError"
+	BackendError                           ErrorCategory = "errors::BackendError"
+	UnsupportedBackendFeatureError         ErrorCategory = "errors::UnsupportedBackendFeatureError"
 	ClientError                            ErrorCategory = "errors::ClientError"
 	ClientConnectionError                  ErrorCategory = "errors::ClientConnectionError"
 	ClientConnectionFailedError            ErrorCategory = "errors::ClientConnectionFailedError"
@@ -107,6 +118,7 @@ const (
 	UnknownArgumentError                   ErrorCategory = "errors::UnknownArgumentError"
 	InvalidArgumentError                   ErrorCategory = "errors::InvalidArgumentError"
 	NoDataError                            ErrorCategory = "errors::NoDataError"
+	InternalClientError                    ErrorCategory = "errors::InternalClientError"
 )
 
 type internalServerError struct {
@@ -391,6 +403,86 @@ func (e *inputDataError) Category(c ErrorCategory) bool {
 func (e *inputDataError) isEdgeDBProtocolError() {}
 
 func (e *inputDataError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type parameterTypeMismatchError struct {
+	msg string
+	err error
+}
+
+func (e *parameterTypeMismatchError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.ParameterTypeMismatchError: " + msg
+}
+
+func (e *parameterTypeMismatchError) Unwrap() error { return e.err }
+
+func (e *parameterTypeMismatchError) Category(c ErrorCategory) bool {
+	switch c {
+	case ParameterTypeMismatchError:
+		return true
+	case InputDataError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *parameterTypeMismatchError) isEdgeDBInputDataError() {}
+
+func (e *parameterTypeMismatchError) isEdgeDBProtocolError() {}
+
+func (e *parameterTypeMismatchError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type stateMismatchError struct {
+	msg string
+	err error
+}
+
+func (e *stateMismatchError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.StateMismatchError: " + msg
+}
+
+func (e *stateMismatchError) Unwrap() error { return e.err }
+
+func (e *stateMismatchError) Category(c ErrorCategory) bool {
+	switch c {
+	case StateMismatchError:
+		return true
+	case InputDataError:
+		return true
+	case ProtocolError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *stateMismatchError) isEdgeDBInputDataError() {}
+
+func (e *stateMismatchError) isEdgeDBProtocolError() {}
+
+func (e *stateMismatchError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -2209,6 +2301,82 @@ func (e *duplicateCastDefinitionError) HasTag(tag ErrorTag) bool {
 	}
 }
 
+type sessionTimeoutError struct {
+	msg string
+	err error
+}
+
+func (e *sessionTimeoutError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.SessionTimeoutError: " + msg
+}
+
+func (e *sessionTimeoutError) Unwrap() error { return e.err }
+
+func (e *sessionTimeoutError) Category(c ErrorCategory) bool {
+	switch c {
+	case SessionTimeoutError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *sessionTimeoutError) isEdgeDBQueryError() {}
+
+func (e *sessionTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type idleSessionTimeoutError struct {
+	msg string
+	err error
+}
+
+func (e *idleSessionTimeoutError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.IdleSessionTimeoutError: " + msg
+}
+
+func (e *idleSessionTimeoutError) Unwrap() error { return e.err }
+
+func (e *idleSessionTimeoutError) Category(c ErrorCategory) bool {
+	switch c {
+	case IdleSessionTimeoutError:
+		return true
+	case SessionTimeoutError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *idleSessionTimeoutError) isEdgeDBSessionTimeoutError() {}
+
+func (e *idleSessionTimeoutError) isEdgeDBQueryError() {}
+
+func (e *idleSessionTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
 type queryTimeoutError struct {
 	msg string
 	err error
@@ -2229,6 +2397,8 @@ func (e *queryTimeoutError) Category(c ErrorCategory) bool {
 	switch c {
 	case QueryTimeoutError:
 		return true
+	case SessionTimeoutError:
+		return true
 	case QueryError:
 		return true
 	default:
@@ -2236,9 +2406,95 @@ func (e *queryTimeoutError) Category(c ErrorCategory) bool {
 	}
 }
 
+func (e *queryTimeoutError) isEdgeDBSessionTimeoutError() {}
+
 func (e *queryTimeoutError) isEdgeDBQueryError() {}
 
 func (e *queryTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type transactionTimeoutError struct {
+	msg string
+	err error
+}
+
+func (e *transactionTimeoutError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.TransactionTimeoutError: " + msg
+}
+
+func (e *transactionTimeoutError) Unwrap() error { return e.err }
+
+func (e *transactionTimeoutError) Category(c ErrorCategory) bool {
+	switch c {
+	case TransactionTimeoutError:
+		return true
+	case SessionTimeoutError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *transactionTimeoutError) isEdgeDBSessionTimeoutError() {}
+
+func (e *transactionTimeoutError) isEdgeDBQueryError() {}
+
+func (e *transactionTimeoutError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type idleTransactionTimeoutError struct {
+	msg string
+	err error
+}
+
+func (e *idleTransactionTimeoutError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.IdleTransactionTimeoutError: " + msg
+}
+
+func (e *idleTransactionTimeoutError) Unwrap() error { return e.err }
+
+func (e *idleTransactionTimeoutError) Category(c ErrorCategory) bool {
+	switch c {
+	case IdleTransactionTimeoutError:
+		return true
+	case TransactionTimeoutError:
+		return true
+	case SessionTimeoutError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *idleTransactionTimeoutError) isEdgeDBTransactionTimeoutError() {}
+
+func (e *idleTransactionTimeoutError) isEdgeDBSessionTimeoutError() {}
+
+func (e *idleTransactionTimeoutError) isEdgeDBQueryError() {}
+
+func (e *idleTransactionTimeoutError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -2387,6 +2643,46 @@ func (e *numericOutOfRangeError) isEdgeDBInvalidValueError() {}
 func (e *numericOutOfRangeError) isEdgeDBExecutionError() {}
 
 func (e *numericOutOfRangeError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type accessPolicyError struct {
+	msg string
+	err error
+}
+
+func (e *accessPolicyError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.AccessPolicyError: " + msg
+}
+
+func (e *accessPolicyError) Unwrap() error { return e.err }
+
+func (e *accessPolicyError) Category(c ErrorCategory) bool {
+	switch c {
+	case AccessPolicyError:
+		return true
+	case InvalidValueError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *accessPolicyError) isEdgeDBInvalidValueError() {}
+
+func (e *accessPolicyError) isEdgeDBExecutionError() {}
+
+func (e *accessPolicyError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -2813,6 +3109,144 @@ func (e *authenticationError) Category(c ErrorCategory) bool {
 func (e *authenticationError) isEdgeDBAccessError() {}
 
 func (e *authenticationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type availabilityError struct {
+	msg string
+	err error
+}
+
+func (e *availabilityError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.AvailabilityError: " + msg
+}
+
+func (e *availabilityError) Unwrap() error { return e.err }
+
+func (e *availabilityError) Category(c ErrorCategory) bool {
+	switch c {
+	case AvailabilityError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *availabilityError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type backendUnavailableError struct {
+	msg string
+	err error
+}
+
+func (e *backendUnavailableError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.BackendUnavailableError: " + msg
+}
+
+func (e *backendUnavailableError) Unwrap() error { return e.err }
+
+func (e *backendUnavailableError) Category(c ErrorCategory) bool {
+	switch c {
+	case BackendUnavailableError:
+		return true
+	case AvailabilityError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *backendUnavailableError) isEdgeDBAvailabilityError() {}
+
+func (e *backendUnavailableError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldRetry:
+		return true
+	default:
+		return false
+	}
+}
+
+type backendError struct {
+	msg string
+	err error
+}
+
+func (e *backendError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.BackendError: " + msg
+}
+
+func (e *backendError) Unwrap() error { return e.err }
+
+func (e *backendError) Category(c ErrorCategory) bool {
+	switch c {
+	case BackendError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *backendError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type unsupportedBackendFeatureError struct {
+	msg string
+	err error
+}
+
+func (e *unsupportedBackendFeatureError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.UnsupportedBackendFeatureError: " + msg
+}
+
+func (e *unsupportedBackendFeatureError) Unwrap() error { return e.err }
+
+func (e *unsupportedBackendFeatureError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnsupportedBackendFeatureError:
+		return true
+	case BackendError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *unsupportedBackendFeatureError) isEdgeDBBackendError() {}
+
+func (e *unsupportedBackendFeatureError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -3307,6 +3741,42 @@ func (e *noDataError) HasTag(tag ErrorTag) bool {
 	}
 }
 
+type internalClientError struct {
+	msg string
+	err error
+}
+
+func (e *internalClientError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.InternalClientError: " + msg
+}
+
+func (e *internalClientError) Unwrap() error { return e.err }
+
+func (e *internalClientError) Category(c ErrorCategory) bool {
+	switch c {
+	case InternalClientError:
+		return true
+	case ClientError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *internalClientError) isEdgeDBClientError() {}
+
+func (e *internalClientError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
 func errorFromCode(code uint32, msg string) error {
 	switch code {
 	case 0x01_00_00_00:
@@ -3325,6 +3795,10 @@ func errorFromCode(code uint32, msg string) error {
 		return &unexpectedMessageError{msg: msg}
 	case 0x03_02_00_00:
 		return &inputDataError{msg: msg}
+	case 0x03_02_01_00:
+		return &parameterTypeMismatchError{msg: msg}
+	case 0x03_02_02_00:
+		return &stateMismatchError{msg: msg}
 	case 0x03_03_00_00:
 		return &resultCardinalityMismatchError{msg: msg}
 	case 0x03_04_00_00:
@@ -3414,7 +3888,15 @@ func errorFromCode(code uint32, msg string) error {
 	case 0x04_05_02_0a:
 		return &duplicateCastDefinitionError{msg: msg}
 	case 0x04_06_00_00:
+		return &sessionTimeoutError{msg: msg}
+	case 0x04_06_01_00:
+		return &idleSessionTimeoutError{msg: msg}
+	case 0x04_06_02_00:
 		return &queryTimeoutError{msg: msg}
+	case 0x04_06_0a_00:
+		return &transactionTimeoutError{msg: msg}
+	case 0x04_06_0a_01:
+		return &idleTransactionTimeoutError{msg: msg}
 	case 0x05_00_00_00:
 		return &executionError{msg: msg}
 	case 0x05_01_00_00:
@@ -3423,6 +3905,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &divisionByZeroError{msg: msg}
 	case 0x05_01_00_02:
 		return &numericOutOfRangeError{msg: msg}
+	case 0x05_01_00_03:
+		return &accessPolicyError{msg: msg}
 	case 0x05_02_00_00:
 		return &integrityError{msg: msg}
 	case 0x05_02_00_01:
@@ -3445,6 +3929,14 @@ func errorFromCode(code uint32, msg string) error {
 		return &accessError{msg: msg}
 	case 0x07_01_00_00:
 		return &authenticationError{msg: msg}
+	case 0x08_00_00_00:
+		return &availabilityError{msg: msg}
+	case 0x08_00_00_01:
+		return &backendUnavailableError{msg: msg}
+	case 0x09_00_00_00:
+		return &backendError{msg: msg}
+	case 0x09_00_01_00:
+		return &unsupportedBackendFeatureError{msg: msg}
 	case 0xff_00_00_00:
 		return &clientError{msg: msg}
 	case 0xff_01_00_00:
@@ -3469,6 +3961,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &invalidArgumentError{msg: msg}
 	case 0xff_03_00_00:
 		return &noDataError{msg: msg}
+	case 0xff_04_00_00:
+		return &internalClientError{msg: msg}
 	default:
 		return &unexpectedMessageError{
 			msg: fmt.Sprintf(

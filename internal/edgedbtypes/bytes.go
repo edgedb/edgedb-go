@@ -31,7 +31,6 @@ func (o *OptionalBytes) Get() ([]byte, bool) { return o.val, o.isSet }
 // Set sets the value.
 func (o *OptionalBytes) Set(val []byte) {
 	if val == nil {
-		// todo I'm not sure about this behavior...
 		o.Unset()
 		return
 	}

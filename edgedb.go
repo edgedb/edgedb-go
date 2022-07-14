@@ -26,9 +26,8 @@ import (
 	"github.com/edgedb/edgedb-go/internal/cache"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/edgedb/edgedb-go/internal/soc"
+	"github.com/edgedb/edgedb-go/internal/state"
 )
-
-var rnd = snc.NewRand()
 
 type cacheCollection struct {
 	serverSettings    *snc.ServerSettings
@@ -46,6 +45,9 @@ type protocolConnection struct {
 
 	protocolVersion internal.ProtocolVersion
 	cacheCollection
+
+	systemConfig systemConfig
+	stateCodec   state.Codec
 }
 
 // connectWithTimeout makes a single attempt to connect to `addr`.
@@ -163,7 +165,7 @@ func (c *protocolConnection) isClosed() bool {
 	return false
 }
 
-func (c *protocolConnection) scriptFlow(ctx context.Context, q sfQuery) error {
+func (c *protocolConnection) scriptFlow(ctx context.Context, q *query) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -175,12 +177,17 @@ func (c *protocolConnection) scriptFlow(ctx context.Context, q sfQuery) error {
 		return err
 	}
 
-	return firstError(c.execScriptFlow(r, q), c.releaseReader(r))
+	if c.protocolVersion.GTE(protocolVersion1p0) {
+		err = c.execGranularFlow1pX(r, q)
+	} else {
+		err = c.execScriptFlow(r, q)
+	}
+	return firstError(err, c.releaseReader(r))
 }
 
 func (c *protocolConnection) granularFlow(
 	ctx context.Context,
-	q *gfQuery,
+	q *query,
 ) error {
 	r, err := c.acquireReader(ctx)
 	if err != nil {
@@ -193,5 +200,10 @@ func (c *protocolConnection) granularFlow(
 		return err
 	}
 
-	return firstError(c.execGranularFlow(r, q), c.releaseReader(r))
+	if c.protocolVersion.GTE(protocolVersion1p0) {
+		err = c.execGranularFlow1pX(r, q)
+	} else {
+		err = c.execGranularFlow0pX(r, q)
+	}
+	return firstError(err, c.releaseReader(r))
 }

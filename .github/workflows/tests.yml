@@ -16,7 +16,7 @@ jobs:
       matrix:
         go-version: ["1.17", "1.18"]
         edgedb-version: [stable, nightly]
-        os: [ubuntu-latest, macos-latest, windows-2019]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
         with:

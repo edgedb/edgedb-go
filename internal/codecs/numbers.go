@@ -27,25 +27,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	int16ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}
-	int32ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}
-	int64ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}
-	float32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}
-	float64ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}
-
-	int16Type           = reflect.TypeOf(int16(0))
-	int32Type           = reflect.TypeOf(int32(0))
-	int64Type           = reflect.TypeOf(int64(0))
-	float32Type         = reflect.TypeOf(float32(0))
-	float64Type         = reflect.TypeOf(float64(0))
-	optionalInt16Type   = reflect.TypeOf(types.OptionalInt16{})
-	optionalInt32Type   = reflect.TypeOf(types.OptionalInt32{})
-	optionalInt64Type   = reflect.TypeOf(types.OptionalInt64{})
-	optionalFloat32Type = reflect.TypeOf(types.OptionalFloat32{})
-	optionalFloat64Type = reflect.TypeOf(types.OptionalFloat64{})
-)
-
 type int16Codec struct{}
 
 func (c *int16Codec) Type() reflect.Type { return int16Type }
@@ -204,7 +185,7 @@ type int64Codec struct{}
 
 func (c *int64Codec) Type() reflect.Type { return int64Type }
 
-func (c *int64Codec) DescriptorID() types.UUID { return int64ID }
+func (c *int64Codec) DescriptorID() types.UUID { return Int64ID }
 
 func (c *int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
@@ -259,7 +240,7 @@ type optionalInt64 struct {
 
 type optionalInt64Decoder struct{}
 
-func (c *optionalInt64Decoder) DescriptorID() types.UUID { return int64ID }
+func (c *optionalInt64Decoder) DescriptorID() types.UUID { return Int64ID }
 
 func (c *optionalInt64Decoder) Decode(
 	r *buff.Reader,

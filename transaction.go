@@ -83,6 +83,7 @@ type Tx struct {
 	borrowableConn
 	*txState
 	options TxOptions
+	state   map[string]interface{}
 }
 
 func (t *Tx) execute(
@@ -90,7 +91,12 @@ func (t *Tx) execute(
 	cmd string,
 	sucessState txStatus,
 ) error {
-	err := t.borrowableConn.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil, t.state)
+	if err != nil {
+		return err
+	}
+
+	err = t.borrowableConn.scriptFlow(ctx, q)
 
 	switch err {
 	case nil:
@@ -141,10 +147,10 @@ func (t *Tx) txstate() *txState { return t.txState }
 // If the action returns an error the savepoint is rolled back,
 // otherwise it is released.
 func (t *Tx) Subtx(ctx context.Context, action SubtxBlock) error {
-	return runSubtx(ctx, action, t)
+	return runSubtx(ctx, action, t, t.state)
 }
 
-func (t *Tx) scriptFlow(ctx context.Context, q sfQuery) error {
+func (t *Tx) scriptFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
 	}
@@ -152,7 +158,7 @@ func (t *Tx) scriptFlow(ctx context.Context, q sfQuery) error {
 	return t.borrowableConn.scriptFlow(ctx, q)
 }
 
-func (t *Tx) granularFlow(ctx context.Context, q *gfQuery) error {
+func (t *Tx) granularFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted(q.method); e != nil {
 		return e
 	}
@@ -161,11 +167,17 @@ func (t *Tx) granularFlow(ctx context.Context, q *gfQuery) error {
 }
 
 // Execute an EdgeQL command (or commands).
-func (t *Tx) Execute(ctx context.Context, cmd string) error {
-	return t.scriptFlow(ctx, sfQuery{
-		cmd:     cmd,
-		headers: t.headers(),
-	})
+func (t *Tx) Execute(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
+	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil, t.state)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 // Query runs a query and returns the results.
@@ -175,7 +187,7 @@ func (t *Tx) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "Query", cmd, out, args)
+	return runQuery(ctx, t, "Query", cmd, out, args, t.state)
 }
 
 // QuerySingle runs a singleton-returning query and returns its element.
@@ -187,7 +199,7 @@ func (t *Tx) QuerySingle(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingle", cmd, out, args)
+	return runQuery(ctx, t, "QuerySingle", cmd, out, args, t.state)
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -197,7 +209,7 @@ func (t *Tx) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QueryJSON", cmd, out, args)
+	return runQuery(ctx, t, "QueryJSON", cmd, out, args, t.state)
 }
 
 // QuerySingleJSON runs a singleton-returning query.
@@ -209,5 +221,5 @@ func (t *Tx) QuerySingleJSON(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args)
+	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args, t.state)
 }

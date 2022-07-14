@@ -19,8 +19,13 @@ package edgedb
 import (
 	"fmt"
 	"log"
+	"reflect"
+	"strconv"
+	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/edgedb/edgedb-go/internal/codecs"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 	"github.com/edgedb/edgedb-go/internal/message"
 )
 
@@ -35,10 +40,55 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 	switch r.MsgType {
 	case message.ParameterStatus:
 		name := r.PopString()
-		value := r.PopBytes()
-		valueCopy := make([]byte, len(value))
-		copy(valueCopy, value)
-		c.serverSettings.Set(name, valueCopy)
+		switch name {
+		case "pgaddr":
+			r.PopBytes() // discard
+		case "suggested_pool_concurrency":
+			i, err := strconv.Atoi(r.PopString())
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding ParameterStatus suggested_pool_concurrency: %w",
+					err)}
+			}
+			c.serverSettings.Set(name, i)
+		case "system_config":
+			p := r.PopSlice(r.PopUint32())
+			d := p.PopSlice(p.PopUint32())
+			id := d.PopUUID()
+			desc, err := descriptor.Pop(d, c.protocolVersion)
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding ParameterStatus system_config descriptor: %w",
+					err)}
+			} else if desc.ID != id {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"system_config descriptor ids don't match: %v != %v",
+					id, desc.ID)}
+			}
+
+			var cfg systemConfig
+			codec, err := codecs.BuildDecoder(
+				desc,
+				reflect.TypeOf(cfg),
+				codecs.Path("system_config"),
+			)
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"building codec from ParameterStatus "+
+						"system_config descriptor: %w", err)}
+			}
+
+			err = codec.Decode(p.PopSlice(p.PopUint32()), unsafe.Pointer(&cfg))
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding ParameterStatus system_config: %w", err)}
+			}
+
+			c.systemConfig = cfg
+		default:
+			return &unexpectedMessageError{msg: fmt.Sprintf(
+				"got ParameterStatus for unknown parameter %q", name)}
+		}
 	case message.LogMessage:
 		severity := logMsgSeverityLookup[r.PopUint8()]
 		code := r.PopUint32()

@@ -27,18 +27,6 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-var (
-	decimalID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}
-	bigIntID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}
-
-	bigIntType         = reflect.TypeOf(&big.Int{})
-	optionalBigIntType = reflect.TypeOf(types.OptionalBigInt{})
-
-	big10k  = big.NewInt(10_000)
-	bigOne  = big.NewInt(1)
-	bigZero = big.NewInt(0)
-)
-
 type bigIntCodec struct{}
 
 func (c *bigIntCodec) Type() reflect.Type { return bigIntType }
@@ -171,11 +159,9 @@ type optionalBigInt struct {
 	isSet bool
 }
 
-type optionalBigIntDecoder struct {
-	id types.UUID
-}
+type optionalBigIntDecoder struct{}
 
-func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return c.id }
+func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return bigIntID }
 
 func (c *optionalBigIntDecoder) Decode(
 	r *buff.Reader,

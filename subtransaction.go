@@ -31,6 +31,7 @@ func runSubtx(
 	ctx context.Context,
 	action SubtxBlock,
 	c subtxable,
+	state map[string]interface{},
 ) (err error) {
 	conn, err := c.borrow("subtransaction")
 	if err != nil {
@@ -42,6 +43,7 @@ func runSubtx(
 		borrowableConn: borrowableConn{conn: conn},
 		txState:        c.txstate(),
 		options:        c.txOptions(),
+		state:          state,
 	}
 
 	if e := subtx.declare(ctx); e != nil {
@@ -64,6 +66,7 @@ type Subtx struct {
 	*txState
 	options TxOptions
 	name    string
+	state   map[string]interface{}
 }
 
 func (t *Subtx) declare(ctx context.Context) error {
@@ -73,7 +76,12 @@ func (t *Subtx) declare(ctx context.Context) error {
 
 	t.name = t.nextSavepointName()
 	cmd := "DECLARE SAVEPOINT " + t.name
-	return t.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil, t.state)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 func (t *Subtx) release(ctx context.Context) error {
@@ -82,7 +90,12 @@ func (t *Subtx) release(ctx context.Context) error {
 	}
 
 	cmd := "RELEASE SAVEPOINT " + t.name
-	return t.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil, t.state)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 func (t *Subtx) rollback(ctx context.Context) error {
@@ -91,7 +104,12 @@ func (t *Subtx) rollback(ctx context.Context) error {
 	}
 
 	cmd := "ROLLBACK TO SAVEPOINT " + t.name
-	return t.scriptFlow(ctx, sfQuery{cmd: cmd})
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil, t.state)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
 func (t *Subtx) txOptions() TxOptions { return t.options }
@@ -102,22 +120,28 @@ func (t *Subtx) txstate() *txState { return t.txState }
 // If the action returns an error the savepoint is rolled back,
 // otherwise it is released.
 func (t *Subtx) Subtx(ctx context.Context, action SubtxBlock) error {
-	return runSubtx(ctx, action, t)
+	return runSubtx(ctx, action, t, t.state)
 }
 
 // Execute an EdgeQL command (or commands).
-func (t *Subtx) Execute(ctx context.Context, cmd string) error {
+func (t *Subtx) Execute(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
 	}
 
-	return t.scriptFlow(ctx, sfQuery{
-		cmd:     cmd,
-		headers: t.headers(),
-	})
+	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil, t.state)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
 }
 
-func (t *Subtx) granularFlow(ctx context.Context, q *gfQuery) error {
+func (t *Subtx) granularFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted(q.method); e != nil {
 		return e
 	}
@@ -132,7 +156,7 @@ func (t *Subtx) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "Query", cmd, out, args)
+	return runQuery(ctx, t, "Query", cmd, out, args, t.state)
 }
 
 // QuerySingle runs a singleton-returning query and returns its element.
@@ -144,7 +168,7 @@ func (t *Subtx) QuerySingle(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingle", cmd, out, args)
+	return runQuery(ctx, t, "QuerySingle", cmd, out, args, t.state)
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -154,7 +178,7 @@ func (t *Subtx) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QueryJSON", cmd, out, args)
+	return runQuery(ctx, t, "QueryJSON", cmd, out, args, t.state)
 }
 
 // QuerySingleJSON runs a singleton-returning query.
@@ -166,5 +190,5 @@ func (t *Subtx) QuerySingleJSON(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args)
+	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args, t.state)
 }

@@ -45,6 +45,16 @@ func New(cap int) *Cache {
 	return &c
 }
 
+// Invalidate all cache entries.
+func (c *Cache) Invalidate() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.mp = make(map[interface{}]*node, c.cap)
+	c.root.next = &c.root
+	c.root.prev = &c.root
+}
+
 // Get returns a value from the cache.
 func (c *Cache) Get(id interface{}) (interface{}, bool) {
 	// ensure cache is only used by one go routine at a time.

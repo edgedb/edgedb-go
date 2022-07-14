@@ -17,22 +17,12 @@
 package edgedb
 
 import (
-	"crypto/tls"
 	"fmt"
 
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/message"
 	"github.com/xdg/scram"
-)
-
-var (
-	protocolVersionMin  = internal.ProtocolVersion{Major: 0, Minor: 9}
-	protocolVersionMax  = internal.ProtocolVersion{Major: 0, Minor: 13}
-	protocolVersion0p10 = internal.ProtocolVersion{Major: 0, Minor: 10}
-	protocolVersion0p11 = internal.ProtocolVersion{Major: 0, Minor: 11}
-	protocolVersion0p12 = internal.ProtocolVersion{Major: 0, Minor: 12}
-	protocolVersion0p13 = internal.ProtocolVersion{Major: 0, Minor: 13}
 )
 
 func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
@@ -108,6 +98,10 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 			}
 
 			done.Signal()
+		case message.StateDataDescription:
+			if e := c.decodeStateDataDescription(r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.ErrorResponse:
 			err = wrapAll(err, decodeErrorResponseMsg(r, ""))
 			done.Signal()
@@ -121,14 +115,6 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 
 	if r.Err != nil {
 		return r.Err
-	}
-
-	_, isTLS := c.soc.conn.(*tls.Conn)
-	if !isTLS && c.protocolVersion.GTE(protocolVersion0p11) {
-		_ = c.soc.Close()
-		return &clientConnectionError{msg: fmt.Sprintf(
-			"server claims to use protocol version %v.%v without using TLS",
-			c.protocolVersion.Major, c.protocolVersion.Minor)}
 	}
 
 	return err
@@ -234,6 +220,10 @@ func (c *protocolConnection) authenticate(
 			ignoreHeaders(r)
 			r.Discard(1) // transaction state
 			done.Signal()
+		case message.StateDataDescription:
+			if e := c.decodeStateDataDescription(r); e != nil {
+				err = wrapAll(err, e)
+			}
 		case message.ErrorResponse:
 			err = wrapAll(decodeErrorResponseMsg(r, ""))
 		default:

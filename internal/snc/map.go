@@ -20,19 +20,19 @@ import "sync"
 
 // NewServerSettings returns an empty ServerSettings.
 func NewServerSettings() *ServerSettings {
-	return &ServerSettings{settings: make(map[string][]byte)}
+	return &ServerSettings{settings: make(map[string]interface{})}
 }
 
 // ServerSettings is a concurrency safe map. A ServerSettings must
 // not be copied after first use. Use NewServerSettings() instead of creating
 // ServerSettings manually.
 type ServerSettings struct {
-	settings map[string][]byte
+	settings map[string]interface{}
 	mx       sync.RWMutex
 }
 
 // GetOk returns the value for key.
-func (s *ServerSettings) GetOk(key string) ([]byte, bool) {
+func (s *ServerSettings) GetOk(key string) (interface{}, bool) {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
 	val, ok := s.settings[key]
@@ -40,14 +40,14 @@ func (s *ServerSettings) GetOk(key string) ([]byte, bool) {
 }
 
 // Get returns the value for key.
-func (s *ServerSettings) Get(key string) []byte {
+func (s *ServerSettings) Get(key string) interface{} {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
 	return s.settings[key]
 }
 
 // Set sets the value for key.
-func (s *ServerSettings) Set(key string, val []byte) {
+func (s *ServerSettings) Set(key string, val interface{}) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.settings[key] = val
