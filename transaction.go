@@ -143,13 +143,6 @@ func (t *Tx) txOptions() TxOptions { return t.options }
 
 func (t *Tx) txstate() *txState { return t.txState }
 
-// Subtx runs an action in a savepoint.
-// If the action returns an error the savepoint is rolled back,
-// otherwise it is released.
-func (t *Tx) Subtx(ctx context.Context, action SubtxBlock) error {
-	return runSubtx(ctx, action, t, t.state)
-}
-
 func (t *Tx) scriptFlow(ctx context.Context, q *query) error {
 	if e := t.assertStarted("Execute"); e != nil {
 		return e
