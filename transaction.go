@@ -35,8 +35,7 @@ const (
 )
 
 type txState struct {
-	txStatus         txStatus
-	txSavepointCount int
+	txStatus txStatus
 }
 
 // assertNotDone returns an error if the transaction is in a done state.
@@ -71,11 +70,6 @@ func (s *txState) assertStarted(opName string) error {
 	default:
 		return s.assertNotDone(opName)
 	}
-}
-
-func (s *txState) nextSavepointName() string {
-	s.txSavepointCount++
-	return fmt.Sprintf("EdgeDBGoSavepoint%v", s.txSavepointCount)
 }
 
 // Tx is a transaction. Use Client.Tx() to get a transaction.
@@ -137,17 +131,6 @@ func (t *Tx) rollback(ctx context.Context) error {
 	}
 
 	return t.execute(ctx, "ROLLBACK;", rolledBackTx)
-}
-
-func (t *Tx) txOptions() TxOptions { return t.options }
-
-func (t *Tx) txstate() *txState { return t.txState }
-
-// Subtx runs an action in a savepoint.
-// If the action returns an error the savepoint is rolled back,
-// otherwise it is released.
-func (t *Tx) Subtx(ctx context.Context, action SubtxBlock) error {
-	return runSubtx(ctx, action, t, t.state)
 }
 
 func (t *Tx) scriptFlow(ctx context.Context, q *query) error {

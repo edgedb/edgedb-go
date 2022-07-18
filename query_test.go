@@ -394,18 +394,6 @@ func TestExecutWithArgs(t *testing.T) {
 		err = tx.Execute(ctx, "select <int64>$0; select <int64>$0;", int64(1))
 		assert.NoError(t, err)
 
-		err = tx.Subtx(ctx, func(ctx context.Context, subtx *Subtx) error {
-			err = subtx.Execute(
-				ctx,
-				"select <int64>$0; select <int64>$0;",
-				int64(1),
-			)
-			assert.NoError(t, err)
-
-			return nil
-		})
-		assert.NoError(t, err)
-
 		return nil
 	})
 	assert.NoError(t, err)
