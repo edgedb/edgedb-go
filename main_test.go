@@ -233,6 +233,8 @@ func TestMain(m *testing.M) {
 					}
 				}
 			};
+			POPULATE MIGRATION;
+			COMMIT MIGRATION;
 		`)
 	} else {
 		executeOrFatal(`
@@ -246,10 +248,10 @@ func TestMain(m *testing.M) {
 					}
 				}
 			};
+			POPULATE MIGRATION;
+			COMMIT MIGRATION;
 		`)
 	}
-	executeOrFatal(`POPULATE MIGRATION;`)
-	executeOrFatal(`COMMIT MIGRATION;`)
 	executeOrFatal(`
 			CREATE SUPERUSER ROLE user_with_password {
 				SET password := 'secret';

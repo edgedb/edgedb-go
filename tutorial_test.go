@@ -59,8 +59,8 @@ func TestTutorial(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = edb.Execute(ctx, `
-		START MIGRATION TO {
+	err = edb.Execute(ctx,
+		`START MIGRATION TO {
 			module default {
 				type Movie {
 					required property title -> str;
@@ -74,11 +74,9 @@ func TestTutorial(t *testing.T) {
 					required property last_name -> str;
 				}
 			}
-		};`)
-	require.NoError(t, err)
-	err = edb.Execute(ctx, `POPULATE MIGRATION;`)
-	require.NoError(t, err)
-	err = edb.Execute(ctx, `COMMIT MIGRATION;`)
+		};
+		POPULATE MIGRATION;
+		COMMIT MIGRATION;`)
 	require.NoError(t, err)
 
 	err = edb.Execute(ctx, `
