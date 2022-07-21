@@ -100,8 +100,12 @@ func BuildEncoder(
 		return buildNamedTupleEncoder(desc, version)
 	case descriptor.Array:
 		return buildArrayEncoder(desc, version)
+	case descriptor.Range:
+		return buildRangeEncoder(desc, version)
 	default:
-		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
+		return nil, fmt.Errorf(
+			"building encoder: unknown descriptor type 0x%x",
+			desc.Type)
 	}
 }
 
@@ -186,8 +190,12 @@ func BuildDecoder(
 		return buildNamedTupleDecoder(desc, typ, path)
 	case descriptor.Array:
 		return buildArrayDecoder(desc, typ, path)
+	case descriptor.Range:
+		return buildRangeDecoder(desc, typ, path)
 	default:
-		return nil, fmt.Errorf("unknown descriptor type 0x%x", desc.Type)
+		return nil, fmt.Errorf(
+			"building decoder: unknown descriptor type 0x%x",
+			desc.Type)
 	}
 }
 

@@ -28,7 +28,7 @@ type OptionalBool struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalBool) Get() (bool, bool) { return o.val, o.isSet }
+func (o OptionalBool) Get() (bool, bool) { return o.val, o.isSet }
 
 // Set sets the value.
 func (o *OptionalBool) Set(val bool) {

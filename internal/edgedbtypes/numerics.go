@@ -29,7 +29,7 @@ type OptionalBigInt struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalBigInt) Get() (*big.Int, bool) { return o.val, o.isSet }
+func (o OptionalBigInt) Get() (*big.Int, bool) { return o.val, o.isSet }
 
 // Set sets the value.
 func (o *OptionalBigInt) Set(val *big.Int) {

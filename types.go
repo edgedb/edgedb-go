@@ -108,6 +108,48 @@ type (
 
 	// OptionalMemory is a Memory that is not required.
 	OptionalMemory = edgedbtypes.OptionalMemory
+
+	// RangeInt32 is an interval of Int32s
+	RangeInt32 = edgedbtypes.RangeInt32
+
+	// OptionalRangeInt32 is a RangeInt32 that is not required.
+	OptionalRangeInt32 = edgedbtypes.OptionalRangeInt32
+
+	// RangeInt64 is an interval of Int64s
+	RangeInt64 = edgedbtypes.RangeInt64
+
+	// OptionalRangeInt64 is a RangeInt64 that is not required.
+	OptionalRangeInt64 = edgedbtypes.OptionalRangeInt64
+
+	// RangeFloat32 is an interval of Float32s
+	RangeFloat32 = edgedbtypes.RangeFloat32
+
+	// OptionalRangeFloat32 is a RangeFloat32 that is not required.
+	OptionalRangeFloat32 = edgedbtypes.OptionalRangeFloat32
+
+	// RangeFloat64 is an interval of Float64s
+	RangeFloat64 = edgedbtypes.RangeFloat64
+
+	// OptionalRangeFloat64 is a RangeFloat64 that is not required.
+	OptionalRangeFloat64 = edgedbtypes.OptionalRangeFloat64
+
+	// RangeDateTime is an interval of DateTimes
+	RangeDateTime = edgedbtypes.RangeDateTime
+
+	// OptionalRangeDateTime is a RangeDateTime that is not required.
+	OptionalRangeDateTime = edgedbtypes.OptionalRangeDateTime
+
+	// RangeLocalDateTime is an interval of LocalDateTimes
+	RangeLocalDateTime = edgedbtypes.RangeLocalDateTime
+
+	// OptionalRangeLocalDateTime is a RangeLocalDateTime that is not required.
+	OptionalRangeLocalDateTime = edgedbtypes.OptionalRangeLocalDateTime
+
+	// RangeLocalDate is an interval of LocalDates
+	RangeLocalDate = edgedbtypes.RangeLocalDate
+
+	// OptionalRangeLocalDate is a RangeLocalDate that is not required.
+	OptionalRangeLocalDate = edgedbtypes.OptionalRangeLocalDate
 )
 
 var (
@@ -128,6 +170,27 @@ var (
 
 	// NewDateDuration returns a new DateDuration
 	NewDateDuration = edgedbtypes.NewDateDuration
+
+	// NewRangeInt32 returns a new RangeInt32
+	NewRangeInt32 = edgedbtypes.NewRangeInt32
+
+	// NewRangeInt64 returns a new RangeInt64
+	NewRangeInt64 = edgedbtypes.NewRangeInt64
+
+	// NewRangeFloat32 returns a new RangeFloat32
+	NewRangeFloat32 = edgedbtypes.NewRangeFloat32
+
+	// NewRangeFloat64 returns a new RangeFloat64
+	NewRangeFloat64 = edgedbtypes.NewRangeFloat64
+
+	// NewRangeDateTime returns a new RangeDateTime
+	NewRangeDateTime = edgedbtypes.NewRangeDateTime
+
+	// NewRangeLocalDateTime returns a new RangeLocalDateTime
+	NewRangeLocalDateTime = edgedbtypes.NewRangeLocalDateTime
+
+	// NewRangeLocalDate returns a new RangeLocalDate
+	NewRangeLocalDate = edgedbtypes.NewRangeLocalDate
 )
 
 // NewOptionalBool is a convenience function for creating an OptionalBool with
@@ -266,10 +329,68 @@ func NewOptionalDateDuration(v DateDuration) OptionalDateDuration {
 	return o
 }
 
-// NewOptionalMemory is a convenience function  for creating an
+// NewOptionalMemory is a convenience function for creating an
 // OptionalMemory with its value set to v.
 func NewOptionalMemory(v Memory) OptionalMemory {
 	o := OptionalMemory{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeInt32 is a convenience function for creating an
+// OptionalRangeInt32 with its value set to v.
+func NewOptionalRangeInt32(v RangeInt32) OptionalRangeInt32 {
+	o := OptionalRangeInt32{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeInt64 is a convenience function for creating an
+// OptionalRangeInt64 with its value set to v.
+func NewOptionalRangeInt64(v RangeInt64) OptionalRangeInt64 {
+	o := OptionalRangeInt64{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeFloat32 is a convenience function for creating an
+// OptionalRangeFloat32 with its value set to v.
+func NewOptionalRangeFloat32(v RangeFloat32) OptionalRangeFloat32 {
+	o := OptionalRangeFloat32{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeFloat64 is a convenience function for creating an
+// OptionalRangeFloat64 with its value set to v.
+func NewOptionalRangeFloat64(v RangeFloat64) OptionalRangeFloat64 {
+	o := OptionalRangeFloat64{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeDateTime is a convenience function for creating an
+// OptionalRangeDateTime with its value set to v.
+func NewOptionalRangeDateTime(v RangeDateTime) OptionalRangeDateTime {
+	o := OptionalRangeDateTime{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeLocalDateTime is a convenience function for creating an
+// OptionalRangeLocalDateTime with its value set to v.
+func NewOptionalRangeLocalDateTime(
+	v RangeLocalDateTime,
+) OptionalRangeLocalDateTime {
+	o := OptionalRangeLocalDateTime{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalRangeLocalDate is a convenience function for creating an
+// OptionalRangeLocalDate with its value set to v.
+func NewOptionalRangeLocalDate(v RangeLocalDate) OptionalRangeLocalDate {
+	o := OptionalRangeLocalDate{}
 	o.Set(v)
 	return o
 }

@@ -60,6 +60,9 @@ const (
 
 	// InputShape represents the input shape descriptor type.
 	InputShape
+
+	// Range represents the range descriptor type.
+	Range
 )
 
 // Descriptor is a type descriptor
@@ -126,6 +129,10 @@ func Pop(
 		case Enum:
 			discardEnumMemberNames(r)
 			desc = Descriptor{typ, id, nil}
+		case Range:
+			desc = Descriptor{typ, id, []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}}
 		default:
 			if 0x80 <= typ && typ <= 0xff {
 				// ignore unknown type annotations
@@ -134,7 +141,7 @@ func Pop(
 			}
 
 			return Descriptor{}, fmt.Errorf(
-				"unknown descriptor type 0x%x", typ)
+				"poping descriptor: unknown descriptor type 0x%x", typ)
 		}
 
 		descriptors = append(descriptors, desc)

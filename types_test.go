@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -7059,4 +7060,610 @@ func TestSendOptionalMemoryMarshaler(t *testing.T) {
 	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
 		"wrong number of bytes encoded by edgedb.CustomOptionalMemory "+
 		"at args[0] expected 8, got 1")
+}
+
+func serverHasRange(t *testing.T) bool {
+	var hasRange bool
+	err := client.QuerySingle(
+		context.Background(),
+		`SELECT count((
+			SELECT names := schema::ObjectType.name
+			FILTER names = 'schema::Range'
+		)) = 1`,
+		&hasRange,
+	)
+	require.NoError(t, err)
+	return hasRange
+}
+
+func TestSendAndReceiveRangeInt32(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeInt32, 1_000)
+	samples[0] = NewRangeInt32(
+		NewOptionalInt32(1),
+		NewOptionalInt32(1),
+		true,
+		false,
+	)
+
+	for i := 1; i < 1_000; i++ {
+		var lower OptionalInt32
+		var upper OptionalInt32
+
+		if rand.Intn(50) != 1 {
+			l := 2_147_483_647 + rand.Uint32()/2
+			lower = NewOptionalInt32(int32(l))
+		}
+
+		if rand.Intn(50) != 1 {
+			u := rand.Uint32() / 2
+			upper = NewOptionalInt32(int32(u))
+		}
+
+		samples[i] = NewRangeInt32(lower, upper, true, false)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte             `edgedb:"encoded"`
+		RoundTrip  RangeInt32         `edgedb:"round_trip"`
+		Missing    OptionalRangeInt32 `edgedb:"missing"`
+		NotMissing OptionalRangeInt32 `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<int32>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<int32>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeInt32{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeInt32{}, result.Missing)
+			assert.Equal(t, NewOptionalRangeInt32(sample), result.NotMissing)
+
+			encoded, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				string(encoded),
+				strings.ReplaceAll(string(result.Encoded), " ", ""),
+			)
+
+			var decoded RangeInt32
+			err = json.Unmarshal(result.Encoded, &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
+}
+
+func TestSendAndReceiveRangeInt64(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeInt64, 1_000)
+	samples[0] =
+		NewRangeInt64(NewOptionalInt64(1), NewOptionalInt64(1), true, false)
+
+	for i := 1; i < 1_000; i++ {
+		var lower OptionalInt64
+		var upper OptionalInt64
+
+		if rand.Intn(50) != 1 {
+			l := 0x7fffffffffffffff + rand.Uint64()/2
+			lower = NewOptionalInt64(int64(l))
+		}
+
+		if rand.Intn(50) != 1 {
+			u := rand.Uint64() / 2
+			upper = NewOptionalInt64(int64(u))
+		}
+
+		samples[i] = NewRangeInt64(lower, upper, true, false)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte             `edgedb:"encoded"`
+		RoundTrip  RangeInt64         `edgedb:"round_trip"`
+		Missing    OptionalRangeInt64 `edgedb:"missing"`
+		NotMissing OptionalRangeInt64 `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<int64>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<int64>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeInt64{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeInt64{}, result.Missing)
+			assert.Equal(t, NewOptionalRangeInt64(sample), result.NotMissing)
+
+			encoded, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				string(encoded),
+				strings.ReplaceAll(string(result.Encoded), " ", ""),
+			)
+
+			var decoded RangeInt64
+			err = json.Unmarshal(result.Encoded, &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
+}
+
+func TestSendAndReceiveRangeFloat32(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeFloat32, 1_000)
+	samples[0] =
+		NewRangeFloat32(
+			NewOptionalFloat32(1),
+			NewOptionalFloat32(1),
+			true,
+			false,
+		)
+
+	for i := 1; i < 1_000; i++ {
+		l := -1_000 + 2_000*rand.Float32()
+		lower := NewOptionalFloat32(l)
+		u := l + (1_000-l)*rand.Float32()
+		upper := NewOptionalFloat32(u)
+
+		if rand.Intn(50) == 1 {
+			lower = OptionalFloat32{}
+		}
+
+		if rand.Intn(50) == 1 {
+			upper = OptionalFloat32{}
+		}
+
+		samples[i] = NewRangeFloat32(
+			lower,
+			upper,
+			rand.Intn(2) == 1,
+			rand.Intn(2) == 1,
+		)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte               `edgedb:"encoded"`
+		RoundTrip  RangeFloat32         `edgedb:"round_trip"`
+		Missing    OptionalRangeFloat32 `edgedb:"missing"`
+		NotMissing OptionalRangeFloat32 `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<float32>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<float32>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeFloat32{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeFloat32{}, result.Missing)
+			assert.Equal(t, NewOptionalRangeFloat32(sample), result.NotMissing)
+
+			encoded, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				string(encoded),
+				strings.ReplaceAll(string(result.Encoded), " ", ""),
+			)
+
+			var decoded RangeFloat32
+			err = json.Unmarshal(result.Encoded, &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
+}
+
+func TestSendAndReceiveRangeFloat64(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeFloat64, 1_000)
+	samples[0] =
+		NewRangeFloat64(
+			NewOptionalFloat64(1),
+			NewOptionalFloat64(1),
+			true,
+			false,
+		)
+
+	for i := 1; i < 1_000; i++ {
+		l := -1_000 + 2_000*rand.Float64()
+		lower := NewOptionalFloat64(l)
+		u := l + (1_000-l)*rand.Float64()
+		upper := NewOptionalFloat64(u)
+
+		if rand.Intn(50) == 1 {
+			lower = OptionalFloat64{}
+		}
+
+		if rand.Intn(50) == 1 {
+			upper = OptionalFloat64{}
+		}
+
+		samples[i] = NewRangeFloat64(
+			lower,
+			upper,
+			rand.Intn(2) == 1,
+			rand.Intn(2) == 1,
+		)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte               `edgedb:"encoded"`
+		RoundTrip  RangeFloat64         `edgedb:"round_trip"`
+		Missing    OptionalRangeFloat64 `edgedb:"missing"`
+		NotMissing OptionalRangeFloat64 `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<float64>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<float64>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeFloat64{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeFloat64{}, result.Missing)
+			assert.Equal(t, NewOptionalRangeFloat64(sample), result.NotMissing)
+
+			encoded, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				string(encoded),
+				strings.ReplaceAll(string(result.Encoded), " ", ""),
+			)
+
+			var decoded RangeFloat64
+			err = json.Unmarshal(result.Encoded, &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
+}
+
+func TestSendAndReceiveRangeDateTime(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeDateTime, 1_000)
+	samples[0] =
+		NewRangeDateTime(
+			NewOptionalDateTime(time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)),
+			NewOptionalDateTime(time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)),
+			true,
+			false,
+		)
+
+	const maxDate = 253402300799
+	const minDate = -62135596800
+
+	for i := 1; i < 1_000; i++ {
+		l := rand.Int63n(maxDate-minDate) + minDate
+		u := rand.Int63n(maxDate-l) + l
+
+		lower := NewOptionalDateTime(time.Unix(l, 0).UTC())
+		upper := NewOptionalDateTime(time.Unix(u, 0).UTC())
+
+		if rand.Intn(50) == 1 {
+			lower = OptionalDateTime{}
+		}
+
+		if rand.Intn(50) == 1 {
+			upper = OptionalDateTime{}
+		}
+
+		samples[i] = NewRangeDateTime(
+			lower,
+			upper,
+			rand.Intn(2) == 1,
+			rand.Intn(2) == 1,
+		)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte                `edgedb:"encoded"`
+		RoundTrip  RangeDateTime         `edgedb:"round_trip"`
+		Missing    OptionalRangeDateTime `edgedb:"missing"`
+		NotMissing OptionalRangeDateTime `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<datetime>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<datetime>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeDateTime{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeDateTime{}, result.Missing)
+			assert.Equal(
+				t,
+				NewOptionalRangeDateTime(sample),
+				result.NotMissing,
+			)
+
+			encoded := string(result.Encoded)
+			encoded = strings.ReplaceAll(encoded, "+00:00", "Z")
+			encoded = strings.ReplaceAll(encoded, " ", "")
+
+			marshaled, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(t, string(marshaled), encoded)
+
+			var decoded RangeDateTime
+			err = json.Unmarshal([]byte(encoded), &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
+}
+
+func TestSendAndReceiveRangeLocalDateTime(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeLocalDateTime, 1_000)
+	samples[0] =
+		NewRangeLocalDateTime(
+			NewOptionalLocalDateTime(NewLocalDateTime(1970, 1, 1, 0, 0, 0, 0)),
+			NewOptionalLocalDateTime(NewLocalDateTime(1970, 1, 1, 0, 0, 0, 0)),
+			true,
+			false,
+		)
+
+	const maxDate = 30
+	const minDate = 1
+
+	for i := 1; i < 1_000; i++ {
+		l := rand.Intn(maxDate-minDate) + minDate
+		u := rand.Intn(maxDate-l) + l
+
+		lower := NewOptionalLocalDateTime(
+			NewLocalDateTime(1970, 1, l, 0, 0, 0, 0),
+		)
+		upper := NewOptionalLocalDateTime(
+			NewLocalDateTime(1970, 1, u, 0, 0, 0, 0),
+		)
+
+		if rand.Intn(50) == 1 {
+			lower = OptionalLocalDateTime{}
+		}
+
+		if rand.Intn(50) == 1 {
+			upper = OptionalLocalDateTime{}
+		}
+
+		samples[i] = NewRangeLocalDateTime(
+			lower,
+			upper,
+			rand.Intn(2) == 1,
+			rand.Intn(2) == 1,
+		)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte                     `edgedb:"encoded"`
+		RoundTrip  RangeLocalDateTime         `edgedb:"round_trip"`
+		Missing    OptionalRangeLocalDateTime `edgedb:"missing"`
+		NotMissing OptionalRangeLocalDateTime `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<cal::local_datetime>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<cal::local_datetime>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeLocalDateTime{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeLocalDateTime{}, result.Missing)
+			assert.Equal(
+				t,
+				NewOptionalRangeLocalDateTime(sample),
+				result.NotMissing,
+			)
+
+			encoded, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				string(encoded),
+				strings.ReplaceAll(string(result.Encoded), " ", ""),
+			)
+
+			var decoded RangeLocalDateTime
+			err = json.Unmarshal(result.Encoded, &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
+}
+
+func TestSendAndReceiveRangeLocalDate(t *testing.T) {
+	if !serverHasRange(t) {
+		t.Skip("server lacks std::range support")
+	}
+
+	samples := make([]RangeLocalDate, 1_000)
+	samples[0] =
+		NewRangeLocalDate(
+			NewOptionalLocalDate(NewLocalDate(1970, 1, 1)),
+			NewOptionalLocalDate(NewLocalDate(1970, 1, 1)),
+			true,
+			false,
+		)
+
+	const maxDate = 30
+	const minDate = 1
+
+	for i := 1; i < 1_000; i++ {
+		l := rand.Intn(maxDate-minDate) + minDate
+		u := rand.Intn(maxDate-l) + l
+
+		lower := NewOptionalLocalDate(
+			NewLocalDate(1970, 1, l),
+		)
+		upper := NewOptionalLocalDate(
+			NewLocalDate(1970, 1, u),
+		)
+
+		if rand.Intn(50) == 1 {
+			lower = OptionalLocalDate{}
+		}
+
+		if rand.Intn(50) == 1 {
+			upper = OptionalLocalDate{}
+		}
+
+		samples[i] = NewRangeLocalDate(lower, upper, true, false)
+	}
+
+	ctx := context.Background()
+	var results []struct {
+		Encoded    []byte                 `edgedb:"encoded"`
+		RoundTrip  RangeLocalDate         `edgedb:"round_trip"`
+		Missing    OptionalRangeLocalDate `edgedb:"missing"`
+		NotMissing OptionalRangeLocalDate `edgedb:"not_missing"`
+	}
+	err := client.Query(
+		ctx,
+		`FOR x IN array_unpack(<array<range<cal::local_date>>>$0) UNION (
+			SELECT {
+				encoded := <json>x,
+				round_trip := x,
+				missing := <OPTIONAL range<cal::local_date>>$1,
+				not_missing := x,
+			}
+		)`,
+		&results,
+		samples,
+		OptionalRangeLocalDate{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(samples), len(results))
+
+	for i, sample := range samples {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			result := results[i]
+			assert.Equal(t, sample, result.RoundTrip)
+			assert.Equal(t, OptionalRangeLocalDate{}, result.Missing)
+			assert.Equal(
+				t,
+				NewOptionalRangeLocalDate(sample),
+				result.NotMissing,
+			)
+
+			encoded, err := json.Marshal(sample)
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				string(encoded),
+				strings.ReplaceAll(string(result.Encoded), " ", ""),
+			)
+
+			var decoded RangeLocalDate
+			err = json.Unmarshal(result.Encoded, &decoded)
+			require.NoError(t, err)
+			assert.Equal(t, sample, decoded)
+		})
+	}
 }
