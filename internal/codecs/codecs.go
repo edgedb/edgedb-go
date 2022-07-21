@@ -153,6 +153,8 @@ func buildScalarEncoder(desc descriptor.Descriptor) (Encoder, error) {
 		return &bigIntCodec{}, nil
 	case relativeDurationID:
 		return &relativeDurationCodec{}, nil
+	case dateDurationID:
+		return &dateDurationCodec{}, nil
 	case MemoryID:
 		return &memoryCodec{}, nil
 	default:
@@ -385,6 +387,16 @@ func buildScalarDecoder(
 		default:
 			expectedType = "edgedb.RealtiveDuration or " +
 				"edgedb.OptionalRelativeDuration"
+		}
+	case dateDurationID:
+		switch typ {
+		case dateDurationType:
+			return &dateDurationCodec{}, nil
+		case optionalDateDurationType:
+			return &optionalDateDurationDecoder{}, nil
+		default:
+			expectedType = "edgedb.DateDuration or " +
+				"edgedb.OptionalDateDuration"
 		}
 	case MemoryID:
 		switch typ {

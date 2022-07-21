@@ -28,6 +28,8 @@ import (
 var (
 	relativeDurationID = types.UUID{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x11}
+	dateDurationID = types.UUID{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x12}
 	uuidID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
 	// StrID is the str type descriptor ID
 	StrID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
@@ -76,6 +78,7 @@ var (
 	localTimeType             = reflect.TypeOf(types.LocalTime{})
 	durationType              = reflect.TypeOf(types.Duration(0))
 	relativeDurationType      = reflect.TypeOf(types.RelativeDuration{})
+	dateDurationType          = reflect.TypeOf(types.DateDuration{})
 	bigIntType                = reflect.TypeOf(&big.Int{})
 	memoryType                = reflect.TypeOf(types.Memory(0))
 	optionalBigIntType        = reflect.TypeOf(types.OptionalBigInt{})
@@ -87,8 +90,9 @@ var (
 	optionalDurationType         = reflect.TypeOf(types.OptionalDuration{})
 	optionalRelativeDurationType = reflect.TypeOf(
 		types.OptionalRelativeDuration{})
-	optionalMemoryType      = reflect.TypeOf(types.OptionalMemory{})
-	optionalUnmarshalerType = getType(
+	optionalDateDurationType = reflect.TypeOf(types.OptionalDateDuration{})
+	optionalMemoryType       = reflect.TypeOf(types.OptionalMemory{})
+	optionalUnmarshalerType  = getType(
 		(*marshal.OptionalUnmarshaler)(nil))
 	optionalScalarUnmarshalerType = getType(
 		(*marshal.OptionalScalarUnmarshaler)(nil))

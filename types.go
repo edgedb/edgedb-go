@@ -42,6 +42,9 @@ type (
 	// RelativeDuration represents a fuzzy/human span of time.
 	RelativeDuration = edgedbtypes.RelativeDuration
 
+	// DateDuration represents a fuzzy/human span of time in days and months.
+	DateDuration = edgedbtypes.DateDuration
+
 	// Memory represents memory in bytes
 	Memory = edgedbtypes.Memory
 
@@ -100,6 +103,9 @@ type (
 	// OptionalRelativeDuration is a RelativeDuration that is not required.
 	OptionalRelativeDuration = edgedbtypes.OptionalRelativeDuration
 
+	// OptionalDateDuration is a DateDuration that is not required.
+	OptionalDateDuration = edgedbtypes.OptionalDateDuration
+
 	// OptionalMemory is a Memory that is not required.
 	OptionalMemory = edgedbtypes.OptionalMemory
 )
@@ -119,6 +125,9 @@ var (
 
 	// NewRelativeDuration returns a new RelativeDuration
 	NewRelativeDuration = edgedbtypes.NewRelativeDuration
+
+	// NewDateDuration returns a new DateDuration
+	NewDateDuration = edgedbtypes.NewDateDuration
 )
 
 // NewOptionalBool is a convenience function for creating an OptionalBool with
@@ -245,6 +254,14 @@ func NewOptionalDuration(v Duration) OptionalDuration {
 // OptionalRelativeDuration with its value set to v.
 func NewOptionalRelativeDuration(v RelativeDuration) OptionalRelativeDuration {
 	o := OptionalRelativeDuration{}
+	o.Set(v)
+	return o
+}
+
+// NewOptionalDateDuration is a convenience function for creating an
+// OptionalDateDuration with its value set to v.
+func NewOptionalDateDuration(v DateDuration) OptionalDateDuration {
+	o := OptionalDateDuration{}
 	o.Set(v)
 	return o
 }
