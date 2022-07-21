@@ -96,6 +96,26 @@ var (
 		(*marshal.OptionalUnmarshaler)(nil))
 	optionalScalarUnmarshalerType = getType(
 		(*marshal.OptionalScalarUnmarshaler)(nil))
+	rangeInt32Type           = reflect.TypeOf(types.RangeInt32{})
+	rangeInt64Type           = reflect.TypeOf(types.RangeInt64{})
+	rangeFloat32Type         = reflect.TypeOf(types.RangeFloat32{})
+	rangeFloat64Type         = reflect.TypeOf(types.RangeFloat64{})
+	rangeDateTimeType        = reflect.TypeOf(types.RangeDateTime{})
+	rangeLocalDateTimeType   = reflect.TypeOf(types.RangeLocalDateTime{})
+	rangeLocalDateType       = reflect.TypeOf(types.RangeLocalDate{})
+	optionalRangeInt32Type   = reflect.TypeOf(types.OptionalRangeInt32{})
+	optionalRangeInt64Type   = reflect.TypeOf(types.OptionalRangeInt64{})
+	optionalRangeFloat32Type = reflect.TypeOf(
+		types.OptionalRangeFloat32{},
+	)
+	optionalRangeFloat64Type  = reflect.TypeOf(types.OptionalRangeFloat64{})
+	optionalRangeDateTimeType = reflect.TypeOf(
+		types.OptionalRangeDateTime{},
+	)
+	optionalRangeLocalDateTimeType = reflect.TypeOf(
+		types.OptionalRangeLocalDateTime{},
+	)
+	optionalRangeLocalDateType = reflect.TypeOf(types.OptionalRangeLocalDate{})
 
 	big10k  = big.NewInt(10_000)
 	bigOne  = big.NewInt(1)
@@ -109,4 +129,12 @@ var (
 
 	trueValue  = reflect.ValueOf(true)
 	falseValue = reflect.ValueOf(false)
+)
+
+const (
+	rangeEmpty uint8 = 0x01
+	rangeLBInc uint8 = 0x02
+	rangeUBInc uint8 = 0x04
+	rangeLBInf uint8 = 0x08
+	rangeUBInf uint8 = 0x10
 )

@@ -75,7 +75,7 @@ type OptionalDateTime struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalDateTime) Get() (time.Time, bool) {
+func (o OptionalDateTime) Get() (time.Time, bool) {
 	return o.val, o.isSet
 }
 
@@ -162,7 +162,7 @@ type OptionalLocalDateTime struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalLocalDateTime) Get() (LocalDateTime, bool) {
+func (o OptionalLocalDateTime) Get() (LocalDateTime, bool) {
 	return o.val, o.isSet
 }
 
@@ -244,7 +244,7 @@ type OptionalLocalDate struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalLocalDate) Get() (LocalDate, bool) { return o.val, o.isSet }
+func (o OptionalLocalDate) Get() (LocalDate, bool) { return o.val, o.isSet }
 
 // Set sets the value.
 func (o *OptionalLocalDate) Set(val LocalDate) {
@@ -344,7 +344,7 @@ type OptionalLocalTime struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalLocalTime) Get() (LocalTime, bool) { return o.val, o.isSet }
+func (o OptionalLocalTime) Get() (LocalTime, bool) { return o.val, o.isSet }
 
 // Set sets the value.
 func (o *OptionalLocalTime) Set(val LocalTime) {
@@ -636,7 +636,7 @@ type OptionalDuration struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalDuration) Get() (Duration, bool) { return o.val, o.isSet }
+func (o OptionalDuration) Get() (Duration, bool) { return o.val, o.isSet }
 
 // Set sets the value.
 func (o *OptionalDuration) Set(val Duration) {
@@ -1030,7 +1030,7 @@ type OptionalRelativeDuration struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalRelativeDuration) Get() (RelativeDuration, bool) {
+func (o OptionalRelativeDuration) Get() (RelativeDuration, bool) {
 	return o.val, o.isSet
 }
 

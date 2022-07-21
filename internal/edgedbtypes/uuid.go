@@ -86,7 +86,7 @@ type OptionalUUID struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o *OptionalUUID) Get() (UUID, bool) { return o.val, o.isSet }
+func (o OptionalUUID) Get() (UUID, bool) { return o.val, o.isSet }
 
 // Set sets the value.
 func (o *OptionalUUID) Set(val UUID) {
