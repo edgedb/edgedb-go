@@ -19,26 +19,20 @@ package state
 import (
 	"fmt"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-// Codec is a state descriptor codec.
-type Codec interface {
-	Encode(*buff.Writer, codecs.Path, interface{}) error
-	Decode(*buff.Reader, codecs.Path) (interface{}, error)
-	DescriptorID() edgedbtypes.UUID
-}
-
-type codecField struct {
-	codec Codec
+type encoderField struct {
+	codec codecs.Encoder
 	name  string
 }
 
-// BuildCodec builds a state descriptor codec.
-func BuildCodec(desc descriptor.Descriptor, path codecs.Path) (Codec, error) {
+// BuildEncoder builds a state descriptor codec.
+func BuildEncoder(
+	desc descriptor.Descriptor,
+	path codecs.Path,
+) (codecs.Encoder, error) {
 	switch desc.Type {
 	case descriptor.Set:
 		if desc.Fields[0].Desc.Type == descriptor.Array {
@@ -48,40 +42,19 @@ func BuildCodec(desc descriptor.Descriptor, path codecs.Path) (Codec, error) {
 		// sets are encoded the same as arrays
 		fallthrough
 	case descriptor.Array:
-		return buildArrayCodec(desc, path)
+		return buildArrayEncoder(desc, path)
 	case descriptor.Object, descriptor.NamedTuple:
-		return buildObjectOrNamedTupleCodec(desc, path)
+		return buildObjectOrNamedTupleEncoder(desc, path)
 	case descriptor.BaseScalar:
-		return buildBaseScalarCodec(desc, path)
+		return codecs.BuildScalarEncoder(desc)
 	case descriptor.Tuple:
-		return buildTupleCodec(desc, path)
+		return buildTupleEncoder(desc, path)
 	case descriptor.Enum:
-		return &strCodec{desc.ID}, nil
+		return &codecs.StrCodec{ID: desc.ID}, nil
 	case descriptor.InputShape:
-		return buildSparceObjectCodec(desc, path)
+		return buildSparceObjectEncoder(desc, path)
 	default:
 		return nil, fmt.Errorf(
 			"building state codec: unexpected descriptor type 0x%x", desc.Type)
-	}
-}
-
-func buildBaseScalarCodec(
-	desc descriptor.Descriptor,
-	path codecs.Path,
-) (Codec, error) {
-	switch desc.ID {
-	case codecs.StrID:
-		return &strCodec{desc.ID}, nil
-	case codecs.Int64ID:
-		return &int64Codec{}, nil
-	case codecs.BoolID:
-		return &boolCodec{}, nil
-	case codecs.DurationID:
-		return &durationCodec{}, nil
-	case codecs.MemoryID:
-		return &memoryCodec{}, nil
-	default:
-		return nil, fmt.Errorf(
-			"building state codec: unexpected scalar type ID: %v", desc.ID)
 	}
 }

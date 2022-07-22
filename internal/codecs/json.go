@@ -27,15 +27,18 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type jsonCodec struct {
+// JSONCodec encodes/decodes json.
+type JSONCodec struct {
 	baseJSONDecoder
 	typ reflect.Type
 }
 
-func (c *jsonCodec) Type() reflect.Type { return bytesType }
+// Type returns the type the codec encodes/decodes
+func (c *JSONCodec) Type() reflect.Type { return bytesType }
 
-func (c *jsonCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
-	if e := c.popFormat(r); e != nil {
+// Decode decodes a value
+func (c *JSONCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+	if e := c.PopFormat(r); e != nil {
 		return e
 	}
 
@@ -62,7 +65,8 @@ type optionalJSONMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *jsonCodec) Encode(
+// Encode encodes a value
+func (c *JSONCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -90,7 +94,7 @@ func (c *jsonCodec) Encode(
 	}
 }
 
-func (c *jsonCodec) encodeData(w *buff.Writer, data []byte) error {
+func (c *JSONCodec) encodeData(w *buff.Writer, data []byte) error {
 	// data length
 	w.PushUint32(uint32(1 + len(data)))
 
@@ -102,7 +106,7 @@ func (c *jsonCodec) encodeData(w *buff.Writer, data []byte) error {
 	return nil
 }
 
-func (c *jsonCodec) encodeMarshaler(
+func (c *JSONCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.JSONMarshaler,
 	path Path,
@@ -118,7 +122,7 @@ func (c *jsonCodec) encodeMarshaler(
 
 type baseJSONDecoder struct{}
 
-func (c *baseJSONDecoder) popFormat(r *buff.Reader) error {
+func (c *baseJSONDecoder) PopFormat(r *buff.Reader) error {
 	format := r.PopUint8()
 	if format != 1 {
 		return fmt.Errorf(
@@ -128,7 +132,7 @@ func (c *baseJSONDecoder) popFormat(r *buff.Reader) error {
 	return nil
 }
 
-func (c *baseJSONDecoder) DescriptorID() types.UUID { return jsonID }
+func (c *baseJSONDecoder) DescriptorID() types.UUID { return JSONID }
 
 type optionalNilableJSONDecoder struct {
 	baseJSONDecoder
@@ -139,7 +143,7 @@ func (c *optionalNilableJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	if e := c.popFormat(r); e != nil {
+	if e := c.PopFormat(r); e != nil {
 		return e
 	}
 
@@ -163,7 +167,7 @@ func (c *optionalUnmarshalerJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	if e := c.popFormat(r); e != nil {
+	if e := c.PopFormat(r); e != nil {
 		return e
 	}
 
@@ -186,7 +190,7 @@ func (c *optionalScalarUnmarshalerJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	if e := c.popFormat(r); e != nil {
+	if e := c.PopFormat(r); e != nil {
 		return e
 	}
 
@@ -205,7 +209,7 @@ type optionalJSONDecoder struct {
 	typ reflect.Type
 }
 
-func (c *optionalJSONDecoder) DescriptorID() types.UUID { return jsonID }
+func (c *optionalJSONDecoder) DescriptorID() types.UUID { return JSONID }
 
 func (c *optionalJSONDecoder) Decode(
 	r *buff.Reader,

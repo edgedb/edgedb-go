@@ -25,63 +25,36 @@ import (
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func buildTupleCodec(
+func buildTupleEncoder(
 	desc descriptor.Descriptor,
 	path codecs.Path,
-) (Codec, error) {
-	fields := make([]*codecField, len(desc.Fields))
+) (codecs.Encoder, error) {
+	fields := make([]*encoderField, len(desc.Fields))
 
 	for i, field := range desc.Fields {
-		codec, err := BuildCodec(field.Desc, path.AddField(field.Name))
+		codec, err := BuildEncoder(field.Desc, path.AddField(field.Name))
 		if err != nil {
 			return nil, err
 		}
 
-		fields[i] = &codecField{codec: codec}
+		fields[i] = &encoderField{codec: codec}
 	}
 
-	return &tupleCodec{desc.ID, fields}, nil
+	return &tupleEncoder{desc.ID, fields}, nil
 }
 
-type tupleCodec struct {
+type tupleEncoder struct {
 	id     edgedbtypes.UUID
-	fields []*codecField
+	fields []*encoderField
 }
 
-func (c *tupleCodec) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *tupleEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
 
-func (c *tupleCodec) Decode(
-	r *buff.Reader,
-	path codecs.Path,
-) (interface{}, error) {
-	elmCount := int(int32(r.PopUint32()))
-	if elmCount != len(c.fields) {
-		return nil, fmt.Errorf(
-			"wrong number of elements for %v, expected %v got %v",
-			path, len(c.fields), elmCount)
-	}
-
-	result := make([]interface{}, elmCount)
-	for i, field := range c.fields {
-		r.Discard(4) // reserved
-		val, err := field.codec.Decode(
-			r.PopSlice(r.PopUint32()),
-			path.AddField(field.name),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		result[i] = val
-	}
-
-	return result, nil
-}
-
-func (c *tupleCodec) Encode(
+func (c *tupleEncoder) Encode(
 	w *buff.Writer,
-	path codecs.Path,
 	val interface{},
+	path codecs.Path,
+	required bool,
 ) error {
 	in, ok := val.([]interface{})
 	if !ok {
@@ -99,7 +72,7 @@ func (c *tupleCodec) Encode(
 
 	for i, field := range c.fields {
 		w.PushUint32(0) // reserved
-		err := field.codec.Encode(w, path.AddIndex(i), in[i])
+		err := field.codec.Encode(w, in[i], path.AddIndex(i), false)
 		if err != nil {
 			return err
 		}

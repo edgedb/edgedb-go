@@ -26,13 +26,17 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type boolCodec struct{}
+// BoolCodec encodes/decodes bool.
+type BoolCodec struct{}
 
-func (c *boolCodec) Type() reflect.Type { return boolType }
+// Type returns the type the codec encodes/decodes
+func (c *BoolCodec) Type() reflect.Type { return boolType }
 
-func (c *boolCodec) DescriptorID() types.UUID { return BoolID }
+// DescriptorID returns the codecs descriptor id.
+func (c *BoolCodec) DescriptorID() types.UUID { return BoolID }
 
-func (c *boolCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *BoolCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint8)(out) = r.PopUint8()
 	return nil
 }
@@ -42,7 +46,8 @@ type optionalBoolMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *boolCodec) Encode(
+// Encode encodes a value
+func (c *BoolCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -70,7 +75,7 @@ func (c *boolCodec) Encode(
 	}
 }
 
-func (c *boolCodec) encodeData(w *buff.Writer, data bool) error {
+func (c *BoolCodec) encodeData(w *buff.Writer, data bool) error {
 	w.PushUint32(1) // data length
 	var out uint8
 	if data {
@@ -80,7 +85,7 @@ func (c *boolCodec) encodeData(w *buff.Writer, data bool) error {
 	return nil
 }
 
-func (c *boolCodec) encodeMarshaler(
+func (c *BoolCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.BoolMarshaler,
 	path Path,

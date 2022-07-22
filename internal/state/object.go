@@ -25,61 +25,38 @@ import (
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func buildObjectOrNamedTupleCodec(
+func buildObjectOrNamedTupleEncoder(
 	desc descriptor.Descriptor,
 	path codecs.Path,
-) (Codec, error) {
-	fields := make([]*codecField, len(desc.Fields))
+) (codecs.Encoder, error) {
+	fields := make([]*encoderField, len(desc.Fields))
 	for i, field := range desc.Fields {
-		child, err := BuildCodec(field.Desc, path.AddField(field.Name))
+		child, err := BuildEncoder(field.Desc, path.AddField(field.Name))
 		if err != nil {
 			return nil, err
 		}
 
-		fields[i] = &codecField{
+		fields[i] = &encoderField{
 			name:  field.Name,
 			codec: child,
 		}
 	}
 
-	return &objectCodec{desc.ID, fields}, nil
+	return &objectEncoder{desc.ID, fields}, nil
 }
 
-type objectCodec struct {
+type objectEncoder struct {
 	id     edgedbtypes.UUID
-	fields []*codecField
+	fields []*encoderField
 }
 
-func (c *objectCodec) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *objectEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
 
-func (c *objectCodec) Decode(
-	r *buff.Reader,
-	path codecs.Path,
-) (interface{}, error) {
-	elmCount := int(r.PopUint32())
-	if elmCount != len(c.fields) {
-		return nil, fmt.Errorf(
-			"wrong number of object fields for %v: expected %v, got %v",
-			path, len(c.fields), elmCount)
-	}
-
-	result := make(map[string]interface{}, elmCount)
-	for _, field := range c.fields {
-		val, err := field.codec.Decode(r.PopSlice(r.PopUint32()), path)
-		if err != nil {
-			return nil, err
-		}
-
-		result[field.name] = val
-	}
-
-	return result, nil
-}
-
-func (c *objectCodec) Encode(
+func (c *objectEncoder) Encode(
 	w *buff.Writer,
-	path codecs.Path,
 	val interface{},
+	path codecs.Path,
+	required bool,
 ) error {
 	in, ok := val.(map[string]interface{})
 	if !ok {
@@ -102,7 +79,12 @@ func (c *objectCodec) Encode(
 		}
 
 		w.PushUint32(0)
-		err := field.codec.Encode(w, path.AddField(field.name), fieldValue)
+		err := field.codec.Encode(
+			w,
+			fieldValue,
+			path.AddField(field.name),
+			false,
+		)
 		if err != nil {
 			return err
 		}

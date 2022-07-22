@@ -28,26 +28,26 @@ import (
 )
 
 var optionalTypeNameLookup = map[reflect.Type]string{
-	reflect.TypeOf(&boolCodec{}):          "edgedb.OptionalBool",
-	reflect.TypeOf(&bytesCodec{}):         "edgedb.OptionalBytes",
-	reflect.TypeOf(&dateTimeCodec{}):      "edgedb.OptionalDateTime",
-	reflect.TypeOf(&localDateTimeCodec{}): "edgedb.OptionalLocalDateTime",
-	reflect.TypeOf(&localDateCodec{}):     "edgedb.OptionalLocalDate",
-	reflect.TypeOf(&localTimeCodec{}):     "edgedb.OptionalLocalTime",
-	reflect.TypeOf(&durationCodec{}):      "edgedb.OptionalDuration",
+	reflect.TypeOf(&BoolCodec{}):          "edgedb.OptionalBool",
+	reflect.TypeOf(&BytesCodec{}):         "edgedb.OptionalBytes",
+	reflect.TypeOf(&DateTimeCodec{}):      "edgedb.OptionalDateTime",
+	reflect.TypeOf(&LocalDateTimeCodec{}): "edgedb.OptionalLocalDateTime",
+	reflect.TypeOf(&LocalDateCodec{}):     "edgedb.OptionalLocalDate",
+	reflect.TypeOf(&LocalTimeCodec{}):     "edgedb.OptionalLocalTime",
+	reflect.TypeOf(&DurationCodec{}):      "edgedb.OptionalDuration",
 	reflect.TypeOf(
-		&relativeDurationCodec{}): "edgedb.OptionalRelativeDuration",
+		&RelativeDurationCodec{}): "edgedb.OptionalRelativeDuration",
 	reflect.TypeOf(&namedTupleDecoder{}): "edgedb.Optional",
-	reflect.TypeOf(&int16Codec{}):        "edgedb.OptionalInt16",
-	reflect.TypeOf(&int32Codec{}):        "edgedb.OptionalInt32",
-	reflect.TypeOf(&int64Codec{}):        "edgedb.OptionalInt64",
-	reflect.TypeOf(&float32Codec{}):      "edgedb.OptionalFloat32",
-	reflect.TypeOf(&float64Codec{}):      "edgedb.OptionalFloat64",
-	reflect.TypeOf(&bigIntCodec{}):       "edgedb.OptionalBigInt",
+	reflect.TypeOf(&Int16Codec{}):        "edgedb.OptionalInt16",
+	reflect.TypeOf(&Int32Codec{}):        "edgedb.OptionalInt32",
+	reflect.TypeOf(&Int64Codec{}):        "edgedb.OptionalInt64",
+	reflect.TypeOf(&Float32Codec{}):      "edgedb.OptionalFloat32",
+	reflect.TypeOf(&Float64Codec{}):      "edgedb.OptionalFloat64",
+	reflect.TypeOf(&BigIntCodec{}):       "edgedb.OptionalBigInt",
 	reflect.TypeOf(&objectDecoder{}):     "edgedb.Optional",
-	reflect.TypeOf(&strCodec{}):          "edgedb.OptionalStr",
+	reflect.TypeOf(&StrCodec{}):          "edgedb.OptionalStr",
 	reflect.TypeOf(&tupleDecoder{}):      "edgedb.Optional",
-	reflect.TypeOf(&uuidCodec{}):         "edgedb.OptionalUUID",
+	reflect.TypeOf(&UUIDCodec{}):         "edgedb.OptionalUUID",
 }
 
 func buildObjectDecoder(

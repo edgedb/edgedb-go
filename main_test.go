@@ -222,9 +222,28 @@ func TestMain(m *testing.M) {
 		executeOrFatal(`
 			START MIGRATION TO {
 				module default {
-					required global global_value -> str {
+					global global_id -> uuid;
+					required global global_str -> str {
 						default := "default";
 					};
+					global global_bytes -> bytes;
+					global global_int16 -> int16;
+					global global_int32 -> int32;
+					global global_int64 -> int64;
+					global global_float32 -> float32;
+					global global_float64 -> float64;
+					global global_bool -> bool;
+					global global_datetime -> datetime;
+					global global_duration -> duration;
+					global global_json -> json;
+					global global_local_datetime -> cal::local_datetime;
+					global global_local_date -> cal::local_date;
+					global global_local_time -> cal::local_time;
+					global global_bigint -> bigint;
+					global global_relative_duration -> cal::relative_duration;
+					global global_date_duration -> cal::date_duration;
+					global global_memory -> cfg::memory;
+
 					type User {
 						property name -> str;
 					}

@@ -26,15 +26,19 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type strCodec struct {
-	id types.UUID
+// StrCodec encodes/decodes strings.
+type StrCodec struct {
+	ID types.UUID
 }
 
-func (c *strCodec) Type() reflect.Type { return strType }
+// Type returns the type the codec encodes/decodes
+func (c *StrCodec) Type() reflect.Type { return strType }
 
-func (c *strCodec) DescriptorID() types.UUID { return c.id }
+// DescriptorID returns the codecs descriptor id.
+func (c *StrCodec) DescriptorID() types.UUID { return c.ID }
 
-func (c *strCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a string.
+func (c *StrCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*string)(out) = string(r.Buf)
 	r.Discard(len(r.Buf))
 	return nil
@@ -45,7 +49,8 @@ type optionalStrMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *strCodec) Encode(
+// Encode encodes a string.
+func (c *StrCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -73,12 +78,12 @@ func (c *strCodec) Encode(
 	}
 }
 
-func (c *strCodec) encodeData(w *buff.Writer, data string) error {
+func (c *StrCodec) encodeData(w *buff.Writer, data string) error {
 	w.PushString(data)
 	return nil
 }
 
-func (c *strCodec) encodeMarshaler(
+func (c *StrCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.StrMarshaler,
 	path Path,

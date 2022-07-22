@@ -27,13 +27,17 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type dateTimeCodec struct{}
+// DateTimeCodec encodes/decodes time.Time values.
+type DateTimeCodec struct{}
 
-func (c *dateTimeCodec) Type() reflect.Type { return dateTimeType }
+// Type returns the type the codec encodes/decodes
+func (c *DateTimeCodec) Type() reflect.Type { return dateTimeType }
 
-func (c *dateTimeCodec) DescriptorID() types.UUID { return dateTimeID }
+// DescriptorID returns the codecs descriptor id.
+func (c *DateTimeCodec) DescriptorID() types.UUID { return DateTimeID }
 
-func (c *dateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *DateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	val := int64(r.PopUint64())
 	seconds := val / 1_000_000
 	microseconds := val % 1_000_000
@@ -49,7 +53,8 @@ type optionalDateTimeMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *dateTimeCodec) Encode(
+// Encode encodes a value
+func (c *DateTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -77,7 +82,7 @@ func (c *dateTimeCodec) Encode(
 	}
 }
 
-func (c *dateTimeCodec) encodeData(w *buff.Writer, data time.Time) error {
+func (c *DateTimeCodec) encodeData(w *buff.Writer, data time.Time) error {
 	seconds := data.Unix() - 946_684_800
 	nanoseconds := int64(data.Sub(time.Unix(data.Unix(), 0)))
 	microseconds := seconds*1_000_000 + nanoseconds/1_000
@@ -86,7 +91,7 @@ func (c *dateTimeCodec) encodeData(w *buff.Writer, data time.Time) error {
 	return nil
 }
 
-func (c *dateTimeCodec) encodeMarshaler(
+func (c *DateTimeCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.DateTimeMarshaler,
 	path Path,
@@ -102,7 +107,7 @@ type optionalDateTime struct {
 type optionalDateTimeDecoder struct{}
 
 func (c *optionalDateTimeDecoder) DescriptorID() types.UUID {
-	return dateTimeID
+	return DateTimeID
 }
 
 func (c *optionalDateTimeDecoder) Decode(
@@ -128,11 +133,14 @@ func (c *optionalDateTimeDecoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalDateTimeDecoder) DecodePresent(out unsafe.Pointer) {}
 
-type localDateTimeCodec struct{}
+// LocalDateTimeCodec encodes/decodes LocalDateTime values.
+type LocalDateTimeCodec struct{}
 
-func (c *localDateTimeCodec) Type() reflect.Type { return localDateTimeType }
+// Type returns the type the codec encodes/decodes
+func (c *LocalDateTimeCodec) Type() reflect.Type { return localDateTimeType }
 
-func (c *localDateTimeCodec) DescriptorID() types.UUID { return localDTID }
+// DescriptorID returns the codecs descriptor id.
+func (c *LocalDateTimeCodec) DescriptorID() types.UUID { return LocalDTID }
 
 // localDateTimeLayout is the memory layout for edgedbtypes.LocalDateTime
 type localDateTimeLayout struct {
@@ -144,7 +152,8 @@ type optionalLocalDateTimeMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *localDateTimeCodec) Encode(
+// Encode encodes a value
+func (c *LocalDateTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -173,7 +182,7 @@ func (c *localDateTimeCodec) Encode(
 	}
 }
 
-func (c *localDateTimeCodec) encodeData(
+func (c *LocalDateTimeCodec) encodeData(
 	w *buff.Writer,
 	data types.LocalDateTime,
 ) error {
@@ -183,7 +192,7 @@ func (c *localDateTimeCodec) encodeData(
 	return nil
 }
 
-func (c *localDateTimeCodec) encodeMarshaler(
+func (c *LocalDateTimeCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.LocalDateTimeMarshaler,
 	path Path,
@@ -191,7 +200,8 @@ func (c *localDateTimeCodec) encodeMarshaler(
 	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalDateTime, 8, path)
 }
 
-func (c *localDateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *LocalDateTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	(*localDateTimeLayout)(out).usec = r.PopUint64() + 63_082_281_600_000_000
 	return nil
 }
@@ -204,7 +214,7 @@ type optionalLocalDateTime struct {
 type optionalLocalDateTimeDecoder struct{}
 
 func (c *optionalLocalDateTimeDecoder) DescriptorID() types.UUID {
-	return localDTID
+	return LocalDTID
 }
 
 func (c *optionalLocalDateTimeDecoder) Decode(
@@ -223,11 +233,14 @@ func (c *optionalLocalDateTimeDecoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalLocalDateTimeDecoder) DecodePresent(out unsafe.Pointer) {}
 
-type localDateCodec struct{}
+// LocalDateCodec encodes/decodes LocalDate values.
+type LocalDateCodec struct{}
 
-func (c *localDateCodec) Type() reflect.Type { return localDateType }
+// Type returns the type the codec encodes/decodes
+func (c *LocalDateCodec) Type() reflect.Type { return localDateType }
 
-func (c *localDateCodec) DescriptorID() types.UUID { return localDateID }
+// DescriptorID returns the codecs descriptor id.
+func (c *LocalDateCodec) DescriptorID() types.UUID { return LocalDateID }
 
 // localDateLayout is the memory layout for edgedbtypes.LocalDate
 type localDateLayout struct {
@@ -239,7 +252,8 @@ type optionalLocalDateMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *localDateCodec) Encode(
+// Encode encodes a value
+func (c *LocalDateCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -267,7 +281,7 @@ func (c *localDateCodec) Encode(
 	}
 }
 
-func (c *localDateCodec) encodeData(
+func (c *LocalDateCodec) encodeData(
 	w *buff.Writer,
 	data types.LocalDate,
 ) error {
@@ -276,7 +290,7 @@ func (c *localDateCodec) encodeData(
 	return nil
 }
 
-func (c *localDateCodec) encodeMarshaler(
+func (c *LocalDateCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.LocalDateMarshaler,
 	path Path,
@@ -284,7 +298,8 @@ func (c *localDateCodec) encodeMarshaler(
 	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalDate, 4, path)
 }
 
-func (c *localDateCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *LocalDateCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	(*localDateLayout)(out).days = r.PopUint32() + 730119
 	return nil
 }
@@ -297,7 +312,7 @@ type optionalLocalDate struct {
 type optionalLocalDateDecoder struct{}
 
 func (c *optionalLocalDateDecoder) DescriptorID() types.UUID {
-	return localDateID
+	return LocalDateID
 }
 
 func (c *optionalLocalDateDecoder) Decode(
@@ -316,11 +331,14 @@ func (c *optionalLocalDateDecoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalLocalDateDecoder) DecodePresent(out unsafe.Pointer) {}
 
-type localTimeCodec struct{}
+// LocalTimeCodec encodes/decodes LocalTime values.
+type LocalTimeCodec struct{}
 
-func (c *localTimeCodec) Type() reflect.Type { return localTimeType }
+// Type returns the type the codec encodes/decodes
+func (c *LocalTimeCodec) Type() reflect.Type { return localTimeType }
 
-func (c *localTimeCodec) DescriptorID() types.UUID { return localTimeID }
+// DescriptorID returns the codecs descriptor id.
+func (c *LocalTimeCodec) DescriptorID() types.UUID { return LocalTimeID }
 
 // localTimeLayout is the memory layout for edgedbtypes.LocalTime
 type localTimeLayout struct {
@@ -332,7 +350,8 @@ type optionalLocalTimeMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *localTimeCodec) Encode(
+// Encode encodes a value
+func (c *LocalTimeCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -360,7 +379,7 @@ func (c *localTimeCodec) Encode(
 	}
 }
 
-func (c *localTimeCodec) encodeData(
+func (c *LocalTimeCodec) encodeData(
 	w *buff.Writer,
 	data types.LocalTime,
 ) error {
@@ -369,7 +388,7 @@ func (c *localTimeCodec) encodeData(
 	return nil
 }
 
-func (c *localTimeCodec) encodeMarshaler(
+func (c *LocalTimeCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.LocalTimeMarshaler,
 	path Path,
@@ -377,7 +396,8 @@ func (c *localTimeCodec) encodeMarshaler(
 	return encodeMarshaler(w, val, val.MarshalEdgeDBLocalTime, 8, path)
 }
 
-func (c *localTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *LocalTimeCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	(*localTimeLayout)(out).usec = r.PopUint64()
 	return nil
 }
@@ -390,7 +410,7 @@ type optionalLocalTime struct {
 type optionalLocalTimeDecoder struct{}
 
 func (c *optionalLocalTimeDecoder) DescriptorID() types.UUID {
-	return localTimeID
+	return LocalTimeID
 }
 
 func (c *optionalLocalTimeDecoder) Decode(
@@ -409,13 +429,17 @@ func (c *optionalLocalTimeDecoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalLocalTimeDecoder) DecodePresent(out unsafe.Pointer) {}
 
-type durationCodec struct{}
+// DurationCodec encodes/decodes Duration values.
+type DurationCodec struct{}
 
-func (c *durationCodec) Type() reflect.Type { return durationType }
+// Type returns the type the codec encodes/decodes
+func (c *DurationCodec) Type() reflect.Type { return durationType }
 
-func (c *durationCodec) DescriptorID() types.UUID { return DurationID }
+// DescriptorID returns the codecs descriptor id.
+func (c *DurationCodec) DescriptorID() types.UUID { return DurationID }
 
-func (c *durationCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *DurationCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
 	r.Discard(8) // reserved
 	return nil
@@ -426,7 +450,8 @@ type optionalDurationMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *durationCodec) Encode(
+// Encode encodes a value
+func (c *DurationCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -454,7 +479,7 @@ func (c *durationCodec) Encode(
 	}
 }
 
-func (c *durationCodec) encodeData(w *buff.Writer, data types.Duration) error {
+func (c *DurationCodec) encodeData(w *buff.Writer, data types.Duration) error {
 	w.PushUint32(16) // data length
 	w.PushUint64(uint64(data))
 	w.PushUint32(0) // reserved
@@ -462,7 +487,7 @@ func (c *durationCodec) encodeData(w *buff.Writer, data types.Duration) error {
 	return nil
 }
 
-func (c *durationCodec) encodeMarshaler(
+func (c *DurationCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.DurationMarshaler,
 	path Path,
@@ -498,14 +523,17 @@ func (c *optionalDurationDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalDuration)(out).Unset()
 }
 
-type relativeDurationCodec struct{}
+// RelativeDurationCodec encodes/decodes RelativeDuration values.
+type RelativeDurationCodec struct{}
 
-func (c *relativeDurationCodec) Type() reflect.Type {
+// Type returns the type the codec encodes/decodes
+func (c *RelativeDurationCodec) Type() reflect.Type {
 	return relativeDurationType
 }
 
-func (c *relativeDurationCodec) DescriptorID() types.UUID {
-	return relativeDurationID
+// DescriptorID returns the codecs descriptor id.
+func (c *RelativeDurationCodec) DescriptorID() types.UUID {
+	return RelativeDurationID
 }
 
 type relativeDurationLayout struct {
@@ -514,7 +542,8 @@ type relativeDurationLayout struct {
 	months       uint32
 }
 
-func (c *relativeDurationCodec) Decode(
+// Decode decodes a value
+func (c *RelativeDurationCodec) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
@@ -530,7 +559,8 @@ type optionalRelativeDurationMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *relativeDurationCodec) Encode(
+// Encode encodes a value
+func (c *RelativeDurationCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -562,7 +592,7 @@ func (c *relativeDurationCodec) Encode(
 	}
 }
 
-func (c *relativeDurationCodec) encodeData(
+func (c *RelativeDurationCodec) encodeData(
 	w *buff.Writer,
 	data types.RelativeDuration,
 ) error {
@@ -574,7 +604,7 @@ func (c *relativeDurationCodec) encodeData(
 	return nil
 }
 
-func (c *relativeDurationCodec) encodeMarshaler(
+func (c *RelativeDurationCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.RelativeDurationMarshaler,
 	path Path,
@@ -590,7 +620,7 @@ type optionalRelativeDuration struct {
 type optionalRelativeDurationDecoder struct{}
 
 func (c *optionalRelativeDurationDecoder) DescriptorID() types.UUID {
-	return relativeDurationID
+	return RelativeDurationID
 }
 
 func (c *optionalRelativeDurationDecoder) Decode(
@@ -611,14 +641,17 @@ func (c *optionalRelativeDurationDecoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalRelativeDurationDecoder) DecodePresent(out unsafe.Pointer) {}
 
-type dateDurationCodec struct{}
+// DateDurationCodec encodes/decodes DateDuration values.
+type DateDurationCodec struct{}
 
-func (c *dateDurationCodec) Type() reflect.Type {
+// Type returns the type the codec encodes/decodes
+func (c *DateDurationCodec) Type() reflect.Type {
 	return dateDurationType
 }
 
-func (c *dateDurationCodec) DescriptorID() types.UUID {
-	return dateDurationID
+// DescriptorID returns the codecs descriptor id.
+func (c *DateDurationCodec) DescriptorID() types.UUID {
+	return DateDurationID
 }
 
 type dateDurationLayout struct {
@@ -626,7 +659,8 @@ type dateDurationLayout struct {
 	months uint32
 }
 
-func (c *dateDurationCodec) Decode(
+// Decode decodes a value
+func (c *DateDurationCodec) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
@@ -642,7 +676,8 @@ type optionalDateDurationMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *dateDurationCodec) Encode(
+// Encode encodes a value
+func (c *DateDurationCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -674,7 +709,7 @@ func (c *dateDurationCodec) Encode(
 	}
 }
 
-func (c *dateDurationCodec) encodeData(
+func (c *DateDurationCodec) encodeData(
 	w *buff.Writer,
 	data types.DateDuration,
 ) error {
@@ -686,7 +721,7 @@ func (c *dateDurationCodec) encodeData(
 	return nil
 }
 
-func (c *dateDurationCodec) encodeMarshaler(
+func (c *DateDurationCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.DateDurationMarshaler,
 	path Path,
@@ -702,7 +737,7 @@ type optionalDateDuration struct {
 type optionalDateDurationDecoder struct{}
 
 func (c *optionalDateDurationDecoder) DescriptorID() types.UUID {
-	return dateDurationID
+	return DateDurationID
 }
 
 func (c *optionalDateDurationDecoder) Decode(

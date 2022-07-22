@@ -27,13 +27,17 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type int16Codec struct{}
+// Int16Codec encodes/decodes int16.
+type Int16Codec struct{}
 
-func (c *int16Codec) Type() reflect.Type { return int16Type }
+// Type returns the type the codec encodes/decodes
+func (c *Int16Codec) Type() reflect.Type { return int16Type }
 
-func (c *int16Codec) DescriptorID() types.UUID { return int16ID }
+// DescriptorID returns the codecs descriptor id.
+func (c *Int16Codec) DescriptorID() types.UUID { return Int16ID }
 
-func (c *int16Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *Int16Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint16)(out) = r.PopUint16()
 	return nil
 }
@@ -43,7 +47,8 @@ type optionalInt16Marshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *int16Codec) Encode(
+// Encode encodes a value
+func (c *Int16Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -73,7 +78,7 @@ func (c *int16Codec) Encode(
 	}
 }
 
-func (c *int16Codec) encodeData(w *buff.Writer, data int16) error {
+func (c *Int16Codec) encodeData(w *buff.Writer, data int16) error {
 	w.PushUint32(2)
 	w.PushUint16(uint16(data))
 	return nil
@@ -86,7 +91,7 @@ type optionalInt16 struct {
 
 type optionalInt16Decoder struct{}
 
-func (c *optionalInt16Decoder) DescriptorID() types.UUID { return int16ID }
+func (c *optionalInt16Decoder) DescriptorID() types.UUID { return Int16ID }
 
 func (c *optionalInt16Decoder) Decode(
 	r *buff.Reader,
@@ -104,13 +109,17 @@ func (c *optionalInt16Decoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalInt16Decoder) DecodePresent(out unsafe.Pointer) {}
 
-type int32Codec struct{}
+// Int32Codec encodes/decodes int32.
+type Int32Codec struct{}
 
-func (c *int32Codec) Type() reflect.Type { return int32Type }
+// Type returns the type the codec encodes/decodes
+func (c *Int32Codec) Type() reflect.Type { return int32Type }
 
-func (c *int32Codec) DescriptorID() types.UUID { return int32ID }
+// DescriptorID returns the codecs descriptor id.
+func (c *Int32Codec) DescriptorID() types.UUID { return Int32ID }
 
-func (c *int32Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *Int32Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint32)(out) = r.PopUint32()
 	return nil
 }
@@ -120,7 +129,8 @@ type optionalInt32Marshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *int32Codec) Encode(
+// Encode encodes a value
+func (c *Int32Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -150,7 +160,7 @@ func (c *int32Codec) Encode(
 	}
 }
 
-func (c *int32Codec) encodeData(w *buff.Writer, data int32) error {
+func (c *Int32Codec) encodeData(w *buff.Writer, data int32) error {
 	w.PushUint32(4) // data length
 	w.PushUint32(uint32(data))
 	return nil
@@ -163,7 +173,7 @@ type optionalInt32 struct {
 
 type optionalInt32Decoder struct{}
 
-func (c *optionalInt32Decoder) DescriptorID() types.UUID { return int32ID }
+func (c *optionalInt32Decoder) DescriptorID() types.UUID { return Int32ID }
 
 func (c *optionalInt32Decoder) Decode(
 	r *buff.Reader,
@@ -181,13 +191,17 @@ func (c *optionalInt32Decoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalInt32Decoder) DecodePresent(out unsafe.Pointer) {}
 
-type int64Codec struct{}
+// Int64Codec encodes/decodes int64.
+type Int64Codec struct{}
 
-func (c *int64Codec) Type() reflect.Type { return int64Type }
+// Type returns the type the codec encodes/decodes
+func (c *Int64Codec) Type() reflect.Type { return int64Type }
 
-func (c *int64Codec) DescriptorID() types.UUID { return Int64ID }
+// DescriptorID returns the codecs descriptor id.
+func (c *Int64Codec) DescriptorID() types.UUID { return Int64ID }
 
-func (c *int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *Int64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
 	return nil
 }
@@ -197,7 +211,8 @@ type optionalInt64Marshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *int64Codec) Encode(
+// Encode encodes a value
+func (c *Int64Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -227,7 +242,7 @@ func (c *int64Codec) Encode(
 	}
 }
 
-func (c *int64Codec) encodeData(w *buff.Writer, data int64) error {
+func (c *Int64Codec) encodeData(w *buff.Writer, data int64) error {
 	w.PushUint32(8) // data length
 	w.PushUint64(uint64(data))
 	return nil
@@ -258,13 +273,17 @@ func (c *optionalInt64Decoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalInt64Decoder) DecodePresent(out unsafe.Pointer) {}
 
-type float32Codec struct{}
+// Float32Codec encodes/decodes float32.
+type Float32Codec struct{}
 
-func (c *float32Codec) Type() reflect.Type { return float32Type }
+// Type returns the type the codec encodes/decodes
+func (c *Float32Codec) Type() reflect.Type { return float32Type }
 
-func (c *float32Codec) DescriptorID() types.UUID { return float32ID }
+// DescriptorID returns the codecs descriptor id.
+func (c *Float32Codec) DescriptorID() types.UUID { return Float32ID }
 
-func (c *float32Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *Float32Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint32)(out) = r.PopUint32()
 	return nil
 }
@@ -274,7 +293,8 @@ type optionalFloat32Marshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *float32Codec) Encode(
+// Encode encodes a value
+func (c *Float32Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -304,7 +324,7 @@ func (c *float32Codec) Encode(
 	}
 }
 
-func (c *float32Codec) encodeData(w *buff.Writer, data float32) error {
+func (c *Float32Codec) encodeData(w *buff.Writer, data float32) error {
 	w.PushUint32(4)
 	w.PushUint32(math.Float32bits(data))
 	return nil
@@ -317,7 +337,7 @@ type optionalFloat32 struct {
 
 type optionalFloat32Decoder struct{}
 
-func (c *optionalFloat32Decoder) DescriptorID() types.UUID { return float32ID }
+func (c *optionalFloat32Decoder) DescriptorID() types.UUID { return Float32ID }
 
 func (c *optionalFloat32Decoder) Decode(
 	r *buff.Reader,
@@ -335,13 +355,17 @@ func (c *optionalFloat32Decoder) DecodeMissing(out unsafe.Pointer) {
 
 func (c *optionalFloat32Decoder) DecodePresent(out unsafe.Pointer) {}
 
-type float64Codec struct{}
+// Float64Codec encodes/decodes float64.
+type Float64Codec struct{}
 
-func (c *float64Codec) Type() reflect.Type { return float64Type }
+// Type returns the type the codec encodes/decodes
+func (c *Float64Codec) Type() reflect.Type { return float64Type }
 
-func (c *float64Codec) DescriptorID() types.UUID { return float64ID }
+// DescriptorID returns the codecs descriptor id.
+func (c *Float64Codec) DescriptorID() types.UUID { return Float64ID }
 
-func (c *float64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *Float64Codec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
 	return nil
 }
@@ -351,7 +375,8 @@ type optionalFloat64Marshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *float64Codec) Encode(
+// Encode encodes a value
+func (c *Float64Codec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -381,7 +406,7 @@ func (c *float64Codec) Encode(
 	}
 }
 
-func (c *float64Codec) encodeData(w *buff.Writer, data float64) error {
+func (c *Float64Codec) encodeData(w *buff.Writer, data float64) error {
 	w.PushUint32(8)
 	w.PushUint64(math.Float64bits(data))
 	return nil
@@ -394,7 +419,7 @@ type optionalFloat64 struct {
 
 type optionalFloat64Decoder struct{}
 
-func (c *optionalFloat64Decoder) DescriptorID() types.UUID { return float64ID }
+func (c *optionalFloat64Decoder) DescriptorID() types.UUID { return Float64ID }
 
 func (c *optionalFloat64Decoder) Decode(
 	r *buff.Reader,
