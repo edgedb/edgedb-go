@@ -32,7 +32,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 
 	var result types.UUID
 	ptr := unsafe.Pointer(&result)
-	codec := &uuidCodec{}
+	codec := &UUIDCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -44,7 +44,7 @@ func BenchmarkDecodeUUID(b *testing.B) {
 func BenchmarkEncodeUUID(b *testing.B) {
 	w := buff.NewWriter([]byte{})
 	id := types.UUID{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}
-	codec := &uuidCodec{}
+	codec := &UUIDCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -58,7 +58,7 @@ func BenchmarkDecodeString(b *testing.B) {
 
 	var result string
 	ptr := unsafe.Pointer(&result)
-	codec := &strCodec{}
+	codec := &StrCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -73,7 +73,7 @@ func BenchmarkDecodeBytes(b *testing.B) {
 
 	var result []byte
 	ptr := unsafe.Pointer(&result)
-	codec := &bytesCodec{}
+	codec := &BytesCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -88,7 +88,7 @@ func BenchmarkDecodeInt16(b *testing.B) {
 
 	var result int16
 	ptr := unsafe.Pointer(&result)
-	codec := &int16Codec{}
+	codec := &Int16Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -103,7 +103,7 @@ func BenchmarkDecodeInt32(b *testing.B) {
 
 	var result int32
 	ptr := unsafe.Pointer(&result)
-	codec := &int32Codec{}
+	codec := &Int32Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -118,7 +118,7 @@ func BenchmarkDecodeInt64(b *testing.B) {
 
 	var result int64
 	ptr := unsafe.Pointer(&result)
-	codec := &int64Codec{}
+	codec := &Int64Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -135,7 +135,7 @@ func BenchmarkDecodeFloat32(b *testing.B) {
 
 	var result float32
 	ptr := unsafe.Pointer(&result)
-	codec := &float32Codec{}
+	codec := &Float32Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -152,7 +152,7 @@ func BenchmarkDecodeFloat64(b *testing.B) {
 
 	var result float64
 	ptr := unsafe.Pointer(&result)
-	codec := &float64Codec{}
+	codec := &Float64Codec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -167,7 +167,7 @@ func BenchmarkDecodeBool(b *testing.B) {
 
 	var result bool
 	ptr := unsafe.Pointer(&result)
-	codec := &boolCodec{}
+	codec := &BoolCodec{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

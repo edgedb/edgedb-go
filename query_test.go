@@ -19,6 +19,7 @@ package edgedb
 import (
 	"context"
 	"errors"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -493,8 +494,9 @@ func TestInvalidWithConfig(t *testing.T) {
 	err = c.QuerySingle(ctx, "select 1", &result)
 	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
 		"invalid connection state: "+
-		"expected state.config.query_execution_timeout to be edgedb.Duration "+
-		"got: string")
+		"expected state.config.query_execution_timeout to be "+
+		"edgedb.Duration, edgedb.OptionalDuration or DurationMarshaler "+
+		"got string")
 
 	err = client.QuerySingle(ctx, "select 1", &result)
 	require.NoError(t, err)
@@ -661,35 +663,365 @@ func TestWithGlobals(t *testing.T) {
 	ctx := context.Background()
 	var result string
 
-	err := client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err := client.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "default", result)
 
 	a := client.WithGlobals(map[string]interface{}{
-		"default::global_value": "first",
+		"default::global_str": "first",
 	})
-	err = a.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = a.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "first", result)
 
-	err = client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "default", result)
 
 	b := a.WithGlobals(map[string]interface{}{
-		"default::global_value": "second",
+		"default::global_str": "second",
 	})
-	err = b.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = b.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "second", result)
 
-	err = a.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = a.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "first", result)
 
-	err = client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "default", result)
+}
+
+func TestWithGlobalUUID(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var id UUID
+	err := client.
+		WithGlobals(map[string]interface{}{"global_id": UUID{1, 2, 3}}).
+		QuerySingle(ctx, "SELECT GLOBAL global_id", &id)
+	require.NoError(t, err)
+	assert.Equal(t, UUID{1, 2, 3}, id)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_id", &id)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalBytes(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var bytes []byte
+	err := client.
+		WithGlobals(map[string]interface{}{"global_bytes": []byte{1, 2, 3}}).
+		QuerySingle(ctx, "SELECT GLOBAL global_bytes", &bytes)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{1, 2, 3}, bytes)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_bytes", &bytes)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalInt16(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var val int16
+	err := client.
+		WithGlobals(map[string]interface{}{"global_int16": int16(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_int16", &val)
+	require.NoError(t, err)
+	assert.Equal(t, int16(7), val)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_int16", &val)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalInt32(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var val int32
+	err := client.
+		WithGlobals(map[string]interface{}{"global_int32": int32(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_int32", &val)
+	require.NoError(t, err)
+	assert.Equal(t, int32(7), val)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_int32", &val)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalInt64(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var val int64
+	err := client.
+		WithGlobals(map[string]interface{}{"global_int64": int64(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_int64", &val)
+	require.NoError(t, err)
+	assert.Equal(t, int64(7), val)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_int64", &val)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalFloat32(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var val float32
+	err := client.
+		WithGlobals(map[string]interface{}{"global_float32": float32(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_float32", &val)
+	require.NoError(t, err)
+	assert.Equal(t, float32(7), val)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_float32", &val)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalFloat64(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result float64
+	err := client.
+		WithGlobals(map[string]interface{}{"global_float64": float64(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_float64", &result)
+	require.NoError(t, err)
+	assert.Equal(t, float64(7), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_float64", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalBool(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result bool
+	err := client.
+		WithGlobals(map[string]interface{}{"global_bool": true}).
+		QuerySingle(ctx, "SELECT GLOBAL global_bool", &result)
+	require.NoError(t, err)
+	assert.True(t, result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_bool", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalDateTime(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result time.Time
+	err := client.
+		WithGlobals(map[string]interface{}{
+			"global_datetime": time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		}).
+		QuerySingle(ctx, "SELECT GLOBAL global_datetime", &result)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_datetime", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalDuration(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result Duration
+	err := client.
+		WithGlobals(map[string]interface{}{"global_duration": Duration(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_duration", &result)
+	require.NoError(t, err)
+	assert.Equal(t, Duration(7), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_duration", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalJSON(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result []byte
+	err := client.
+		WithGlobals(map[string]interface{}{"global_json": []byte("7")}).
+		QuerySingle(ctx, "SELECT GLOBAL global_json", &result)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("7"), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_json", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalLocalDateTime(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result LocalDateTime
+	err := client.
+		WithGlobals(map[string]interface{}{
+			"global_local_datetime": NewLocalDateTime(1970, 1, 1, 0, 0, 0, 0),
+		}).
+		QuerySingle(ctx, "SELECT GLOBAL global_local_datetime", &result)
+	require.NoError(t, err)
+	assert.Equal(t, NewLocalDateTime(1970, 1, 1, 0, 0, 0, 0), result)
+
+	err = client.QuerySingle(
+		ctx,
+		"SELECT GLOBAL global_local_datetime",
+		&result,
+	)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalLocalDate(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result LocalDate
+	err := client.
+		WithGlobals(map[string]interface{}{
+			"global_local_date": NewLocalDate(1970, 1, 1),
+		}).
+		QuerySingle(ctx, "SELECT GLOBAL global_local_date", &result)
+	require.NoError(t, err)
+	assert.Equal(t, NewLocalDate(1970, 1, 1), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_local_date", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalLocalTime(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result LocalTime
+	err := client.
+		WithGlobals(map[string]interface{}{
+			"global_local_time": NewLocalTime(1, 2, 3, 4),
+		}).
+		QuerySingle(ctx, "SELECT GLOBAL global_local_time", &result)
+	require.NoError(t, err)
+	assert.Equal(t, NewLocalTime(1, 2, 3, 4), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_local_time", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalBigInt(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result *big.Int
+	err := client.
+		WithGlobals(map[string]interface{}{"global_bigint": big.NewInt(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_bigint", &result)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(7), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_bigint", &result)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalRelativeDuration(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result RelativeDuration
+	err := client.
+		WithGlobals(map[string]interface{}{
+			"global_relative_duration": NewRelativeDuration(1, 2, 3),
+		}).
+		QuerySingle(ctx, "SELECT GLOBAL global_relative_duration", &result)
+	require.NoError(t, err)
+	assert.Equal(t, NewRelativeDuration(1, 2, 3), result)
+
+	err = client.QuerySingle(
+		ctx,
+		"SELECT GLOBAL global_relative_duration",
+		&result,
+	)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalDateDuration(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result DateDuration
+	err := client.
+		WithGlobals(map[string]interface{}{
+			"global_date_duration": NewDateDuration(1, 2),
+		}).
+		QuerySingle(ctx, "SELECT GLOBAL global_date_duration", &result)
+	require.NoError(t, err)
+	assert.Equal(t, NewDateDuration(1, 2), result)
+
+	err = client.QuerySingle(
+		ctx,
+		"SELECT GLOBAL global_date_duration",
+		&result,
+	)
+	require.Equal(t, errZeroResults, err)
+}
+
+func TestWithGlobalMemory(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+	var result Memory
+	err := client.
+		WithGlobals(map[string]interface{}{"global_memory": Memory(7)}).
+		QuerySingle(ctx, "SELECT GLOBAL global_memory", &result)
+	require.NoError(t, err)
+	assert.Equal(t, Memory(7), result)
+
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_memory", &result)
+	require.Equal(t, errZeroResults, err)
 }
 
 func TestInvalidWithGlobals(t *testing.T) {
@@ -710,14 +1042,15 @@ func TestInvalidWithGlobals(t *testing.T) {
 		"found unknown state value state.globals.default::this")
 
 	b := client.WithGlobals(map[string]interface{}{
-		"default::global_value": 27,
+		"default::global_str": 27,
 	})
 
-	err = b.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = b.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
 		"invalid connection state: "+
-		"expected state.globals.default::global_value to be string "+
-		"got: int")
+		"expected state.globals.default::global_str to be "+
+		"string, edgedb.OptionalStr or StrMarshaler "+
+		"got int")
 }
 
 func TestWithoutGlobals(t *testing.T) {
@@ -728,24 +1061,24 @@ func TestWithoutGlobals(t *testing.T) {
 	ctx := context.Background()
 	var result string
 
-	err := client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err := client.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "default", result)
 
 	a := client.WithGlobals(map[string]interface{}{
-		"default::global_value": "first",
+		"default::global_str": "first",
 	})
 
-	b := a.WithoutGlobals("default::global_value")
-	err = b.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	b := a.WithoutGlobals("default::global_str")
+	err = b.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "default", result)
 
-	err = a.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = a.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "first", result)
 
-	err = client.QuerySingle(ctx, "SELECT GLOBAL global_value", &result)
+	err = client.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
 	require.NoError(t, err)
 	assert.Equal(t, "default", result)
 }
@@ -758,7 +1091,7 @@ func TestWithConfigWrongServerVersion(t *testing.T) {
 	var result int64
 
 	a := client.WithGlobals(map[string]interface{}{
-		"default::global_value": "first",
+		"default::global_str": "first",
 	})
 	err := a.QuerySingle(ctx, "SELECT 1", &result)
 	require.EqualError(t, err, "edgedb.InterfaceError: "+

@@ -77,9 +77,10 @@ func (c *protocolConnection) parse1pX(
 	w.PushString(q.cmd)
 
 	w.PushUUID(c.stateCodec.DescriptorID())
-	if e := c.stateCodec.Encode(w, codecs.Path("state"), q.state); e != nil {
+	err := c.stateCodec.Encode(w, q.state, codecs.Path("state"), false)
+	if err != nil {
 		return nil, &binaryProtocolError{err: fmt.Errorf(
-			"invalid connection state: %w", e)}
+			"invalid connection state: %w", err)}
 	}
 	w.EndMessage()
 
@@ -90,11 +91,7 @@ func (c *protocolConnection) parse1pX(
 		return nil, &clientConnectionClosedError{err: e}
 	}
 
-	var (
-		err  error
-		desc *descPair
-	)
-
+	var desc *descPair
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
@@ -199,9 +196,10 @@ func (c *protocolConnection) execute1pX(
 	w.PushString(q.cmd)
 
 	w.PushUUID(c.stateCodec.DescriptorID())
-	if e := c.stateCodec.Encode(w, codecs.Path("state"), q.state); e != nil {
+	err := c.stateCodec.Encode(w, q.state, codecs.Path("state"), false)
+	if err != nil {
 		return &binaryProtocolError{err: fmt.Errorf(
-			"invalid connection state: %w", e)}
+			"invalid connection state: %w", err)}
 	}
 
 	w.PushUUID(cdcs.in.DescriptorID())
@@ -219,7 +217,6 @@ func (c *protocolConnection) execute1pX(
 	}
 
 	tmp := q.out
-	err := error(nil)
 	if q.expCard == cardinality.AtMostOne {
 		err = errZeroResults
 	}
@@ -356,7 +353,7 @@ func (c *protocolConnection) decodeStateDataDescription(r *buff.Reader) error {
 			"state_description ids don't match: %v != %v", id, desc.ID)}
 	}
 
-	codec, err := state.BuildCodec(desc, codecs.Path("state"))
+	codec, err := state.BuildEncoder(desc, codecs.Path("state"))
 	if err != nil {
 		return &binaryProtocolError{err: fmt.Errorf(
 			"building decoder from ParameterStatus state_description: %w",

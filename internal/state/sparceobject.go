@@ -18,6 +18,7 @@ package state
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/codecs"
@@ -25,62 +26,38 @@ import (
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func buildSparceObjectCodec(
+func buildSparceObjectEncoder(
 	desc descriptor.Descriptor,
 	path codecs.Path,
-) (Codec, error) {
-	fields := make([]*codecField, len(desc.Fields))
+) (codecs.Encoder, error) {
+	fields := make([]*encoderField, len(desc.Fields))
 	for i, field := range desc.Fields {
-		child, err := BuildCodec(field.Desc, path.AddField(field.Name))
+		child, err := BuildEncoder(field.Desc, path.AddField(field.Name))
 		if err != nil {
 			return nil, err
 		}
 
-		fields[i] = &codecField{
+		fields[i] = &encoderField{
 			name:  field.Name,
 			codec: child,
 		}
 	}
 
-	return &sparceObjectCodec{desc.ID, fields}, nil
+	return &sparceObjectEncoder{desc.ID, fields}, nil
 }
 
-type sparceObjectCodec struct {
+type sparceObjectEncoder struct {
 	id     edgedbtypes.UUID
-	fields []*codecField
+	fields []*encoderField
 }
 
-func (c *sparceObjectCodec) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *sparceObjectEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
 
-func (c *sparceObjectCodec) Decode(
-	r *buff.Reader,
-	path codecs.Path,
-) (interface{}, error) {
-	elmCount := int(r.PopUint32())
-	if elmCount > len(c.fields) {
-		return nil, fmt.Errorf(
-			"too many object fields: expected at most %v, got %v",
-			len(c.fields), elmCount)
-	}
-
-	result := make(map[string]interface{}, elmCount)
-	for i := 0; i < elmCount; i++ {
-		field := c.fields[r.PopUint32()]
-		val, err := field.codec.Decode(r.PopSlice(r.PopUint32()), path)
-		if err != nil {
-			return nil, err
-		}
-
-		result[field.name] = val
-	}
-
-	return result, nil
-}
-
-func (c *sparceObjectCodec) Encode(
+func (c *sparceObjectEncoder) Encode(
 	w *buff.Writer,
-	path codecs.Path,
 	val interface{},
+	path codecs.Path,
+	required bool,
 ) error {
 	in, ok := val.(map[string]interface{})
 	if !ok {
@@ -96,12 +73,20 @@ func (c *sparceObjectCodec) Encode(
 	seen := 0
 	for i, field := range c.fields {
 		fieldValue, ok := in[field.name]
+		if !ok && strings.HasPrefix(field.name, "default::") {
+			fieldValue, ok = in[strings.TrimPrefix(field.name, "default::")]
+		}
 		if !ok {
 			continue
 		}
 
 		w.PushUint32(uint32(i))
-		err = field.codec.Encode(w, path.AddField(field.name), fieldValue)
+		err = field.codec.Encode(
+			w,
+			fieldValue,
+			path.AddField(field.name),
+			false,
+		)
 		if err != nil {
 			return err
 		}

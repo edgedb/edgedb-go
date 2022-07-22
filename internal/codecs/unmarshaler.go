@@ -39,23 +39,23 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.BoolUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBBool",
 	},
-	bytesID: {
+	BytesID: {
 		typ:        getType((*marshal.BytesUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBBytes",
 	},
-	dateTimeID: {
+	DateTimeID: {
 		typ:        getType((*marshal.DateTimeUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBDateTime",
 	},
-	localDTID: {
+	LocalDTID: {
 		typ:        getType((*marshal.LocalDateTimeUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBLocalDateTime",
 	},
-	localDateID: {
+	LocalDateID: {
 		typ:        getType((*marshal.LocalDateUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBLocalDate",
 	},
-	localTimeID: {
+	LocalTimeID: {
 		typ:        getType((*marshal.LocalTimeUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBLocalTime",
 	},
@@ -63,23 +63,23 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.DurationUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBDuration",
 	},
-	relativeDurationID: {
+	RelativeDurationID: {
 		typ:        getType((*marshal.RelativeDurationUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBRelativeDuration",
 	},
-	dateDurationID: {
+	DateDurationID: {
 		typ:        getType((*marshal.DateDurationUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBDateDuration",
 	},
-	jsonID: {
+	JSONID: {
 		typ:        getType((*marshal.JSONUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBJSON",
 	},
-	int16ID: {
+	Int16ID: {
 		typ:        getType((*marshal.Int16Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBInt16",
 	},
-	int32ID: {
+	Int32ID: {
 		typ:        getType((*marshal.Int32Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBInt32",
 	},
@@ -87,19 +87,19 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.Int64Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBInt64",
 	},
-	float32ID: {
+	Float32ID: {
 		typ:        getType((*marshal.Float32Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBFloat32",
 	},
-	float64ID: {
+	Float64ID: {
 		typ:        getType((*marshal.Float64Unmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBFloat64",
 	},
-	bigIntID: {
+	BigIntID: {
 		typ:        getType((*marshal.BigIntUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBBigInt",
 	},
-	decimalID: {
+	DecimalID: {
 		typ:        getType((*marshal.DecimalUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBDecimal",
 	},
@@ -107,7 +107,7 @@ var unmarshalers = map[types.UUID]struct {
 		typ:        getType((*marshal.StrUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBStr",
 	},
-	uuidID: {
+	UUIDID: {
 		typ:        getType((*marshal.UUIDUnmarshaler)(nil)),
 		methodName: "UnmarshalEdgeDBUUID",
 	},

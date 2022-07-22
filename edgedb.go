@@ -24,9 +24,9 @@ import (
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/cache"
+	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/edgedb/edgedb-go/internal/soc"
-	"github.com/edgedb/edgedb-go/internal/state"
 )
 
 type cacheCollection struct {
@@ -47,7 +47,7 @@ type protocolConnection struct {
 	cacheCollection
 
 	systemConfig systemConfig
-	stateCodec   state.Codec
+	stateCodec   codecs.Encoder
 }
 
 // connectWithTimeout makes a single attempt to connect to `addr`.

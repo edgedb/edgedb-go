@@ -26,13 +26,17 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type memoryCodec struct{}
+// MemoryCodec encodes/decodes Memory values.
+type MemoryCodec struct{}
 
-func (c *memoryCodec) Type() reflect.Type { return memoryType }
+// Type returns the type the codec encodes/decodes
+func (c *MemoryCodec) Type() reflect.Type { return memoryType }
 
-func (c *memoryCodec) DescriptorID() types.UUID { return MemoryID }
+// DescriptorID returns the codecs descriptor id.
+func (c *MemoryCodec) DescriptorID() types.UUID { return MemoryID }
 
-func (c *memoryCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a value
+func (c *MemoryCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	*(*uint64)(out) = r.PopUint64()
 	return nil
 }
@@ -42,7 +46,8 @@ type optionalMemoryMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *memoryCodec) Encode(
+// Encode encodes a value
+func (c *MemoryCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -70,13 +75,13 @@ func (c *memoryCodec) Encode(
 	}
 }
 
-func (c *memoryCodec) encodeData(w *buff.Writer, data types.Memory) error {
+func (c *MemoryCodec) encodeData(w *buff.Writer, data types.Memory) error {
 	w.PushUint32(8) // data length
 	w.PushUint64(uint64(data))
 	return nil
 }
 
-func (c *memoryCodec) encodeMarshaler(
+func (c *MemoryCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.MemoryMarshaler,
 	path Path,

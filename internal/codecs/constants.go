@@ -26,31 +26,46 @@ import (
 )
 
 var (
-	relativeDurationID = types.UUID{
+	// RelativeDurationID is the cal::relativeduration type descriptor ID
+	RelativeDurationID = types.UUID{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x11}
-	dateDurationID = types.UUID{
+	// DateDurationID is the cal::date_duration type descriptor ID
+	DateDurationID = types.UUID{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x12}
-	uuidID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
+	// UUIDID is the uuid type descriptor ID
+	UUIDID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
 	// StrID is the str type descriptor ID
-	StrID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
-	bytesID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
-	int16ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}
-	int32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}
+	StrID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+	// BytesID is the bytes type descriptor ID
+	BytesID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}
+	// Int16ID is the int16 type descriptor ID
+	Int16ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3}
+	// Int32ID is the int32 type descriptor ID
+	Int32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4}
 	// Int64ID is the int64 type descriptor ID
-	Int64ID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}
-	float32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}
-	float64ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}
-	decimalID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}
+	Int64ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5}
+	// Float32ID is the float32 type descriptor ID
+	Float32ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6}
+	// Float64ID is the float64 type descriptor ID
+	Float64ID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7}
+	// DecimalID is the decimal type descriptor ID
+	DecimalID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8}
 	// BoolID is the bool type descriptor ID
-	BoolID      = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
-	dateTimeID  = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0a}
-	localDTID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0b}
-	localDateID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0c}
-	localTimeID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0d}
+	BoolID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9}
+	// DateTimeID is the datetime type descriptor ID
+	DateTimeID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0a}
+	// LocalDTID is the cal::local_datetime type descriptor ID
+	LocalDTID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0b}
+	// LocalDateID is the cal::local_date type descriptor ID
+	LocalDateID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0c}
+	// LocalTimeID is the cal::local_time type descriptor ID
+	LocalTimeID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0d}
 	// DurationID is the duration type descriptor ID
 	DurationID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0e}
-	jsonID     = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0f}
-	bigIntID   = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}
+	// JSONID is the json type descriptor ID
+	JSONID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0f}
+	// BigIntID is the bigint type descriptor ID
+	BigIntID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x10}
 	// MemoryID is the cfg::memory type descriptor ID
 	MemoryID = types.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x30}
 
@@ -68,7 +83,7 @@ var (
 	optionalStrType           = reflect.TypeOf(types.OptionalStr{})
 	boolType                  = reflect.TypeOf(false)
 	optionalBoolType          = reflect.TypeOf(types.OptionalBool{})
-	uuidType                  = reflect.TypeOf(uuidID)
+	uuidType                  = reflect.TypeOf(UUIDID)
 	optionalUUIDType          = reflect.TypeOf(types.OptionalUUID{})
 	bytesType                 = reflect.TypeOf([]byte{})
 	optionalBytesType         = reflect.TypeOf(types.OptionalBytes{})
@@ -125,7 +140,7 @@ var (
 	// In go query json should return bytes not str.
 	// but the descriptor type ID sent to the server
 	// should still be str.
-	JSONBytes = &bytesCodec{StrID}
+	JSONBytes = &BytesCodec{StrID}
 
 	trueValue  = reflect.ValueOf(true)
 	falseValue = reflect.ValueOf(false)

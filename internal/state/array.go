@@ -25,61 +25,30 @@ import (
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func buildArrayCodec(
+func buildArrayEncoder(
 	desc descriptor.Descriptor,
 	path codecs.Path,
-) (Codec, error) {
-	child, err := BuildCodec(desc.Fields[0].Desc, path)
+) (codecs.Encoder, error) {
+	child, err := BuildEncoder(desc.Fields[0].Desc, path)
 	if err != nil {
 		return nil, err
 	}
 
-	return &arrayOrSetCodec{desc.ID, child}, nil
+	return &arrayOrSetEncoder{desc.ID, child}, nil
 }
 
-type arrayOrSetCodec struct {
+type arrayOrSetEncoder struct {
 	id    edgedbtypes.UUID
-	child Codec
+	child codecs.Encoder
 }
 
-func (c *arrayOrSetCodec) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *arrayOrSetEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
 
-func (c *arrayOrSetCodec) Decode(
-	r *buff.Reader,
-	path codecs.Path,
-) (interface{}, error) {
-	if r.PopUint32() == 0 { // number of dimensions is 1 or 0
-		r.Discard(8) // skip 2 reserved fields
-		return nil, nil
-	}
-
-	r.Discard(8) // skip 2 reserved fields
-	upper := int32(r.PopUint32())
-	lower := int32(r.PopUint32())
-	elmCount := int(upper - lower + 1)
-	result := make([]interface{}, elmCount)
-
-	for i := 0; i < elmCount; i++ {
-		elmLen := r.PopUint32()
-		if elmLen == 0xffffffff {
-			continue
-		}
-
-		val, err := c.child.Decode(r.PopSlice(elmLen), path.AddIndex(i))
-		if err != nil {
-			return nil, err
-		}
-
-		result[i] = val
-	}
-
-	return result, nil
-}
-
-func (c *arrayOrSetCodec) Encode(
+func (c *arrayOrSetEncoder) Encode(
 	w *buff.Writer,
-	path codecs.Path,
 	val interface{},
+	path codecs.Path,
+	required bool,
 ) error {
 	in, ok := val.([]interface{})
 	if !ok {
@@ -96,7 +65,7 @@ func (c *arrayOrSetCodec) Encode(
 	w.PushUint32(1)                // dimension.lower
 
 	for i := 0; i < elmCount; i++ {
-		err := c.child.Encode(w, path.AddIndex(i), in[i])
+		err := c.child.Encode(w, in[i], path.AddIndex(i), false)
 		if err != nil {
 			return err
 		}

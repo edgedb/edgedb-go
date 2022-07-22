@@ -26,13 +26,17 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type uuidCodec struct{}
+// UUIDCodec encodes/decodes uuids.
+type UUIDCodec struct{}
 
-func (c *uuidCodec) Type() reflect.Type { return uuidType }
+// Type returns the type the codec encodes/decodes
+func (c *UUIDCodec) Type() reflect.Type { return uuidType }
 
-func (c *uuidCodec) DescriptorID() types.UUID { return uuidID }
+// DescriptorID returns the codecs descriptor id.
+func (c *UUIDCodec) DescriptorID() types.UUID { return UUIDID }
 
-func (c *uuidCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a uuid.
+func (c *UUIDCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	p := (*types.UUID)(out)
 	copy((*p)[:], r.Buf[:16])
 	r.Discard(16)
@@ -44,7 +48,8 @@ type optionalUUIDMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *uuidCodec) Encode(
+// Encode encodes a uuid.
+func (c *UUIDCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -74,7 +79,7 @@ func (c *uuidCodec) Encode(
 	}
 }
 
-func (c *uuidCodec) encodeData(w *buff.Writer, data types.UUID) error {
+func (c *UUIDCodec) encodeData(w *buff.Writer, data types.UUID) error {
 	w.PushUint32(16)
 	w.PushBytes(data[:])
 	return nil
@@ -87,7 +92,7 @@ type optionalUUID struct {
 
 type optionalUUIDDecoder struct{}
 
-func (c *optionalUUIDDecoder) DescriptorID() types.UUID { return uuidID }
+func (c *optionalUUIDDecoder) DescriptorID() types.UUID { return UUIDID }
 
 func (c *optionalUUIDDecoder) Decode(
 	r *buff.Reader,

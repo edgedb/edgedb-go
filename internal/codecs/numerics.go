@@ -27,13 +27,17 @@ import (
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
-type bigIntCodec struct{}
+// BigIntCodec encodes/decodes *big.Int
+type BigIntCodec struct{}
 
-func (c *bigIntCodec) Type() reflect.Type { return bigIntType }
+// Type returns the type the codec encodes/decodes
+func (c *BigIntCodec) Type() reflect.Type { return bigIntType }
 
-func (c *bigIntCodec) DescriptorID() types.UUID { return bigIntID }
+// DescriptorID returns the codecs descriptor id.
+func (c *BigIntCodec) DescriptorID() types.UUID { return BigIntID }
 
-func (c *bigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
+// Decode decodes a *big.Int
+func (c *BigIntCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
 	n := int(r.PopUint16())
 	weight := big.NewInt(int64(r.PopUint16()))
 	sign := r.PopUint16()
@@ -71,7 +75,8 @@ type optionalBigIntMarshaler interface {
 	marshal.OptionalMarshaler
 }
 
-func (c *bigIntCodec) Encode(
+// Encode encodes a *big.Int.
+func (c *BigIntCodec) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
@@ -99,7 +104,7 @@ func (c *bigIntCodec) Encode(
 	}
 }
 
-func (c *bigIntCodec) encodeData(w *buff.Writer, val *big.Int) error {
+func (c *BigIntCodec) encodeData(w *buff.Writer, val *big.Int) error {
 	// copy to prevent mutating the user's value
 	cpy := &big.Int{}
 	cpy.Set(val)
@@ -136,7 +141,7 @@ func (c *bigIntCodec) encodeData(w *buff.Writer, val *big.Int) error {
 	return nil
 }
 
-func (c *bigIntCodec) encodeMarshaler(
+func (c *BigIntCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.BigIntMarshaler,
 	path Path,
@@ -161,7 +166,7 @@ type optionalBigInt struct {
 
 type optionalBigIntDecoder struct{}
 
-func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return bigIntID }
+func (c *optionalBigIntDecoder) DescriptorID() types.UUID { return BigIntID }
 
 func (c *optionalBigIntDecoder) Decode(
 	r *buff.Reader,
@@ -209,7 +214,7 @@ func (c *optionalBigIntDecoder) DecodePresent(out unsafe.Pointer) {}
 
 type decimalEncoder struct{}
 
-func (c *decimalEncoder) DescriptorID() types.UUID { return decimalID }
+func (c *decimalEncoder) DescriptorID() types.UUID { return DecimalID }
 
 type optionalDecimalMarshaler interface {
 	marshal.DecimalMarshaler
