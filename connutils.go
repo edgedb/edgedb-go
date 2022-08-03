@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -195,7 +194,7 @@ func (r *configResolver) setTLSCAFile(file, source string) error {
 	if r.tlsCAData.val != nil {
 		return nil
 	}
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -696,7 +695,7 @@ func (r *configResolver) resolveTOML(paths *cfgPaths) (string, error) {
 			"but the project is not initialized. Run `edgedb project init`.")
 	}
 
-	instance, err := ioutil.ReadFile(filepath.Join(stashDir, "instance-name"))
+	instance, err := os.ReadFile(filepath.Join(stashDir, "instance-name"))
 	if err != nil {
 		return "", err
 	}
@@ -1083,7 +1082,7 @@ func popDSNValue(
 		source := fmt.Sprintf(" (%v: %q)", key, val)
 		return cfgVal{val: v, source: source}, nil
 	case ok && strings.HasSuffix(key, "_file"):
-		data, err := ioutil.ReadFile(val)
+		data, err := os.ReadFile(val)
 		if err != nil {
 			return cfgVal{}, fmt.Errorf(
 				"failed to read %v file %q: %w", key, val, err)

@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 )
 
 type credentials struct {
@@ -36,7 +36,7 @@ type credentials struct {
 }
 
 func readCredentials(path string) (*credentials, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		msg := fmt.Sprintf("cannot read credentials at %q: %v", path, err)
 		return nil, &configurationError{msg: msg}

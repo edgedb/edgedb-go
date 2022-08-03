@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -380,7 +379,7 @@ func TestConUtils(t *testing.T) {
 
 			if c.expected.err != nil {
 				require.EqualError(t, err, c.expected.errMessage)
-				require.True(t, errors.As(err, &c.expected.err))
+				require.True(t, errors.As(err, interface{}(&c.expected.err)))
 				assert.Nil(t, config)
 			} else {
 				require.NoError(t, err)
@@ -533,11 +532,11 @@ func createFile(tmpDir, file, data string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(file, []byte(data), 0644)
+	return os.WriteFile(file, []byte(data), 0644)
 }
 
 func TestConnectionParameterResolution(t *testing.T) {
-	data, err := ioutil.ReadFile(
+	data, err := os.ReadFile(
 		"./shared-client-testcases/connection_testcases.json",
 	)
 	require.NoError(t, err, "Failed to read 'connection_testcases.json'\n"+
@@ -553,7 +552,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 			if _, ok := testcase["platform"]; ok {
 				t.Skip("platform specific tests not supported")
 			}
-			tmpDir, err := ioutil.TempDir(os.TempDir(), "edgedb-go-tests")
+			tmpDir, err := os.MkdirTemp(os.TempDir(), "edgedb-go-tests")
 			require.NoError(t, err)
 			defer os.RemoveAll(tmpDir) // nolint:errcheck
 			paths := newCfgPaths()
