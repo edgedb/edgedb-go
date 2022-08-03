@@ -1,7 +1,7 @@
 quality: lint test bench
 
 lint:
-	golangci-lint run
+	golangci-lint run --sort-results
 
 test:
 	go test -v -race -bench=$$^ -timeout=10m ./...
