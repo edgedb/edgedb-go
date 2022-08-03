@@ -29,7 +29,7 @@ jobs:
 
       - name: Lint
         run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.44.2
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
           make lint
 
       - name: Build

@@ -18,125 +18,124 @@
 //
 // Typical usage looks like this:
 //
-//   package main
+//	package main
 //
-//   import (
-//       "context"
-//       "log"
+//	import (
+//	    "context"
+//	    "log"
 //
-//       "github.com/edgedb/edgedb-go"
-//   )
+//	    "github.com/edgedb/edgedb-go"
+//	)
 //
-//   func main() {
-//       ctx := context.Background()
-//       client, err := edgedb.CreateClient(ctx, edgedb.Options{})
-//       if err != nil {
-//           log.Fatal(err)
-//       }
-//       defer client.Close()
+//	func main() {
+//	    ctx := context.Background()
+//	    client, err := edgedb.CreateClient(ctx, edgedb.Options{})
+//	    if err != nil {
+//	        log.Fatal(err)
+//	    }
+//	    defer client.Close()
 //
-//       var (
-//           age   int64 = 21
-//           users []struct {
-//               ID   edgedb.UUID `edgedb:"id"`
-//               Name string      `edgedb:"name"`
-//           }
-//       )
+//	    var (
+//	        age   int64 = 21
+//	        users []struct {
+//	            ID   edgedb.UUID `edgedb:"id"`
+//	            Name string      `edgedb:"name"`
+//	        }
+//	    )
 //
-//       query := "SELECT User{name} FILTER .age = <int64>$0"
-//       err = client.Query(ctx, query, &users, age)
-//       ...
-//   }
+//	    query := "SELECT User{name} FILTER .age = <int64>$0"
+//	    err = client.Query(ctx, query, &users, age)
+//	    ...
+//	}
 //
 // You can also connect to a database using a DSN:
 //
-//   url := "edgedb://edgedb@localhost/edgedb"
-//   client, err := edgedb.CreateClientDSN(ctx, url, opts)
+//	url := "edgedb://edgedb@localhost/edgedb"
+//	client, err := edgedb.CreateClientDSN(ctx, url, opts)
 //
 // Or you can use Option fields.
 //
-//   opts := edgedb.Options{
-//       Database:    "edgedb",
-//       User:        "edgedb",
-//       Concurrency: 4,
-//   }
+//	opts := edgedb.Options{
+//	    Database:    "edgedb",
+//	    User:        "edgedb",
+//	    Concurrency: 4,
+//	}
 //
-//   client, err := edgedb.CreateClient(ctx, opts)
+//	client, err := edgedb.CreateClient(ctx, opts)
 //
-//
-// Errors
+// # Errors
 //
 // edgedb never returns underlying errors directly.
 // If you are checking for things like context expiration
 // use errors.Is() or errors.As().
 //
-//   err := client.Query(...)
-//   if errors.Is(err, context.Canceled) { ... }
+//	err := client.Query(...)
+//	if errors.Is(err, context.Canceled) { ... }
 //
 // Most errors returned by the edgedb package will satisfy the edgedb.Error
 // interface which has methods for introspecting.
 //
-//   err := client.Query(...)
+//	err := client.Query(...)
 //
-//   var edbErr edgedb.Error
-//   if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){
-//       ...
-//   }
+//	var edbErr edgedb.Error
+//	if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){
+//	    ...
+//	}
 //
-// Datatypes
+// # Datatypes
 //
 // The following list shows the marshal/unmarshal
 // mapping between EdgeDB types and go types:
 //
-//   EdgeDB                   Go
-//   ---------                ---------
-//   Set                      []anytype
-//   array<anytype>           []anytype
-//   tuple                    struct
-//   named tuple              struct
-//   Object                   struct
-//   bool                     bool, edgedb.OptionalBool
-//   bytes                    []byte, edgedb.OptionalBytes
-//   str                      string, edgedb.OptionalStr
-//   anyenum                  string, edgedb.OptionalStr
-//   datetime                 time.Time, edgedb.OptionalDateTime
-//   cal::local_datetime      edgedb.LocalDateTime,
-//                            edgedb.OptionalLocalDateTime
-//   cal::local_date          edgedb.LocalDate, edgedb.OptionalLocalDate
-//   cal::local_time          edgedb.LocalTime, edgedb.OptionalLocalTime
-//   duration                 time.Duration, edgedb.OptionalDuration
-//   cal::relative_duraation  edgedb.RelativeDuration,
-//                            edgedb.OptionalRelativeDuration
-//   float32                  float32, edgedb.OptionalFloat32
-//   float64                  float64, edgedb.OptionalFloat64
-//   int16                    int16, edgedb.OptionalFloat16
-//   int32                    int32, edgedb.OptionalInt16
-//   int64                    int64, edgedb.OptionalInt64
-//   uuid                     edgedb.UUID, edgedb.OptionalUUID
-//   json                     []byte, edgedb.OptionalBytes
-//   bigint                   *big.Int, edgedb.OptionalBigInt
+//	EdgeDB                   Go
+//	---------                ---------
+//	Set                      []anytype
+//	array<anytype>           []anytype
+//	tuple                    struct
+//	named tuple              struct
+//	Object                   struct
+//	bool                     bool, edgedb.OptionalBool
+//	bytes                    []byte, edgedb.OptionalBytes
+//	str                      string, edgedb.OptionalStr
+//	anyenum                  string, edgedb.OptionalStr
+//	datetime                 time.Time, edgedb.OptionalDateTime
+//	cal::local_datetime      edgedb.LocalDateTime,
+//	                         edgedb.OptionalLocalDateTime
+//	cal::local_date          edgedb.LocalDate, edgedb.OptionalLocalDate
+//	cal::local_time          edgedb.LocalTime, edgedb.OptionalLocalTime
+//	duration                 time.Duration, edgedb.OptionalDuration
+//	cal::relative_duraation  edgedb.RelativeDuration,
+//	                         edgedb.OptionalRelativeDuration
+//	float32                  float32, edgedb.OptionalFloat32
+//	float64                  float64, edgedb.OptionalFloat64
+//	int16                    int16, edgedb.OptionalFloat16
+//	int32                    int32, edgedb.OptionalInt16
+//	int64                    int64, edgedb.OptionalInt64
+//	uuid                     edgedb.UUID, edgedb.OptionalUUID
+//	json                     []byte, edgedb.OptionalBytes
+//	bigint                   *big.Int, edgedb.OptionalBigInt
 //
-//   decimal                  user defined (see Custom Marshalers)
+//	decimal                  user defined (see Custom Marshalers)
 //
 // Shape fields that are not required must use optional types for receiving
 // query results. The edgedb.Optional struct can be embedded to make structs
 // optional.
 //
-//   type User Struct {
-//       edgedb.Optional
-//       Email string `edgedb:"email"`
-//   }
+//	type User Struct {
+//	    edgedb.Optional
+//	    Email string `edgedb:"email"`
+//	}
 //
-//   var result User
-//   err := client.QuerySingle(ctx, `SELECT User { email } LIMIT 0`, $result)
-//   fmt.Println(result.Missing())
-//   // Output: true
+//	var result User
+//	err := client.QuerySingle(ctx, `SELECT User { email } LIMIT 0`, $result)
+//	fmt.Println(result.Missing())
+//	// Output: true
 //
-//   err := client.QuerySingle(ctx, `SELECT User { email } LIMIT 1`, $result)
-//   fmt.Println(result.Missing())
-//   // Output: false
+//	err := client.QuerySingle(ctx, `SELECT User { email } LIMIT 1`, $result)
+//	fmt.Println(result.Missing())
+//	// Output: false
 //
-// Custom Marshalers
+// # Custom Marshalers
 //
 // Interfaces for user defined marshaler/unmarshalers  are documented in the
 // internal/marshal package.

@@ -71,7 +71,7 @@ func CreateClient(ctx context.Context, opts Options) (*Client, error) { // nolin
 // https://www.edgedb.com/docs/clients/connection
 // or it specifies a single string in the following format:
 //
-//     edgedb://user:password@host:port/database?option=value.
+//	edgedb://user:password@host:port/database?option=value.
 //
 // The following options are recognized: host, port, user, database, password.
 func CreateClientDSN(ctx context.Context, dsn string, opts Options) (*Client, error) { // nolint:gocritic,lll

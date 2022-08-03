@@ -20,7 +20,7 @@
 // type except arrays. They must implement the interface for their type.
 // For example a custom int64 unmarshaler should implement Int64Unmarshaler.
 //
-// Optional Fields
+// # Optional Fields
 //
 // When shape fields in a query result are optional (not required) the client
 // requires the out value's optional fields to implement OptionalUnmarshaler.
