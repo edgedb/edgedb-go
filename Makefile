@@ -19,6 +19,7 @@ errors:
 		exit 1 \
 		)
 	edb gen-errors-json --client | \
-		go run internal/cmd/generr/*.go > \
-		generatederrors.go
+		go run internal/cmd/generr/definition.go > internal/client/errors_gen.go
+	edb gen-errors-json --client | \
+		go run internal/cmd/generr/export.go > errors_gen.go
 	make format

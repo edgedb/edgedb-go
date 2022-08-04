@@ -18,6 +18,14 @@ package edgedbtypes
 
 import "encoding/json"
 
+// NewOptionalBytes is a convenience function for creating an OptionalBytes
+// with its value set to v.
+func NewOptionalBytes(v []byte) OptionalBytes {
+	o := OptionalBytes{}
+	o.Set(v)
+	return o
+}
+
 // OptionalBytes is an optional []byte. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalBytes struct {

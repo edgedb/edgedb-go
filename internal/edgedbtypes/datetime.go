@@ -67,6 +67,14 @@ const (
 	timeShift = 62135596800
 )
 
+// NewOptionalDateTime is a convenience function for creating an
+// OptionalDateTime with its value set to v.
+func NewOptionalDateTime(v time.Time) OptionalDateTime {
+	o := OptionalDateTime{}
+	o.Set(v)
+	return o
+}
+
 // OptionalDateTime is an optional time.Time.  Optional types must be used for
 // out parameters when a shape field is not required.
 type OptionalDateTime struct {
@@ -154,6 +162,14 @@ func (dt *LocalDateTime) UnmarshalText(b []byte) error {
 	return nil
 }
 
+// NewOptionalLocalDateTime is a convenience function for creating an
+// OptionalLocalDateTime with its value set to v.
+func NewOptionalLocalDateTime(v LocalDateTime) OptionalLocalDateTime {
+	o := OptionalLocalDateTime{}
+	o.Set(v)
+	return o
+}
+
 // OptionalLocalDateTime is an optional LocalDateTime. Optional types must be
 // used for out parameters when a shape field is not required.
 type OptionalLocalDateTime struct {
@@ -234,6 +250,14 @@ func (d *LocalDate) UnmarshalText(b []byte) error {
 	d.days = int32((t.Unix() + timeShift) / 86400)
 
 	return nil
+}
+
+// NewOptionalLocalDate is a convenience function for creating an
+// OptionalLocalDate with its value set to v.
+func NewOptionalLocalDate(v LocalDate) OptionalLocalDate {
+	o := OptionalLocalDate{}
+	o.Set(v)
+	return o
 }
 
 // OptionalLocalDate is an optional LocalDate. Optional types must be used for
@@ -334,6 +358,14 @@ func (t *LocalTime) UnmarshalText(b []byte) error {
 		62_167_219_200_000_000
 
 	return nil
+}
+
+// NewOptionalLocalTime is a convenience function for creating an
+// OptionalLocalTime with its value set to v.
+func NewOptionalLocalTime(v LocalTime) OptionalLocalTime {
+	o := OptionalLocalTime{}
+	o.Set(v)
+	return o
 }
 
 // OptionalLocalTime is an optional LocalTime. Optional types must be used for
@@ -626,6 +658,14 @@ func (d Duration) String() string {
 	}
 
 	return strings.Join(buf, "")
+}
+
+// NewOptionalDuration is a convenience function for creating an
+// OptionalDuration with its value set to v.
+func NewOptionalDuration(v Duration) OptionalDuration {
+	o := OptionalDuration{}
+	o.Set(v)
+	return o
 }
 
 // OptionalDuration is an optional Duration. Optional types must be used for
@@ -1022,6 +1062,14 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 	return nil
 }
 
+// NewOptionalRelativeDuration is a convenience function for creating an
+// OptionalRelativeDuration with its value set to v.
+func NewOptionalRelativeDuration(v RelativeDuration) OptionalRelativeDuration {
+	o := OptionalRelativeDuration{}
+	o.Set(v)
+	return o
+}
+
 // OptionalRelativeDuration is an optional RelativeDuration. Optional types
 // must be used for out parameters when a shape field is not required.
 type OptionalRelativeDuration struct {
@@ -1275,6 +1323,14 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 	dd.months = int32(months + math.Round(12*years))
 	dd.days = int32(days)
 	return nil
+}
+
+// NewOptionalDateDuration is a convenience function for creating an
+// OptionalDateDuration with its value set to v.
+func NewOptionalDateDuration(v DateDuration) OptionalDateDuration {
+	o := OptionalDateDuration{}
+	o.Set(v)
+	return o
 }
 
 // OptionalDateDuration is an optional DateDuration. Optional types

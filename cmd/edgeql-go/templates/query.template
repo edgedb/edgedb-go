@@ -1,0 +1,19 @@
+
+//go:embed {{.QueryFile}}
+var {{.CMDVarName}} string
+
+// {{.QueryName}} runs the query found in {{.QueryFile}}
+func {{.QueryName}} (
+	ctx context.Context, 
+	client *edgedb.Client,{{.SignatureArgs}}
+) ({{.ResultType}}, error) {
+	var result {{.ResultType}}
+
+	err := client.{{.Method}}(
+		ctx, 
+		{{.CMDVarName}}, 
+		&result,{{.ArgList}}
+	)
+
+	return result, err
+}

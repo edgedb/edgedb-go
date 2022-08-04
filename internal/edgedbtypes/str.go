@@ -20,6 +20,14 @@ import (
 	"encoding/json"
 )
 
+// NewOptionalStr is a convenience function for creating an OptionalStr with
+// its value set to v.
+func NewOptionalStr(v string) OptionalStr {
+	o := OptionalStr{}
+	o.Set(v)
+	return o
+}
+
 // OptionalStr is an optional string. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalStr struct {

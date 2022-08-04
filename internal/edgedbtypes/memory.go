@@ -89,6 +89,14 @@ func (m *Memory) UnmarshalText(b []byte) error {
 	return nil
 }
 
+// NewOptionalMemory is a convenience function for creating an
+// OptionalMemory with its value set to v.
+func NewOptionalMemory(v Memory) OptionalMemory {
+	o := OptionalMemory{}
+	o.Set(v)
+	return o
+}
+
 // OptionalMemory is an optional Memory. Optional types must be used for
 // out parameters when a shape field is not required.
 type OptionalMemory struct {

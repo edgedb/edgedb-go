@@ -6,8 +6,12 @@ require (
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d
 	github.com/stretchr/testify v1.7.1
 	github.com/xdg/scram v1.0.5
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+	golang.org/x/tools v0.1.12
 )
+
+require golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -16,7 +20,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/xdg/stringprep v1.0.3 // indirect
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.3.7
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 )

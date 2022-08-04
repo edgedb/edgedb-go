@@ -30,6 +30,8 @@ import (
 // https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
 var IDZero = types.UUID{}
 
+//go:generate stringer -type Type
+
 // Type represents a descriptor type.
 type Type uint8
 

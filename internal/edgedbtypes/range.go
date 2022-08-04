@@ -124,6 +124,14 @@ func (r *RangeInt32) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// NewOptionalRangeInt32 is a convenience function for creating an
+// OptionalRangeInt32 with its value set to v.
+func NewOptionalRangeInt32(v RangeInt32) OptionalRangeInt32 {
+	o := OptionalRangeInt32{}
+	o.Set(v)
+	return o
+}
+
 // OptionalRangeInt32 is an optional RangeInt32. Optional types must be used
 // for out parameters when a shape field is not required.
 type OptionalRangeInt32 struct {
@@ -271,6 +279,14 @@ func (r *RangeInt64) UnmarshalJSON(data []byte) error {
 	r.incLower = decoded.IncLower
 	r.incUpper = decoded.IncUpper
 	return nil
+}
+
+// NewOptionalRangeInt64 is a convenience function for creating an
+// OptionalRangeInt64 with its value set to v.
+func NewOptionalRangeInt64(v RangeInt64) OptionalRangeInt64 {
+	o := OptionalRangeInt64{}
+	o.Set(v)
+	return o
 }
 
 // OptionalRangeInt64 is an optional RangeInt64. Optional
@@ -426,6 +442,14 @@ type OptionalRangeFloat32 struct {
 	isSet bool
 }
 
+// NewOptionalRangeFloat32 is a convenience function for creating an
+// OptionalRangeFloat32 with its value set to v.
+func NewOptionalRangeFloat32(v RangeFloat32) OptionalRangeFloat32 {
+	o := OptionalRangeFloat32{}
+	o.Set(v)
+	return o
+}
+
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalRangeFloat32) Get() (RangeFloat32, bool) {
 	return o.val, o.isSet
@@ -563,6 +587,14 @@ func (r *RangeFloat64) UnmarshalJSON(data []byte) error {
 	r.incLower = decoded.IncLower
 	r.incUpper = decoded.IncUpper
 	return nil
+}
+
+// NewOptionalRangeFloat64 is a convenience function for creating an
+// OptionalRangeFloat64 with its value set to v.
+func NewOptionalRangeFloat64(v RangeFloat64) OptionalRangeFloat64 {
+	o := OptionalRangeFloat64{}
+	o.Set(v)
+	return o
 }
 
 // OptionalRangeFloat64 is an optional RangeFloat64. Optional
@@ -711,6 +743,14 @@ func (r *RangeDateTime) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// NewOptionalRangeDateTime is a convenience function for creating an
+// OptionalRangeDateTime with its value set to v.
+func NewOptionalRangeDateTime(v RangeDateTime) OptionalRangeDateTime {
+	o := OptionalRangeDateTime{}
+	o.Set(v)
+	return o
+}
+
 // OptionalRangeDateTime is an optional RangeDateTime. Optional
 // types must be used for out parameters when a shape field is not required.
 type OptionalRangeDateTime struct {
@@ -855,6 +895,16 @@ func (r *RangeLocalDateTime) UnmarshalJSON(data []byte) error {
 	r.incLower = decoded.IncLower
 	r.incUpper = decoded.IncUpper
 	return nil
+}
+
+// NewOptionalRangeLocalDateTime is a convenience function for creating an
+// OptionalRangeLocalDateTime with its value set to v.
+func NewOptionalRangeLocalDateTime(
+	v RangeLocalDateTime,
+) OptionalRangeLocalDateTime {
+	o := OptionalRangeLocalDateTime{}
+	o.Set(v)
+	return o
 }
 
 // OptionalRangeLocalDateTime is an optional RangeLocalDateTime. Optional
@@ -1004,6 +1054,14 @@ func (r *RangeLocalDate) UnmarshalJSON(data []byte) error {
 	r.incLower = decoded.IncLower
 	r.incUpper = decoded.IncUpper
 	return nil
+}
+
+// NewOptionalRangeLocalDate is a convenience function for creating an
+// OptionalRangeLocalDate with its value set to v.
+func NewOptionalRangeLocalDate(v RangeLocalDate) OptionalRangeLocalDate {
+	o := OptionalRangeLocalDate{}
+	o.Set(v)
+	return o
 }
 
 // OptionalRangeLocalDate is an optional RangeLocalDate. Optional types must be

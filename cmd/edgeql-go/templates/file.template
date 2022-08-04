@@ -1,0 +1,9 @@
+package {{.packageName}}
+
+import (
+	"context"
+	_ "embed"
+
+	"github.com/edgedb/edgedb-go"
+)
+{{range .queries}}{{template "query.template" .}}{{end}}

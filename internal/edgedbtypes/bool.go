@@ -20,6 +20,14 @@ import (
 	"encoding/json"
 )
 
+// NewOptionalBool is a convenience function for creating an OptionalBool with
+// its value set to v.
+func NewOptionalBool(v bool) OptionalBool {
+	o := OptionalBool{}
+	o.Set(v)
+	return o
+}
+
 // OptionalBool is an optional bool. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalBool struct {

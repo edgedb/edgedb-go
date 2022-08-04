@@ -21,6 +21,14 @@ import (
 	"math/big"
 )
 
+// NewOptionalBigInt is a convenience function for creating an OptionalBigInt
+// with its value set to v.
+func NewOptionalBigInt(v *big.Int) OptionalBigInt {
+	o := OptionalBigInt{}
+	o.Set(v)
+	return o
+}
+
 // OptionalBigInt is an optional *big.Int. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalBigInt struct {
