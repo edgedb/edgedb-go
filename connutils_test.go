@@ -565,6 +565,9 @@ func TestConnectionParameterResolution(t *testing.T) {
 			if testcase["env"] != nil {
 				testcaseEnv := testcase["env"].(map[string]interface{})
 				for k, v := range testcaseEnv {
+					if strings.HasSuffix(k, "_FILE") {
+						v = filepath.Join(tmpDir, v.(string))
+					}
 					env[k] = v.(string)
 				}
 			}
