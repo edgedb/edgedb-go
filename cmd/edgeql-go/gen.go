@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"sync"
 
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
@@ -30,46 +31,63 @@ type lookupKey struct {
 	Required bool
 }
 
+// Type is a go type definition
+type Type struct {
+	definition string
+	imports    []string
+}
+
 // Generator generates go code from EdgeDB types.
 type Generator struct {
-	typeNameLookup map[lookupKey][]byte
+	mx             sync.RWMutex
+	typeNameLookup map[lookupKey]Type
 }
 
 func (g *Generator) getType(
 	desc descriptor.Descriptor,
 	required bool,
-) (string, error) {
-	var err error
+) (Type, error) {
 	key := lookupKey{desc.ID, required}
-	text, ok := g.typeNameLookup[key]
+
+	g.mx.RLock()
+	typ, ok := g.typeNameLookup[key]
+	g.mx.RUnlock()
+
 	if !ok {
-		text, err = g.generateType(desc, required)
+		text, imports, err := g.generateType(desc, required)
 		if err != nil {
-			return "", err
+			return Type{}, err
 		}
 
-		g.typeNameLookup[key] = text
+		typ = Type{string(text), imports}
+
+		g.mx.Lock()
+		g.typeNameLookup[key] = typ
+		g.mx.Unlock()
 	}
 
-	return string(text), nil
+	return typ, nil
 }
 
 func (g *Generator) generateType(
 	desc descriptor.Descriptor,
 	required bool,
-) ([]byte, error) {
-	var buf bytes.Buffer
-	var err error
+) ([]byte, []string, error) {
+	var (
+		buf     bytes.Buffer
+		err     error
+		imports []string
+	)
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		err = g.generateSlice(&buf, desc)
+		imports, err = g.generateSlice(&buf, desc)
 	case descriptor.Object, descriptor.NamedTuple:
-		err = g.generateObject(&buf, desc, required)
+		imports, err = g.generateObject(&buf, desc, required)
 	case descriptor.Tuple:
-		err = g.generateTuple(&buf, desc, required)
+		imports, err = g.generateTuple(&buf, desc, required)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
-		err = g.generateBaseScalar(&buf, desc, required)
+		imports, err = g.generateBaseScalar(&buf, desc, required)
 	case descriptor.Range:
 		err = g.generateRange(&buf, desc, required)
 	default:
@@ -80,10 +98,10 @@ func (g *Generator) generateType(
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes(), imports, nil
 }
 
 func (g *Generator) generateRange(
@@ -126,75 +144,79 @@ func (g *Generator) generateRange(
 func (g *Generator) generateSlice(
 	buf *bytes.Buffer,
 	desc descriptor.Descriptor,
-) error {
-	fmt.Fprintf(buf, "[]")
+) ([]string, error) {
 	typ, err := g.getType(desc.Fields[0].Desc, desc.Fields[0].Required)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fmt.Fprint(buf, typ)
-	return nil
+	fmt.Fprint(buf, typ.definition)
+	return typ.imports, nil
 }
 
 func (g *Generator) generateObject(
 	buf *bytes.Buffer,
 	desc descriptor.Descriptor,
 	required bool,
-) error {
+) ([]string, error) {
+	var imports []string
 	fmt.Fprintln(buf, `struct {`)
 
 	for _, field := range desc.Fields {
 		typ, err := g.getType(field.Desc, field.Required)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		fmt.Fprintf(
 			buf,
 			"%s %s `edgedb:\"%s\"`\n",
 			snakeToUpperCamelCase(field.Name),
-			typ,
+			typ.definition,
 			field.Name,
 		)
+		imports = append(imports, typ.imports...)
 	}
 	fmt.Fprint(buf, `}`)
 
-	return nil
+	return imports, nil
 }
 
 func (g *Generator) generateTuple(
 	buf *bytes.Buffer,
 	desc descriptor.Descriptor,
 	required bool,
-) error {
+) ([]string, error) {
+	var imports []string
 	fmt.Fprintln(buf, `struct {`)
 	fmt.Fprintln(buf, "// descriptor", desc.ID)
 
 	for _, field := range desc.Fields {
 		typ, err := g.getType(field.Desc, field.Required)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		fmt.Fprintf(
 			buf,
 			"Field%s %s `edgedb:\"%s\"`\n",
 			field.Name,
-			typ,
+			typ.definition,
 			field.Name,
 		)
+		imports = append(imports, typ.imports...)
 	}
 	fmt.Fprint(buf, `}`)
 
-	return nil
+	return imports, nil
 }
 
 func (g *Generator) generateBaseScalar(
 	buf *bytes.Buffer,
 	desc descriptor.Descriptor,
 	required bool,
-) error {
+) ([]string, error) {
+	var imports []string
 	switch desc.ID {
 	case codecs.UUIDID:
 		if required {
@@ -206,7 +228,7 @@ func (g *Generator) generateBaseScalar(
 		if required {
 			buf.WriteString("string")
 		} else {
-			buf.WriteString("edgedb.OptionalString")
+			buf.WriteString("edgedb.OptionalStr")
 		}
 	case codecs.BytesID, codecs.JSONID:
 		if required {
@@ -252,6 +274,7 @@ func (g *Generator) generateBaseScalar(
 		}
 	case codecs.DateTimeID:
 		if required {
+			imports = append(imports, "time")
 			buf.WriteString("time.Time")
 		} else {
 			buf.WriteString("edgedb.OptionalDateTime")
@@ -282,6 +305,7 @@ func (g *Generator) generateBaseScalar(
 		}
 	case codecs.BigIntID:
 		if required {
+			imports = append(imports, "math/big")
 			buf.WriteString("*big.Int")
 		} else {
 			buf.WriteString("edgedb.OptionalBigInt")
@@ -306,5 +330,5 @@ func (g *Generator) generateBaseScalar(
 		}
 	}
 
-	return nil
+	return imports, nil
 }

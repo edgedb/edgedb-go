@@ -20,10 +20,12 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -41,16 +43,10 @@ import (
 )
 
 var (
+	typeGen = Generator{typeNameLookup: make(map[lookupKey]Type)}
+
 	//go:embed templates/*.template
 	templates embed.FS
-
-	typeGen = Generator{typeNameLookup: make(map[lookupKey][]byte)}
-
-	queryFiles MultiStringFlag
-	outFile    = flag.String("out", "",
-		"output file name; default srcdir/<file>_edgeql.go")
-	isJSON = flag.Bool("json", false,
-		"use Query(Single)JSON instead of Query(Single)")
 )
 
 func usage() {
@@ -58,22 +54,8 @@ func usage() {
 		"Generate go functions from edgeql files.\n"+
 		"\n"+
 		"USAGE:\n"+
-		"    %s [OPTIONS]\n"+
-		"\n"+
-		"OPTIONS:\n", os.Args[0])
+		"    %s\n", os.Args[0])
 	flag.PrintDefaults()
-}
-
-// MultiStringFlag is a string flag that can be specified multiple times.
-type MultiStringFlag []string
-
-// String returns a semicolon delimited list of strings
-func (s *MultiStringFlag) String() string { return strings.Join(*s, ";") }
-
-// Set appends a value
-func (s *MultiStringFlag) Set(value string) error {
-	*s = append(*s, value)
-	return nil
 }
 
 func main() {
@@ -81,80 +63,170 @@ func main() {
 	log.SetPrefix("edgeql-go: ")
 
 	flag.Usage = usage
-	flag.Var(&queryFiles, "file",
-		".edgeql file to parse; may be specified multiple times; required")
 	flag.Parse()
 
-	if len(queryFiles) == 0 {
-		log.Fatal("-file must be specified at least once")
-	}
+	timer := time.AfterFunc(200*time.Millisecond, func() {
+		log.Println("connecting to EdgeDB")
+	})
+	defer timer.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
+	ctx := context.Background()
 	c, err := edgedb.CreateClient(ctx, edgedb.Options{})
 	if err != nil {
 		log.Fatalf("creating client: %s", err) // nolint:gocritic
 	}
 	client := edgedb.InstrospectionClient{Client: c}
 
-	if *outFile != "" {
-		if !strings.HasSuffix(*outFile, ".go") {
-			log.Fatal("the filename specified by -out must end with .go")
-		}
-	} else {
-		*outFile = getOutFile(queryFiles[0])
-	}
-	*outFile, err = filepath.Abs(*outFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var wg sync.WaitGroup
-	queries := make([]*Query, len(queryFiles))
-	for i, queryFile := range queryFiles {
-		wg.Add(1)
-		go func(i int, queryFile string) {
-			defer wg.Done()
-			q, e := newQuery(ctx, client, queryFile, *outFile)
-			if e != nil {
-				log.Fatalf("processing %s: %s", *outFile, e)
-			}
-			queries[i] = q
-		}(i, queryFile)
-	}
-
-	packageName, err := getPackageName(*outFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	fileQueue := queueFilesInBackground()
 
 	t, err := template.ParseFS(templates, "templates/*.template")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	var wg sync.WaitGroup
+	for queryFile := range fileQueue {
+		wg.Add(1)
+		go func(queryFile string) {
+			defer wg.Done()
+			outFile := getOutFile(queryFile)
+			q, e := newQuery(ctx, client, queryFile, outFile)
+			if e != nil {
+				log.Fatalf("processing %s: %s", queryFile, e)
+			}
+
+			e = writeGoFile(t, outFile, []*Query{q})
+			if e != nil {
+				log.Fatalf("processing %s: %s", queryFile, e)
+			}
+		}(queryFile)
+	}
 	wg.Wait()
-	var buf bytes.Buffer
-	err = t.Execute(&buf, map[string]any{
-		"packageName": packageName,
-		"queries":     queries,
-	})
+}
+
+func isEdgeDBTOML(file string) (bool, error) {
+	info, err := os.Stat(file)
+	if err == nil {
+		if info.Mode() == fs.ModeDir {
+			return false, fmt.Errorf(
+				"expected %q to be a file not a directory",
+				file,
+			)
+		}
+		return true, nil
+	}
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+
+	return false, err
+}
+
+func getProjectRoot() (string, error) {
+	dir, err := filepath.Abs(".")
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		parent := filepath.Dir(dir)
+		if dir == parent {
+			return "", fmt.Errorf(
+				"could not find edgedb.toml, " +
+					"fix this by initializing a project, run: " +
+					" edgedb project init",
+			)
+		}
+
+		file := filepath.Join(dir, "edgedb.toml")
+		isTOML, err := isEdgeDBTOML(file)
+		if err != nil {
+			return "", err
+		}
+
+		if isTOML {
+			return dir, nil
+		}
+		dir = parent
+	}
+}
+
+func queueFilesInBackground() chan string {
+	queue := make(chan string)
+	root, err := getProjectRoot()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(*outFile, buf.Bytes(), 0644)
+	go func() {
+		er := filepath.WalkDir(
+			root,
+			func(f string, d fs.DirEntry, e error) error {
+				if e != nil {
+					return e
+				}
+
+				if d.IsDir() &&
+					f == filepath.Join(root, "dbschema/migrations") {
+					return fs.SkipDir
+				}
+
+				if !d.IsDir() && strings.HasSuffix(f, ".edgeql") {
+					queue <- f
+				}
+
+				return nil
+			},
+		)
+
+		if er != nil {
+			log.Fatalf("detecting .edgeql files: %s", er)
+		}
+		close(queue)
+	}()
+
+	return queue
+}
+
+func writeGoFile(
+	t *template.Template,
+	outFile string,
+	queries []*Query,
+) error {
+	packageName, err := getPackageName(outFile)
 	if err != nil {
-		log.Fatalf("error writing file %q: %s", queryFiles, err)
+		log.Fatal(err)
 	}
 
-	cmd := exec.Command("gofmt", "-s", "-w", *outFile)
+	var imports []string
+	for _, q := range queries {
+		imports = append(imports, q.Imports()...)
+	}
+
+	var buf bytes.Buffer
+	err = t.Execute(&buf, map[string]any{
+		"PackageName":  packageName,
+		"ExtraImports": imports,
+		"Queries":      queries,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(outFile, buf.Bytes(), 0644)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("gofmt", "-s", "-w", outFile)
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
-		log.Fatalln("formatting code:", err)
+		return fmt.Errorf("formatting %s: %w", outFile, err)
 	}
+
+	return nil
 }
 
 // getPackageName looks up the package name from the first adjacent .go file it
@@ -198,7 +270,11 @@ func getPackageName(outFile string) (string, error) {
 		}
 	}
 
-	return strings.ToLower(filepath.Base(dirname)), nil
+	return strings.ReplaceAll(
+		strings.ToLower(filepath.Base(dirname)),
+		"-",
+		"",
+	), nil
 }
 
 func getOutFile(queryFile string) string {

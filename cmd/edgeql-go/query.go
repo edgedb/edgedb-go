@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"log"
 	"os"
@@ -27,7 +28,7 @@ import (
 
 	edgedb "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
 func newQuery(
@@ -59,14 +60,26 @@ func newQuery(
 		// todo: maybe check that argument names are valid identifiers
 	}
 
-	return &Query{queryFile, outFile, description}, nil
+	rType, err := resultType(description)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sTypes, err := signatureTypes(description)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &Query{queryFile, outFile, description, rType, sTypes}, nil
 }
 
 // Query generates values for templates/query.template
 type Query struct {
-	queryFile   string
-	outFile     string
-	description *edgedb.CommandDescription
+	queryFile      string
+	outFile        string
+	description    *edgedb.CommandDescription
+	resultType     Type
+	signatureTypes []Type
 }
 
 // QueryFile returns the relative path from the go source file to the edgeql
@@ -90,6 +103,20 @@ func (q *Query) QueryName() string {
 	return snakeToUpperCamelCase(name)
 }
 
+func signatureTypes(description *edgedb.CommandDescription) ([]Type, error) {
+	types := make([]Type, len(description.In.Fields))
+
+	for _, field := range description.In.Fields {
+		typ, err := typeGen.getType(field.Desc, field.Required)
+		if err != nil {
+			return nil, err
+		}
+		types = append(types, typ)
+	}
+
+	return types, nil
+}
+
 // SignatureArgs returns the query arguments as they will appear  in the
 // function signature.
 func (q *Query) SignatureArgs() (string, error) {
@@ -101,28 +128,28 @@ func (q *Query) SignatureArgs() (string, error) {
 		}
 
 		name := snakeToLowerCamelCase(field.Name)
-		fmt.Fprintf(&buf, "\n%s %s,", name, typ)
+		fmt.Fprintf(&buf, "\n%s %s,", name, typ.definition)
 	}
 
 	return buf.String(), nil
 }
 
-// ResultType returns the type that the query returns.
-func (q *Query) ResultType() (string, error) {
-	if *isJSON {
-		return "[]byte", nil
-	}
-
-	outDesc := q.description.Out
+func resultType(description *edgedb.CommandDescription) (Type, error) {
+	outDesc := description.Out
 	var required bool
-	switch q.description.Card {
+	switch description.Card {
 	case edgedb.Many, edgedb.AtLeastOne:
+		id, err := randomID()
+		if err != nil {
+			return Type{}, err
+		}
+
 		required = true
 		outDesc = descriptor.Descriptor{
 			Type: descriptor.Set,
-			ID:   types.UUID{},
+			ID:   id,
 			Fields: []*descriptor.Field{{
-				Desc: q.description.Out,
+				Desc: description.Out,
 			}},
 		}
 	case edgedb.One:
@@ -130,6 +157,17 @@ func (q *Query) ResultType() (string, error) {
 	}
 
 	return typeGen.getType(outDesc, required)
+}
+
+func randomID() (edgedbtypes.UUID, error) {
+	var id edgedbtypes.UUID
+	_, err := rand.Read(id[:])
+	return id, err
+}
+
+// ResultType returns the type declaration for the query result.
+func (q *Query) ResultType() string {
+	return q.resultType.definition
 }
 
 // ArgList returns then list of arguments to pass to the query method.
@@ -153,16 +191,31 @@ func (q *Query) ArgList() (string, error) {
 func (q *Query) Method() string {
 	switch q.description.Card {
 	case edgedb.AtMostOne, edgedb.One:
-		if *isJSON {
-			return "QuerySingleJSON"
-		}
 		return "QuerySingle"
 	case edgedb.NoResult, edgedb.Many, edgedb.AtLeastOne:
-		if *isJSON {
-			return "QueryJSON"
-		}
 		return "Query"
 	default:
 		panic("unreachable 20135")
 	}
+}
+
+// Imports returns extra packages that need to be imported.
+func (q *Query) Imports() []string {
+	imports := q.resultType.imports
+	for i := 0; i < len(q.signatureTypes); i++ {
+		imports = append(imports, q.signatureTypes[i].imports...)
+	}
+
+	unique := make(map[string]struct{})
+	for _, name := range imports {
+		unique[name] = struct{}{}
+	}
+
+	result := make([]string, len(unique))
+	result = result[:0]
+	for name := range unique {
+		result = append(result, name)
+	}
+
+	return result
 }
