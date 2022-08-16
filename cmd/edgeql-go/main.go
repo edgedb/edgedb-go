@@ -75,7 +75,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("creating client: %s", err) // nolint:gocritic
 	}
-	client := edgedb.InstrospectionClient{Client: c}
 
 	fileQueue := queueFilesInBackground()
 
@@ -90,7 +89,7 @@ func main() {
 		go func(queryFile string) {
 			defer wg.Done()
 			outFile := getOutFile(queryFile)
-			q, e := newQuery(ctx, client, queryFile, outFile)
+			q, e := newQuery(ctx, c, queryFile, outFile)
 			if e != nil {
 				log.Fatalf("processing %s: %s", queryFile, e)
 			}

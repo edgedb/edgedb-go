@@ -17,8 +17,10 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,9 +28,29 @@ import (
 	"sync"
 	"testing"
 
+	edgedb "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var dsn string
+
+func TestMain(m *testing.M) {
+	o := edgedb.TestClientOptions()
+	pwd, ok := o.Password.Get()
+	if !ok {
+		log.Fatal("missing password")
+	}
+	dsn = fmt.Sprintf(
+		"edgedb://%s:%s@%s:%d?tls_security=%s&tls_ca_file=%s",
+		o.User,
+		pwd,
+		o.Host,
+		o.Port,
+		o.TLSOptions.SecurityMode,
+		o.TLSOptions.CAFile,
+	)
+}
 
 func TestEdgeQLGo(t *testing.T) {
 	dir, err := os.MkdirTemp("", "edgeql-go-*")
@@ -150,5 +172,6 @@ func run(t *testing.T, dir, name string, args ...string) {
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Env = []string{fmt.Sprintf("EDGEDB_DSN=%s", dsn)}
 	require.NoError(t, cmd.Run())
 }

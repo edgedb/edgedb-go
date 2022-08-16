@@ -18,16 +18,23 @@ package edgedb
 
 import (
 	"context"
+
+	"github.com/edgedb/edgedb-go/internal"
+	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
 
-// InstrospectionClient is an client with methods for introspecting.
-type InstrospectionClient struct {
-	*Client
+// CommandDescription is the information returned in the CommandDataDescription
+// message
+type CommandDescription struct {
+	In   descriptor.Descriptor
+	Out  descriptor.Descriptor
+	Card Cardinality
 }
 
 // Describe returns CommandDescription for the provided cmd.
-func (c *InstrospectionClient) Describe(
+func Describe(
 	ctx context.Context,
+	c *Client,
 	cmd string,
 ) (*CommandDescription, error) {
 	conn, err := c.acquire(ctx)
@@ -60,4 +67,23 @@ func (c *InstrospectionClient) Describe(
 	}
 
 	return d, nil
+}
+
+// ProtocolVersion returns the protocol version used by c.
+func ProtocolVersion(
+	ctx context.Context,
+	c *Client,
+) (internal.ProtocolVersion, error) {
+	conn, err := c.acquire(ctx)
+	if err != nil {
+		return internal.ProtocolVersion{}, err
+	}
+
+	protocolVersion := conn.conn.protocolVersion
+	err = c.release(conn, nil)
+	if err != nil {
+		return internal.ProtocolVersion{}, err
+	}
+
+	return protocolVersion, nil
 }

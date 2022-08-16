@@ -33,7 +33,7 @@ import (
 
 func newQuery(
 	ctx context.Context,
-	client edgedb.InstrospectionClient,
+	c *edgedb.Client,
 	queryFile,
 	outFile string,
 ) (*Query, error) {
@@ -48,7 +48,7 @@ func newQuery(
 		log.Fatalf("error reading %q: %s", queryFile, err)
 	}
 
-	description, err := client.Describe(ctx, string(queryBytes))
+	description, err := edgedb.Describe(ctx, c, string(queryBytes))
 	if err != nil {
 		log.Fatalf("error introspecting query %q: %s", queryFile, err)
 	}

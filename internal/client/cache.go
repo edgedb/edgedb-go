@@ -48,7 +48,6 @@ import (
 	"reflect"
 
 	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/header"
 )
@@ -61,14 +60,6 @@ type codecKey struct {
 type codecPair struct {
 	in  codecs.Encoder
 	out codecs.Decoder
-}
-
-// CommandDescription is the information returned in the CommandDataDescription
-// message
-type CommandDescription struct {
-	In   descriptor.Descriptor
-	Out  descriptor.Descriptor
-	Card Cardinality
 }
 
 type idPair struct {
