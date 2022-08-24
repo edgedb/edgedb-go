@@ -18,24 +18,15 @@ package edgedb_test
 
 import (
 	"context"
-	"log"
 	"testing"
 
 	"github.com/edgedb/edgedb-go"
 )
 
 var (
-	ctx    = context.Background()
-	client = createClient()
+	ctx    context.Context
+	client *edgedb.Client
 )
-
-func createClient() *edgedb.Client {
-	c, err := edgedb.CreateClient(ctx, edgedb.Options{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return c
-}
 
 // [Link properties] are treated as fields in the linked to struct, and the @
 // is omitted from the field's tag.
