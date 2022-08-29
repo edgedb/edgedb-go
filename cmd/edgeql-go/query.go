@@ -100,7 +100,7 @@ func (q *Query) CMDVarName() string {
 func (q *Query) QueryName() string {
 	name := filepath.Base(q.queryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
-	return snakeToUpperCamelCase(name)
+	return snakeToLowerCamelCase(name)
 }
 
 func signatureTypes(description *edgedb.CommandDescription) ([]Type, error) {

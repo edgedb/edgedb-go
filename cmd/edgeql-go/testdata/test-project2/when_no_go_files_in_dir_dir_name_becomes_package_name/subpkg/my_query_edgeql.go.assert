@@ -14,10 +14,10 @@ import (
 //go:embed my_query.edgeql
 var myQueryCmd string
 
-// MyQuery
+// myQuery
 // runs the query found in
 // my_query.edgeql
-func MyQuery(
+func myQuery(
 	ctx context.Context,
 	client *edgedb.Client,
 	a edgedb.UUID,
@@ -236,11 +236,11 @@ func MyQuery(
 	return result, err
 }
 
-// MyQueryJSON
+// myQueryJSON
 // runs the query found in
 // my_query.edgeql
 // returning the results as json encoded bytes
-func MyQueryJSON(
+func myQueryJSON(
 	ctx context.Context,
 	client *edgedb.Client,
 	a edgedb.UUID,

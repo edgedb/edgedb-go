@@ -12,10 +12,10 @@ import (
 //go:embed select_scalar.edgeql
 var selectScalarCmd string
 
-// SelectScalar
+// selectScalar
 // runs the query found in
 // select_scalar.edgeql
-func SelectScalar(
+func selectScalar(
 	ctx context.Context,
 	client *edgedb.Client,
 ) (edgedb.OptionalInt64, error) {
@@ -30,11 +30,11 @@ func SelectScalar(
 	return result, err
 }
 
-// SelectScalarJSON
+// selectScalarJSON
 // runs the query found in
 // select_scalar.edgeql
 // returning the results as json encoded bytes
-func SelectScalarJSON(
+func selectScalarJSON(
 	ctx context.Context,
 	client *edgedb.Client,
 ) ([]byte, error) {

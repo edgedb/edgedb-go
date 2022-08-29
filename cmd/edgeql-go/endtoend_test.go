@@ -50,6 +50,7 @@ func TestMain(m *testing.M) {
 		o.TLSOptions.SecurityMode,
 		o.TLSOptions.CAFile,
 	)
+	os.Exit(m.Run())
 }
 
 func TestEdgeQLGo(t *testing.T) {
@@ -172,6 +173,6 @@ func run(t *testing.T, dir, name string, args ...string) {
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = []string{fmt.Sprintf("EDGEDB_DSN=%s", dsn)}
+	cmd.Env = append(os.Environ(), fmt.Sprintf("EDGEDB_DSN=%s", dsn))
 	require.NoError(t, cmd.Run())
 }

@@ -13,10 +13,10 @@ import (
 //go:embed select_args.edgeql
 var selectArgsCmd string
 
-// SelectArgs
+// selectArgs
 // runs the query found in
 // select_args.edgeql
-func SelectArgs(
+func selectArgs(
 	ctx context.Context,
 	client *edgedb.Client,
 	str string,
@@ -43,11 +43,11 @@ func SelectArgs(
 	return result, err
 }
 
-// SelectArgsJSON
+// selectArgsJSON
 // runs the query found in
 // select_args.edgeql
 // returning the results as json encoded bytes
-func SelectArgsJSON(
+func selectArgsJSON(
 	ctx context.Context,
 	client *edgedb.Client,
 	str string,

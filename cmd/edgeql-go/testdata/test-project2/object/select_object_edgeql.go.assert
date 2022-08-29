@@ -12,10 +12,10 @@ import (
 //go:embed select_object.edgeql
 var selectObjectCmd string
 
-// SelectObject
+// selectObject
 // runs the query found in
 // select_object.edgeql
-func SelectObject(
+func selectObject(
 	ctx context.Context,
 	client *edgedb.Client,
 ) (struct {
@@ -44,11 +44,11 @@ func SelectObject(
 	return result, err
 }
 
-// SelectObjectJSON
+// selectObjectJSON
 // runs the query found in
 // select_object.edgeql
 // returning the results as json encoded bytes
-func SelectObjectJSON(
+func selectObjectJSON(
 	ctx context.Context,
 	client *edgedb.Client,
 ) ([]byte, error) {
