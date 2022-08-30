@@ -180,7 +180,7 @@ func (q *Query) ArgList() (string, error) {
 	fmt.Fprintf(&buf, "\nmap[string]interface{}{\n")
 	for _, field := range q.description.In.Fields {
 		name := snakeToLowerCamelCase(field.Name)
-		fmt.Fprintf(&buf, "%q: %s,\n", name, name)
+		fmt.Fprintf(&buf, "%q: %s,\n", field.Name, name)
 	}
 	fmt.Fprintf(&buf, "},")
 
