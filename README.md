@@ -5,7 +5,9 @@
 
 ## Installation
 
+```bash
 $ go get github.com/edgedb/edgedb-go
+```
 
 ## Basic Usage
 
