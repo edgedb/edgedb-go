@@ -5,6 +5,8 @@
 
 ## Installation
 
+In your module directory, run the following command.
+
 ```bash
 $ go get github.com/edgedb/edgedb-go
 ```
