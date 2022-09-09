@@ -4,7 +4,8 @@
 [![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
 ## Installation
-In your module directory run
+
+In your module directory, run the following command.
 
 ```bash
 $ go get github.com/edgedb/edgedb-go
