@@ -124,7 +124,7 @@ func TestMissmatchedCardinality(t *testing.T) {
 	err := client.QuerySingle(ctx, "SELECT {1, 2, 3}", &result)
 
 	expected := "edgedb.ResultCardinalityMismatchError: " +
-		"the query has cardinality MANY " +
+		"the query has cardinality AT_LEAST_ONE " +
 		"which does not match the expected cardinality ONE"
 	assert.EqualError(t, err, expected)
 }

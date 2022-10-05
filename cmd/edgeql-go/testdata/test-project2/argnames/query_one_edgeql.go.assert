@@ -19,8 +19,8 @@ func queryOne(
 	ctx context.Context,
 	client *edgedb.Client,
 	arg_name_with_underscores int64,
-) (edgedb.OptionalInt64, error) {
-	var result edgedb.OptionalInt64
+) (int64, error) {
+	var result int64
 
 	err := client.QuerySingle(
 		ctx,

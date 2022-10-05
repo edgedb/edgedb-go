@@ -18,8 +18,8 @@ var selectScalarCmd string
 func selectScalar(
 	ctx context.Context,
 	client *edgedb.Client,
-) (edgedb.OptionalInt64, error) {
-	var result edgedb.OptionalInt64
+) (int64, error) {
+	var result int64
 
 	err := client.QuerySingle(
 		ctx,
