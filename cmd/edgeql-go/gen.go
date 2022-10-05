@@ -171,7 +171,7 @@ func (g *Generator) generateObject(
 		fmt.Fprintf(
 			buf,
 			"%s %s `edgedb:\"%s\"`\n",
-			snakeToUpperCamelCase(field.Name),
+			field.Name,
 			typ.definition,
 			field.Name,
 		)

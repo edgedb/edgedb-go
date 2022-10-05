@@ -297,18 +297,6 @@ func isNumberedArgs(desc descriptor.Descriptor) bool {
 	return true
 }
 
-func snakeToUpperCamelCase(s string) string {
-	// todo allow passing spoken language as an option?
-	title := cases.Title(language.English)
-
-	parts := strings.Split(s, "_")
-	for i := 0; i < len(parts); i++ {
-		parts[i] = title.String(parts[i])
-	}
-
-	return strings.Join(parts, "")
-}
-
 func snakeToLowerCamelCase(s string) string {
 	title := cases.Title(language.English)
 	lower := cases.Lower(language.English)

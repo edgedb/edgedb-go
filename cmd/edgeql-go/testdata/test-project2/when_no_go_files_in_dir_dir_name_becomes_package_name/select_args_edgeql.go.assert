@@ -22,12 +22,12 @@ func selectArgs(
 	str string,
 	datetime time.Time,
 ) (struct {
-	Str      string    `edgedb:"str"`
-	Datetime time.Time `edgedb:"datetime"`
+	Str      string    `edgedb:"Str"`
+	DateTime time.Time `edgedb:"DateTime"`
 }, error) {
 	var result struct {
-		Str      string    `edgedb:"str"`
-		Datetime time.Time `edgedb:"datetime"`
+		Str      string    `edgedb:"Str"`
+		DateTime time.Time `edgedb:"DateTime"`
 	}
 
 	err := client.QuerySingle(

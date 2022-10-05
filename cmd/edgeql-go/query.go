@@ -127,8 +127,7 @@ func (q *Query) SignatureArgs() (string, error) {
 			return "", err
 		}
 
-		name := snakeToLowerCamelCase(field.Name)
-		fmt.Fprintf(&buf, "\n%s %s,", name, typ.definition)
+		fmt.Fprintf(&buf, "\n%s %s,", field.Name, typ.definition)
 	}
 
 	return buf.String(), nil
@@ -179,8 +178,7 @@ func (q *Query) ArgList() (string, error) {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "\nmap[string]interface{}{\n")
 	for _, field := range q.description.In.Fields {
-		name := snakeToLowerCamelCase(field.Name)
-		fmt.Fprintf(&buf, "%q: %s,\n", field.Name, name)
+		fmt.Fprintf(&buf, "%q: %s,\n", field.Name, field.Name)
 	}
 	fmt.Fprintf(&buf, "},")
 

@@ -1,4 +1,4 @@
 select {
-	str := <str>$str,
-	datetime := <datetime>$datetime,
+	Str := <str>$str,
+	DateTime := <datetime>$datetime,
 }

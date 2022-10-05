@@ -19,20 +19,20 @@ func selectObjects(
 	ctx context.Context,
 	client *edgedb.Client,
 ) (struct {
-	Name     string `edgedb:"name"`
-	Language string `edgedb:"language"`
+	Name     string `edgedb:"Name"`
+	Language string `edgedb:"Language"`
 	Params   struct {
-		Name    string             `edgedb:"name"`
-		Default edgedb.OptionalStr `edgedb:"default"`
-	} `edgedb:"params"`
+		Name    string             `edgedb:"Name"`
+		Default edgedb.OptionalStr `edgedb:"Default"`
+	} `edgedb:"Params"`
 }, error) {
 	var result struct {
-		Name     string `edgedb:"name"`
-		Language string `edgedb:"language"`
+		Name     string `edgedb:"Name"`
+		Language string `edgedb:"Language"`
 		Params   struct {
-			Name    string             `edgedb:"name"`
-			Default edgedb.OptionalStr `edgedb:"default"`
-		} `edgedb:"params"`
+			Name    string             `edgedb:"Name"`
+			Default edgedb.OptionalStr `edgedb:"Default"`
+		} `edgedb:"Params"`
 	}
 
 	err := client.Query(

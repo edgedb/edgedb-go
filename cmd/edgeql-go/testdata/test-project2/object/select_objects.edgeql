@@ -1,8 +1,8 @@
 select schema::Function {
-  name,
-  language,
-  params: {
-    name,
-    default,
+  Name := .name,
+  Language := .language,
+  Params := .params {
+    Name := .name,
+    Default := .default,
   }
 }

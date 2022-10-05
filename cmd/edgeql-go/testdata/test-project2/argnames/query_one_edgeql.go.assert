@@ -18,7 +18,7 @@ var queryOneCmd string
 func queryOne(
 	ctx context.Context,
 	client *edgedb.Client,
-	argNameWithUnderscores int64,
+	arg_name_with_underscores int64,
 ) (edgedb.OptionalInt64, error) {
 	var result edgedb.OptionalInt64
 
@@ -27,7 +27,7 @@ func queryOne(
 		queryOneCmd,
 		&result,
 		map[string]interface{}{
-			"arg_name_with_underscores": argNameWithUnderscores,
+			"arg_name_with_underscores": arg_name_with_underscores,
 		},
 	)
 
@@ -41,7 +41,7 @@ func queryOne(
 func queryOneJSON(
 	ctx context.Context,
 	client *edgedb.Client,
-	argNameWithUnderscores int64,
+	arg_name_with_underscores int64,
 ) ([]byte, error) {
 	var result []byte
 
@@ -50,7 +50,7 @@ func queryOneJSON(
 		queryOneCmd,
 		&result,
 		map[string]interface{}{
-			"arg_name_with_underscores": argNameWithUnderscores,
+			"arg_name_with_underscores": arg_name_with_underscores,
 		},
 	)
 	if err != nil {
