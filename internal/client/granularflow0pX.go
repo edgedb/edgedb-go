@@ -516,7 +516,10 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg0pX(
 	}
 	if descs.Out.ID != id {
 		return nil, nil, &clientError{msg: fmt.Sprintf(
-			"unexpected out descriptor id: %v", descs.Out.ID)}
+			"unexpected out descriptor id: got %v but expected %v",
+			descs.Out.ID,
+			id,
+		)}
 	}
 
 	if q.expCard == AtMostOne && descs.Card == Many {

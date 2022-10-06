@@ -121,6 +121,10 @@ func myQuery(
 	av edgedb.RangeLocalDateTime         `edgedb:"av"`
 	aw edgedb.OptionalRangeLocalDate     `edgedb:"aw"`
 	ax edgedb.RangeLocalDate             `edgedb:"ax"`
+	ay int64                             `edgedb:"ay"`
+	az edgedb.OptionalInt64              `edgedb:"az"`
+	ba string                            `edgedb:"ba"`
+	bb edgedb.OptionalStr                `edgedb:"bb"`
 }, error) {
 	var result struct {
 		a  edgedb.UUID                       `edgedb:"a"`
@@ -173,6 +177,10 @@ func myQuery(
 		av edgedb.RangeLocalDateTime         `edgedb:"av"`
 		aw edgedb.OptionalRangeLocalDate     `edgedb:"aw"`
 		ax edgedb.RangeLocalDate             `edgedb:"ax"`
+		ay int64                             `edgedb:"ay"`
+		az edgedb.OptionalInt64              `edgedb:"az"`
+		ba string                            `edgedb:"ba"`
+		bb edgedb.OptionalStr                `edgedb:"bb"`
 	}
 
 	err := client.QuerySingle(

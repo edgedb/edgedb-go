@@ -86,7 +86,7 @@ func BuildEncoder(
 			return buildArgEncoder(desc, version)
 		}
 		return nil, errors.New("objects can not be encoded")
-	case descriptor.BaseScalar, descriptor.Enum:
+	case descriptor.BaseScalar, descriptor.Enum, descriptor.Scalar:
 		return BuildScalarEncoder(desc)
 	case descriptor.Tuple:
 		if version.GTE(internal.ProtocolVersion{Major: 0, Minor: 12}) {
@@ -109,8 +109,20 @@ func BuildEncoder(
 	}
 }
 
+func GetScalarDescriptor(desc descriptor.Descriptor) descriptor.Descriptor {
+	for desc.Fields != nil {
+		desc = desc.Fields[0].Desc
+	}
+
+	return desc
+}
+
 // BuildScalarEncoder builds a scalar encoder.
 func BuildScalarEncoder(desc descriptor.Descriptor) (Encoder, error) {
+	if desc.Type == descriptor.Scalar {
+		desc = GetScalarDescriptor(desc)
+	}
+
 	if desc.ID == DecimalID {
 		return &decimalEncoder{}, nil
 	}
@@ -183,7 +195,7 @@ func BuildDecoder(
 		return buildSetDecoder(desc, typ, path)
 	case descriptor.Object:
 		return buildObjectDecoder(desc, typ, path)
-	case descriptor.BaseScalar, descriptor.Enum:
+	case descriptor.BaseScalar, descriptor.Enum, descriptor.Scalar:
 		return buildScalarDecoder(desc, typ, path)
 	case descriptor.Tuple:
 		return buildTupleDecoder(desc, typ, path)
@@ -205,6 +217,10 @@ func buildScalarDecoder(
 	typ reflect.Type,
 	path Path,
 ) (Decoder, error) {
+	if desc.Type == descriptor.Scalar {
+		desc = GetScalarDescriptor(desc)
+	}
+
 	decoder, ok, err := buildUnmarshaler(desc, typ)
 	if err != nil {
 		return decoder, err

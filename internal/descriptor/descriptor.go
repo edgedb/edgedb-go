@@ -112,7 +112,9 @@ func Pop(
 		case BaseScalar:
 			desc = Descriptor{BaseScalar, id, nil}
 		case Scalar:
-			desc = descriptors[r.PopUint16()]
+			desc = Descriptor{Scalar, id, []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}}
 		case Tuple:
 			fields := tupleFields(r, descriptors)
 			desc = Descriptor{Tuple, id, fields}

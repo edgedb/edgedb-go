@@ -1,3 +1,6 @@
+create scalar type MyScalar extending int64;
+create scalar type MyEnum extending enum<This, That>;
+
 select {
 	a := <uuid>$a,
 	b := <optional uuid>$b,
@@ -49,4 +52,8 @@ select {
 	av := <optional range<cal::local_datetime>>$av,
 	aw := <range<cal::local_date>>$aw,
 	ax := <optional range<cal::local_date>>$ax,
+	ay := <MyScalar>1,
+	az := <optional MyScalar>{},
+	ba := MyEnum.This,
+	bb := <optional MyEnum>{},
 }

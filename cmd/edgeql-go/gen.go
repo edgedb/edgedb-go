@@ -216,6 +216,19 @@ func (g *Generator) generateBaseScalar(
 	desc descriptor.Descriptor,
 	required bool,
 ) ([]string, error) {
+	if desc.Type == descriptor.Scalar {
+		desc = codecs.GetScalarDescriptor(desc)
+	}
+
+	if desc.Type == descriptor.Enum {
+		if required {
+			buf.WriteString("string")
+		} else {
+			buf.WriteString("edgedb.OptionalStr")
+		}
+		return nil, nil
+	}
+
 	var imports []string
 	switch desc.ID {
 	case codecs.UUIDID:
