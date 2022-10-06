@@ -109,6 +109,8 @@ func BuildEncoder(
 	}
 }
 
+// GetScalarDescriptor finds the BaseScalar descriptor at the root of the
+// inheritance chain for a Scalar descriptor.
 func GetScalarDescriptor(desc descriptor.Descriptor) descriptor.Descriptor {
 	for desc.Fields != nil {
 		desc = desc.Fields[0].Desc
