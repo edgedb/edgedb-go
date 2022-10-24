@@ -9,40 +9,40 @@ import (
 	"github.com/edgedb/edgedb-go"
 )
 
-//go:embed select_scalars.edgeql
-var selectScalarsCmd string
+//go:embed select_array.edgeql
+var selectArrayCmd string
 
-// selectScalars
+// selectArray
 // runs the query found in
-// select_scalars.edgeql
-func selectScalars(
+// select_array.edgeql
+func selectArray(
 	ctx context.Context,
 	client *edgedb.Client,
-) ([]edgedb.OptionalMemory, error) {
-	var result []edgedb.OptionalMemory
+) ([]edgedb.OptionalStr, error) {
+	var result []edgedb.OptionalStr
 
-	err := client.Query(
+	err := client.QuerySingle(
 		ctx,
-		selectScalarsCmd,
+		selectArrayCmd,
 		&result,
 	)
 
 	return result, err
 }
 
-// selectScalarsJSON
+// selectArrayJSON
 // runs the query found in
-// select_scalars.edgeql
+// select_array.edgeql
 // returning the results as json encoded bytes
-func selectScalarsJSON(
+func selectArrayJSON(
 	ctx context.Context,
 	client *edgedb.Client,
 ) ([]byte, error) {
 	var result []byte
 
-	err := client.QueryJSON(
+	err := client.QuerySingleJSON(
 		ctx,
-		selectScalarsCmd,
+		selectArrayCmd,
 		&result,
 	)
 	if err != nil {

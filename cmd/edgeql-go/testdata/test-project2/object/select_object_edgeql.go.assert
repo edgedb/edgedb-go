@@ -21,7 +21,7 @@ func selectObject(
 ) (struct {
 	Name     string `edgedb:"Name"`
 	Language string `edgedb:"Language"`
-	Params   struct {
+	Params   []struct {
 		Name    string             `edgedb:"Name"`
 		Default edgedb.OptionalStr `edgedb:"Default"`
 	} `edgedb:"Params"`
@@ -29,7 +29,7 @@ func selectObject(
 	var result struct {
 		Name     string `edgedb:"Name"`
 		Language string `edgedb:"Language"`
-		Params   struct {
+		Params   []struct {
 			Name    string             `edgedb:"Name"`
 			Default edgedb.OptionalStr `edgedb:"Default"`
 		} `edgedb:"Params"`

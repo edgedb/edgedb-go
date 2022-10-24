@@ -150,6 +150,7 @@ func (g *Generator) generateSlice(
 		return nil, err
 	}
 
+	fmt.Fprint(buf, "[]")
 	fmt.Fprint(buf, typ.definition)
 	return typ.imports, nil
 }

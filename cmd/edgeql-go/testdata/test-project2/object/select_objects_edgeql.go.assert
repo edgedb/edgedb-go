@@ -18,18 +18,18 @@ var selectObjectsCmd string
 func selectObjects(
 	ctx context.Context,
 	client *edgedb.Client,
-) (struct {
+) ([]struct {
 	Name     string `edgedb:"Name"`
 	Language string `edgedb:"Language"`
-	Params   struct {
+	Params   []struct {
 		Name    string             `edgedb:"Name"`
 		Default edgedb.OptionalStr `edgedb:"Default"`
 	} `edgedb:"Params"`
 }, error) {
-	var result struct {
+	var result []struct {
 		Name     string `edgedb:"Name"`
 		Language string `edgedb:"Language"`
-		Params   struct {
+		Params   []struct {
 			Name    string             `edgedb:"Name"`
 			Default edgedb.OptionalStr `edgedb:"Default"`
 		} `edgedb:"Params"`
