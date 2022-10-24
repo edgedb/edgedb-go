@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/edgedb/edgedb-go"
+	edgedb "github.com/edgedb/edgedb-go"
 )
 
 var (

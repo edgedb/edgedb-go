@@ -1,0 +1,43 @@
+
+//go:embed {{.QueryFile}}
+var {{.CMDVarName}} string
+
+// {{.QueryName}}
+// runs the query found in
+// {{.QueryFile}}
+func {{.QueryName}}(
+	ctx context.Context, 
+	client *edgedb.Client,{{.SignatureArgs}}
+) ({{.ResultType}}, error) {
+	var result {{.ResultType}}
+
+	err := client.{{.Method}}(
+		ctx, 
+		{{.CMDVarName}}, 
+		&result,{{.ArgList}}
+	)
+
+	return result, err
+}
+
+// {{.QueryName}}JSON
+// runs the query found in
+// {{.QueryFile}}
+// returning the results as json encoded bytes
+func {{.QueryName}}JSON(
+	ctx context.Context,
+	client *edgedb.Client,{{.SignatureArgs}}
+) ([]byte, error) {
+	var result []byte
+
+	err := client.{{.Method}}JSON(
+		ctx,
+		{{.CMDVarName}},
+		&result,{{.ArgList}}
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

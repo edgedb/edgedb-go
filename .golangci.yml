@@ -18,6 +18,7 @@ run:
 
   # list of build tags, all linters use it. Default is empty list.
   build-tags:
+    - tools
 
   # which dirs to skip: issues from them won't be reported;
   # can use regexp here: generated.*, regexp is applied on full path;
@@ -39,6 +40,7 @@ run:
   # on Windows.
   skip-files:
     - doc_test.go
+    - cmd/edgeql-go/doc.go
 
   # by default isn't set. If set we pass it to "go list -mod={option}". From "go help modules":
   # If invoked with -mod=readonly, the go command is disallowed from the implicit

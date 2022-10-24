@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import (
 // IDZero is descriptor ID 00000000-0000-0000-0000-000000000000
 // https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
 var IDZero = types.UUID{}
+
+//go:generate stringer -type Type
 
 // Type represents a descriptor type.
 type Type uint8
@@ -110,7 +112,9 @@ func Pop(
 		case BaseScalar:
 			desc = Descriptor{BaseScalar, id, nil}
 		case Scalar:
-			desc = descriptors[r.PopUint16()]
+			desc = Descriptor{Scalar, id, []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}}
 		case Tuple:
 			fields := tupleFields(r, descriptors)
 			desc = Descriptor{Tuple, id, fields}

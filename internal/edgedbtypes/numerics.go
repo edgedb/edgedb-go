@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,14 @@ import (
 	"encoding/json"
 	"math/big"
 )
+
+// NewOptionalBigInt is a convenience function for creating an OptionalBigInt
+// with its value set to v.
+func NewOptionalBigInt(v *big.Int) OptionalBigInt {
+	o := OptionalBigInt{}
+	o.Set(v)
+	return o
+}
 
 // OptionalBigInt is an optional *big.Int. Optional types must be used for out
 // parameters when a shape field is not required.

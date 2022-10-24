@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,14 @@ package edgedbtypes
 import (
 	"encoding/json"
 )
+
+// NewOptionalStr is a convenience function for creating an OptionalStr with
+// its value set to v.
+func NewOptionalStr(v string) OptionalStr {
+	o := OptionalStr{}
+	o.Set(v)
+	return o
+}
 
 // OptionalStr is an optional string. Optional types must be used for out
 // parameters when a shape field is not required.

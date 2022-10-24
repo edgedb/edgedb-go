@@ -1,0 +1,18 @@
+{{template "header.template" -}}
+// run 'go generate ./...' to regenerate
+
+package {{.PackageName}}
+
+import (
+{{range .Imports}}	{{.}}
+{{end}}
+)
+
+const ({{template "exportitems.template" .Constants}}
+)
+
+type ({{template "exportitems.template" .Types}}
+)
+
+var ({{template "exportitems.template" .Vars}}
+)

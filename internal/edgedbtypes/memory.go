@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -87,6 +87,14 @@ func (m *Memory) UnmarshalText(b []byte) error {
 
 	*m = Memory(i * multiplier)
 	return nil
+}
+
+// NewOptionalMemory is a convenience function for creating an
+// OptionalMemory with its value set to v.
+func NewOptionalMemory(v Memory) OptionalMemory {
+	o := OptionalMemory{}
+	o.Set(v)
+	return o
 }
 
 // OptionalMemory is an optional Memory. Optional types must be used for

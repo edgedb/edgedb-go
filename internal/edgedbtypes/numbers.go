@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,12 @@ import (
 )
 
 // Optional represents a shape field that is not required.
+// Optional is embedded in structs to make them optional. For example:
+//
+//	type User struct {
+//	    edgedb.Optional
+//	    Name string `edgedb:"name"`
+//	}
 type Optional struct {
 	isSet bool
 }
@@ -34,6 +40,14 @@ func (o *Optional) SetMissing(missing bool) { o.isSet = !missing }
 
 // Unset marks the value as missing
 func (o *Optional) Unset() { o.isSet = false }
+
+// NewOptionalInt16 is a convenience function for creating an OptionalInt16
+// with its value set to v.
+func NewOptionalInt16(v int16) OptionalInt16 {
+	o := OptionalInt16{}
+	o.Set(v)
+	return o
+}
 
 // OptionalInt16 is an optional int16. Optional types must be used for out
 // parameters when a shape field is not required.
@@ -80,6 +94,14 @@ func (o *OptionalInt16) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+// NewOptionalInt32 is a convenience function for creating an OptionalInt32
+// with its value set to v.
+func NewOptionalInt32(v int32) OptionalInt32 {
+	o := OptionalInt32{}
+	o.Set(v)
+	return o
+}
+
 // OptionalInt32 is an optional int32. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalInt32 struct {
@@ -123,6 +145,14 @@ func (o *OptionalInt32) UnmarshalJSON(bytes []byte) error {
 	o.isSet = true
 
 	return nil
+}
+
+// NewOptionalInt64 is a convenience function for creating an OptionalInt64
+// with its value set to v.
+func NewOptionalInt64(v int64) OptionalInt64 {
+	o := OptionalInt64{}
+	o.Set(v)
+	return o
 }
 
 // OptionalInt64 is an optional int64. Optional types must be used for out
@@ -172,6 +202,14 @@ func (o *OptionalInt64) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+// NewOptionalFloat32 is a convenience function for creating an OptionalFloat32
+// with its value set to v.
+func NewOptionalFloat32(v float32) OptionalFloat32 {
+	o := OptionalFloat32{}
+	o.Set(v)
+	return o
+}
+
 // OptionalFloat32 is an optional float32. Optional types must be used for out
 // parameters when a shape field is not required.
 type OptionalFloat32 struct {
@@ -215,6 +253,14 @@ func (o *OptionalFloat32) UnmarshalJSON(bytes []byte) error {
 	o.isSet = true
 
 	return nil
+}
+
+// NewOptionalFloat64 is a convenience function for creating an OptionalFloat64
+// with its value set to v.
+func NewOptionalFloat64(v float64) OptionalFloat64 {
+	o := OptionalFloat64{}
+	o.Set(v)
+	return o
 }
 
 // OptionalFloat64 is an optional float64. Optional types must be used for out

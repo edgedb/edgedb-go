@@ -1,6 +1,6 @@
 // This source file is part of the EdgeDB open source project.
 //
-// Copyright 2020-present EdgeDB Inc. and the EdgeDB authors.
+// Copyright EdgeDB Inc. and the EdgeDB authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ func ParseUUID(s string) (UUID, error) {
 	return tmp, nil
 }
 
-// UUID a universally unique identifier
+// UUID is a universally unique identifier
 // https://www.edgedb.com/docs/stdlib/uuid
 type UUID [16]byte
 
@@ -76,6 +76,14 @@ func (id *UUID) UnmarshalText(b []byte) error {
 
 	*id = tmp
 	return nil
+}
+
+// NewOptionalUUID is a convenience function for creating an OptionalUUID with
+// its value set to v.
+func NewOptionalUUID(v UUID) OptionalUUID {
+	o := OptionalUUID{}
+	o.Set(v)
+	return o
 }
 
 // OptionalUUID is an optional UUID. Optional types must be used for out
