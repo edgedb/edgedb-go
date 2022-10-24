@@ -17,7 +17,7 @@
 // edgeql-go is a tool to generate go functions from edgeql queries. When run
 // in an EdgeDB project directory (or subdirectory) a *_edgeql.go source file
 // will be generated for each *.edgeql file.  The generated go will have an
-// EdgeqlFileName and EdgeqlFileNameJSON function with typed arguments and
+// edgeqlFileName and edgeqlFileNameJSON function with typed arguments and
 // return value matching the query's arguments and result shape.
 //
 // # Install
