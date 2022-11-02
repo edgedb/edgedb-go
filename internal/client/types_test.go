@@ -6471,6 +6471,12 @@ func TestSendAndReceiveArray(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, Tuple{[]int64{1}}, nested)
 
+	// encode empty array
+	err = client.QuerySingle(ctx,
+		"SELECT (<array<int64>>$0,)", &nested, []int64{})
+	require.NoError(t, err)
+	assert.Equal(t, Tuple{[]int64{}}, nested)
+
 	query := "SELECT <array<int64>>$0"
 	err = client.QuerySingle(ctx, query, &result, []int64{1})
 	require.NoError(t, err)
