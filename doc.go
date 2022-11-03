@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package edgedb is the official Go EdgeDB driver. https://www.edgedb.com
+// Package edgedb is the official Go driver for [EdgeDB].
 //
 // Typical usage looks like this:
 //
@@ -48,7 +48,10 @@
 //	    ...
 //	}
 //
-// You can also connect to a database using a DSN:
+// We recommend using environment variables for connection parameters. See the
+// [client connection docs] for more information.
+//
+// You may also connect to a database using a DSN:
 //
 //	url := "edgedb://edgedb@localhost/edgedb"
 //	client, err := edgedb.CreateClientDSN(ctx, url, opts)
@@ -135,8 +138,22 @@
 //	fmt.Println(result.Missing())
 //	// Output: false
 //
+// Not all types listed above are valid query parameters.  To pass a slice of
+// scalar values use array in your query. EdgeDB doesn't currently support
+// using sets as parameters.
+//
+//	query := `select User filter .id in array_unpack(<array<uuid>>$1)`
+//	client.QuerySingle(ctx, query, $user, []edgedb.UUID{...})
+//
+// Nested structures are also not directly allowed but you can use [json]
+// instead.
+//
 // # Custom Marshalers
 //
 // Interfaces for user defined marshaler/unmarshalers  are documented in the
 // internal/marshal package.
+//
+// [EdgeDB]: https://www.edgedb.com
+// [json]: https://www.edgedb.com/docs/edgeql/insert#bulk-inserts
+// [client connection docs]: https://www.edgedb.com/docs/clients/connection
 package edgedb
