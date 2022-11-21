@@ -22,7 +22,7 @@ A clear and concise description of what you expected to happen. If applicable, a
 **Versions (please complete the following information):**
 
 <!--
-For EdgeDB version: Run `edgedb` from your project directory copying the first line of output or query `select sys::get_version_as_str();`
+For EdgeDB version: Run `edgedb query 'select sys::get_version_as_str()'` from your project directory or query `select sys::get_version_as_str();`
 For EdgeDB CLI version: Run `edgedb --version` from anywhere
 For `edgedb-go` version: Look for the `edgedb-go` version in your `go.mod` file in the module root (`cat go.mod`)
 For Go version: Run `go version`
