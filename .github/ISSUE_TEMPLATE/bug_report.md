@@ -28,7 +28,7 @@ For `edgedb-go` version: Look for the `edgedb-go` version in your `go.mod` file 
 For Go version: Run `go version`
 -->
 
--   OS (e.g. iOS):
+-   OS :
 -   EdgeDB version:
 -   EdgeDB CLI version:
 -   `edgedb-go` version:
