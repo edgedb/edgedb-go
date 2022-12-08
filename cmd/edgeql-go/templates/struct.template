@@ -1,0 +1,6 @@
+// {{.Name}}
+// is part of the return type for
+// {{.QueryFuncName}}()
+type {{.Name}} struct {
+{{range .Fields}}    {{.Name}} {{.Type}} `edgedb:"{{.Name}}"`
+{{end}}}

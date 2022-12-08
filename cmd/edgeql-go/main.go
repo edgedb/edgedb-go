@@ -43,8 +43,6 @@ import (
 )
 
 var (
-	typeGen = Generator{typeNameLookup: make(map[lookupKey]Type)}
-
 	//go:embed templates/*.template
 	templates embed.FS
 )
@@ -200,7 +198,7 @@ func writeGoFile(
 
 	var imports []string
 	for _, q := range queries {
-		imports = append(imports, q.Imports()...)
+		imports = append(imports, q.imports...)
 	}
 
 	var buf bytes.Buffer

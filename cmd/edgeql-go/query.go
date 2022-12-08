@@ -17,9 +17,9 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -34,113 +34,112 @@ import (
 func newQuery(
 	ctx context.Context,
 	c *edgedb.Client,
-	queryFile,
+	qryFile,
 	outFile string,
 ) (*Query, error) {
 	var err error
-	queryFile, err = filepath.Abs(queryFile)
+	qryFile, err = filepath.Abs(qryFile)
 	if err != nil {
 		return nil, err
 	}
 
-	queryBytes, err := os.ReadFile(queryFile)
+	queryBytes, err := os.ReadFile(qryFile)
 	if err != nil {
-		log.Fatalf("error reading %q: %s", queryFile, err)
+		log.Fatalf("error reading %q: %s", qryFile, err)
 	}
 
 	description, err := edgedb.Describe(ctx, c, string(queryBytes))
 	if err != nil {
-		log.Fatalf("error introspecting query %q: %s", queryFile, err)
+		log.Fatalf("error introspecting query %q: %s", qryFile, err)
 	}
 
 	if isNumberedArgs(description.In) {
 		log.Fatalf(
 			"numbered query arguments detected, use named arguments instead",
 		)
-		// todo: maybe check that argument names are valid identifiers
 	}
 
-	rType, err := resultType(description)
+	qryName := queryName(qryFile)
+	rTypes, imports, err := resultTypes(qryName, description)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var rStructs []*goStruct
+	for _, typ := range rTypes {
+		if t, ok := typ.(*goStruct); ok {
+			t.QueryFuncName = qryName
+			rStructs = append(rStructs, t)
+		}
+	}
+
+	sTypes, i, err := signatureTypes(description)
+	if err != nil {
+		log.Fatal(err)
+	}
+	imports = append(imports, i...)
+
+	qryFile, err = queryFile(outFile, qryFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	sTypes, err := signatureTypes(description)
+	m, err := method(description)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return &Query{queryFile, outFile, description, rType, sTypes}, nil
+	return &Query{
+		imports: imports,
+
+		QueryFile:           qryFile,
+		QueryName:           qryName,
+		CMDVarName:          cmdVarName(qryFile),
+		ResultTypes:         rStructs,
+		SignatureReturnType: rTypes[0].Reference(),
+		SignatureArgs:       sTypes.Fields,
+		Method:              m,
+	}, nil
 }
 
-// Query generates values for templates/query.template
-type Query struct {
-	queryFile      string
-	outFile        string
-	description    *edgedb.CommandDescription
-	resultType     Type
-	signatureTypes []Type
+func queryFile(outFile, queryFile string) (string, error) {
+	return filepath.Rel(filepath.Dir(outFile), queryFile)
 }
 
-// QueryFile returns the relative path from the go source file to the edgeql
-// file.
-func (q *Query) QueryFile() (string, error) {
-	return filepath.Rel(filepath.Dir(q.outFile), q.queryFile)
-}
-
-// CMDVarName returns the name of the variable that embeds the edgeql file.
-func (q *Query) CMDVarName() string {
-	name := filepath.Base(q.queryFile)
+func cmdVarName(qryFile string) string {
+	name := filepath.Base(qryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
 	name = fmt.Sprintf("%s_cmd", name)
 	return snakeToLowerCamelCase(name)
 }
 
-// QueryName returns the name of the function that will run the query.
-func (q *Query) QueryName() string {
-	name := filepath.Base(q.queryFile)
+func queryName(qryFile string) string {
+	name := filepath.Base(qryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
 	return snakeToLowerCamelCase(name)
 }
 
-func signatureTypes(description *edgedb.CommandDescription) ([]Type, error) {
-	types := make([]Type, len(description.In.Fields))
-
-	for _, field := range description.In.Fields {
-		typ, err := typeGen.getType(field.Desc, field.Required)
-		if err != nil {
-			return nil, err
-		}
-		types = append(types, typ)
+func signatureTypes(
+	description *edgedb.CommandDescription,
+) (*goStruct, []string, error) {
+	types, imports, err := generateType(description.In, true, nil)
+	if err != nil {
+		return &goStruct{}, nil, err
 	}
 
-	return types, nil
+	return types[0].(*goStruct), imports, nil
 }
 
-// SignatureArgs returns the query arguments as they will appear  in the
-// function signature.
-func (q *Query) SignatureArgs() (string, error) {
-	var buf bytes.Buffer
-	for _, field := range q.description.In.Fields {
-		typ, err := typeGen.getType(field.Desc, field.Required)
-		if err != nil {
-			return "", err
-		}
-
-		fmt.Fprintf(&buf, "\n%s %s,", field.Name, typ.definition)
-	}
-
-	return buf.String(), nil
-}
-
-func resultType(description *edgedb.CommandDescription) (Type, error) {
+func resultTypes(
+	qryName string,
+	description *edgedb.CommandDescription,
+) ([]goType, []string, error) {
 	outDesc := description.Out
 	var required bool
 	switch description.Card {
 	case edgedb.Many, edgedb.AtLeastOne:
 		id, err := randomID()
 		if err != nil {
-			return Type{}, err
+			return nil, nil, err
 		}
 
 		required = true
@@ -155,7 +154,7 @@ func resultType(description *edgedb.CommandDescription) (Type, error) {
 		required = true
 	}
 
-	return typeGen.getType(outDesc, required)
+	return generateType(outDesc, required, []string{qryName + "Result"})
 }
 
 func randomID() (edgedbtypes.UUID, error) {
@@ -164,56 +163,13 @@ func randomID() (edgedbtypes.UUID, error) {
 	return id, err
 }
 
-// ResultType returns the type declaration for the query result.
-func (q *Query) ResultType() string {
-	return q.resultType.definition
-}
-
-// ArgList returns then list of arguments to pass to the query method.
-func (q *Query) ArgList() (string, error) {
-	if len(q.description.In.Fields) == 0 {
-		return "", nil
-	}
-
-	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "\nmap[string]interface{}{\n")
-	for _, field := range q.description.In.Fields {
-		fmt.Fprintf(&buf, "%q: %s,\n", field.Name, field.Name)
-	}
-	fmt.Fprintf(&buf, "},")
-
-	return buf.String(), nil
-}
-
-// Method returns the edgedb.Client query method name.
-func (q *Query) Method() string {
-	switch q.description.Card {
+func method(description *edgedb.CommandDescription) (string, error) {
+	switch description.Card {
 	case edgedb.AtMostOne, edgedb.One:
-		return "QuerySingle"
+		return "QuerySingle", nil
 	case edgedb.NoResult, edgedb.Many, edgedb.AtLeastOne:
-		return "Query"
+		return "Query", nil
 	default:
-		panic("unreachable 20135")
+		return "", errors.New("unreachable 20135")
 	}
-}
-
-// Imports returns extra packages that need to be imported.
-func (q *Query) Imports() []string {
-	imports := q.resultType.imports
-	for i := 0; i < len(q.signatureTypes); i++ {
-		imports = append(imports, q.signatureTypes[i].imports...)
-	}
-
-	unique := make(map[string]struct{})
-	for _, name := range imports {
-		unique[name] = struct{}{}
-	}
-
-	result := make([]string, len(unique))
-	result = result[:0]
-	for name := range unique {
-		result = append(result, name)
-	}
-
-	return result
 }

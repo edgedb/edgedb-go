@@ -17,79 +17,35 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"sync"
+	"strings"
 
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-type lookupKey struct {
-	ID       types.UUID
-	Required bool
-}
-
-// Type is a go type definition
-type Type struct {
-	definition string
-	imports    []string
-}
-
-// Generator generates go code from EdgeDB types.
-type Generator struct {
-	mx             sync.RWMutex
-	typeNameLookup map[lookupKey]Type
-}
-
-func (g *Generator) getType(
+func generateType(
 	desc descriptor.Descriptor,
 	required bool,
-) (Type, error) {
-	key := lookupKey{desc.ID, required}
-
-	g.mx.RLock()
-	typ, ok := g.typeNameLookup[key]
-	g.mx.RUnlock()
-
-	if !ok {
-		text, imports, err := g.generateType(desc, required)
-		if err != nil {
-			return Type{}, err
-		}
-
-		typ = Type{string(text), imports}
-
-		g.mx.Lock()
-		g.typeNameLookup[key] = typ
-		g.mx.Unlock()
-	}
-
-	return typ, nil
-}
-
-func (g *Generator) generateType(
-	desc descriptor.Descriptor,
-	required bool,
-) ([]byte, []string, error) {
+	path []string,
+) ([]goType, []string, error) {
 	var (
-		buf     bytes.Buffer
 		err     error
+		types   []goType
 		imports []string
 	)
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		imports, err = g.generateSlice(&buf, desc)
+		types, imports, err = generateSlice(desc, path)
 	case descriptor.Object, descriptor.NamedTuple:
-		imports, err = g.generateObject(&buf, desc, required)
+		types, imports, err = generateObject(desc, required, path)
 	case descriptor.Tuple:
-		imports, err = g.generateTuple(&buf, desc, required)
+		types, imports, err = generateTuple(desc, required, path)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
-		imports, err = g.generateBaseScalar(&buf, desc, required)
+		types, imports, err = generateBaseScalar(desc, required)
 	case descriptor.Range:
-		err = g.generateRange(&buf, desc, required)
+		types, imports, err = generateRange(desc, required)
 	default:
 		err = fmt.Errorf(
 			"generating type: unknown descriptor type %v",
@@ -101,248 +57,270 @@ func (g *Generator) generateType(
 		return nil, nil, err
 	}
 
-	return buf.Bytes(), imports, nil
+	return types, imports, nil
 }
 
-func (g *Generator) generateRange(
-	buf *bytes.Buffer,
+func generateRange(
 	desc descriptor.Descriptor,
 	required bool,
-) error {
-	buf.WriteString("edgedb.")
-	if required {
-		buf.WriteString("Optional")
+) ([]goType, []string, error) {
+	optional := ""
+	if !required {
+		optional = "Optional"
 	}
-	buf.WriteString("Range")
 
+	var typ string
 	fieldDesc := desc.Fields[0].Desc
 	switch fieldDesc.ID {
 	case codecs.Int32ID:
-		buf.WriteString("Int32")
+		typ = "Int32"
 	case codecs.Int64ID:
-		buf.WriteString("Int64")
+		typ = "Int64"
 	case codecs.Float32ID:
-		buf.WriteString("Float32")
+		typ = "Float32"
 	case codecs.Float64ID:
-		buf.WriteString("Float64")
+		typ = "Float64"
 	case codecs.DateTimeID:
-		buf.WriteString("DateTime")
+		typ = "DateTime"
 	case codecs.LocalDTID:
-		buf.WriteString("LocalDateTime")
+		typ = "LocalDateTime"
 	case codecs.LocalDateID:
-		buf.WriteString("LocalDate")
+		typ = "LocalDate"
 	default:
-		return fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"generating range: unknown %v with id %v",
 			fieldDesc.Type,
 			fieldDesc.ID,
 		)
 	}
-	return nil
+
+	types := []goType{
+		&goScalar{Name: fmt.Sprintf("edgedb.%sRange%s", optional, typ)},
+	}
+	return types, nil, nil
 }
 
-func (g *Generator) generateSlice(
-	buf *bytes.Buffer,
+func generateSlice(
 	desc descriptor.Descriptor,
-) ([]string, error) {
-	typ, err := g.getType(desc.Fields[0].Desc, desc.Fields[0].Required)
+	path []string,
+) ([]goType, []string, error) {
+	types, imports, err := generateType(
+		desc.Fields[0].Desc,
+		desc.Fields[0].Required,
+		path,
+	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	fmt.Fprint(buf, "[]")
-	fmt.Fprint(buf, typ.definition)
-	return typ.imports, nil
+	typ := []goType{&goSlice{typ: types[0]}}
+	return append(typ, types...), imports, nil
 }
 
-func (g *Generator) generateObject(
-	buf *bytes.Buffer,
+func generateObject(
 	desc descriptor.Descriptor,
 	required bool,
-) ([]string, error) {
+	path []string,
+) ([]goType, []string, error) {
 	var imports []string
-	fmt.Fprintln(buf, `struct {`)
+	typ := goStruct{Name: nameFromPath(path)}
+	types := []goType{&typ}
 
 	for _, field := range desc.Fields {
-		typ, err := g.getType(field.Desc, field.Required)
+		t, i, err := generateType(
+			field.Desc,
+			field.Required,
+			append(path, field.Name),
+		)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		fmt.Fprintf(
-			buf,
-			"%s %s `edgedb:\"%s\"`\n",
-			field.Name,
-			typ.definition,
-			field.Name,
-		)
-		imports = append(imports, typ.imports...)
+		typ.Fields = append(typ.Fields, goStructField{
+			Name: field.Name,
+			Type: t[0].Reference(),
+		})
+		types = append(types, t...)
+		imports = append(imports, i...)
 	}
-	fmt.Fprint(buf, `}`)
 
-	return imports, nil
+	return types, imports, nil
 }
 
-func (g *Generator) generateTuple(
-	buf *bytes.Buffer,
+func generateTuple(
 	desc descriptor.Descriptor,
 	required bool,
-) ([]string, error) {
+	path []string,
+) ([]goType, []string, error) {
 	var imports []string
-	fmt.Fprintln(buf, `struct {`)
-	fmt.Fprintln(buf, "// descriptor", desc.ID)
+	typ := &goStruct{Name: nameFromPath(path)}
+	types := []goType{typ}
 
 	for _, field := range desc.Fields {
-		typ, err := g.getType(field.Desc, field.Required)
+		t, i, err := generateType(
+			field.Desc,
+			field.Required,
+			append(path, field.Name),
+		)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		fmt.Fprintf(
-			buf,
-			"Field%s %s `edgedb:\"%s\"`\n",
-			field.Name,
-			typ.definition,
-			field.Name,
-		)
-		imports = append(imports, typ.imports...)
+		typ.Fields = append(typ.Fields, goStructField{
+			Name: field.Name,
+			Type: t[0].Reference(),
+		})
+		types = append(types, t...)
+		imports = append(imports, i...)
 	}
-	fmt.Fprint(buf, `}`)
 
-	return imports, nil
+	return types, imports, nil
 }
 
-func (g *Generator) generateBaseScalar(
-	buf *bytes.Buffer,
+func generateBaseScalar(
 	desc descriptor.Descriptor,
 	required bool,
-) ([]string, error) {
+) ([]goType, []string, error) {
 	if desc.Type == descriptor.Scalar {
 		desc = codecs.GetScalarDescriptor(desc)
 	}
 
+	var name string
 	if desc.Type == descriptor.Enum {
 		if required {
-			buf.WriteString("string")
+			name = "string"
 		} else {
-			buf.WriteString("edgedb.OptionalStr")
+			name = "edgedb.OptionalStr"
 		}
-		return nil, nil
+
+		return []goType{&goScalar{Name: name}}, nil, nil
 	}
 
 	var imports []string
 	switch desc.ID {
 	case codecs.UUIDID:
 		if required {
-			buf.WriteString("edgedb.UUID")
+			name = "edgedb.UUID"
 		} else {
-			buf.WriteString("edgedb.OptionalUUID")
+			name = "edgedb.OptionalUUID"
 		}
 	case codecs.StrID:
 		if required {
-			buf.WriteString("string")
+			name = "string"
 		} else {
-			buf.WriteString("edgedb.OptionalStr")
+			name = "edgedb.OptionalStr"
 		}
 	case codecs.BytesID, codecs.JSONID:
 		if required {
-			buf.WriteString("[]byte")
+			name = "[]byte"
 		} else {
-			buf.WriteString("edgedb.OptionalBytes")
+			name = "edgedb.OptionalBytes"
 		}
 	case codecs.Int16ID:
 		if required {
-			buf.WriteString("int16")
+			name = "int16"
 		} else {
-			buf.WriteString("edgedb.OptionalInt16")
+			name = "edgedb.OptionalInt16"
 		}
 	case codecs.Int32ID:
 		if required {
-			buf.WriteString("int32")
+			name = "int32"
 		} else {
-			buf.WriteString("edgedb.OptionalInt32")
+			name = "edgedb.OptionalInt32"
 		}
 	case codecs.Int64ID:
 		if required {
-			buf.WriteString("int64")
+			name = "int64"
 		} else {
-			buf.WriteString("edgedb.OptionalInt64")
+			name = "edgedb.OptionalInt64"
 		}
 	case codecs.Float32ID:
 		if required {
-			buf.WriteString("float32")
+			name = "float32"
 		} else {
-			buf.WriteString("edgedb.OptionalFloat32")
+			name = "edgedb.OptionalFloat32"
 		}
 	case codecs.Float64ID:
 		if required {
-			buf.WriteString("float64")
+			name = "float64"
 		} else {
-			buf.WriteString("edgedb.OptionalFloat64")
+			name = "edgedb.OptionalFloat64"
 		}
 	case codecs.BoolID:
 		if required {
-			buf.WriteString("bool")
+			name = "bool"
 		} else {
-			buf.WriteString("edgedb.OptionalBool")
+			name = "edgedb.OptionalBool"
 		}
 	case codecs.DateTimeID:
 		if required {
 			imports = append(imports, "time")
-			buf.WriteString("time.Time")
+			name = "time.Time"
 		} else {
-			buf.WriteString("edgedb.OptionalDateTime")
+			name = "edgedb.OptionalDateTime"
 		}
 	case codecs.LocalDTID:
 		if required {
-			buf.WriteString("edgedb.LocalDateTime")
+			name = "edgedb.LocalDateTime"
 		} else {
-			buf.WriteString("edgedb.OptionalLocalDateTime")
+			name = "edgedb.OptionalLocalDateTime"
 		}
 	case codecs.LocalDateID:
 		if required {
-			buf.WriteString("edgedb.LocalDate")
+			name = "edgedb.LocalDate"
 		} else {
-			buf.WriteString("edgedb.OptionalLocalDate")
+			name = "edgedb.OptionalLocalDate"
 		}
 	case codecs.LocalTimeID:
 		if required {
-			buf.WriteString("edgedb.LocalTime")
+			name = "edgedb.LocalTime"
 		} else {
-			buf.WriteString("edgedb.OptionalLocalTime")
+			name = "edgedb.OptionalLocalTime"
 		}
 	case codecs.DurationID:
 		if required {
-			buf.WriteString("edgedb.Duration")
+			name = "edgedb.Duration"
 		} else {
-			buf.WriteString("edgedb.OptionalDuration")
+			name = "edgedb.OptionalDuration"
 		}
 	case codecs.BigIntID:
 		if required {
 			imports = append(imports, "math/big")
-			buf.WriteString("*big.Int")
+			name = "*big.Int"
 		} else {
-			buf.WriteString("edgedb.OptionalBigInt")
+			name = "edgedb.OptionalBigInt"
 		}
 	case codecs.RelativeDurationID:
 		if required {
-			buf.WriteString("edgedb.RelativeDuration")
+			name = "edgedb.RelativeDuration"
 		} else {
-			buf.WriteString("edgedb.OptionalRelativeDuration")
+			name = "edgedb.OptionalRelativeDuration"
 		}
 	case codecs.DateDurationID:
 		if required {
-			buf.WriteString("edgedb.DateDuration")
+			name = "edgedb.DateDuration"
 		} else {
-			buf.WriteString("edgedb.OptionalDateDuration")
+			name = "edgedb.OptionalDateDuration"
 		}
 	case codecs.MemoryID:
 		if required {
-			buf.WriteString("edgedb.Memory")
+			name = "edgedb.Memory"
 		} else {
-			buf.WriteString("edgedb.OptionalMemory")
+			name = "edgedb.OptionalMemory"
 		}
 	}
 
-	return imports, nil
+	return []goType{&goScalar{Name: name}}, imports, nil
+}
+
+func nameFromPath(path []string) string {
+	if len(path) == 0 {
+		return ""
+	}
+
+	if len(path) == 1 {
+		return path[0]
+	}
+
+	return path[0] + strings.Join(path[1:], "Item") + "Item"
 }

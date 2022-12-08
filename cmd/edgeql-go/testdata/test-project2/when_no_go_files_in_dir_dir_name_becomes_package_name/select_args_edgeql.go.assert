@@ -13,6 +13,14 @@ import (
 //go:embed select_args.edgeql
 var selectArgsCmd string
 
+// selectArgsResult
+// is part of the return type for
+// selectArgs()
+type selectArgsResult struct {
+	Str      string    `edgedb:"Str"`
+	DateTime time.Time `edgedb:"DateTime"`
+}
+
 // selectArgs
 // runs the query found in
 // select_args.edgeql
@@ -21,14 +29,8 @@ func selectArgs(
 	client *edgedb.Client,
 	str string,
 	datetime time.Time,
-) (struct {
-	Str      string    `edgedb:"Str"`
-	DateTime time.Time `edgedb:"DateTime"`
-}, error) {
-	var result struct {
-		Str      string    `edgedb:"Str"`
-		DateTime time.Time `edgedb:"DateTime"`
-	}
+) (selectArgsResult, error) {
+	var result selectArgsResult
 
 	err := client.QuerySingle(
 		ctx,

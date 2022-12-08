@@ -1,20 +1,33 @@
-
 //go:embed {{.QueryFile}}
 var {{.CMDVarName}} string
+
+{{- range .ResultTypes}}
+
+{{template "struct.template" .}}
+{{- end}}
 
 // {{.QueryName}}
 // runs the query found in
 // {{.QueryFile}}
 func {{.QueryName}}(
 	ctx context.Context, 
-	client *edgedb.Client,{{.SignatureArgs}}
-) ({{.ResultType}}, error) {
-	var result {{.ResultType}}
+	client *edgedb.Client,
+	{{- range .SignatureArgs}}
+	{{.Name}} {{.Type}},
+	{{- end}}
+) ({{.SignatureReturnType}}, error) {
+	var result {{.SignatureReturnType}}
 
 	err := client.{{.Method}}(
 		ctx, 
 		{{.CMDVarName}}, 
-		&result,{{.ArgList}}
+		&result,
+		{{- if .SignatureArgs}}
+		map[string]interface{}{
+			{{- range .SignatureArgs}}
+			{{printf "%q" .Name}}: {{.Name}},
+			{{- end}}
+		},{{end}}
 	)
 
 	return result, err
@@ -26,14 +39,23 @@ func {{.QueryName}}(
 // returning the results as json encoded bytes
 func {{.QueryName}}JSON(
 	ctx context.Context,
-	client *edgedb.Client,{{.SignatureArgs}}
+	client *edgedb.Client,
+	{{- range .SignatureArgs}}
+	{{.Name}} {{.Type}},
+	{{- end}}
 ) ([]byte, error) {
 	var result []byte
 
 	err := client.{{.Method}}JSON(
 		ctx,
 		{{.CMDVarName}},
-		&result,{{.ArgList}}
+		&result,
+		{{- if .SignatureArgs}}
+		map[string]interface{}{
+			{{- range .SignatureArgs}}
+			{{printf "%q" .Name}}: {{.Name}},
+			{{- end}}
+		},{{end}}
 	)
 	if err != nil {
 		return nil, err

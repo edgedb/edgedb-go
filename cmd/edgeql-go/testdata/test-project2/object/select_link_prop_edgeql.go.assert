@@ -12,26 +12,30 @@ import (
 //go:embed select_link_prop.edgeql
 var selectLinkPropCmd string
 
+// selectLinkPropResult
+// is part of the return type for
+// selectLinkProp()
+type selectLinkPropResult struct {
+	Name    string                            `edgedb:"Name"`
+	Friends []selectLinkPropResultFriendsItem `edgedb:"Friends"`
+}
+
+// selectLinkPropResultFriendsItem
+// is part of the return type for
+// selectLinkProp()
+type selectLinkPropResultFriendsItem struct {
+	Name     string                 `edgedb:"Name"`
+	Strength edgedb.OptionalFloat64 `edgedb:"Strength"`
+}
+
 // selectLinkProp
 // runs the query found in
 // select_link_prop.edgeql
 func selectLinkProp(
 	ctx context.Context,
 	client *edgedb.Client,
-) ([]struct {
-	Name    string `edgedb:"Name"`
-	Friends []struct {
-		Name     string                 `edgedb:"Name"`
-		Strength edgedb.OptionalFloat64 `edgedb:"Strength"`
-	} `edgedb:"Friends"`
-}, error) {
-	var result []struct {
-		Name    string `edgedb:"Name"`
-		Friends []struct {
-			Name     string                 `edgedb:"Name"`
-			Strength edgedb.OptionalFloat64 `edgedb:"Strength"`
-		} `edgedb:"Friends"`
-	}
+) ([]selectLinkPropResult, error) {
+	var result []selectLinkPropResult
 
 	err := client.Query(
 		ctx,
