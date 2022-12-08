@@ -3,10 +3,14 @@
 package {{.PackageName}}
 
 import (
-	"context"{{range .ExtraImports}}
-	"{{.}}"{{end}}
+	"context"
+	{{- range .ExtraImports}}
+	"{{.}}"
+	{{- end}}
 	_ "embed"
 
 	"github.com/edgedb/edgedb-go"
 )
-{{range .Queries}}{{template "query.template" .}}{{end}}
+{{range .Queries}}
+{{template "query.template" .}}
+{{- end}}
