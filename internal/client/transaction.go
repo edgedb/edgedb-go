@@ -155,7 +155,7 @@ func (t *Tx) Execute(
 	cmd string,
 	args ...interface{},
 ) error {
-	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), nil, t.state)
+	q, err := newQuery("Execute", cmd, args, t.capabilities1pX(), t.state, nil)
 	if err != nil {
 		return err
 	}

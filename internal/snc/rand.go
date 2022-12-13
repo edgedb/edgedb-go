@@ -33,6 +33,13 @@ type Rand struct {
 	rnd *rand.Rand
 }
 
+// Read is the same as rand.Rand.Read
+func (r *Rand) Read(n []byte) (int, error) {
+	r.mx.Lock()
+	defer r.mx.Unlock()
+	return r.rnd.Read(n)
+}
+
 // Intn is the same as rand.Rand.Intn
 func (r *Rand) Intn(n int) int {
 	r.mx.Lock()

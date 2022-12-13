@@ -20,8 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
+	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -155,4 +158,53 @@ func TestTxKinds(t *testing.T) {
 			require.NoError(t, p.Tx(ctx, noOp))
 		})
 	}
+}
+
+func TestWithConfigInTx(t *testing.T) {
+	if protocolVersion.LT(protocolVersion1p0) {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+
+	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
+		var id types.UUID
+		_, e := rnd.Read(id[:])
+		assert.NoError(t, e)
+
+		e = tx.Execute(ctx, `insert User { id := <uuid>$0 }`, id)
+		assert.True(t, strings.HasPrefix(
+			e.Error(),
+			"edgedb.QueryError: cannot assign to id",
+		))
+
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
+
+	c := client.WithConfig(map[string]interface{}{
+		"allow_user_specified_id": true,
+	})
+
+	var id types.UUID
+	_, e := rnd.Read(id[:])
+	assert.NoError(t, e)
+
+	// todo: remove this Execute query after
+	// https://github.com/edgedb/edgedb/issues/4816
+	// is resolved
+	e = c.Execute(ctx, `insert User { id := <uuid>$0 }`, id)
+	assert.NoError(t, e)
+
+	err = c.Tx(ctx, func(ctx context.Context, tx *Tx) error {
+		var id types.UUID
+		_, e := rnd.Read(id[:])
+		assert.NoError(t, e)
+
+		e = tx.Execute(ctx, `insert User { id := <uuid>$0 }`, id)
+		assert.NoError(t, e)
+
+		return errors.New("rollback")
+	})
+	assert.EqualError(t, err, "rollback")
 }
