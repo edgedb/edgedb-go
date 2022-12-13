@@ -120,6 +120,10 @@
 //
 //	decimal                  user defined (see Custom Marshalers)
 //
+// Note that EdgeDB's std::duration type is represented in int64 microseconds
+// while go's time.Duration type is int64 nanoseconds. It is incorrect to cast
+// one directly to the other.
+//
 // Shape fields that are not required must use optional types for receiving
 // query results. The edgedb.Optional struct can be embedded to make structs
 // optional.
