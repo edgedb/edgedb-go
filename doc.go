@@ -106,7 +106,7 @@
 //	                         edgedb.OptionalLocalDateTime
 //	cal::local_date          edgedb.LocalDate, edgedb.OptionalLocalDate
 //	cal::local_time          edgedb.LocalTime, edgedb.OptionalLocalTime
-//	duration                 time.Duration, edgedb.OptionalDuration
+//	duration                 edgedb.Duration, edgedb.OptionalDuration
 //	cal::relative_duraation  edgedb.RelativeDuration,
 //	                         edgedb.OptionalRelativeDuration
 //	float32                  float32, edgedb.OptionalFloat32
