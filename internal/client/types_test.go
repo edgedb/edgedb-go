@@ -2551,9 +2551,7 @@ func TestSendJSONMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		types.NewOptionalBytes(
-			append([]byte{1}, []byte(`{"hello": "world"}`)...),
-		),
+		types.NewOptionalBytes([]byte(`{"hello": "world"}`)),
 		result.Val,
 	)
 
@@ -2566,9 +2564,7 @@ func TestSendJSONMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		types.NewOptionalBytes(
-			append([]byte{1}, []byte(`{"hello": "world"}`)...),
-		),
+		types.NewOptionalBytes([]byte(`{"hello": "world"}`)),
 		result.Val,
 	)
 }
@@ -2646,9 +2642,7 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		types.NewOptionalBytes(
-			append([]byte{1}, []byte(`{"hello": "world"}`)...),
-		),
+		types.NewOptionalBytes([]byte(`{"hello": "world"}`)),
 		result.Val,
 	)
 
@@ -2661,9 +2655,7 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		types.NewOptionalBytes(
-			append([]byte{1}, []byte(`{"hello": "world"}`)...),
-		),
+		types.NewOptionalBytes([]byte(`{"hello": "world"}`)),
 		result.Val,
 	)
 
