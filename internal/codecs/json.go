@@ -38,7 +38,7 @@ func (c *JSONCodec) Type() reflect.Type { return bytesType }
 
 // Decode decodes a value
 func (c *JSONCodec) Decode(r *buff.Reader, out unsafe.Pointer) error {
-	if e := c.PopFormat(r); e != nil {
+	if e := popJSONFormat(r); e != nil {
 		return e
 	}
 
@@ -122,7 +122,7 @@ func (c *JSONCodec) encodeMarshaler(
 
 type baseJSONDecoder struct{}
 
-func (c *baseJSONDecoder) PopFormat(r *buff.Reader) error {
+func popJSONFormat(r *buff.Reader) error {
 	format := r.PopUint8()
 	if format != 1 {
 		return fmt.Errorf(
@@ -143,7 +143,7 @@ func (c *optionalNilableJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	if e := c.PopFormat(r); e != nil {
+	if e := popJSONFormat(r); e != nil {
 		return e
 	}
 
@@ -167,7 +167,7 @@ func (c *optionalUnmarshalerJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	if e := c.PopFormat(r); e != nil {
+	if e := popJSONFormat(r); e != nil {
 		return e
 	}
 
@@ -190,7 +190,7 @@ func (c *optionalScalarUnmarshalerJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
-	if e := c.PopFormat(r); e != nil {
+	if e := popJSONFormat(r); e != nil {
 		return e
 	}
 
@@ -215,6 +215,10 @@ func (c *optionalJSONDecoder) Decode(
 	r *buff.Reader,
 	out unsafe.Pointer,
 ) error {
+	if e := popJSONFormat(r); e != nil {
+		return e
+	}
+
 	opbytes := (*optionalBytesLayout)(out)
 	opbytes.set = true
 
