@@ -166,8 +166,13 @@ func generateTuple(
 			return nil, nil, err
 		}
 
+		name := field.Name
+		if name != "" && name[0] >= '0' && name[0] <= '9' {
+			name = fmt.Sprintf("Element%s", name)
+		}
+
 		typ.Fields = append(typ.Fields, goStructField{
-			Name: field.Name,
+			Name: name,
 			Type: t[0].Reference(),
 		})
 		types = append(types, t...)
