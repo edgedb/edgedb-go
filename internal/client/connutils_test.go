@@ -412,8 +412,9 @@ var testcaseErrorMapping = map[string]string{
 	"invalid_tls_security": "invalid TLSSecurity value|tls_verify_hostname" +
 		"=.* and tls_security=.* are incompatible" +
 		"|tls_security must be set to strict",
-	"security_key_not_found": "Cannot connect to cloud instances without secret key",
-	"invalid_security_key":   "Invalid secret key",
+	"security_key_not_found": "Cannot connect to cloud instances " +
+		"without secret key",
+	"invalid_security_key": "Invalid secret key",
 }
 
 func getStr(t *testing.T, lookup map[string]interface{}, key string) string {

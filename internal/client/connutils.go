@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -740,7 +740,13 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		}
 	case instanceOk || credsOk:
 		if keyOk {
-			r.setSecretKey(secretKey, "EDGEDB_SECRET_KEY environment variable")
+			e := r.setSecretKey(
+				secretKey,
+				"EDGEDB_SECRET_KEY environment variable",
+			)
+			if e != nil {
+				return false, e
+			}
 		}
 		source := "EDGEDB_CREDENTIALS_FILE environment variable"
 		if instanceOk {
@@ -826,6 +832,11 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		tlsSecurity = r.tlsSecurity.val.(string)
 	}
 
+	secretKey := ""
+	if r.secretKey.val != nil {
+		secretKey = r.secretKey.val.(string)
+	}
+
 	security, err := getEnvVarSetting("EDGEDB_CLIENT_SECURITY", "default",
 		"default", "insecure_dev_mode", "strict")
 	if err != nil {
@@ -873,6 +884,7 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		serverSettings:     r.serverSettings,
 		tlsCAData:          certData,
 		tlsSecurity:        tlsSecurity,
+		secretKey:          secretKey,
 	}, nil
 }
 
@@ -913,7 +925,6 @@ func newConfigResolver(
 	opts *Options,
 	paths *cfgPaths,
 ) (*configResolver, error) {
-
 	cfg := &configResolver{serverSettings: snc.NewServerSettings()}
 
 	var instance string
@@ -1327,7 +1338,7 @@ func jwtBase64Decode(data []byte) (map[string]interface{}, error) {
 func (r *configResolver) parseCloudInstanceNameIntoConfig(
 	source, org, inst, profile string,
 	paths *cfgPaths,
-) error {
+) (e error) {
 	var secretKey string
 	if r.secretKey.val != nil {
 		secretKey = r.secretKey.val.(string)
@@ -1352,9 +1363,14 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 		if err != nil {
 			return fmt.Errorf(errMsg, err)
 		}
-		defer f.Close()
+		defer func() {
+			fErr := f.Close()
+			if e == nil {
+				e = fErr
+			}
+		}()
 
-		data, err := ioutil.ReadAll(f)
+		data, err := io.ReadAll(f)
 		if err != nil {
 			return fmt.Errorf(errMsg, err)
 		}
@@ -1403,7 +1419,7 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 		return fmt.Errorf("Invalid secret key: iss is missing")
 	}
 
-	dns_zone, ok := iss.(string)
+	dnsZone, ok := iss.(string)
 	if !ok {
 		return fmt.Errorf(
 			"Invalid secret key: iss is the wrong type, "+
@@ -1412,7 +1428,7 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 	}
 
 	crc := crc16.Checksum([]byte(fmt.Sprintf("%s/%s", org, inst)), crcTable)
-	host := fmt.Sprintf("%s.%s.c-%x.i.%s", inst, org, crc%9900, dns_zone)
+	host := fmt.Sprintf("%s.%s.c-%x.i.%s", inst, org, crc%9900, dnsZone)
 	return r.setHost(host, source)
 }
 
