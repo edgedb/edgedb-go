@@ -106,6 +106,9 @@ type Options struct {
 
 	// ServerSettings is currently unused.
 	ServerSettings map[string][]byte
+
+	// SecretKey is used to connect to cloud instances.
+	SecretKey string
 }
 
 // TLSOptions contains the parameters needed to configure TLS on EdgeDB
