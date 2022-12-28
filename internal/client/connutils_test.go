@@ -412,9 +412,9 @@ var testcaseErrorMapping = map[string]string{
 	"invalid_tls_security": "invalid TLSSecurity value|tls_verify_hostname" +
 		"=.* and tls_security=.* are incompatible" +
 		"|tls_security must be set to strict",
-	"security_key_not_found": "Cannot connect to cloud instances " +
+	"secret_key_not_found": "Cannot connect to cloud instances " +
 		"without secret key",
-	"invalid_security_key": "Invalid secret key",
+	"invalid_secret_key": "Invalid secret key",
 }
 
 func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
@@ -631,7 +631,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 					)
 				}
 
-				options.SecretKey = getStr(t, opts, "secret_key")
+				options.SecretKey = getStr(t, opts, "secretKey")
 			}
 
 			expectedResult := connConfig{
@@ -656,6 +656,10 @@ func TestConnectionParameterResolution(t *testing.T) {
 				expectedResult.tlsSecurity = res["tlsSecurity"].(string)
 				if data := res["tlsCAData"]; data != nil {
 					expectedResult.tlsCAData = []byte(data.(string))
+				}
+
+				if key := res["secretKey"]; key != nil {
+					expectedResult.secretKey = key.(string)
 				}
 
 				ss := res["serverSettings"].(map[string]interface{})

@@ -130,6 +130,37 @@ type configResolver struct {
 	waitUntilAvailable cfgVal // time.Duration
 	serverSettings     *snc.ServerSettings
 	secretKey          cfgVal // string
+	profile            cfgVal // string
+	instance           cfgVal // string
+	org                cfgVal // string
+}
+
+func (r *configResolver) setInstance(val, source string) error {
+	if r.instance.val != nil {
+		return nil
+	}
+
+	match := instanceNameRe.FindStringSubmatch(val)
+	if len(match) == 0 {
+		return fmt.Errorf("invalid instance name %q", val)
+	}
+
+	if match[2] != "" {
+		r.org.val = match[1]
+		r.instance.val = match[2]
+	} else {
+		r.instance.val = match[1]
+	}
+
+	return nil
+}
+
+func (r *configResolver) setProfile(val, source string) {
+	if r.profile.val != nil {
+		return
+	}
+
+	r.profile = cfgVal{val: val, source: source}
 }
 
 func (r *configResolver) setHost(val, source string) error {
@@ -278,7 +309,6 @@ func (r *configResolver) addServerSettingsStr(s map[string]string) {
 }
 
 func (r *configResolver) resolveOptions(
-	instance string,
 	opts *Options,
 	paths *cfgPaths,
 ) (err error) {
@@ -384,18 +414,10 @@ func (r *configResolver) resolveOptions(
 		}
 	}
 
-	if r.secretKey.val != nil && instance != "" {
-		inst, org, err := splitCloudInstance(instance)
-		if err != nil {
-			return err
-		}
-
-		if org != "" {
+	if r.secretKey.val != nil && r.instance.val != nil {
+		if r.org.val != nil {
 			err := r.parseCloudInstanceNameIntoConfig(
 				"SecretKey option",
-				inst,
-				org,
-				"",
 				paths,
 			)
 			if err != nil {
@@ -545,36 +567,38 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 }
 
 func (r *configResolver) resolveCredentials(
-	instance, profile, credentials, source string, paths *cfgPaths,
+	credentials, source string,
+	paths *cfgPaths,
 ) error {
-	if instance != "" && credentials != "" {
+	if r.instance.val != nil && credentials != "" {
 		return errors.New("cannot have both instance name and " +
 			"credentials file")
 	}
 
-	if instance != "" {
-		inst, org, err := splitCloudInstance(instance)
-		if err != nil {
-			return err
-		}
-
-		if org != "" {
-			return r.parseCloudInstanceNameIntoConfig(
-				source, inst, org, profile, paths)
+	if r.instance.val != nil {
+		if r.org.val != nil {
+			return r.parseCloudInstanceNameIntoConfig(source, paths)
 		}
 
 		dir, err := paths.CfgDir()
 		if err != nil {
 			return err
 		}
-		credentials = filepath.Join(dir, "credentials", instance+".json")
+		credentials = filepath.Join(
+			dir,
+			"credentials",
+			r.instance.val.(string)+".json",
+		)
 	}
 
 	creds, err := readCredentials(credentials)
 	if err != nil {
-		if instance != "" {
+		if r.instance.val != nil {
 			return fmt.Errorf(
-				"cannot read credentials for instance %q: %w", instance, err)
+				"cannot read credentials for instance %q: %w",
+				r.instance.val.(string),
+				err,
+			)
 		}
 		return err
 	}
@@ -689,6 +713,10 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	instance, instanceOk := os.LookupEnv("EDGEDB_INSTANCE")
 	if instanceOk {
 		names = append(names, "EDGEDB_INSTANCE")
+		err := r.setInstance(instance, "EDGEDB_INSTANCE environment variable")
+		if err != nil {
+			return false, err
+		}
 	}
 	credentials, credsOk := os.LookupEnv("EDGEDB_CREDENTIALS_FILE")
 	if credsOk {
@@ -716,7 +744,20 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			englishList(names, "and"))
 	}
 
+	if profile, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
+		r.setProfile(profile, "EDGEDB_CLOUD_PROFILE environment variable")
+	}
+
 	secretKey, keyOk := os.LookupEnv("EDGEDB_SECRET_KEY")
+	if keyOk {
+		e := r.setSecretKey(
+			secretKey,
+			"EDGEDB_SECRET_KEY environment variable",
+		)
+		if e != nil {
+			return false, e
+		}
+	}
 
 	switch {
 	case hostOk || portOk:
@@ -739,20 +780,15 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			return false, e
 		}
 	case instanceOk || credsOk:
-		if keyOk {
-			e := r.setSecretKey(
-				secretKey,
-				"EDGEDB_SECRET_KEY environment variable",
-			)
-			if e != nil {
-				return false, e
-			}
-		}
 		source := "EDGEDB_CREDENTIALS_FILE environment variable"
 		if instanceOk {
 			source = "EDGEDB_INSTANCE environment variable"
 		}
-		err := r.resolveCredentials(instance, "", credentials, source, paths)
+		err := r.resolveCredentials(
+			credentials,
+			source,
+			paths,
+		)
 		if err != nil {
 			return false, err
 		}
@@ -763,37 +799,37 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	return true, nil
 }
 
-func (r *configResolver) resolveTOML(paths *cfgPaths) (string, string, error) {
+func (r *configResolver) resolveTOML(paths *cfgPaths) error {
 	toml, err := findEdgeDBTOML(paths)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	stashDir, err := stashPath(filepath.Dir(toml), paths)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	if !exists(stashDir) {
-		return "", "", errors.New("Found `edgedb.toml` " +
+		return errors.New("Found `edgedb.toml` " +
 			"but the project is not initialized. Run `edgedb project init`.")
 	}
 
 	instance, err := os.ReadFile(filepath.Join(stashDir, "instance-name"))
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	profile, err := os.ReadFile(filepath.Join(stashDir, "cloud-profile"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return "", "", err
+		return err
 	}
+	r.setProfile(strings.TrimSpace(string(profile)), "project")
 
-	return strings.TrimSpace(
-			string(instance),
-		), strings.TrimSpace(
-			string(profile),
-		), nil
+	return r.setInstance(
+		strings.TrimSpace(string(instance)),
+		"project link",
+	)
 }
 
 func (r *configResolver) config(opts *Options) (*connConfig, error) {
@@ -933,6 +969,13 @@ func newConfigResolver(
 		dsn = ""
 	}
 
+	if instance != "" {
+		err := cfg.setInstance(instance, "dsn (parsed as instance name)")
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var names []string
 	if dsn != "" || instance != "" {
 		names = append(names, "dsn")
@@ -954,7 +997,7 @@ func newConfigResolver(
 			englishList(names, "and"))
 	}
 
-	if e := cfg.resolveOptions(instance, opts, paths); e != nil {
+	if e := cfg.resolveOptions(opts, paths); e != nil {
 		return nil, e
 	}
 
@@ -970,8 +1013,7 @@ func newConfigResolver(
 		if instance != "" {
 			source = "dsn (parsed as instance name)"
 		}
-		err := cfg.resolveCredentials(
-			instance, "", opts.CredentialsFile, source, paths)
+		err := cfg.resolveCredentials(opts.CredentialsFile, source, paths)
 		if err != nil {
 			return nil, err
 		}
@@ -993,7 +1035,7 @@ func newConfigResolver(
 			break
 		}
 
-		instance, profile, err := cfg.resolveTOML(paths)
+		err = cfg.resolveTOML(paths)
 		if errors.Is(err, errNoTOMLFound) {
 			return nil, errors.New(
 				"no `edgedb.toml` found and no connection options " +
@@ -1007,8 +1049,11 @@ func newConfigResolver(
 			return nil, err
 		}
 
-		source := fmt.Sprintf("project linked instance (%q)", instance)
-		err = cfg.resolveCredentials(instance, profile, "", source, paths)
+		source := fmt.Sprintf(
+			"project linked instance (%q)",
+			cfg.instance.val.(string),
+		)
+		err = cfg.resolveCredentials("", source, paths)
 		if err != nil {
 			return nil, err
 		}
@@ -1336,9 +1381,17 @@ func jwtBase64Decode(data []byte) (map[string]interface{}, error) {
 }
 
 func (r *configResolver) parseCloudInstanceNameIntoConfig(
-	source, org, inst, profile string,
+	source string,
 	paths *cfgPaths,
 ) (e error) {
+	if r.instance.val == nil {
+		return fmt.Errorf("missing instance")
+	}
+
+	if r.org.val == nil {
+		return fmt.Errorf("missing org")
+	}
+
 	var secretKey string
 	if r.secretKey.val != nil {
 		secretKey = r.secretKey.val.(string)
@@ -1350,12 +1403,15 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 			return fmt.Errorf(errMsg, err)
 		}
 
-		if profile == "" {
-			var ok bool
-			profile, ok = os.LookupEnv("EDGEDB_CLOUD_PROFILE")
-			if !ok {
-				profile = "default"
+		profile := "default"
+		if r.profile.val == nil {
+			p, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE")
+			if ok {
+				r.setProfile(p, "EDGEDB_CLOUD_PROFILE environment variable")
 			}
+		}
+		if r.profile.val != nil {
+			profile = r.profile.val.(string)
 		}
 
 		path := path.Join(dir, "cloud-credentials", profile+".json")
@@ -1405,8 +1461,7 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 
 	data := strings.Split(secretKey, ".")
 	if len(data) < 2 {
-		// todo better error message
-		return fmt.Errorf("Invalid secret key")
+		return fmt.Errorf("Invalid secret key: JWT is missing parts")
 	}
 
 	jwt, err := jwtBase64Decode([]byte(data[1]))
@@ -1427,16 +1482,9 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 			iss)
 	}
 
+	inst := r.instance.val
+	org := r.org.val
 	crc := crc16.Checksum([]byte(fmt.Sprintf("%s/%s", org, inst)), crcTable)
 	host := fmt.Sprintf("%s.%s.c-%x.i.%s", inst, org, crc%9900, dnsZone)
 	return r.setHost(host, source)
-}
-
-func splitCloudInstance(instance string) (string, string, error) {
-	match := instanceNameRe.FindStringSubmatch(instance)
-	if len(match) == 0 {
-		return "", "", fmt.Errorf("invalid instance name %q", instance)
-	}
-
-	return match[1], match[2], nil
 }
