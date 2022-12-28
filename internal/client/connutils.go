@@ -47,7 +47,7 @@ var (
 		`^([A-Za-z_]\w*)(?:/([A-Za-z_]\w*))?$`,
 	)
 	crcTable       *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)
-	base64Encoding              = base64.StdEncoding.WithPadding(
+	base64Encoding              = base64.URLEncoding.WithPadding(
 		base64.NoPadding,
 	)
 )
