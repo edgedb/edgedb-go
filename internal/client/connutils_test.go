@@ -412,6 +412,9 @@ var testcaseErrorMapping = map[string]string{
 	"invalid_tls_security": "invalid TLSSecurity value|tls_verify_hostname" +
 		"=.* and tls_security=.* are incompatible" +
 		"|tls_security must be set to strict",
+	"secret_key_not_found": "Cannot connect to cloud instances " +
+		"without secret key",
+	"invalid_secret_key": "Invalid secret key",
 }
 
 func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
@@ -517,13 +520,15 @@ func createProjectDir(
 
 	hash := fmt.Sprintf("%x", sha1.Sum([]byte(path)))
 	dir = strings.Replace(dir, "${HASH}", hash, 1)
-	err = createFile(tmpDir, filepath.Join(dir, "project-path"), path)
-	if err != nil {
-		return err
+
+	for name, content := range contents {
+		err = createFile(tmpDir, filepath.Join(dir, name), content.(string))
+		if err != nil {
+			return err
+		}
 	}
 
-	instance := contents["instance-name"].(string)
-	return createFile(tmpDir, filepath.Join(dir, "instance-name"), instance)
+	return nil
 }
 
 func createFile(tmpDir, file, data string) error {
@@ -581,6 +586,10 @@ func TestConnectionParameterResolution(t *testing.T) {
 			var options Options
 
 			if opts, ok := testcase["opts"].(map[string]interface{}); ok {
+				if inst, ok := opts["instance"]; ok {
+					opts["dsn"] = inst
+				}
+
 				dsn = getStr(t, opts, "dsn")
 				dsn = strings.ReplaceAll(dsn, "_file=/", "_file="+tmpDir+"/")
 				file := getStr(t, opts, "credentialsFile")
@@ -621,6 +630,8 @@ func TestConnectionParameterResolution(t *testing.T) {
 						"waitUntilAvailable",
 					)
 				}
+
+				options.SecretKey = getStr(t, opts, "secretKey")
 			}
 
 			expectedResult := connConfig{
@@ -645,6 +656,10 @@ func TestConnectionParameterResolution(t *testing.T) {
 				expectedResult.tlsSecurity = res["tlsSecurity"].(string)
 				if data := res["tlsCAData"]; data != nil {
 					expectedResult.tlsCAData = []byte(data.(string))
+				}
+
+				if key := res["secretKey"]; key != nil {
+					expectedResult.secretKey = key.(string)
 				}
 
 				ss := res["serverSettings"].(map[string]interface{})
