@@ -1404,12 +1404,6 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 		}
 
 		profile := "default"
-		if r.profile.val == nil {
-			p, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE")
-			if ok {
-				r.setProfile(p, "EDGEDB_CLOUD_PROFILE environment variable")
-			}
-		}
 		if r.profile.val != nil {
 			profile = r.profile.val.(string)
 		}
