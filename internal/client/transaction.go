@@ -85,7 +85,7 @@ func (t *Tx) execute(
 	cmd string,
 	sucessState txStatus,
 ) error {
-	q, err := newQuery("Execute", cmd, nil, txCapabilities, nil, t.state)
+	q, err := newQuery("Execute", cmd, nil, txCapabilities, t.state, nil)
 	if err != nil {
 		return err
 	}
