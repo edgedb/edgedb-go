@@ -85,7 +85,14 @@ func (c *DateTimeCodec) Encode(
 func (c *DateTimeCodec) encodeData(w *buff.Writer, data time.Time) error {
 	seconds := data.Unix() - 946_684_800
 	nanoseconds := int64(data.Sub(time.Unix(data.Unix(), 0)))
-	microseconds := seconds*1_000_000 + nanoseconds/1_000
+
+	rounded := nanoseconds / 1_000
+	remainder := nanoseconds % 1_000
+	if remainder == 500 && rounded%2 == 1 || remainder > 500 {
+		rounded++
+	}
+
+	microseconds := seconds*1_000_000 + rounded
 	w.PushUint32(8) // data length
 	w.PushUint64(uint64(microseconds))
 	return nil
