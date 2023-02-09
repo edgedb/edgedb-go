@@ -244,6 +244,7 @@ func (p *Client) release(conn *transactableConn, err error) error {
 				connChan <- conn
 			case <-time.After(timeout):
 				connChan <- nil
+				p.potentialConns <- struct{}{}
 				if e := conn.Close(); e != nil {
 					log.Println("error while closing idle connection:", e)
 				}
