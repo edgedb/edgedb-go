@@ -36,6 +36,7 @@ func newQuery(
 	c *edgedb.Client,
 	qryFile,
 	outFile string,
+	mixedCaps bool,
 ) (*Query, error) {
 	var err error
 	qryFile, err = filepath.Abs(qryFile)
@@ -60,7 +61,7 @@ func newQuery(
 	}
 
 	qryName := queryName(qryFile)
-	rTypes, imports, err := resultTypes(qryName, description)
+	rTypes, imports, err := resultTypes(qryName, description, mixedCaps)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,7 +73,7 @@ func newQuery(
 		}
 	}
 
-	sTypes, i, err := signatureTypes(description)
+	sTypes, i, err := signatureTypes(description, mixedCaps)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,19 +110,20 @@ func cmdVarName(qryFile string) string {
 	name := filepath.Base(qryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
 	name = fmt.Sprintf("%s_cmd", name)
-	return snakeToLowerCamelCase(name)
+	return snakeToLowerMixedCase(name)
 }
 
 func queryName(qryFile string) string {
 	name := filepath.Base(qryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
-	return snakeToLowerCamelCase(name)
+	return snakeToLowerMixedCase(name)
 }
 
 func signatureTypes(
 	description *edgedb.CommandDescription,
+	mixedCaps bool,
 ) (*goStruct, []string, error) {
-	types, imports, err := generateType(description.In, true, nil)
+	types, imports, err := generateType(description.In, true, nil, mixedCaps)
 	if err != nil {
 		return &goStruct{}, nil, err
 	}
@@ -132,6 +134,7 @@ func signatureTypes(
 func resultTypes(
 	qryName string,
 	description *edgedb.CommandDescription,
+	mixedCaps bool,
 ) ([]goType, []string, error) {
 	outDesc := description.Out
 	var required bool
@@ -154,7 +157,12 @@ func resultTypes(
 		required = true
 	}
 
-	return generateType(outDesc, required, []string{qryName + "Result"})
+	return generateType(
+		outDesc,
+		required,
+		[]string{qryName + "Result"},
+		mixedCaps,
+	)
 }
 
 func randomID() (edgedbtypes.UUID, error) {

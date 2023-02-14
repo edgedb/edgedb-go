@@ -28,6 +28,7 @@ func generateType(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
+	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var (
 		err     error
@@ -37,11 +38,11 @@ func generateType(
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		types, imports, err = generateSlice(desc, path)
+		types, imports, err = generateSlice(desc, path, mixedCaps)
 	case descriptor.Object, descriptor.NamedTuple:
-		types, imports, err = generateObject(desc, required, path)
+		types, imports, err = generateObject(desc, required, path, mixedCaps)
 	case descriptor.Tuple:
-		types, imports, err = generateTuple(desc, required, path)
+		types, imports, err = generateTuple(desc, required, path, mixedCaps)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
 		types, imports, err = generateBaseScalar(desc, required)
 	case descriptor.Range:
@@ -103,11 +104,13 @@ func generateRange(
 func generateSlice(
 	desc descriptor.Descriptor,
 	path []string,
+	mixedCaps bool,
 ) ([]goType, []string, error) {
 	types, imports, err := generateType(
 		desc.Fields[0].Desc,
 		desc.Fields[0].Required,
 		path,
+		mixedCaps,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -121,6 +124,7 @@ func generateObject(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
+	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := goStruct{Name: nameFromPath(path)}
@@ -131,14 +135,23 @@ func generateObject(
 			field.Desc,
 			field.Required,
 			append(path, field.Name),
+			mixedCaps,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
 
+		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		name := field.Name
+		if mixedCaps {
+			name = snakeToUpperMixedCase(name)
+		}
+
 		typ.Fields = append(typ.Fields, goStructField{
-			Name: field.Name,
-			Type: t[0].Reference(),
+			EQLName: field.Name,
+			GoName:  name,
+			Type:    t[0].Reference(),
+			Tag:     tag,
 		})
 		types = append(types, t...)
 		imports = append(imports, i...)
@@ -151,6 +164,7 @@ func generateTuple(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
+	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := &goStruct{Name: nameFromPath(path)}
@@ -161,6 +175,7 @@ func generateTuple(
 			field.Desc,
 			field.Required,
 			append(path, field.Name),
+			mixedCaps,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -169,11 +184,15 @@ func generateTuple(
 		name := field.Name
 		if name != "" && name[0] >= '0' && name[0] <= '9' {
 			name = fmt.Sprintf("Element%s", name)
+		} else if mixedCaps {
+			name = snakeToUpperMixedCase(name)
 		}
 
 		typ.Fields = append(typ.Fields, goStructField{
-			Name: name,
-			Type: t[0].Reference(),
+			EQLName: field.Name,
+			GoName:  name,
+			Type:    t[0].Reference(),
+			Tag:     fmt.Sprintf(`edgedb:"%s"`, field.Name),
 		})
 		types = append(types, t...)
 		imports = append(imports, i...)

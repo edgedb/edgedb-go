@@ -35,6 +35,23 @@ import (
 
 var dsn string
 
+var tests = []struct {
+	description string
+	directory   string
+	args        []string
+}{
+	{
+		description: "invoke edgeql-go without args",
+		directory:   "testdata/no-args",
+		args:        []string{},
+	},
+	{
+		description: "invoke edgeql-go with -mixedcaps",
+		directory:   "testdata/mixedcaps",
+		args:        []string{"-mixedcaps"},
+	},
+}
+
 func TestMain(m *testing.M) {
 	o := edgedb.TestClientOptions()
 	pwd, ok := o.Password.Get()
@@ -54,69 +71,77 @@ func TestMain(m *testing.M) {
 }
 
 func TestEdgeQLGo(t *testing.T) {
-	dir, err := os.MkdirTemp("", "edgeql-go-*")
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, os.RemoveAll(dir))
-	}()
+	for _, test := range tests {
+		t.Run(test.description, runTest(test.directory, test.args))
+	}
+}
 
-	t.Log("building edgeql-go")
-	edgeqlGo := filepath.Join(dir, "edgeql-go")
-	run(t, ".", "go", "build", "-o", edgeqlGo)
+func runTest(dir string, args []string) func(*testing.T) {
+	return func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "edgeql-go-*")
+		require.NoError(t, err)
+		defer func() {
+			assert.NoError(t, os.RemoveAll(tmpDir))
+		}()
 
-	var wg sync.WaitGroup
-	err = filepath.WalkDir(
-		"testdata",
-		func(src string, d fs.DirEntry, e error) error {
-			require.NoError(t, e)
-			if src == "testdata" {
-				return nil
-			}
+		t.Log("building edgeql-go")
+		edgeqlGo := filepath.Join(tmpDir, "edgeql-go")
+		run(t, ".", "go", "build", "-o", edgeqlGo)
 
-			dst := filepath.Join(dir, strings.TrimPrefix(src, "testdata"))
-			if d.IsDir() {
-				e = os.Mkdir(dst, os.ModePerm)
+		var wg sync.WaitGroup
+		err = filepath.WalkDir(
+			dir,
+			func(src string, d fs.DirEntry, e error) error {
 				require.NoError(t, e)
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					copyFile(t, dst, src)
-				}()
-			}
-			return nil
-		},
-	)
-	require.NoError(t, err)
-	wg.Wait()
-
-	entries, err := os.ReadDir(dir)
-	require.NoError(t, err)
-	for _, entry := range entries {
-		if entry.Name() == "edgeql-go" {
-			continue
-		}
-
-		t.Run(entry.Name(), func(t *testing.T) {
-			projectDir := filepath.Join(dir, entry.Name())
-			run(t, projectDir, edgeqlGo)
-			run(t, projectDir, "go", "run", "./...")
-			er := filepath.WalkDir(
-				projectDir,
-				func(f string, d fs.DirEntry, e error) error {
-					require.NoError(t, e)
-					if strings.HasSuffix(f, ".go.assert") {
-						checkAssertFile(t, f)
-					}
-					if strings.HasSuffix(f, ".go") &&
-						!strings.HasSuffix(f, "ignore.go") {
-						checkGoFile(t, f)
-					}
+				if src == dir {
 					return nil
-				},
-			)
-			require.NoError(t, er)
-		})
+				}
+
+				dst := filepath.Join(tmpDir, strings.TrimPrefix(src, dir))
+				if d.IsDir() {
+					e = os.Mkdir(dst, os.ModePerm)
+					require.NoError(t, e)
+				} else {
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						copyFile(t, dst, src)
+					}()
+				}
+				return nil
+			},
+		)
+		require.NoError(t, err)
+		wg.Wait()
+
+		entries, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		for _, entry := range entries {
+			if entry.Name() == "edgeql-go" {
+				continue
+			}
+
+			t.Run(entry.Name(), func(t *testing.T) {
+				projectDir := filepath.Join(tmpDir, entry.Name())
+				run(t, projectDir, edgeqlGo, args...)
+				run(t, projectDir, "go", "run", "./...")
+				er := filepath.WalkDir(
+					projectDir,
+					func(f string, d fs.DirEntry, e error) error {
+						require.NoError(t, e)
+						if strings.HasSuffix(f, ".go.assert") {
+							checkAssertFile(t, f)
+						}
+						if strings.HasSuffix(f, ".go") &&
+							!strings.HasSuffix(f, "ignore.go") {
+							checkGoFile(t, f)
+						}
+						return nil
+					},
+				)
+				require.NoError(t, er)
+			})
+		}
 	}
 }
 

@@ -52,7 +52,8 @@ func usage() {
 		"Generate go functions from edgeql files.\n"+
 		"\n"+
 		"USAGE:\n"+
-		"    %s\n", os.Args[0])
+		"  %s [OPTIONS]\n\n"+
+		"OPTIONS:\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -61,6 +62,9 @@ func main() {
 	log.SetPrefix("edgeql-go: ")
 
 	flag.Usage = usage
+	mixedCaps := flag.Bool("mixedcaps", false,
+		"Change snake_case names in shapes "+
+			"to MixedCaps names in go structs")
 	flag.Parse()
 
 	timer := time.AfterFunc(200*time.Millisecond, func() {
@@ -87,7 +91,7 @@ func main() {
 		go func(queryFile string) {
 			defer wg.Done()
 			outFile := getOutFile(queryFile)
-			q, e := newQuery(ctx, c, queryFile, outFile)
+			q, e := newQuery(ctx, c, queryFile, outFile, *mixedCaps)
 			if e != nil {
 				log.Fatalf("processing %s: %s", queryFile, e)
 			}
@@ -295,7 +299,18 @@ func isNumberedArgs(desc descriptor.Descriptor) bool {
 	return true
 }
 
-func snakeToLowerCamelCase(s string) string {
+func snakeToUpperMixedCase(s string) string {
+	title := cases.Title(language.English)
+
+	parts := strings.Split(s, "_")
+	for i := 0; i < len(parts); i++ {
+		parts[i] = title.String(parts[i])
+	}
+
+	return strings.Join(parts, "")
+}
+
+func snakeToLowerMixedCase(s string) string {
 	title := cases.Title(language.English)
 	lower := cases.Lower(language.English)
 

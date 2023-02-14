@@ -16,17 +16,17 @@ var selectTupleCmd string
 // is part of the return type for
 // selectTuple()
 type selectTupleResult struct {
-	Element0 edgedb.OptionalStr     `edgedb:"Element0"`
-	Element1 edgedb.OptionalInt64   `edgedb:"Element1"`
-	Element2 selectTupleResult2Item `edgedb:"Element2"`
+	Element0 edgedb.OptionalStr     `edgedb:"0"`
+	Element1 edgedb.OptionalInt64   `edgedb:"1"`
+	Element2 selectTupleResult2Item `edgedb:"2"`
 }
 
 // selectTupleResult2Item
 // is part of the return type for
 // selectTuple()
 type selectTupleResult2Item struct {
-	Element0 edgedb.OptionalStr   `edgedb:"Element0"`
-	Element1 edgedb.OptionalInt64 `edgedb:"Element1"`
+	Element0 edgedb.OptionalStr   `edgedb:"0"`
+	Element1 edgedb.OptionalInt64 `edgedb:"1"`
 }
 
 // selectTuple
