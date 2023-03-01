@@ -464,6 +464,7 @@ func configureFileSystem(
 	paths *cfgPaths,
 ) error {
 	var err error
+	paths.testDir = tmpDir
 	paths.cfgDir = filepath.Join(tmpDir, "home", "edgedb", ".config", "edgedb")
 
 	if cwd, ok := cfg["cwd"]; ok {
