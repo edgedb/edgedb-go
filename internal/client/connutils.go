@@ -430,7 +430,10 @@ func (r *configResolver) resolveOptions(
 	return nil
 }
 
-func (r *configResolver) resolveDSN(dsn, source string) (err error) {
+func (r *configResolver) resolveDSN(
+	dsn, source string,
+	paths *cfgPaths,
+) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("invalid DSN: %w", err)
@@ -502,6 +505,9 @@ func (r *configResolver) resolveDSN(dsn, source string) (err error) {
 		return err
 	}
 	if val.val != nil {
+		if paths.testDir != "" {
+			val.val = filepath.Join(paths.testDir, val.val.(string))
+		}
 		if e := r.setTLSCAFile(val.val.(string), source+val.source); e != nil {
 			return e
 		}
@@ -775,7 +781,7 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			}
 		}
 	case dsnOk:
-		e := r.resolveDSN(dsn, "EDGEDB_DSN environment variable")
+		e := r.resolveDSN(dsn, "EDGEDB_DSN environment variable", paths)
 		if e != nil {
 			return false, e
 		}
@@ -1005,7 +1011,7 @@ func newConfigResolver(
 	case opts.Host != "" || opts.Port != 0:
 		// stop here since there is a host or port
 	case dsn != "":
-		if e := cfg.resolveDSN(dsn, "DSN option"); e != nil {
+		if e := cfg.resolveDSN(dsn, "DSN option", paths); e != nil {
 			return nil, e
 		}
 	case instance != "" || opts.CredentialsFile != "":
@@ -1315,6 +1321,7 @@ type cfgPaths struct {
 	cwdErr    error
 	cfgDir    string
 	cfgDirErr error
+	testDir   string
 }
 
 func (c *cfgPaths) Cwd() (string, error) { return c.cwd, c.cwdErr }
@@ -1479,6 +1486,6 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 	inst := r.instance.val
 	org := r.org.val
 	crc := crc16.Checksum([]byte(fmt.Sprintf("%s/%s", org, inst)), crcTable)
-	host := fmt.Sprintf("%s.%s.c-%x.i.%s", inst, org, crc%9900, dnsZone)
+	host := fmt.Sprintf("%s--%s.c-%02d.i.%s", inst, org, crc%100, dnsZone)
 	return r.setHost(host, source)
 }
