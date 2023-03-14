@@ -124,14 +124,31 @@ func (c *protocolConnection) releaseReader(r *buff.Reader) error {
 
 	go func() {
 		for r.Next(c.acquireReaderSignal) {
-			if e := c.fallThrough(r); e != nil {
-				log.Println(e)
-				_ = c.soc.Close()
-				c.readerChan <- r
-				return
+			switch Message(r.MsgType) {
+			case ErrorResponse:
+				err := decodeErrorResponseMsg(r, "")
+				log.Println("from background:", err)
+				r.Err = wrapAll(r.Err, err)
+			default:
+				if e := c.fallThrough(r); e != nil {
+					log.Println("fall through in background:", e)
+					r.Err = wrapAll(r.Err, e)
+					err := c.soc.Close()
+					if err != nil {
+						log.Println("error closing socket:", err)
+					}
+					c.readerChan <- r
+					return
+				}
 			}
 		}
 
+		if r.Err != nil {
+			err := c.soc.Close()
+			if err != nil {
+				log.Println("error closing socket:", err)
+			}
+		}
 		c.readerChan <- r
 	}()
 
