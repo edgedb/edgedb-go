@@ -141,7 +141,10 @@ func (c *protocolConnection) releaseReader(r *buff.Reader) error {
 		}
 
 		if r.Err != nil {
-			c.soc.Close()
+			err := c.soc.Close()
+			if err != nil {
+				log.Println("error closing socket:", err)
+			}
 		}
 		c.readerChan <- r
 	}()
