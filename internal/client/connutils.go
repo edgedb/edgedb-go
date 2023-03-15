@@ -1359,7 +1359,7 @@ func findEdgeDBTOML(paths *cfgPaths) (string, error) {
 
 			// Stop searching at file system boundaries.
 			if pDev != dev {
-				if err == nil {
+				if err == nil { // nolint:govet
 					err = errNoTOMLFound
 				}
 				return "", fmt.Errorf("%w: stopped searching for edgedb.toml "+
