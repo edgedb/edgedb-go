@@ -44,10 +44,14 @@ import (
 var (
 	isDSNLike      = regexp.MustCompile(`(?i)^[a-z]+://`)
 	instanceNameRe = regexp.MustCompile(
-		`^([A-Za-z_]\w*)(?:/([A-Za-z_]\w*))?$`,
+		`^(\w(?:-?\w)*)$`,
 	)
-	crcTable       *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)
-	base64Encoding              = base64.URLEncoding.WithPadding(
+	cloudInstanceNameRe = regexp.MustCompile(
+		`^([A-Za-z0-9](?:-?[A-Za-z0-9])*)/([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
+	)
+	domainLabelMaxLength              = 63
+	crcTable             *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)
+	base64Encoding                    = base64.URLEncoding.WithPadding(
 		base64.NoPadding,
 	)
 )
@@ -142,10 +146,10 @@ func (r *configResolver) setInstance(val, source string) error {
 
 	match := instanceNameRe.FindStringSubmatch(val)
 	if len(match) == 0 {
-		return fmt.Errorf("invalid instance name %q", val)
-	}
-
-	if match[2] != "" {
+		match = cloudInstanceNameRe.FindStringSubmatch(val)
+		if len(match) == 0 {
+			return fmt.Errorf("invalid instance name %q", val)
+		}
 		r.org.val = match[1]
 		r.instance.val = match[2]
 	} else {
@@ -1401,6 +1405,16 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 	if r.org.val == nil {
 		return fmt.Errorf("missing org")
 	}
+	inst := r.instance.val
+	org := r.org.val
+	label := fmt.Sprintf("%s--%s", inst, org)
+	if len(label) > domainLabelMaxLength {
+		return fmt.Errorf(
+			"invalid instance name: cloud instance name length"+
+				" cannot exceed %d characters: %s/%s",
+			domainLabelMaxLength-1, org, inst,
+		)
+	}
 
 	var secretKey string
 	if r.secretKey.val != nil {
@@ -1486,9 +1500,7 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 			iss)
 	}
 
-	inst := r.instance.val
-	org := r.org.val
 	crc := crc16.Checksum([]byte(fmt.Sprintf("%s/%s", org, inst)), crcTable)
-	host := fmt.Sprintf("%s--%s.c-%02d.i.%s", inst, org, crc%100, dnsZone)
+	host := fmt.Sprintf("%s.c-%02d.i.%s", label, crc%100, dnsZone)
 	return r.setHost(host, source)
 }

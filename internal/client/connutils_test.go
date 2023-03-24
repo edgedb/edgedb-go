@@ -397,6 +397,7 @@ var testcaseErrorMapping = map[string]string{
 		"specified either",
 	"invalid_credentials_file":     "cannot parse credentials",
 	"invalid_dsn_or_instance_name": "invalid DSN|invalid instance name",
+	"invalid_instance_name":        "invalid instance name",
 	"invalid_dsn":                  "invalid DSN",
 	"unix_socket_unsupported":      "unix socket paths not supported",
 	"invalid_port":                 "invalid port",
