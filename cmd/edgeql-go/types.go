@@ -47,8 +47,10 @@ type goSlice struct {
 func (t *goSlice) Reference() string { return "[]" + t.typ.Reference() }
 
 type goStructField struct {
-	Name string
-	Type string
+	EQLName string
+	GoName  string
+	Type    string
+	Tag     string
 }
 
 type goStruct struct {

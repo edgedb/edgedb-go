@@ -13,7 +13,7 @@ func {{.QueryName}}(
 	ctx context.Context, 
 	client *edgedb.Client,
 	{{- range .SignatureArgs}}
-	{{.Name}} {{.Type}},
+	{{.GoName}} {{.Type}},
 	{{- end}}
 ) ({{.SignatureReturnType}}, error) {
 	var result {{.SignatureReturnType}}
@@ -25,7 +25,7 @@ func {{.QueryName}}(
 		{{- if .SignatureArgs}}
 		map[string]interface{}{
 			{{- range .SignatureArgs}}
-			{{printf "%q" .Name}}: {{.Name}},
+			{{printf "%q" .EQLName}}: {{.GoName}},
 			{{- end}}
 		},{{end}}
 	)
@@ -41,7 +41,7 @@ func {{.QueryName}}JSON(
 	ctx context.Context,
 	client *edgedb.Client,
 	{{- range .SignatureArgs}}
-	{{.Name}} {{.Type}},
+	{{.GoName}} {{.Type}},
 	{{- end}}
 ) ([]byte, error) {
 	var result []byte
@@ -53,7 +53,7 @@ func {{.QueryName}}JSON(
 		{{- if .SignatureArgs}}
 		map[string]interface{}{
 			{{- range .SignatureArgs}}
-			{{printf "%q" .Name}}: {{.Name}},
+			{{printf "%q" .EQLName}}: {{.GoName}},
 			{{- end}}
 		},{{end}}
 	)
