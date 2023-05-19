@@ -76,6 +76,7 @@ const (
 	DuplicateFunctionDefinitionError       = edgedb.DuplicateFunctionDefinitionError
 	DuplicateConstraintDefinitionError     = edgedb.DuplicateConstraintDefinitionError
 	DuplicateCastDefinitionError           = edgedb.DuplicateCastDefinitionError
+	DuplicateMigrationError                = edgedb.DuplicateMigrationError
 	SessionTimeoutError                    = edgedb.SessionTimeoutError
 	IdleSessionTimeoutError                = edgedb.IdleSessionTimeoutError
 	QueryTimeoutError                      = edgedb.QueryTimeoutError
@@ -86,6 +87,7 @@ const (
 	DivisionByZeroError                    = edgedb.DivisionByZeroError
 	NumericOutOfRangeError                 = edgedb.NumericOutOfRangeError
 	AccessPolicyError                      = edgedb.AccessPolicyError
+	QueryAssertionError                    = edgedb.QueryAssertionError
 	IntegrityError                         = edgedb.IntegrityError
 	ConstraintViolationError               = edgedb.ConstraintViolationError
 	CardinalityViolationError              = edgedb.CardinalityViolationError
@@ -94,6 +96,7 @@ const (
 	TransactionConflictError               = edgedb.TransactionConflictError
 	TransactionSerializationError          = edgedb.TransactionSerializationError
 	TransactionDeadlockError               = edgedb.TransactionDeadlockError
+	WatchError                             = edgedb.WatchError
 	ConfigurationError                     = edgedb.ConfigurationError
 	AccessError                            = edgedb.AccessError
 	AuthenticationError                    = edgedb.AuthenticationError
@@ -114,6 +117,6 @@ const (
 	InvalidArgumentError                   = edgedb.InvalidArgumentError
 	NoDataError                            = edgedb.NoDataError
 	InternalClientError                    = edgedb.InternalClientError
-	ShouldReconnect                        = edgedb.ShouldReconnect
 	ShouldRetry                            = edgedb.ShouldRetry
+	ShouldReconnect                        = edgedb.ShouldReconnect
 )

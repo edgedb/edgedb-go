@@ -84,6 +84,7 @@ const (
 	DuplicateFunctionDefinitionError       ErrorCategory = "errors::DuplicateFunctionDefinitionError"
 	DuplicateConstraintDefinitionError     ErrorCategory = "errors::DuplicateConstraintDefinitionError"
 	DuplicateCastDefinitionError           ErrorCategory = "errors::DuplicateCastDefinitionError"
+	DuplicateMigrationError                ErrorCategory = "errors::DuplicateMigrationError"
 	SessionTimeoutError                    ErrorCategory = "errors::SessionTimeoutError"
 	IdleSessionTimeoutError                ErrorCategory = "errors::IdleSessionTimeoutError"
 	QueryTimeoutError                      ErrorCategory = "errors::QueryTimeoutError"
@@ -94,6 +95,7 @@ const (
 	DivisionByZeroError                    ErrorCategory = "errors::DivisionByZeroError"
 	NumericOutOfRangeError                 ErrorCategory = "errors::NumericOutOfRangeError"
 	AccessPolicyError                      ErrorCategory = "errors::AccessPolicyError"
+	QueryAssertionError                    ErrorCategory = "errors::QueryAssertionError"
 	IntegrityError                         ErrorCategory = "errors::IntegrityError"
 	ConstraintViolationError               ErrorCategory = "errors::ConstraintViolationError"
 	CardinalityViolationError              ErrorCategory = "errors::CardinalityViolationError"
@@ -102,6 +104,7 @@ const (
 	TransactionConflictError               ErrorCategory = "errors::TransactionConflictError"
 	TransactionSerializationError          ErrorCategory = "errors::TransactionSerializationError"
 	TransactionDeadlockError               ErrorCategory = "errors::TransactionDeadlockError"
+	WatchError                             ErrorCategory = "errors::WatchError"
 	ConfigurationError                     ErrorCategory = "errors::ConfigurationError"
 	AccessError                            ErrorCategory = "errors::AccessError"
 	AuthenticationError                    ErrorCategory = "errors::AuthenticationError"
@@ -2306,6 +2309,50 @@ func (e *duplicateCastDefinitionError) HasTag(tag ErrorTag) bool {
 	}
 }
 
+type duplicateMigrationError struct {
+	msg string
+	err error
+}
+
+func (e *duplicateMigrationError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.DuplicateMigrationError: " + msg
+}
+
+func (e *duplicateMigrationError) Unwrap() error { return e.err }
+
+func (e *duplicateMigrationError) Category(c ErrorCategory) bool {
+	switch c {
+	case DuplicateMigrationError:
+		return true
+	case DuplicateDefinitionError:
+		return true
+	case SchemaDefinitionError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *duplicateMigrationError) isEdgeDBDuplicateDefinitionError() {}
+
+func (e *duplicateMigrationError) isEdgeDBSchemaDefinitionError() {}
+
+func (e *duplicateMigrationError) isEdgeDBQueryError() {}
+
+func (e *duplicateMigrationError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
 type sessionTimeoutError struct {
 	msg string
 	err error
@@ -2377,6 +2424,8 @@ func (e *idleSessionTimeoutError) isEdgeDBQueryError() {}
 
 func (e *idleSessionTimeoutError) HasTag(tag ErrorTag) bool {
 	switch tag {
+	case ShouldRetry:
+		return true
 	default:
 		return false
 	}
@@ -2688,6 +2737,46 @@ func (e *accessPolicyError) isEdgeDBInvalidValueError() {}
 func (e *accessPolicyError) isEdgeDBExecutionError() {}
 
 func (e *accessPolicyError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type queryAssertionError struct {
+	msg string
+	err error
+}
+
+func (e *queryAssertionError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.QueryAssertionError: " + msg
+}
+
+func (e *queryAssertionError) Unwrap() error { return e.err }
+
+func (e *queryAssertionError) Category(c ErrorCategory) bool {
+	switch c {
+	case QueryAssertionError:
+		return true
+	case InvalidValueError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *queryAssertionError) isEdgeDBInvalidValueError() {}
+
+func (e *queryAssertionError) isEdgeDBExecutionError() {}
+
+func (e *queryAssertionError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -3015,6 +3104,42 @@ func (e *transactionDeadlockError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	case ShouldRetry:
 		return true
+	default:
+		return false
+	}
+}
+
+type watchError struct {
+	msg string
+	err error
+}
+
+func (e *watchError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "edgedb.WatchError: " + msg
+}
+
+func (e *watchError) Unwrap() error { return e.err }
+
+func (e *watchError) Category(c ErrorCategory) bool {
+	switch c {
+	case WatchError:
+		return true
+	case ExecutionError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *watchError) isEdgeDBExecutionError() {}
+
+func (e *watchError) HasTag(tag ErrorTag) bool {
+	switch tag {
 	default:
 		return false
 	}
@@ -3892,6 +4017,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &duplicateConstraintDefinitionError{msg: msg}
 	case 0x04_05_02_0a:
 		return &duplicateCastDefinitionError{msg: msg}
+	case 0x04_05_02_0b:
+		return &duplicateMigrationError{msg: msg}
 	case 0x04_06_00_00:
 		return &sessionTimeoutError{msg: msg}
 	case 0x04_06_01_00:
@@ -3912,6 +4039,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &numericOutOfRangeError{msg: msg}
 	case 0x05_01_00_03:
 		return &accessPolicyError{msg: msg}
+	case 0x05_01_00_04:
+		return &queryAssertionError{msg: msg}
 	case 0x05_02_00_00:
 		return &integrityError{msg: msg}
 	case 0x05_02_00_01:
@@ -3928,6 +4057,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &transactionSerializationError{msg: msg}
 	case 0x05_03_01_02:
 		return &transactionDeadlockError{msg: msg}
+	case 0x05_04_00_00:
+		return &watchError{msg: msg}
 	case 0x06_00_00_00:
 		return &configurationError{msg: msg}
 	case 0x07_00_00_00:
