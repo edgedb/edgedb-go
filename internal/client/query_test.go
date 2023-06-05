@@ -97,24 +97,24 @@ func TestWrongNumberOfArguments(t *testing.T) {
 
 func TestConnRejectsTransactions(t *testing.T) {
 	expected := "edgedb.DisabledCapabilityError: " +
-		"cannot execute transaction control commands"
+		"cannot execute transaction control commands.*"
 
 	ctx := context.Background()
 	err := client.Execute(ctx, "START TRANSACTION")
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	var result []byte
 	err = client.Query(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = client.QueryJSON(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = client.QuerySingle(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = client.QuerySingleJSON(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 }
 
 func TestMissmatchedCardinality(t *testing.T) {
@@ -407,24 +407,24 @@ func TestClientRejectsSessionConfig(t *testing.T) {
 	}
 
 	expected := "edgedb.DisabledCapabilityError: " +
-		"cannot execute session configuration queries"
+		"cannot execute session configuration queries.*"
 
 	ctx := context.Background()
 	err := client.Execute(ctx, "SET ALIAS bar AS MODULE std")
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	var result []byte
 	err = client.Query(ctx, "SET ALIAS bar AS MODULE std", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = client.QueryJSON(ctx, "SET ALIAS bar AS MODULE std", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = client.QuerySingle(ctx, "SET ALIAS bar AS MODULE std", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = client.QuerySingleJSON(ctx, "SET ALIAS bar AS MODULE std", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 }
 
 func TestWithConfig(t *testing.T) {

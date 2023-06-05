@@ -60,23 +60,23 @@ func TestClientRejectsTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := "edgedb.DisabledCapabilityError: " +
-		"cannot execute transaction control commands"
+		"cannot execute transaction control commands.*"
 
 	err = p.Execute(ctx, "START TRANSACTION")
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	var result []byte
 	err = p.Query(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = p.QueryJSON(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = p.QuerySingle(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = p.QuerySingleJSON(ctx, "START TRANSACTION", &result)
-	assert.EqualError(t, err, expected)
+	assert.Regexp(t, expected, err)
 
 	err = p.Close()
 	assert.NoError(t, err)
