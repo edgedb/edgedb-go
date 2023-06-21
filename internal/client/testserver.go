@@ -197,6 +197,7 @@ func initOptions(info serverInfo) {
 			CAFile:       info.TLSCertFile,
 			SecurityMode: TLSModeNoHostVerification,
 		},
+		WaitUntilAvailable: 2 * time.Minute,
 	}
 }
 
