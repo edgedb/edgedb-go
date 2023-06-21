@@ -1401,12 +1401,21 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 	if r.instance.val == nil {
 		return fmt.Errorf("missing instance")
 	}
+	inst, instOk := r.instance.val.(string)
+	if !instOk {
+		return fmt.Errorf("instance is not a string")
+	}
+	inst = strings.ToLower(inst)
 
 	if r.org.val == nil {
 		return fmt.Errorf("missing org")
 	}
-	inst := r.instance.val
-	org := r.org.val
+	org, orgOk := r.org.val.(string)
+	if !orgOk {
+		return fmt.Errorf("org is not a string")
+	}
+	org = strings.ToLower(org)
+
 	label := fmt.Sprintf("%s--%s", inst, org)
 	if len(label) > domainLabelMaxLength {
 		return fmt.Errorf(
