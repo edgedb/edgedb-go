@@ -56,3 +56,52 @@ func TestAuth(t *testing.T) {
 	err = clientCopy.Close()
 	assert.EqualError(t, err, msg)
 }
+
+func TestCloudClientHandshakeMessage(t *testing.T) {
+	params := map[string]string{
+		"database":   "mydb",
+		"secret_key": "mysecret",
+		"user":       "myuser",
+	}
+	got, err := clientHandshakeMessage(params, []byte{})
+	assert.NoError(t, err)
+	majorUpper, majorLower := convertUint16ToUint8(protocolVersionMax.Major)
+	minorUpper, minorLower := convertUint16ToUint8(protocolVersionMax.Minor)
+
+	want := []byte{
+		uint8(ClientHandshake), // mtype (uint8)
+		0, 0, 0, 76,            // message_length (uint32)
+		majorLower, majorUpper, // major_ver (uint16)
+		minorLower, minorUpper, // minor_ver (uint16)
+		0, 3, // num_params (uint16)
+
+		// Parameter 1: database
+		0, 0, 0, 8, // param1 name length (uint32)
+		'd', 'a', 't', 'a', 'b', 'a', 's', 'e', // param1 name ("database")
+		0, 0, 0, 4, // param1 value length (uint32)
+		'm', 'y', 'd', 'b', // param1 value ("mydb")
+
+		// Parameter 2: secret_key
+		0, 0, 0, 10, // param3 name length (uint32)
+		's', 'e', 'c', 'r', 'e', 't', '_', 'k', 'e', 'y', // p3 ("secret_key")
+		0, 0, 0, 8, // param3 value length (uint32)
+		'm', 'y', 's', 'e', 'c', 'r', 'e', 't', // param3 value ("mysecret")
+
+		// Parameter 3: user
+		0, 0, 0, 4, // param2 name length (uint32)
+		'u', 's', 'e', 'r', // param2 name ("user")
+		0, 0, 0, 6, // param2 value length (uint32)
+		'm', 'y', 'u', 's', 'e', 'r', // param2 value ("myuser")
+
+		0, 0, // num_extensions (uint16)
+	}
+
+	assert.EqualValues(t, got.Unwrap(), want)
+}
+
+func convertUint16ToUint8(value uint16) (uint8, uint8) {
+	lowerByte := uint8(value & 0xFF)
+	upperByte := uint8((value >> 8) & 0xFF)
+
+	return lowerByte, upperByte
+}

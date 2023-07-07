@@ -17,33 +17,63 @@
 package edgedb
 
 import (
+	"errors"
 	"fmt"
+	"math"
 
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/xdg/scram"
+	"golang.org/x/exp/slices"
 )
 
-func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
-	w := buff.NewWriter(c.writeMemory[:0])
+func clientHandshakeMessage(
+	params map[string]string, alocatedMemory []byte) (*buff.Writer, error) {
+	if len(params) > math.MaxUint16 {
+		return nil, errors.New("too many connection parameters")
+	}
+
+	numParams := uint16(len(params))
+	paramKeys := make([]string, 0, len(params))
+	for k := range params {
+		paramKeys = append(paramKeys, k)
+	}
+	slices.Sort(paramKeys)
+	w := buff.NewWriter(alocatedMemory)
 	w.BeginMessage(uint8(ClientHandshake))
 	w.PushUint16(protocolVersionMax.Major)
 	w.PushUint16(protocolVersionMax.Minor)
-	w.PushUint16(2) // number of parameters
-	w.PushString("database")
-	w.PushString(cfg.database)
-	w.PushString("user")
-	w.PushString(cfg.user)
+	w.PushUint16(numParams)
+	for _, pk := range paramKeys {
+		w.PushString(pk)
+		w.PushString(params[pk])
+	}
 	w.PushUint16(0) // no extensions
 	w.EndMessage()
 
-	c.protocolVersion = protocolVersionMax
+	return w, nil
+}
 
-	if err := c.soc.WriteAll(w.Unwrap()); err != nil {
+func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
+	var err error
+
+	params := map[string]string{
+		"database":   cfg.database,
+		"user":       cfg.user,
+		"secret_key": cfg.secretKey,
+	}
+
+	w, err := clientHandshakeMessage(params, c.writeMemory[:0])
+	if err != nil {
 		return err
 	}
 
-	var err error
+	c.protocolVersion = protocolVersionMax
+
+	if err = c.soc.WriteAll(w.Unwrap()); err != nil {
+		return err
+	}
+
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
