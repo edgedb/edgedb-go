@@ -150,10 +150,10 @@ func (r *configResolver) setInstance(val, source string) error {
 		if len(match) == 0 {
 			return fmt.Errorf("invalid instance name %q", val)
 		}
-		r.org.val = match[1]
-		r.instance.val = match[2]
+		r.org = cfgVal{val: match[1], source: source}
+		r.instance = cfgVal{val: match[2], source: source}
 	} else {
-		r.instance.val = match[1]
+		r.instance = cfgVal{val: match[1], source: source}
 	}
 
 	return nil
@@ -835,6 +835,14 @@ func (r *configResolver) resolveTOML(paths *cfgPaths) error {
 		return err
 	}
 	r.setProfile(strings.TrimSpace(string(profile)), "project")
+
+	db, err := os.ReadFile(filepath.Join(stashDir, "database"))
+	if err == nil {
+		database := strings.TrimSpace(string(db))
+		if err = r.setDatabase(database, "database"); err != nil {
+			return err
+		}
+	}
 
 	return r.setInstance(
 		strings.TrimSpace(string(instance)),

@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -149,7 +148,7 @@ func TestConUtils(t *testing.T) {
 				Host:     "host2",
 				Port:     456,
 				User:     "user2",
-				Password: types.NewOptionalStr("passw2"),
+				Password: edgedbtypes.NewOptionalStr("passw2"),
 				Database: "db2",
 			},
 			expected: Result{
@@ -177,7 +176,7 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb://user3:123123@localhost/abcdef",
 			opts: Options{
 				User:           "user2",
-				Password:       types.NewOptionalStr("passw2"),
+				Password:       edgedbtypes.NewOptionalStr("passw2"),
 				Database:       "db2",
 				ServerSettings: map[string][]byte{"ssl": []byte("False")},
 			},
@@ -297,7 +296,7 @@ func TestConUtils(t *testing.T) {
 				"&port=2222&database=testdb",
 			opts: Options{
 				User:     "me",
-				Password: types.NewOptionalStr("ask"),
+				Password: edgedbtypes.NewOptionalStr("ask"),
 				Database: "db",
 			},
 			expected: Result{
@@ -320,7 +319,7 @@ func TestConUtils(t *testing.T) {
 				"&port=2222&database=testdb",
 			opts: Options{
 				User:           "me",
-				Password:       types.NewOptionalStr("ask"),
+				Password:       edgedbtypes.NewOptionalStr("ask"),
 				Database:       "db",
 				ServerSettings: map[string][]byte{"aa": []byte("bb")},
 			},
