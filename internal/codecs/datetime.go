@@ -138,7 +138,7 @@ func (c *optionalDateTimeDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalDateTime)(out).Unset()
 }
 
-func (c *optionalDateTimeDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalDateTimeDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 // LocalDateTimeCodec encodes/decodes LocalDateTime values.
 type LocalDateTimeCodec struct{}
@@ -238,7 +238,7 @@ func (c *optionalLocalDateTimeDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalLocalDateTime)(out).Unset()
 }
 
-func (c *optionalLocalDateTimeDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalLocalDateTimeDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 // LocalDateCodec encodes/decodes LocalDate values.
 type LocalDateCodec struct{}
@@ -336,7 +336,7 @@ func (c *optionalLocalDateDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalLocalDate)(out).Unset()
 }
 
-func (c *optionalLocalDateDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalLocalDateDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 // LocalTimeCodec encodes/decodes LocalTime values.
 type LocalTimeCodec struct{}
@@ -434,7 +434,7 @@ func (c *optionalLocalTimeDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalLocalTime)(out).Unset()
 }
 
-func (c *optionalLocalTimeDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalLocalTimeDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 // DurationCodec encodes/decodes Duration values.
 type DurationCodec struct{}
@@ -509,7 +509,7 @@ type optionalDuration struct {
 
 type optionalDurationDecoder struct{}
 
-func (c *optionalDurationDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalDurationDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 func (c *optionalDurationDecoder) DescriptorID() types.UUID {
 	return DurationID
@@ -646,7 +646,7 @@ func (c *optionalRelativeDurationDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalRelativeDuration)(out).Unset()
 }
 
-func (c *optionalRelativeDurationDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalRelativeDurationDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 // DateDurationCodec encodes/decodes DateDuration values.
 type DateDurationCodec struct{}
@@ -763,4 +763,4 @@ func (c *optionalDateDurationDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalDateDuration)(out).Unset()
 }
 
-func (c *optionalDateDurationDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalDateDurationDecoder) DecodePresent(_ unsafe.Pointer) {}

@@ -75,7 +75,7 @@ func CreateClient(ctx context.Context, opts Options) (*Client, error) { // nolin
 //	edgedb://user:password@host:port/database?option=value.
 //
 // The following options are recognized: host, port, user, database, password.
-func CreateClientDSN(ctx context.Context, dsn string, opts Options) (*Client, error) { // nolint:gocritic,lll
+func CreateClientDSN(_ context.Context, dsn string, opts Options) (*Client, error) { // nolint:gocritic,lll
 	cfg, err := parseConnectDSNAndArgs(dsn, &opts, newCfgPaths())
 	if err != nil {
 		return nil, err

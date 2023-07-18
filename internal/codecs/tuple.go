@@ -59,7 +59,7 @@ func (c *tupleEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
-	required bool,
+	_ bool,
 ) error {
 	in, ok := val.([]interface{})
 	if !ok {
@@ -114,6 +114,54 @@ func buildTupleDecoder(
 
 		child, err := BuildDecoder(
 			field.Desc,
+			sf.Type,
+			path.AddField(field.Name),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		fields[i] = &DecoderField{
+			name:    field.Name,
+			offset:  sf.Offset,
+			decoder: child,
+		}
+	}
+
+	decoder := tupleDecoder{desc.ID, fields}
+
+	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+		return &optionalTupleDecoder{decoder, typ}, nil
+	}
+
+	return &decoder, nil
+}
+
+func buildTupleDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf(
+			"expected %v to be a struct got %v", path, typ.Kind(),
+		)
+	}
+
+	fields := make([]*DecoderField, len(desc.Fields))
+
+	for i, field := range desc.Fields {
+		sf, ok := introspect.StructField(typ, field.Name)
+		if !ok {
+			return nil, fmt.Errorf(
+				"expected %v to have a field with the tag `edgedb:\"%v\"`",
+				typ, field.Name,
+			)
+		}
+
+		child, err := BuildDecoderV2(
+			&field.Desc,
 			sf.Type,
 			path.AddField(field.Name),
 		)

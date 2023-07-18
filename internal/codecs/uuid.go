@@ -109,4 +109,4 @@ func (c *optionalUUIDDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalUUID)(out).Unset()
 }
 
-func (c *optionalUUIDDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalUUIDDecoder) DecodePresent(_ unsafe.Pointer) {}

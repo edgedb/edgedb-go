@@ -37,7 +37,7 @@ type noOpDecoder struct{}
 
 func (c noOpDecoder) DescriptorID() types.UUID { return descriptor.IDZero }
 
-func (c noOpDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
+func (c noOpDecoder) Decode(_ *buff.Reader, _ unsafe.Pointer) error {
 	return nil
 }
 
@@ -47,9 +47,9 @@ func (c noOpEncoder) DescriptorID() types.UUID { return descriptor.IDZero }
 
 func (c noOpEncoder) Encode(
 	w *buff.Writer,
-	val interface{},
-	path Path,
-	required bool,
+	_ interface{},
+	_ Path,
+	_ bool,
 ) error {
 	w.PushUint32(0)
 	return nil

@@ -424,4 +424,5 @@ func initProtocolVersion() {
 	if err != nil {
 		fatal(err)
 	}
+	log.Printf("using Protocol Version: %v", protocolVersion)
 }

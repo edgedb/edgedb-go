@@ -27,10 +27,12 @@ import (
 
 func TestSyntaxError(t *testing.T) {
 	samples := []struct {
-		query string
-		err   string
+		protocolVersion uint16
+		query           string
+		err             string
 	}{
 		{
+			1,
 			"SELECT 1 2 3",
 			`edgedb.EdgeQLSyntaxError: Unexpected '2'
 query:1:10
@@ -39,6 +41,16 @@ SELECT 1 2 3
          ^ error`,
 		},
 		{
+			2,
+			"SELECT 1 2 3",
+			`edgedb.EdgeQLSyntaxError: Unexpected '2'
+query:1:10
+
+SELECT 1 2 3
+         ^ error`,
+		},
+		{
+			1,
 			"SELECT (foo (((1 2) 3)) 4)",
 			`edgedb.EdgeQLSyntaxError: Unexpected token: <Token ICONST "2">
 query:1:18
@@ -47,6 +59,16 @@ SELECT (foo (((1 2) 3)) 4)
                  ^ It appears that a ',' is missing in a tuple before '2'`,
 		},
 		{
+			2,
+			"SELECT (foo (((1 2) 3)) 4)",
+			`edgedb.EdgeQLSyntaxError: Missing ','
+query:1:17
+
+SELECT (foo (((1 2) 3)) 4)
+                ^ error`,
+		},
+		{
+			1,
 			`SELECT (Foo {
 				foo
 				bar
@@ -57,14 +79,30 @@ query:3:5
     bar
     ^ It appears that a ',' is missing in a shape before 'bar'`,
 		},
+		{
+			2,
+			`SELECT (Foo {
+				foo
+				bar
+			} 2);`,
+			`edgedb.EdgeQLSyntaxError: Missing ','
+query:2:1
+
+    foo
+^ error`,
+		},
 	}
 
 	for _, s := range samples {
 		t.Run(s.query, func(t *testing.T) {
 			var result int64
 			ctx := context.Background()
-			err := client.QuerySingle(ctx, s.query, &result)
-			assert.EqualError(t, err, s.err)
+			pv, err := ProtocolVersion(ctx, client)
+			assert.NoError(t, err)
+			if pv.Major == s.protocolVersion {
+				err := client.QuerySingle(ctx, s.query, &result)
+				assert.EqualError(t, err, s.err)
+			}
 		})
 	}
 }

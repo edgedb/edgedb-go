@@ -112,4 +112,4 @@ func (c *optionalMemoryDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalMemory)(out).Unset()
 }
 
-func (c *optionalMemoryDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalMemoryDecoder) DecodePresent(_ unsafe.Pointer) {}

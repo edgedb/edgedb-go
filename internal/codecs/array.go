@@ -40,6 +40,19 @@ func buildArrayEncoder(
 	return &arrayEncoder{desc.ID, child}, nil
 }
 
+func buildArrayEncoderV2(
+	desc *descriptor.V2,
+	version internal.ProtocolVersion,
+) (Encoder, error) {
+	child, err := BuildEncoderV2(&desc.Fields[0].Desc, version)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &arrayEncoder{desc.ID, child}, nil
+}
+
 type arrayEncoder struct {
 	id    types.UUID
 	child Encoder
@@ -107,6 +120,25 @@ func buildArrayDecoder(
 	}
 
 	child, err := BuildDecoder(desc.Fields[0].Desc, typ.Elem(), path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &arrayDecoder{desc.ID, child, typ, calcStep(typ.Elem())}, nil
+}
+
+func buildArrayDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Slice {
+		return nil, fmt.Errorf(
+			"expected %v to be a Slice, got %v", path, typ.Kind(),
+		)
+	}
+
+	child, err := BuildDecoderV2(&desc.Fields[0].Desc, typ.Elem(), path)
 	if err != nil {
 		return nil, err
 	}

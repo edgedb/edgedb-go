@@ -21,6 +21,10 @@ import (
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 )
 
+type setOfArrayCodec struct {
+	arrayOrSetEncoder
+}
+
 func buildSetOfArrayCodec(
 	desc descriptor.Descriptor,
 	path codecs.Path,
@@ -33,6 +37,14 @@ func buildSetOfArrayCodec(
 	return &setOfArrayCodec{arrayOrSetEncoder{desc.ID, child}}, nil
 }
 
-type setOfArrayCodec struct {
-	arrayOrSetEncoder
+func buildSetOfArrayCodecV2(
+	desc *descriptor.V2,
+	path codecs.Path,
+) (codecs.Encoder, error) {
+	child, err := BuildEncoderV2(&desc.Fields[0].Desc, path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &setOfArrayCodec{arrayOrSetEncoder{desc.ID, child}}, nil
 }

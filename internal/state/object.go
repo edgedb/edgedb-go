@@ -45,6 +45,26 @@ func buildObjectOrNamedTupleEncoder(
 	return &objectEncoder{desc.ID, fields}, nil
 }
 
+func buildObjectOrNamedTupleEncoderV2(
+	desc *descriptor.V2,
+	path codecs.Path,
+) (codecs.Encoder, error) {
+	fields := make([]*encoderField, len(desc.Fields))
+	for i, field := range desc.Fields {
+		child, err := BuildEncoderV2(&field.Desc, path.AddField(field.Name))
+		if err != nil {
+			return nil, err
+		}
+
+		fields[i] = &encoderField{
+			name:  field.Name,
+			codec: child,
+		}
+	}
+
+	return &objectEncoder{desc.ID, fields}, nil
+}
+
 type objectEncoder struct {
 	id     edgedbtypes.UUID
 	fields []*encoderField
@@ -56,7 +76,7 @@ func (c *objectEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path codecs.Path,
-	required bool,
+	_ bool,
 ) error {
 	in, ok := val.(map[string]interface{})
 	if !ok {

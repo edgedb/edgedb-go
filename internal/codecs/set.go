@@ -45,6 +45,25 @@ func buildSetDecoder(
 	return &setDecoder{desc.ID, child, typ, calcStep(typ.Elem())}, nil
 }
 
+func buildSetDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Slice {
+		return nil, fmt.Errorf(
+			"expected %v to be a Slice got %v", path, typ.Kind(),
+		)
+	}
+
+	child, err := BuildDecoderV2(&desc.Fields[0].Desc, typ.Elem(), path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &setDecoder{desc.ID, child, typ, calcStep(typ.Elem())}, nil
+}
+
 type setDecoder struct {
 	id    types.UUID
 	child Decoder

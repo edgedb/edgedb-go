@@ -59,6 +59,36 @@ func buildRangeDecoder(
 		path, typ)
 }
 
+func buildRangeDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ == rangeInt32Type ||
+		typ == rangeInt64Type ||
+		typ == rangeFloat32Type ||
+		typ == rangeFloat64Type ||
+		typ == rangeDateTimeType ||
+		typ == rangeLocalDateTimeType ||
+		typ == rangeLocalDateType {
+		return buildRequiredRangeDecoderV2(desc, typ, path)
+	}
+
+	if typ == optionalRangeInt32Type ||
+		typ == optionalRangeInt64Type ||
+		typ == optionalRangeFloat32Type ||
+		typ == optionalRangeFloat64Type ||
+		typ == optionalRangeDateTimeType ||
+		typ == optionalRangeLocalDateTimeType ||
+		typ == optionalRangeLocalDateType {
+		return buildOptionalRangeDecoderV2(desc, typ, path)
+	}
+
+	return nil, fmt.Errorf(
+		"expected %v to be an edgedb.Range type got %v",
+		path, typ)
+}
+
 func buildRequiredRangeDecoder(
 	desc descriptor.Descriptor,
 	typ reflect.Type,
@@ -101,6 +131,48 @@ func buildRequiredRangeDecoder(
 	}, nil
 }
 
+func buildRequiredRangeDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	fieldDesc := desc.Fields[0].Desc
+	lower, child, err := buildFieldV2(typ, "lower", path, &fieldDesc)
+	if err != nil {
+		return nil, err
+	}
+
+	upper, _, err := buildFieldV2(typ, "upper", path, &fieldDesc)
+	if err != nil {
+		return nil, err
+	}
+
+	incLower, _, err := buildFieldV2(typ, "inc_lower", path, &fieldDesc)
+	if err != nil {
+		return nil, err
+	}
+
+	incUpper, _, err := buildFieldV2(typ, "inc_upper", path, &fieldDesc)
+	if err != nil {
+		return nil, err
+	}
+
+	empty, _, err := buildFieldV2(typ, "empty", path, &fieldDesc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rangeCodec{
+		id:             desc.ID,
+		child:          child.(OptionalDecoder),
+		lowerOffset:    lower.Offset,
+		upperOffset:    upper.Offset,
+		incLowerOffset: incLower.Offset,
+		incUpperOffset: incUpper.Offset,
+		emptyOffset:    empty.Offset,
+	}, nil
+}
+
 func buildField(
 	typ reflect.Type,
 	name string,
@@ -124,6 +196,54 @@ func buildField(
 		return sf, nil, nil
 	case "upper", "lower":
 		child, err := buildScalarDecoder(
+			desc,
+			sf.Type,
+			path.AddField(name),
+		)
+		if err != nil {
+			return reflect.StructField{}, nil, err
+		}
+
+		if _, isOptional := child.(OptionalDecoder); !isOptional {
+			typeName, ok := optionalTypeNameLookup[reflect.TypeOf(child)]
+			if !ok {
+				typeName = "OptionalUnmarshaler interface"
+			}
+			return reflect.StructField{}, nil, fmt.Errorf(
+				"expected %v at %v.%v to be %v"+
+					"because the field is not required",
+				sf.Type, path, name, typeName)
+		}
+
+		return sf, child, nil
+	default:
+		return reflect.StructField{}, nil, errors.New("unreachable 10118")
+	}
+}
+
+func buildFieldV2(
+	typ reflect.Type,
+	name string,
+	path Path,
+	desc *descriptor.V2,
+) (reflect.StructField, Decoder, error) {
+	sf, ok := introspect.StructField(typ, name)
+	if !ok {
+		return reflect.StructField{}, nil, fmt.Errorf(
+			"expected %v to have a field named %q", path, name)
+	}
+
+	switch name {
+	case "inc_lower", "inc_upper", "empty":
+		if sf.Type.Kind() != reflect.Bool {
+			return reflect.StructField{}, nil, fmt.Errorf(
+				"expected field %q to be bool",
+				name)
+		}
+
+		return sf, nil, nil
+	case "upper", "lower":
+		child, err := buildScalarDecoderV2(
 			desc,
 			sf.Type,
 			path.AddField(name),
@@ -236,6 +356,38 @@ func buildOptionalRangeDecoder(
 	}, nil
 }
 
+func buildOptionalRangeDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (OptionalDecoder, error) {
+	val, ok := introspect.StructField(typ, "val")
+	if !ok {
+		return nil, fmt.Errorf("unreachable 11248: val not found")
+	}
+
+	codec, err := buildRequiredRangeDecoderV2(
+		desc,
+		val.Type,
+		path.AddField("val"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	isSet, ok := introspect.StructField(typ, "isSet")
+	if !ok {
+		return nil, fmt.Errorf("unreachable 22467: isSet not found")
+	}
+
+	child := codec.(*rangeCodec)
+	return &optionalRangeDecoder{
+		id:     desc.ID,
+		offset: isSet.Offset,
+		child:  child,
+	}, nil
+}
+
 type optionalRangeDecoder struct {
 	id     types.UUID
 	child  *rangeCodec
@@ -283,6 +435,18 @@ func buildRangeEncoder(
 	version internal.ProtocolVersion,
 ) (Encoder, error) {
 	child, err := BuildEncoder(desc.Fields[0].Desc, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rangeEncoder{id: desc.ID, child: child}, nil
+}
+
+func buildRangeEncoderV2(
+	desc *descriptor.V2,
+	version internal.ProtocolVersion,
+) (Encoder, error) {
+	child, err := BuildEncoderV2(&desc.Fields[0].Desc, version)
 	if err != nil {
 		return nil, err
 	}

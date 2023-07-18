@@ -108,6 +108,64 @@ func buildObjectDecoder(
 	return &decoder, nil
 }
 
+func buildObjectDecoderV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+	path Path,
+) (Decoder, error) {
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf(
+			"expected %v to be a Struct got %v", path, typ.Kind(),
+		)
+	}
+
+	fields := make([]*DecoderField, len(desc.Fields))
+
+	for i, field := range desc.Fields {
+		sf, ok := introspect.StructField(typ, field.Name)
+		if !ok {
+			return nil, fmt.Errorf(
+				"expected %v to have a field named %q", path, field.Name,
+			)
+		}
+
+		child, err := BuildDecoderV2(
+			&field.Desc,
+			sf.Type,
+			path.AddField(field.Name),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if !field.Required {
+			if _, isOptional := child.(OptionalDecoder); !isOptional {
+				typeName, ok := optionalTypeNameLookup[reflect.TypeOf(child)]
+				if !ok {
+					typeName = "OptionalUnmarshaler interface"
+				}
+				return nil, fmt.Errorf("expected %v at %v.%v to be %v "+
+					"because the field is not required",
+					sf.Type, path, field.Name, typeName)
+			}
+		}
+
+		fields[i] = &DecoderField{
+			name:    field.Name,
+			offset:  sf.Offset,
+			decoder: child,
+		}
+	}
+
+	decoder := objectDecoder{desc.ID, fields}
+
+	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+		return &optionalObjectDecoder{decoder, typ}, nil
+	}
+
+	return &decoder, nil
+}
+
 type objectDecoder struct {
 	id     types.UUID
 	fields []*DecoderField

@@ -37,6 +37,18 @@ func buildArrayEncoder(
 	return &arrayOrSetEncoder{desc.ID, child}, nil
 }
 
+func buildArrayEncoderV2(
+	desc *descriptor.V2,
+	path codecs.Path,
+) (codecs.Encoder, error) {
+	child, err := BuildEncoderV2(&desc.Fields[0].Desc, path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &arrayOrSetEncoder{desc.ID, child}, nil
+}
+
 type arrayOrSetEncoder struct {
 	id    edgedbtypes.UUID
 	child codecs.Encoder
@@ -48,7 +60,7 @@ func (c *arrayOrSetEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path codecs.Path,
-	required bool,
+	_ bool,
 ) error {
 	in, ok := val.([]interface{})
 	if !ok {

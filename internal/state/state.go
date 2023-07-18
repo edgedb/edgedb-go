@@ -58,3 +58,34 @@ func BuildEncoder(
 			"building state codec: unexpected descriptor type 0x%x", desc.Type)
 	}
 }
+
+// BuildEncoderV2 builds a state descriptor codec.
+func BuildEncoderV2(
+	desc *descriptor.V2,
+	path codecs.Path,
+) (codecs.Encoder, error) {
+	switch desc.Type {
+	case descriptor.Set:
+		if desc.Fields[0].Desc.Type == descriptor.Array {
+			return buildSetOfArrayCodecV2(desc, path)
+		}
+
+		// sets are encoded the same as arrays
+		fallthrough
+	case descriptor.Array:
+		return buildArrayEncoderV2(desc, path)
+	case descriptor.Object, descriptor.NamedTuple:
+		return buildObjectOrNamedTupleEncoderV2(desc, path)
+	case descriptor.Scalar:
+		return codecs.BuildScalarEncoderV2(desc)
+	case descriptor.Tuple:
+		return buildTupleEncoderV2(desc, path)
+	case descriptor.Enum:
+		return &codecs.StrCodec{ID: desc.ID}, nil
+	case descriptor.InputShape:
+		return buildSparceObjectEncoderV2(desc, path)
+	default:
+		return nil, fmt.Errorf(
+			"building state codec: unexpected descriptor type 0x%x", desc.Type)
+	}
+}

@@ -151,6 +151,40 @@ func buildUnmarshaler(
 	return &decoder, true, nil
 }
 
+func buildUnmarshalerV2(
+	desc *descriptor.V2,
+	typ reflect.Type,
+) (Decoder, bool, error) {
+	var id types.UUID
+	switch desc.Type {
+	case descriptor.Scalar:
+		id = desc.ID
+	case descriptor.Enum:
+		id = StrID
+	default:
+		return nil, false, fmt.Errorf(
+			"unexpected descriptor type 0x%x", desc.Type)
+	}
+
+	iface, ok := unmarshalers[id]
+	if !ok {
+		return nil, false, nil
+	}
+
+	ptr := reflect.PtrTo(typ)
+	if !ptr.Implements(iface.typ) {
+		return nil, false, nil
+	}
+
+	var decoder = unmarshalerDecoder{desc.ID, typ, iface.methodName}
+
+	if ptr.Implements(optionalUnmarshalerType) {
+		return &optionalUnmarshalerDecoder{decoder}, true, nil
+	}
+
+	return &decoder, true, nil
+}
+
 type unmarshalerDecoder struct {
 	id         types.UUID
 	typ        reflect.Type
