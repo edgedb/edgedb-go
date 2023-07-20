@@ -23,12 +23,12 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
 // IDZero is descriptor ID 00000000-0000-0000-0000-000000000000
 // https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
-var IDZero = types.UUID{}
+var IDZero = edgedbtypes.UUID{}
 
 //go:generate stringer -type Type
 
@@ -65,13 +65,19 @@ const (
 
 	// Range represents the range descriptor type.
 	Range
+
+	// ObjectShape represents the object shape descriptor type.
+	ObjectShape
+
+	// Compound represents the compound descriptor type.
+	Compound
 )
 
 // Descriptor is a type descriptor
 // https://www.edgedb.com/docs/internals/protocol/typedesc
 type Descriptor struct {
 	Type   Type
-	ID     types.UUID
+	ID     edgedbtypes.UUID
 	Fields []*Field
 }
 

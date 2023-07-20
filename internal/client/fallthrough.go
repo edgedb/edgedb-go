@@ -36,6 +36,9 @@ var logMsgSeverityLookup = map[uint8]string{
 }
 
 func (c *protocolConnection) fallThrough(r *buff.Reader) error {
+	if c.protocolVersion.GTE(protocolVersion2p0) {
+		return c.fallThrough2pX(r)
+	}
 	switch Message(r.MsgType) {
 	case ParameterStatus:
 		name := r.PopString()
@@ -78,6 +81,75 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 			}
 
 			err = codec.Decode(p.PopSlice(p.PopUint32()), unsafe.Pointer(&cfg))
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding ParameterStatus system_config: %w", err)}
+			}
+
+			c.systemConfig = cfg
+		default:
+			return &unexpectedMessageError{msg: fmt.Sprintf(
+				"got ParameterStatus for unknown parameter %q", name)}
+		}
+	case LogMessage:
+		severity := logMsgSeverityLookup[r.PopUint8()]
+		code := r.PopUint32()
+		message := r.PopString()
+		ignoreHeaders(r)
+		log.Println("SERVER MESSAGE", severity, code, message)
+	default:
+		msg := fmt.Sprintf("unexpected message type: 0x%x", r.MsgType)
+		return &unexpectedMessageError{msg: msg}
+	}
+
+	return nil
+}
+
+func (c *protocolConnection) fallThrough2pX(r *buff.Reader) error {
+	switch Message(r.MsgType) {
+	case ParameterStatus:
+		name := r.PopString()
+		switch name {
+		case "pgaddr":
+			r.PopBytes() // discard
+		case "suggested_pool_concurrency":
+			i, err := strconv.Atoi(r.PopString())
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding ParameterStatus suggested_pool_concurrency: %w",
+					err)}
+			}
+			c.serverSettings.Set(name, i)
+		case "system_config":
+			p := r.PopSlice(r.PopUint32())
+			d := p.PopSlice(p.PopUint32())
+			id := d.PopUUID()
+			desc, err := descriptor.PopV2(d, c.protocolVersion)
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"decoding ParameterStatus system_config descriptor: %w",
+					err)}
+			} else if desc.ID != id {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"system_config descriptor ids don't match: %v != %v",
+					id, desc.ID)}
+			}
+
+			var cfg systemConfig
+			codec, err := codecs.BuildDecoderV2(
+				&desc,
+				reflect.TypeOf(cfg),
+				codecs.Path("system_config"),
+			)
+			if err != nil {
+				return &binaryProtocolError{err: fmt.Errorf(
+					"building codec from ParameterStatus "+
+						"system_config descriptor: %w", err)}
+			}
+
+			err = codec.Decode(
+				p.PopSlice(p.PopUint32()), unsafe.Pointer(&cfg),
+			)
 			if err != nil {
 				return &binaryProtocolError{err: fmt.Errorf(
 					"decoding ParameterStatus system_config: %w", err)}

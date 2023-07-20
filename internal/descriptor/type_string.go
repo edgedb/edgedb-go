@@ -18,11 +18,13 @@ func _() {
 	_ = x[Enum-7]
 	_ = x[InputShape-8]
 	_ = x[Range-9]
+	_ = x[ObjectShape-10]
+	_ = x[Compound-11]
 }
 
-const _Type_name = "SetObjectBaseScalarScalarTupleNamedTupleArrayEnumInputShapeRange"
+const _Type_name = "SetObjectBaseScalarScalarTupleNamedTupleArrayEnumInputShapeRangeObjectShapeCompound"
 
-var _Type_index = [...]uint8{0, 3, 9, 19, 25, 30, 40, 45, 49, 59, 64}
+var _Type_index = [...]uint8{0, 3, 9, 19, 25, 30, 40, 45, 49, 59, 64, 75, 83}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

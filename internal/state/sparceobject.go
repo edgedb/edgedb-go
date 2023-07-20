@@ -46,6 +46,26 @@ func buildSparceObjectEncoder(
 	return &sparceObjectEncoder{desc.ID, fields}, nil
 }
 
+func buildSparceObjectEncoderV2(
+	desc *descriptor.V2,
+	path codecs.Path,
+) (codecs.Encoder, error) {
+	fields := make([]*encoderField, len(desc.Fields))
+	for i, field := range desc.Fields {
+		child, err := BuildEncoderV2(&field.Desc, path.AddField(field.Name))
+		if err != nil {
+			return nil, err
+		}
+
+		fields[i] = &encoderField{
+			name:  field.Name,
+			codec: child,
+		}
+	}
+
+	return &sparceObjectEncoder{desc.ID, fields}, nil
+}
+
 type sparceObjectEncoder struct {
 	id     edgedbtypes.UUID
 	fields []*encoderField
@@ -57,7 +77,7 @@ func (c *sparceObjectEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path codecs.Path,
-	required bool,
+	_ bool,
 ) error {
 	in, ok := val.(map[string]interface{})
 	if !ok {

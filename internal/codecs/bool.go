@@ -116,4 +116,4 @@ func (c *optionalBoolDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalBool)(out).Unset()
 }
 
-func (c *optionalBoolDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalBoolDecoder) DecodePresent(_ unsafe.Pointer) {}

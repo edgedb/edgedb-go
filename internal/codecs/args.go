@@ -51,6 +51,32 @@ func buildArgEncoder(
 	return &argsEncoder{desc.ID, fields}, nil
 }
 
+func buildArgEncoderV2(
+	desc *descriptor.V2,
+	version internal.ProtocolVersion,
+) (Encoder, error) {
+	fields := make([]*EncoderField, len(desc.Fields))
+
+	for i, field := range desc.Fields {
+		encoder, err := BuildEncoderV2(&field.Desc, version)
+		if err != nil {
+			return nil, err
+		}
+
+		fields[i] = &EncoderField{
+			name:     field.Name,
+			encoder:  encoder,
+			required: field.Required,
+		}
+	}
+
+	if len(desc.Fields) > 0 && desc.Fields[0].Name != "0" {
+		return &kwargsEncoder{desc.ID, fields}, nil
+	}
+
+	return &argsEncoder{desc.ID, fields}, nil
+}
+
 type argsEncoder struct {
 	id     types.UUID
 	fields []*EncoderField
@@ -62,7 +88,7 @@ func (c *argsEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
-	required bool,
+	_ bool,
 ) error {
 	in, ok := val.([]interface{})
 	if !ok {
@@ -104,7 +130,7 @@ func (c *kwargsEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
-	required bool,
+	_ bool,
 ) error {
 	args, ok := val.([]interface{})
 	if !ok {

@@ -86,7 +86,7 @@ func (c *StrCodec) encodeData(w *buff.Writer, data string) error {
 func (c *StrCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.StrMarshaler,
-	path Path,
+	_ Path,
 ) error {
 	data, err := val.MarshalEdgeDBStr()
 	if err != nil {
@@ -120,4 +120,4 @@ func (c *optionalStrDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalStr)(out).Unset()
 }
 
-func (c *optionalStrDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalStrDecoder) DecodePresent(_ unsafe.Pointer) {}

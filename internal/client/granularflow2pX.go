@@ -26,43 +26,43 @@ import (
 	"github.com/edgedb/edgedb-go/internal/state"
 )
 
-func (c *protocolConnection) execGranularFlow1pX(
+func (c *protocolConnection) execGranularFlow2pX(
 	r *buff.Reader,
 	q *query,
 ) error {
 	ids, ok := c.getCachedTypeIDs(q)
 	if !ok {
-		return c.pesimistic1pX(r, q)
+		return c.pesimistic2pX(r, q)
 	}
 
-	cdcs, err := c.codecsFromIDs(ids, q)
+	cdcs, err := c.codecsFromIDsV2(ids, q)
 	if err != nil {
 		return err
 	} else if cdcs == nil {
-		return c.pesimistic1pX(r, q)
+		return c.pesimistic2pX(r, q)
 	}
 
-	return c.execute1pX(r, q, cdcs)
+	return c.execute2pX(r, q, cdcs)
 }
 
-func (c *protocolConnection) pesimistic1pX(r *buff.Reader, q *query) error {
-	desc, err := c.parse1pX(r, q)
+func (c *protocolConnection) pesimistic2pX(r *buff.Reader, q *query) error {
+	desc, err := c.parse2pX(r, q)
 	if err != nil {
 		return err
 	}
 
-	cdcs, err := c.codecsFromDescriptors1pX(q, desc)
+	cdcs, err := c.codecsFromDescriptors2pX(q, desc)
 	if err != nil {
 		return err
 	}
 
-	return c.execute1pX(r, q, cdcs)
+	return c.execute2pX(r, q, cdcs)
 }
 
-func (c *protocolConnection) parse1pX(
+func (c *protocolConnection) parse2pX(
 	r *buff.Reader,
 	q *query,
-) (*CommandDescription, error) {
+) (*CommandDescriptionV2, error) {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(Parse))
 	w.PushUint16(0) // no headers
@@ -88,7 +88,7 @@ func (c *protocolConnection) parse1pX(
 		return nil, &clientConnectionClosedError{err: e}
 	}
 
-	var desc *CommandDescription
+	var desc *CommandDescriptionV2
 	done := buff.NewSignal()
 
 	for r.Next(done.Chan) {
@@ -99,7 +99,7 @@ func (c *protocolConnection) parse1pX(
 			}
 		case CommandDataDescription:
 			var e error
-			desc, e = c.decodeCommandDataDescriptionMsg1pX(r, q)
+			desc, e = c.decodeCommandDataDescriptionMsg2pX(r, q)
 			err = wrapAll(err, e)
 		case ReadyForCommand:
 			decodeReadyForCommandMsg(r)
@@ -121,21 +121,21 @@ func (c *protocolConnection) parse1pX(
 	return desc, nil
 }
 
-func (c *protocolConnection) decodeCommandDataDescriptionMsg1pX(
+func (c *protocolConnection) decodeCommandDataDescriptionMsg2pX(
 	r *buff.Reader,
 	q *query,
-) (*CommandDescription, error) {
+) (*CommandDescriptionV2, error) {
 	discardHeaders(r)
 	c.cacheCapabilities1pX(q, r.PopUint64())
 
 	var (
 		err   error
-		descs CommandDescription
+		descs CommandDescriptionV2
 	)
 
 	descs.Card = Cardinality(r.PopUint8())
 	id := r.PopUUID()
-	descs.In, err = descriptor.Pop(
+	descs.In, err = descriptor.PopV2(
 		r.PopSlice(r.PopUint32()),
 		c.protocolVersion,
 	)
@@ -149,7 +149,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg1pX(
 	}
 
 	id = r.PopUUID()
-	descs.Out, err = descriptor.Pop(
+	descs.Out, err = descriptor.PopV2(
 		r.PopSlice(r.PopUint32()),
 		c.protocolVersion,
 	)
@@ -177,7 +177,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg1pX(
 	return &descs, nil
 }
 
-func (c *protocolConnection) execute1pX(
+func (c *protocolConnection) execute2pX(
 	r *buff.Reader,
 	q *query,
 	cdcs *codecPair,
@@ -191,7 +191,6 @@ func (c *protocolConnection) execute1pX(
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushString(q.cmd)
-
 	w.PushUUID(c.stateCodec.DescriptorID())
 	err := c.stateCodec.Encode(w, q.state, codecs.Path("state"), false)
 	if err != nil {
@@ -247,7 +246,7 @@ func (c *protocolConnection) execute1pX(
 				err = nil
 			}
 		case CommandComplete:
-			if e := c.decodeCommandCompleteMsg1pX(q, r); e != nil {
+			if e := c.decodeCommandCompleteMsg2pX(q, r); e != nil {
 				err = wrapAll(err, e)
 			}
 		case ReadyForCommand:
@@ -278,13 +277,54 @@ func (c *protocolConnection) execute1pX(
 	return err
 }
 
-func (c *protocolConnection) codecsFromDescriptors1pX(
+func (c *protocolConnection) codecsFromIDsV2(
+	ids *idPair,
 	q *query,
-	descs *CommandDescription,
+) (*codecPair, error) {
+	var err error
+
+	in, ok := c.inCodecCache.Get(ids.in)
+	if !ok {
+		desc, OK := descCache.Get(ids.in)
+		if !OK {
+			return nil, nil
+		}
+
+		in, err = codecs.BuildEncoderV2(
+			desc.(*descriptor.V2),
+			c.protocolVersion,
+		)
+		if err != nil {
+			return nil, &invalidArgumentError{msg: err.Error()}
+		}
+	}
+
+	out, ok := c.outCodecCache.Get(codecKey{ID: ids.out, Type: q.outType})
+	if !ok {
+		desc, OK := descCache.Get(ids.out)
+		if !OK {
+			return nil, nil
+		}
+
+		d := desc.(descriptor.V2)
+		path := codecs.Path(q.outType.String())
+		out, err = codecs.BuildDecoderV2(&d, q.outType, path)
+		if err != nil {
+			return nil, &invalidArgumentError{msg: fmt.Sprintf(
+				"the \"out\" argument does not match query schema: %v", err)}
+		}
+	}
+
+	return &codecPair{in: in.(codecs.Encoder), out: out.(codecs.Decoder)}, nil
+}
+
+func (c *protocolConnection) codecsFromDescriptors2pX(
+	q *query,
+	descs *CommandDescriptionV2,
 ) (*codecPair, error) {
 	var cdcs codecPair
 	var err error
-	cdcs.in, err = codecs.BuildEncoder(descs.In, c.protocolVersion)
+	cdcs.in, err = codecs.BuildEncoderV2(&descs.In, c.protocolVersion)
 	if err != nil {
 		return nil, &invalidArgumentError{msg: err.Error()}
 	}
@@ -300,7 +340,7 @@ func (c *protocolConnection) codecsFromDescriptors1pX(
 			path = codecs.Path(q.outType.String())
 		}
 
-		cdcs.out, err = codecs.BuildDecoder(descs.Out, q.outType, path)
+		cdcs.out, err = codecs.BuildDecoderV2(&descs.Out, q.outType, path)
 		if err != nil {
 			err = fmt.Errorf(
 				"the \"out\" argument does not match query schema: %v",
@@ -319,7 +359,7 @@ func (c *protocolConnection) codecsFromDescriptors1pX(
 	return &cdcs, nil
 }
 
-func (c *protocolConnection) decodeCommandCompleteMsg1pX(
+func (c *protocolConnection) decodeCommandCompleteMsg2pX(
 	q *query,
 	r *buff.Reader,
 ) error {
@@ -336,13 +376,11 @@ func (c *protocolConnection) decodeCommandCompleteMsg1pX(
 	return nil
 }
 
-func (c *protocolConnection) decodeStateDataDescription(r *buff.Reader) error {
-	if c.protocolVersion.GTE(protocolVersion2p0) {
-		return c.decodeStateDataDescription2pX(r)
-	}
-
+func (c *protocolConnection) decodeStateDataDescription2pX(
+	r *buff.Reader,
+) error {
 	id := r.PopUUID()
-	desc, err := descriptor.Pop(
+	desc, err := descriptor.PopV2(
 		r.PopSlice(r.PopUint32()),
 		c.protocolVersion,
 	)
@@ -354,7 +392,7 @@ func (c *protocolConnection) decodeStateDataDescription(r *buff.Reader) error {
 			"state_description ids don't match: %v != %v", id, desc.ID)}
 	}
 
-	codec, err := state.BuildEncoder(desc, codecs.Path("state"))
+	codec, err := state.BuildEncoderV2(&desc, codecs.Path("state"))
 	if err != nil {
 		return &binaryProtocolError{err: fmt.Errorf(
 			"building decoder from ParameterStatus state_description: %w",

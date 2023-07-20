@@ -210,7 +210,7 @@ func (c *optionalBigIntDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalBigInt)(out).Unset()
 }
 
-func (c *optionalBigIntDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalBigIntDecoder) DecodePresent(_ unsafe.Pointer) {}
 
 type decimalEncoder struct{}
 

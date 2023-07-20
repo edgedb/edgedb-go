@@ -299,6 +299,20 @@ func isNumberedArgs(desc descriptor.Descriptor) bool {
 	return true
 }
 
+func isNumberedArgsV2(desc *descriptor.V2) bool {
+	if len(desc.Fields) == 0 {
+		return false
+	}
+
+	for i, field := range desc.Fields {
+		if field.Name != strconv.Itoa(i) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func snakeToUpperMixedCase(s string) string {
 	title := cases.Title(language.English)
 

@@ -109,7 +109,7 @@ func (c *JSONCodec) encodeData(w *buff.Writer, data []byte) error {
 func (c *JSONCodec) encodeMarshaler(
 	w *buff.Writer,
 	val marshal.JSONMarshaler,
-	path Path,
+	_ Path,
 ) error {
 	data, err := val.MarshalEdgeDBJSON()
 	if err != nil {
@@ -238,4 +238,4 @@ func (c *optionalJSONDecoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalBytes)(out).Unset()
 }
 
-func (c *optionalJSONDecoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalJSONDecoder) DecodePresent(_ unsafe.Pointer) {}

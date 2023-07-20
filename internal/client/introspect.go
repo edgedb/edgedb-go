@@ -31,6 +31,14 @@ type CommandDescription struct {
 	Card Cardinality
 }
 
+// CommandDescriptionV2 is the information returned in the
+// CommandDataDescription message
+type CommandDescriptionV2 struct {
+	In   descriptor.V2
+	Out  descriptor.V2
+	Card Cardinality
+}
+
 // Describe returns CommandDescription for the provided cmd.
 func Describe(
 	ctx context.Context,
@@ -62,6 +70,44 @@ func Describe(
 	}
 
 	d, err := conn.conn.parse1pX(r, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return d, nil
+}
+
+// DescribeV2 returns CommandDescription for the provided cmd.
+func DescribeV2(
+	ctx context.Context,
+	c *Client,
+	cmd string,
+) (*CommandDescriptionV2, error) {
+	conn, err := c.acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	q := &query{
+		method:       "Query",
+		cmd:          cmd,
+		fmt:          Binary,
+		expCard:      Many,
+		capabilities: userCapabilities,
+	}
+
+	r, err := conn.conn.acquireReader(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	deadline, _ := ctx.Deadline()
+	err = conn.conn.soc.SetDeadline(deadline)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := conn.conn.parse2pX(r, q)
 	if err != nil {
 		return nil, err
 	}

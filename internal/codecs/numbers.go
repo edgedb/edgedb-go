@@ -107,7 +107,7 @@ func (c *optionalInt16Decoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalInt16)(out).Unset()
 }
 
-func (c *optionalInt16Decoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalInt16Decoder) DecodePresent(_ unsafe.Pointer) {}
 
 // Int32Codec encodes/decodes int32.
 type Int32Codec struct{}
@@ -189,7 +189,7 @@ func (c *optionalInt32Decoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalInt32)(out).Unset()
 }
 
-func (c *optionalInt32Decoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalInt32Decoder) DecodePresent(_ unsafe.Pointer) {}
 
 // Int64Codec encodes/decodes int64.
 type Int64Codec struct{}
@@ -271,7 +271,7 @@ func (c *optionalInt64Decoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalInt64)(out).Unset()
 }
 
-func (c *optionalInt64Decoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalInt64Decoder) DecodePresent(_ unsafe.Pointer) {}
 
 // Float32Codec encodes/decodes float32.
 type Float32Codec struct{}
@@ -353,7 +353,7 @@ func (c *optionalFloat32Decoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalFloat32)(out).Unset()
 }
 
-func (c *optionalFloat32Decoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalFloat32Decoder) DecodePresent(_ unsafe.Pointer) {}
 
 // Float64Codec encodes/decodes float64.
 type Float64Codec struct{}
@@ -435,4 +435,4 @@ func (c *optionalFloat64Decoder) DecodeMissing(out unsafe.Pointer) {
 	(*types.OptionalFloat64)(out).Unset()
 }
 
-func (c *optionalFloat64Decoder) DecodePresent(out unsafe.Pointer) {}
+func (c *optionalFloat64Decoder) DecodePresent(_ unsafe.Pointer) {}
