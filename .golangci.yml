@@ -363,7 +363,6 @@ linters-settings:
 
 linters:
   enable:
-    - deadcode
     - errcheck
     - gocritic
     - gofmt
@@ -376,11 +375,9 @@ linters:
     - revive
     - prealloc
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
     - unused
-    - varcheck
     - whitespace
   disable:
   disable-all: false
@@ -396,7 +393,8 @@ issues:
   # it can be disabled by `exclude-use-default: false`. To list all
   # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    # - abcdef
+    - should have a package comment
+    - "unused-parameter: parameter"
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:

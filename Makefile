@@ -1,7 +1,7 @@
 quality: lint test bench
 
 lint:
-	golangci-lint run --sort-results
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3 run --sort-results
 
 test:
 	go test -v -count=1 -race -bench=$$^ -timeout=20m ./...
@@ -19,7 +19,7 @@ errors:
 		exit 1 \
 		)
 	edb gen-errors-json --client | \
-		go run internal/cmd/generr/definition.go > internal/client/errors_gen.go
+		go run internal/cmd/generrdefinition/main.go > internal/client/errors_gen.go
 	edb gen-errors-json --client | \
-		go run internal/cmd/generr/export.go > errors_gen.go
+		go run internal/cmd/generrexport/main.go > errors_gen.go
 	make format
