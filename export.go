@@ -90,7 +90,7 @@ type (
 	// Memory represents memory in bytes.
 	Memory = edgedbtypes.Memory
 
-	// ModuleAlias is an alias name and module name pare.
+	// ModuleAlias is an alias name and module name pair.
 	ModuleAlias = edgedb.ModuleAlias
 
 	// Optional represents a shape field that is not required.

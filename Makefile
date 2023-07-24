@@ -23,3 +23,6 @@ errors:
 	edb gen-errors-json --client | \
 		go run internal/cmd/generrexport/main.go > errors_gen.go
 	make format
+
+gendocs:
+	go run internal/cmd/gendocs/*.go
