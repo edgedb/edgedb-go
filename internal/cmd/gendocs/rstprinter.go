@@ -1,3 +1,21 @@
+// This source file is part of the EdgeDB open source project.
+//
+// Copyright EdgeDB Inc. and the EdgeDB authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build gendocs
+
 package main
 
 import (
@@ -44,7 +62,6 @@ func (p *rstPrinter) block(out *bytes.Buffer, x comment.Block) {
 		out.WriteString(".. code-block:: go\n\n    ")
 		out.WriteString(strings.ReplaceAll(x.Text, "\n", "\n    "))
 		out.WriteString("\n")
-
 	}
 }
 
@@ -77,7 +94,8 @@ func (p *rstPrinter) text(out *bytes.Buffer, x []comment.Text) {
 			out.WriteString("`")
 			if len(t.Text) == 1 {
 				if s, ok := t.Text[0].(comment.Plain); ok &&
-					strings.HasPrefix(string(s), "github.com/edgedb/edgedb-go") {
+					strings.HasPrefix(
+						string(s), "github.com/edgedb/edgedb-go") {
 					urlParts := strings.Split(string(s), "/")
 					out.WriteString(urlParts[len(urlParts)-1])
 				} else {
