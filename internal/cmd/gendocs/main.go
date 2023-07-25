@@ -20,6 +20,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/doc"
@@ -30,7 +31,12 @@ import (
 	"strings"
 )
 
+var lintMode = flag.Bool("lint", false, "Instead of writing output files, "+
+	"check if contents of existing files match")
+
 func main() {
+	flag.Parse()
+
 	if err := os.Mkdir("rstdocs", 0750); err != nil && !os.IsExist(err) {
 		panic(err)
 	}
@@ -52,6 +58,21 @@ func readAndParseFile(fset *token.FileSet, filename string) *ast.File {
 		panic(err)
 	}
 	return ast
+}
+
+func writeFile(filename string, content string) {
+	if *lintMode {
+		if file, err := os.ReadFile(filename); err != nil ||
+			string(file) != content {
+			panic("Content of " + filename + " does not match generated " +
+				"docs, Run 'make gendocs' to update docs")
+		}
+	} else {
+		if err := os.WriteFile(
+			filename, []byte(content), 0666); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func renderTypesPage() []string {
@@ -83,10 +104,7 @@ Datatypes
 
 	rst += renderTypes(fset, p, p.Types)
 
-	if err := os.WriteFile(
-		"rstdocs/types.rst", []byte(rst), 0666); err != nil {
-		panic(err)
-	}
+	writeFile("rstdocs/types.rst", rst)
 
 	typeNames := []string{}
 	for _, t := range p.Types {
@@ -125,9 +143,7 @@ API
 
 	rst += renderTypes(fset, p, types)
 
-	if err := os.WriteFile("rstdocs/api.rst", []byte(rst), 0666); err != nil {
-		panic(err)
-	}
+	writeFile("rstdocs/api.rst", rst)
 }
 
 func renderTypes(
@@ -254,10 +270,7 @@ Usage Example
 		}
 	}
 
-	if err := os.WriteFile(
-		"rstdocs/index.rst", []byte(rst), 0666); err != nil {
-		panic(err)
-	}
+	writeFile("rstdocs/index.rst", rst)
 }
 
 func renderCodegenPage() {
@@ -279,8 +292,5 @@ Codegen
 
 	rst += string(printRST(p.Printer(), p.Parser().Parse(p.Doc)))
 
-	if err := os.WriteFile(
-		"rstdocs/codegen.rst", []byte(rst), 0666); err != nil {
-		panic(err)
-	}
+	writeFile("rstdocs/codegen.rst", rst)
 }
