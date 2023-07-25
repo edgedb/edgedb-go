@@ -408,7 +408,7 @@ func (p Client) WithoutConfig(key ...string) *Client { // nolint:gocritic
 	return &p
 }
 
-// ModuleAlias is an alias name and module name pare.
+// ModuleAlias is an alias name and module name pair.
 type ModuleAlias struct {
 	Alias  string
 	Module string
