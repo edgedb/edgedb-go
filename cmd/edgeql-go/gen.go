@@ -185,7 +185,7 @@ func generateSlice(
 ) ([]goType, []string, error) {
 	types, imports, err := generateType(
 		desc.Fields[0].Desc,
-		desc.Fields[0].Required,
+		true,
 		path,
 		mixedCaps,
 	)
@@ -204,7 +204,7 @@ func generateSliceV2(
 ) ([]goType, []string, error) {
 	types, imports, err := generateTypeV2(
 		&desc.Fields[0].Desc,
-		desc.Fields[0].Required,
+		true,
 		path,
 		mixedCaps,
 	)
@@ -223,7 +223,7 @@ func generateObject(
 	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var imports []string
-	typ := goStruct{Name: nameFromPath(path)}
+	typ := goStruct{Name: nameFromPath(path), Required: required}
 	types := []goType{&typ}
 
 	for _, field := range desc.Fields {
@@ -258,12 +258,12 @@ func generateObject(
 
 func generateObjectV2(
 	desc *descriptor.V2,
-	_ bool,
+	required bool,
 	path []string,
 	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var imports []string
-	typ := goStruct{Name: nameFromPath(path)}
+	typ := goStruct{Name: nameFromPath(path), Required: required}
 	types := []goType{&typ}
 
 	for _, field := range desc.Fields {
@@ -303,7 +303,7 @@ func generateTuple(
 	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var imports []string
-	typ := &goStruct{Name: nameFromPath(path)}
+	typ := &goStruct{Name: nameFromPath(path), Required: required}
 	types := []goType{typ}
 
 	for _, field := range desc.Fields {
@@ -339,12 +339,12 @@ func generateTuple(
 
 func generateTupleV2(
 	desc *descriptor.V2,
-	_ bool,
+	required bool,
 	path []string,
 	mixedCaps bool,
 ) ([]goType, []string, error) {
 	var imports []string
-	typ := &goStruct{Name: nameFromPath(path)}
+	typ := &goStruct{Name: nameFromPath(path), Required: required}
 	types := []goType{typ}
 
 	for _, field := range desc.Fields {

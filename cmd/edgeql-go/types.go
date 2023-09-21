@@ -57,6 +57,7 @@ type goStruct struct {
 	Name          string
 	QueryFuncName string
 	Fields        []goStructField
+	Required      bool
 }
 
 func (t *goStruct) Reference() string { return t.Name }

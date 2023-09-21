@@ -16,6 +16,7 @@ var selectObjectCmd string
 // is part of the return type for
 // selectObject()
 type selectObjectResult struct {
+	edgedb.Optional
 	Name     string                         `edgedb:"Name"`
 	Language string                         `edgedb:"Language"`
 	Params   []selectObjectResultParamsItem `edgedb:"Params"`

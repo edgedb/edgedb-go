@@ -25,6 +25,7 @@ type selectTupleResult struct {
 // is part of the return type for
 // selectTuple()
 type selectTupleResult2Item struct {
+	edgedb.Optional
 	Element0 edgedb.OptionalStr   `edgedb:"0"`
 	Element1 edgedb.OptionalInt64 `edgedb:"1"`
 }

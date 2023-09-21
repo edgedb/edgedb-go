@@ -18,8 +18,8 @@ var selectArrayCmd string
 func selectArray(
 	ctx context.Context,
 	client *edgedb.Client,
-) ([]edgedb.OptionalStr, error) {
-	var result []edgedb.OptionalStr
+) ([]string, error) {
+	var result []string
 
 	err := client.QuerySingle(
 		ctx,
