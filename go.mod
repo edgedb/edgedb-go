@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d
+	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/sigurn/crc16 v0.0.0-20211026045750-20ab5afb07e3
 	github.com/stretchr/testify v1.8.4
 	github.com/xdg/scram v1.0.5

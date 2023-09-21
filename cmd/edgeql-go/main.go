@@ -38,6 +38,7 @@ import (
 
 	edgedb "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
+	toml "github.com/pelletier/go-toml/v2"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -124,16 +125,21 @@ func isEdgeDBTOML(file string) (bool, error) {
 	return false, err
 }
 
-func getProjectRoot() (string, error) {
+type project struct {
+	rootDir       string
+	migrationsDir string
+}
+
+func getProject() (*project, error) {
 	dir, err := filepath.Abs(".")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for {
 		parent := filepath.Dir(dir)
 		if dir == parent {
-			return "", fmt.Errorf(
+			return nil, fmt.Errorf(
 				"could not find edgedb.toml, " +
 					"fix this by initializing a project, run: " +
 					" edgedb project init",
@@ -143,11 +149,31 @@ func getProjectRoot() (string, error) {
 		file := filepath.Join(dir, "edgedb.toml")
 		isTOML, err := isEdgeDBTOML(file)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		if isTOML {
-			return dir, nil
+			data, err := os.ReadFile(file)
+			if err != nil {
+				return nil, err
+			}
+
+			var x struct {
+				Project struct {
+					SchemaDir string `toml:"schema-dir"`
+				}
+			}
+			x.Project.SchemaDir = "dbschema"
+			err = toml.Unmarshal(data, &x)
+			if err != nil {
+				return nil, err
+			}
+
+			return &project{
+				rootDir: dir,
+				migrationsDir: filepath.Join(
+					dir, x.Project.SchemaDir, "migrations"),
+			}, nil
 		}
 		dir = parent
 	}
@@ -155,21 +181,21 @@ func getProjectRoot() (string, error) {
 
 func queueFilesInBackground() chan string {
 	queue := make(chan string)
-	root, err := getProjectRoot()
+	p, err := getProject()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	go func() {
 		er := filepath.WalkDir(
-			root,
+			p.rootDir,
 			func(f string, d fs.DirEntry, e error) error {
 				if e != nil {
 					return e
 				}
 
 				if d.IsDir() &&
-					f == filepath.Join(root, "dbschema/migrations") {
+					f == p.migrationsDir {
 					return fs.SkipDir
 				}
 
