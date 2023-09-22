@@ -2,5 +2,8 @@
 // is part of the return type for
 // {{.QueryFuncName}}()
 type {{.Name}} struct {
+{{- if not .Required}}
+edgedb.Optional
+{{- end}}
 {{range .Fields}}    {{.GoName}} {{.Type}} `{{.Tag}}`
 {{end}}}

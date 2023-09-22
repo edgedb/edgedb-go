@@ -18,8 +18,8 @@ var selectScalarsCmd string
 func selectScalars(
 	ctx context.Context,
 	client *edgedb.Client,
-) ([]edgedb.OptionalMemory, error) {
-	var result []edgedb.OptionalMemory
+) ([]edgedb.Memory, error) {
+	var result []edgedb.Memory
 
 	err := client.Query(
 		ctx,
