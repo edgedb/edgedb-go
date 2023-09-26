@@ -148,7 +148,7 @@ optional.
 
 .. code-block:: go
 
-    type User Struct {
+    type User struct {
         edgedb.Optional
         Email string `edgedb:"email"`
     }
@@ -174,6 +174,21 @@ using sets as parameters.
 Nested structures are also not directly allowed but you can use `json <https://www.edgedb.com/docs/edgeql/insert#bulk-inserts>`_
 instead.
 
+By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
+To treat an embedded struct's fields as part of the parent struct's fields
+tag the embedded struct with `edgedb:$inline`.
+
+.. code-block:: go
+
+    type Object struct {
+        ID edgedb.UUID
+    }
+    
+    type User struct {
+        Object `edgedb:$inline`
+        Name string
+    }
+    
 
 Custom Marshalers
 -----------------
