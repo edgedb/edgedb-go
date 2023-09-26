@@ -130,7 +130,7 @@
 // query results. The edgedb.Optional struct can be embedded to make structs
 // optional.
 //
-//	type User Struct {
+//	type User struct {
 //	    edgedb.Optional
 //	    Email string `edgedb:"email"`
 //	}
@@ -153,6 +153,19 @@
 //
 // Nested structures are also not directly allowed but you can use [json]
 // instead.
+//
+// By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
+// To treat an embedded struct's fields as part of the parent struct's fields
+// tag the embedded struct with `edgedb:$inline`.
+//
+//	type Object struct {
+//	    ID edgedb.UUID
+//	}
+//
+//	type User struct {
+//	    Object `edgedb:$inline`
+//	    Name string
+//	}
 //
 // # Custom Marshalers
 //
