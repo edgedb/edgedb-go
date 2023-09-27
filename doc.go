@@ -155,15 +155,15 @@
 // instead.
 //
 // By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
-// To treat an embedded struct's fields as part of the parent struct's fields
-// tag the embedded struct with `edgedb:$inline`.
+// To treat an embedded struct's fields as part of the parent struct's fields,
+// tag the embedded struct with `edgedb:"$inline"`.
 //
 //	type Object struct {
 //	    ID edgedb.UUID
 //	}
 //
 //	type User struct {
-//	    Object `edgedb:$inline`
+//	    Object `edgedb:"$inline"`
 //	    Name string
 //	}
 //
