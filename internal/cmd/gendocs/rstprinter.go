@@ -114,5 +114,6 @@ func (p *rstPrinter) text(out *bytes.Buffer, x []comment.Text) {
 func (p *rstPrinter) escape(out *bytes.Buffer, s string) {
 	s = strings.ReplaceAll(s, "*", "\\*")
 	s = strings.ReplaceAll(s, "\\\\*", "\\*")
+	s = strings.ReplaceAll(s, "`", "\\`")
 	out.WriteString(s)
 }
