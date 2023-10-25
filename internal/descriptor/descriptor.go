@@ -71,6 +71,9 @@ const (
 
 	// Compound represents the compound descriptor type.
 	Compound
+
+	// MultiRange represents the multi range descriptor type.
+	MultiRange
 )
 
 // Descriptor is a type descriptor
@@ -143,6 +146,15 @@ func Pop(
 			desc = Descriptor{typ, id, []*Field{{
 				Desc: descriptors[r.PopUint16()],
 			}}}
+		case MultiRange:
+			fields := []*Field{{
+				Desc: descriptors[r.PopUint16()],
+			}}
+			err := assertArrayDimensions(r)
+			if err != nil {
+				return Descriptor{}, err
+			}
+			desc = Descriptor{typ, id, fields}
 		default:
 			if 0x80 <= typ && typ <= 0xff {
 				// ignore unknown type annotations

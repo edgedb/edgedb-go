@@ -7806,3 +7806,48 @@ func TestSendAndReceiveRangeLocalDate(t *testing.T) {
 		})
 	}
 }
+
+func serverHasMultiRange(t *testing.T) bool {
+	var hasMultiRange bool
+	err := client.QuerySingle(
+		context.Background(),
+		`SELECT count((
+			SELECT names := schema::ObjectType.name
+			FILTER names = 'schema::MultiRange'
+		)) = 1`,
+		&hasMultiRange,
+	)
+	require.NoError(t, err)
+	return hasMultiRange
+}
+
+func TestSendAndReceiveInt32MultiRange(t *testing.T) {
+	if !serverHasMultiRange(t) {
+		t.Skip("server lacks std::MultiRange support")
+	}
+
+	ctx := context.Background()
+
+	var result []types.RangeInt32
+
+	multiRange := make([]types.RangeInt32, 2)
+
+	multiRange[0] = types.NewRangeInt32(
+		types.NewOptionalInt32(1),
+		types.NewOptionalInt32(1),
+		true,
+		false,
+	)
+
+	multiRange[1] = types.NewRangeInt32(
+		types.NewOptionalInt32(1),
+		types.NewOptionalInt32(10),
+		true,
+		false,
+	)
+
+	query := "SELECT <array<range<int32>>>$0"
+	err := client.QuerySingle(ctx, query, &result, multiRange)
+	require.NoError(t, err)
+	assert.Equal(t, multiRange, result)
+}
