@@ -147,10 +147,6 @@ func PopV2(
 			fields := []*FieldV2{{
 				Desc: descriptorsV2[r.PopUint16()],
 			}}
-			err := assertArrayDimensions(r)
-			if err != nil {
-				return V2{}, err
-			}
 			desc = V2{MultiRange, id, name, true, ancestors, fields}
 		default:
 			if 0x80 <= typ && typ <= 0xff {

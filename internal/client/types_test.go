@@ -7846,7 +7846,7 @@ func TestSendAndReceiveInt32MultiRange(t *testing.T) {
 		false,
 	)
 
-	query := "SELECT <array<range<int32>>>$0"
+	query := "SELECT <multirange<int32>$0"
 	err := client.QuerySingle(ctx, query, &result, multiRange)
 	require.NoError(t, err)
 	assert.Equal(t, multiRange, result)

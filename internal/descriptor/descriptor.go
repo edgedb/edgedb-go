@@ -150,10 +150,6 @@ func Pop(
 			fields := []*Field{{
 				Desc: descriptors[r.PopUint16()],
 			}}
-			err := assertArrayDimensions(r)
-			if err != nil {
-				return Descriptor{}, err
-			}
 			desc = Descriptor{typ, id, fields}
 		default:
 			if 0x80 <= typ && typ <= 0xff {
