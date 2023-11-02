@@ -7806,3 +7806,28 @@ func TestSendAndReceiveRangeLocalDate(t *testing.T) {
 		})
 	}
 }
+
+func TestCustomSequenceTypeHandling(t *testing.T) {
+	ddl := `
+		CREATE SCALAR TYPE SampleSequence extending std::sequence;
+		CREATE TYPE Sample { CREATE PROPERTY val -> SampleSequence; };
+	`
+	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
+		var result struct {
+			Val types.OptionalInt64 `edgedb:"val"`
+		}
+
+		// Decode value
+		err := tx.QuerySingle(ctx, `
+			with inserted_sample := (insert Sample{})
+			select inserted_sample { val }
+			`,
+			&result,
+		)
+		assert.NoError(t, err)
+
+		val, isSet := result.Val.Get()
+		assert.Equal(t, int64(1), val)
+		assert.True(t, isSet)
+	})
+}
