@@ -156,7 +156,7 @@ func GetScalarDescriptorV2(
 	desc *descriptor.V2,
 ) *descriptor.V2 {
 	if len(desc.Ancestors) > 0 {
-		desc = &desc.Ancestors[0].Desc
+		return &desc.Ancestors[len(desc.Ancestors)-1].Desc
 	}
 
 	return desc
