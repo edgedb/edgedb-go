@@ -7834,20 +7834,35 @@ func TestSendAndReceiveInt32MultiRange(t *testing.T) {
 
 	multiRange[0] = types.NewRangeInt32(
 		types.NewOptionalInt32(1),
-		types.NewOptionalInt32(1),
+		types.NewOptionalInt32(5),
 		true,
 		false,
 	)
 
 	multiRange[1] = types.NewRangeInt32(
-		types.NewOptionalInt32(1),
+		types.NewOptionalInt32(8),
 		types.NewOptionalInt32(10),
 		true,
 		false,
 	)
 
-	query := "SELECT <multirange<int32>$0"
+	query := "SELECT <multirange<int32>>$0"
 	err := client.QuerySingle(ctx, query, &result, multiRange)
 	require.NoError(t, err)
 	assert.Equal(t, multiRange, result)
+}
+
+func TestMultiRangeContains(t *testing.T) {
+	if !serverHasMultiRange(t) {
+		t.Skip("server lacks std::MultiRange support")
+	}
+
+	ctx := context.Background()
+
+	var result bool
+
+	query := "select contains(multirange([range(1, 5), range(8,10)]), 9)"
+	err := client.QuerySingle(ctx, query, &result)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
 }

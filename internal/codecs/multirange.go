@@ -31,7 +31,7 @@ func buildMultiRangeEncoder(
 	desc descriptor.Descriptor,
 	version internal.ProtocolVersion,
 ) (Encoder, error) {
-	child, err := BuildEncoder(desc.Fields[0].Desc, version)
+	child, err := buildRangeEncoder(desc.Fields[0].Desc, version)
 
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func buildMultiRangeEncoderV2(
 	desc *descriptor.V2,
 	version internal.ProtocolVersion,
 ) (Encoder, error) {
-	child, err := BuildEncoderV2(&desc.Fields[0].Desc, version)
+	child, err := buildRangeEncoderV2(&desc.Fields[0].Desc, version)
 
 	if err != nil {
 		return nil, err
@@ -64,16 +64,17 @@ func (c *multiRangeEncoder) Encode(
 	w *buff.Writer,
 	val interface{},
 	path Path,
-	required bool, // todo do we need this?
+	required bool,
 ) error {
 	in := reflect.ValueOf(val)
+
 	if in.Kind() != reflect.Slice {
 		return fmt.Errorf(
 			"expected %v to be a slice got: %T", path, val,
 		)
 	}
 
-	if in.IsNil() && required { // todo do we need this?
+	if in.IsNil() && required {
 		return missingValueError(val, path)
 	}
 
@@ -115,7 +116,7 @@ func buildMultiRangeDecoder(
 		)
 	}
 
-	child, err := BuildDecoder(desc.Fields[0].Desc, typ.Elem(), path)
+	child, err := buildRangeDecoder(desc.Fields[0].Desc, typ.Elem(), path)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,8 @@ func buildMultiRangeDecoderV2(
 		)
 	}
 
-	child, err := BuildDecoderV2(&desc.Fields[0].Desc, typ.Elem(), path)
+	child, err := buildRangeDecoderV2(&desc.Fields[0].Desc, typ.Elem(), path)
+
 	if err != nil {
 		return nil, err
 	}
@@ -147,21 +149,21 @@ type multiRangeDecoder struct {
 	child Decoder
 	typ   reflect.Type
 
-	// step is the element width in bytes for a go array of type `MultiRange.typ`.
+	// step is the element width in bytes for a go array of type `Array.typ`.
 	step int
 }
 
 func (c *multiRangeDecoder) DescriptorID() types.UUID { return c.id }
 
 func (c *multiRangeDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
-	upper := int32(r.PopUint32())
-	n := int(upper)
+	elmCount := int(int32(r.PopUint32()))
 
 	slice := (*sliceHeader)(out)
-	setSliceLen(slice, c.typ, n)
+	setSliceLen(slice, c.typ, elmCount)
 
-	for i := 0; i < n; i++ {
+	for i := 0; i < elmCount; i++ {
 		elmLen := r.PopUint32()
+
 		if elmLen == 0xffffffff {
 			continue
 		}
@@ -170,16 +172,11 @@ func (c *multiRangeDecoder) Decode(r *buff.Reader, out unsafe.Pointer) error {
 			r.PopSlice(elmLen),
 			pAdd(slice.Data, uintptr(i*c.step)),
 		)
+
 		if err != nil {
 			return err
 		}
 	}
-	return nil
-}
 
-func (c *multiRangeDecoder) DecodeMissing(out unsafe.Pointer) {
-	slice := (*sliceHeader)(out)
-	slice.Data = nilPointer
-	slice.Len = 0
-	slice.Cap = 0
+	return nil
 }
