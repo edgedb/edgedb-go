@@ -102,8 +102,6 @@ func BuildEncoder(
 		return buildArrayEncoder(desc, version)
 	case descriptor.Range:
 		return buildRangeEncoder(desc, version)
-	case descriptor.MultiRange:
-		return buildMultiRangeEncoder(desc, version)
 	default:
 		return nil, fmt.Errorf(
 			"building encoder: unknown descriptor type 0x%x",
@@ -317,8 +315,6 @@ func BuildDecoder(
 		return buildArrayDecoder(desc, typ, path)
 	case descriptor.Range:
 		return buildRangeDecoder(desc, typ, path)
-	case descriptor.MultiRange:
-		return buildMultiRangeDecoder(desc, typ, path)
 	default:
 		return nil, fmt.Errorf(
 			"building decoder: unknown descriptor type 0x%x",

@@ -27,19 +27,6 @@ import (
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-func buildMultiRangeEncoder(
-	desc descriptor.Descriptor,
-	version internal.ProtocolVersion,
-) (Encoder, error) {
-	child, err := buildRangeEncoder(desc.Fields[0].Desc, version)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &multiRangeEncoder{desc.ID, child}, nil
-}
-
 func buildMultiRangeEncoderV2(
 	desc *descriptor.V2,
 	version internal.ProtocolVersion,
@@ -103,25 +90,6 @@ func (c *multiRangeEncoder) Encode(
 
 	w.EndBytes()
 	return nil
-}
-
-func buildMultiRangeDecoder(
-	desc descriptor.Descriptor,
-	typ reflect.Type,
-	path Path,
-) (Decoder, error) {
-	if typ.Kind() != reflect.Slice {
-		return nil, fmt.Errorf(
-			"expected %v to be a Slice, got %v", path, typ.Kind(),
-		)
-	}
-
-	child, err := buildRangeDecoder(desc.Fields[0].Desc, typ.Elem(), path)
-	if err != nil {
-		return nil, err
-	}
-
-	return &multiRangeDecoder{desc.ID, child, typ, calcStep(typ.Elem())}, nil
 }
 
 func buildMultiRangeDecoderV2(
