@@ -36,7 +36,7 @@ NewDateDuration returns a new DateDuration
 
     func (dd DateDuration) MarshalText() ([]byte, error)
 
-MarshalText returns rd marshaled as text.
+MarshalText returns dd marshaled as text.
 
 
 
@@ -58,7 +58,7 @@ MarshalText returns rd marshaled as text.
 
     func (dd *DateDuration) UnmarshalText(b []byte) error
 
-UnmarshalText unmarshals bytes into \*rd.
+UnmarshalText unmarshals bytes into \*dd.
 
 
 
