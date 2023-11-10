@@ -31,8 +31,10 @@ type MultiRangeFloat64 = []RangeFloat64
 // MultiRangeDateTime is a type alias for multi range of RangeDateTime values.
 type MultiRangeDateTime = []RangeDateTime
 
-// MultiRangeLocalDateTime is a type alias for multi range of RangeLocalDateTime values.
+// MultiRangeLocalDateTime is a type alias for multi range of
+// RangeLocalDateTime values.
 type MultiRangeLocalDateTime = []RangeLocalDateTime
 
-// MultiRangeLocalDate is a type alias for multi range of RangeLocalDate values.
+// MultiRangeLocalDate is a type alias for multi range of
+// RangeLocalDate values.
 type MultiRangeLocalDate = []RangeLocalDate
