@@ -7852,7 +7852,6 @@ func TestSendAndReceiveInt32MultiRange(t *testing.T) {
 	assert.Equal(t, multiRange, result)
 }
 
-
 func TestEmptyMultiRange(t *testing.T) {
 	if !serverHasMultiRange(t) {
 		t.Skip("server lacks std::MultiRange support")
