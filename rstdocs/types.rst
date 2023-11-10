@@ -324,6 +324,69 @@ UnmarshalText unmarshals bytes into \*m.
 
 
 
+*type* MultiRangeDateTime
+-------------------------
+
+
+.. code-block:: go
+
+    type MultiRangeDateTime = []RangeDateTime
+
+
+*type* MultiRangeFloat32
+------------------------
+
+
+.. code-block:: go
+
+    type MultiRangeFloat32 = []RangeFloat32
+
+
+*type* MultiRangeFloat64
+------------------------
+
+
+.. code-block:: go
+
+    type MultiRangeFloat64 = []RangeFloat64
+
+
+*type* MultiRangeInt32
+----------------------
+
+
+.. code-block:: go
+
+    type MultiRangeInt32 = []RangeInt32
+
+
+*type* MultiRangeInt64
+----------------------
+
+
+.. code-block:: go
+
+    type MultiRangeInt64 = []RangeInt64
+
+
+*type* MultiRangeLocalDate
+--------------------------
+
+
+.. code-block:: go
+
+    type MultiRangeLocalDate = []RangeLocalDate
+
+
+*type* MultiRangeLocalDateTime
+------------------------------
+
+
+.. code-block:: go
+
+    type MultiRangeLocalDateTime = []RangeLocalDateTime
+
+
 *type* Optional
 ---------------
 
