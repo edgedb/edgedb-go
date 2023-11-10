@@ -6701,7 +6701,7 @@ func TestReceiveOptionalArray(t *testing.T) {
 	})
 }
 
-func TestSendOptioanlArray(t *testing.T) {
+func TestSendOptionalArray(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
 		Val []int64 `edgedb:"val"`
@@ -7828,7 +7828,7 @@ func TestSendAndReceiveInt32MultiRange(t *testing.T) {
 
 	ctx := context.Background()
 
-	var result []types.RangeInt32
+	var result types.MultiRangeInt32
 
 	multiRange := make([]types.RangeInt32, 2)
 
@@ -7850,6 +7850,24 @@ func TestSendAndReceiveInt32MultiRange(t *testing.T) {
 	err := client.QuerySingle(ctx, query, &result, multiRange)
 	require.NoError(t, err)
 	assert.Equal(t, multiRange, result)
+}
+
+
+func TestEmptyMultiRange(t *testing.T) {
+	if !serverHasMultiRange(t) {
+		t.Skip("server lacks std::MultiRange support")
+	}
+
+	ctx := context.Background()
+
+	var result types.MultiRangeFloat32
+
+	emptyMultiRange := []types.RangeFloat32{}
+
+	query := "SELECT <multirange<float32>>$0"
+	err := client.QuerySingle(ctx, query, &result, emptyMultiRange)
+	require.NoError(t, err)
+	assert.Equal(t, emptyMultiRange, result)
 }
 
 func TestMultiRangeContains(t *testing.T) {
