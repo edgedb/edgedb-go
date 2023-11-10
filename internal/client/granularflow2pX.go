@@ -290,10 +290,8 @@ func (c *protocolConnection) codecsFromIDsV2(
 			return nil, nil
 		}
 
-		in, err = codecs.BuildEncoderV2(
-			desc.(*descriptor.V2),
-			c.protocolVersion,
-		)
+		d := desc.(descriptor.V2)
+		in, err = codecs.BuildEncoderV2(&d, c.protocolVersion)
 		if err != nil {
 			return nil, &invalidArgumentError{msg: err.Error()}
 		}
