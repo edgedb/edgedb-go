@@ -327,6 +327,8 @@ UnmarshalText unmarshals bytes into \*m.
 *type* MultiRangeDateTime
 -------------------------
 
+MultiRangeDateTime is a type alias for multi range of RangeDateTime values.
+
 
 .. code-block:: go
 
@@ -335,6 +337,8 @@ UnmarshalText unmarshals bytes into \*m.
 
 *type* MultiRangeFloat32
 ------------------------
+
+MultiRangeFloat32 is a type alias for multi range of RangeFloat32 values.
 
 
 .. code-block:: go
@@ -345,6 +349,8 @@ UnmarshalText unmarshals bytes into \*m.
 *type* MultiRangeFloat64
 ------------------------
 
+MultiRangeFloat64 is a type alias for multi range of RangeFloat64 values.
+
 
 .. code-block:: go
 
@@ -353,6 +359,8 @@ UnmarshalText unmarshals bytes into \*m.
 
 *type* MultiRangeInt32
 ----------------------
+
+MultiRangeInt32 is a type alias for multi range of RangeInt32 values.
 
 
 .. code-block:: go
@@ -363,6 +371,8 @@ UnmarshalText unmarshals bytes into \*m.
 *type* MultiRangeInt64
 ----------------------
 
+MultiRangeInt64 is a type alias for multi range of RangeInt64 values.
+
 
 .. code-block:: go
 
@@ -372,6 +382,9 @@ UnmarshalText unmarshals bytes into \*m.
 *type* MultiRangeLocalDate
 --------------------------
 
+MultiRangeLocalDate is a type alias for multi range of
+RangeLocalDate values.
+
 
 .. code-block:: go
 
@@ -380,6 +393,9 @@ UnmarshalText unmarshals bytes into \*m.
 
 *type* MultiRangeLocalDateTime
 ------------------------------
+
+MultiRangeLocalDateTime is a type alias for multi range of
+RangeLocalDateTime values.
 
 
 .. code-block:: go
