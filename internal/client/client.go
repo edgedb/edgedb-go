@@ -355,7 +355,8 @@ func (p *Client) Query(
 
 // QuerySingle runs a singleton-returning query and returns its element.
 // If the query executes successfully but doesn't return a result
-// a NoDataError is returned.
+// a NoDataError is returned. If the out argument is an optional type the out
+// argument will be set to missing instead of returning a NoDataError.
 func (p *Client) QuerySingle(
 	ctx context.Context,
 	cmd string,
