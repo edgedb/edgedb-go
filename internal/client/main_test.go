@@ -18,15 +18,12 @@ package edgedb
 
 import (
 	"log"
-	"math/rand"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestMain(m *testing.M) {
 	once.Do(initServer)
-	rand.Seed(time.Now().Unix())
 	log.Println("starting client tests")
 	os.Exit(m.Run())
 }

@@ -1,7 +1,7 @@
 quality: lint test bench
 
 lint:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3 run --sort-results
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1 run --sort-results
 
 test:
 	go test -v -count=1 -race -bench=$$^ -timeout=20m ./...

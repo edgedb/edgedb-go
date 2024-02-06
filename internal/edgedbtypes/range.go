@@ -759,7 +759,7 @@ type OptionalRangeDateTime struct {
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o OptionalRangeDateTime) Get() (RangeDateTime, bool) {
+func (o *OptionalRangeDateTime) Get() (RangeDateTime, bool) {
 	return o.val, o.isSet
 }
 
@@ -776,7 +776,7 @@ func (o *OptionalRangeDateTime) Unset() {
 }
 
 // MarshalJSON returns o marshaled as json.
-func (o OptionalRangeDateTime) MarshalJSON() ([]byte, error) {
+func (o *OptionalRangeDateTime) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
 	}
