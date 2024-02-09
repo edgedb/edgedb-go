@@ -420,6 +420,9 @@ var (
 	// NewRelativeDuration returns a new RelativeDuration
 	NewRelativeDuration = edgedbtypes.NewRelativeDuration
 
+	// NewRetryOptions returns the default RetryOptions value.
+	NewRetryOptions = edgedb.NewRetryOptions
+
 	// NewRetryRule returns the default RetryRule value.
 	NewRetryRule = edgedb.NewRetryRule
 
