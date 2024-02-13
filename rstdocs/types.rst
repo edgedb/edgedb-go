@@ -1719,7 +1719,7 @@ OptionalRangeDateTime with its value set to v.
 
 .. code-block:: go
 
-    func (o OptionalRangeDateTime) Get() (RangeDateTime, bool)
+    func (o *OptionalRangeDateTime) Get() (RangeDateTime, bool)
 
 Get returns the value and a boolean indicating if the value is present.
 
@@ -1731,7 +1731,7 @@ Get returns the value and a boolean indicating if the value is present.
 
 .. code-block:: go
 
-    func (o OptionalRangeDateTime) MarshalJSON() ([]byte, error)
+    func (o *OptionalRangeDateTime) MarshalJSON() ([]byte, error)
 
 MarshalJSON returns o marshaled as json.
 
