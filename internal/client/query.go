@@ -38,6 +38,7 @@ type query struct {
 	args         []interface{}
 	capabilities uint64
 	state        map[string]interface{}
+	parse        bool
 }
 
 func (q *query) flat() bool {
@@ -66,6 +67,7 @@ func newQuery(
 	capabilities uint64,
 	state map[string]interface{},
 	out interface{},
+	parse bool,
 ) (*query, error) {
 	var (
 		expCard Cardinality
@@ -82,6 +84,7 @@ func newQuery(
 			args:         args,
 			capabilities: capabilities,
 			state:        state,
+			parse:        parse,
 		}, nil
 	case "Query":
 		expCard = Many
@@ -107,6 +110,7 @@ func newQuery(
 		args:         args,
 		capabilities: capabilities,
 		state:        state,
+		parse:        parse,
 	}
 
 	var err error
@@ -159,7 +163,15 @@ func runQuery(
 		}
 	}
 
-	q, err := newQuery(method, cmd, args, c.capabilities1pX(), state, out)
+	q, err := newQuery(
+		method,
+		cmd,
+		args,
+		c.capabilities1pX(),
+		state,
+		out,
+		true,
+	)
 	if err != nil {
 		return err
 	}

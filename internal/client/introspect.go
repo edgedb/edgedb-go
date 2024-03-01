@@ -94,6 +94,7 @@ func DescribeV2(
 		fmt:          Binary,
 		expCard:      Many,
 		capabilities: userCapabilities,
+		parse:        true,
 	}
 
 	r, err := conn.conn.acquireReader(ctx)

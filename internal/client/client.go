@@ -325,6 +325,7 @@ func (p *Client) Execute(
 		conn.capabilities1pX(),
 		copyState(p.state),
 		nil,
+		true,
 	)
 	if err != nil {
 		return err
