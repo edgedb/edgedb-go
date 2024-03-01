@@ -24,6 +24,14 @@ import (
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
+var (
+	// NoOpDecoder is a noOpDecoder
+	NoOpDecoder = noOpDecoder{}
+
+	// NoOpEncoder is a noOpEncoder
+	NoOpEncoder = noOpEncoder{}
+)
+
 // noOpDecoder decodes empty blocks i.e. does nothing.
 //
 //	There is one special type with type id of zero:

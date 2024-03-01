@@ -30,16 +30,22 @@ func (c *protocolConnection) execGranularFlow2pX(
 	r *buff.Reader,
 	q *query,
 ) error {
-	ids, ok := c.getCachedTypeIDs(q)
-	if !ok {
-		return c.pesimistic2pX(r, q)
-	}
+	var cdcs *codecPair
+	if q.parse {
+		ids, ok := c.getCachedTypeIDs(q)
+		if !ok {
+			return c.pesimistic2pX(r, q)
+		}
 
-	cdcs, err := c.codecsFromIDsV2(ids, q)
-	if err != nil {
-		return err
-	} else if cdcs == nil {
-		return c.pesimistic2pX(r, q)
+		var err error
+		cdcs, err = c.codecsFromIDsV2(ids, q)
+		if err != nil {
+			return err
+		} else if cdcs == nil {
+			return c.pesimistic2pX(r, q)
+		}
+	} else {
+		cdcs = &codecPair{in: codecs.NoOpEncoder, out: codecs.NoOpDecoder}
 	}
 
 	return c.execute2pX(r, q, cdcs)
