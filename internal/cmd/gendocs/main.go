@@ -225,7 +225,8 @@ func renderIndexPage() {
 		panic(err)
 	}
 
-	rst := `
+	rst := `.. _edgedb-go-intro:
+
 ================
 EdgeDB Go Driver
 ================

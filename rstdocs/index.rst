@@ -1,3 +1,4 @@
+.. _edgedb-go-intro:
 
 ================
 EdgeDB Go Driver
