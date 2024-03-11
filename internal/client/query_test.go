@@ -71,20 +71,20 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 func TestObjectWithoutID(t *testing.T) {
 	ctx := context.Background()
 
-	type Database struct {
+	type Function struct {
 		Name string `edgedb:"name"`
 	}
 
-	var result Database
+	var result Function
 	err := client.QuerySingle(
 		ctx, `
-		SELECT sys::Database{ name }
-		FILTER .name = 'edgedb'
+		SELECT schema::Function{ name }
+		FILTER .name = 'std::str_trim'
 		LIMIT 1`,
 		&result,
 	)
 	assert.NoError(t, err)
-	assert.Equal(t, "edgedb", result.Name)
+	assert.Equal(t, "std::str_trim", result.Name)
 }
 
 func TestWrongNumberOfArguments(t *testing.T) {
