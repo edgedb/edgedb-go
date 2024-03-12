@@ -1156,12 +1156,12 @@ func (dd DateDuration) String() string {
 	return strings.Join(buf, "")
 }
 
-// MarshalText returns rd marshaled as text.
+// MarshalText returns dd marshaled as text.
 func (dd DateDuration) MarshalText() ([]byte, error) {
 	return []byte(dd.String()), nil
 }
 
-// UnmarshalText unmarshals bytes into *rd.
+// UnmarshalText unmarshals bytes into *dd.
 func (dd *DateDuration) UnmarshalText(b []byte) error {
 	str := string(b)
 	if !strings.HasPrefix(str, "P") {

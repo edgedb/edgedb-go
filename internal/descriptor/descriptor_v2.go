@@ -140,6 +140,19 @@ func PopV2(
 			}
 			fields := scalarFields2pX(r, descriptorsV2, unionOperation)
 			desc = V2{Compound, id, name, true, nil, fields}
+		case MultiRange:
+			name := r.PopString()
+			r.PopUint8() // schema_defined
+			ancestors := scalarFields2pX(r, descriptorsV2, false)
+			fields := []*FieldV2{{
+				Desc: V2{
+					Type: Range,
+					Fields: []*FieldV2{{
+						Desc: descriptorsV2[r.PopUint16()],
+					}},
+				},
+			}}
+			desc = V2{MultiRange, id, name, true, ancestors, fields}
 		default:
 			if 0x80 <= typ && typ <= 0xff {
 				// ignore unknown type annotations
