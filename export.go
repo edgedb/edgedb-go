@@ -71,6 +71,10 @@ type (
 	// ErrorTag is the argument type to Error.HasTag().
 	ErrorTag = edgedb.ErrorTag
 
+	// Executor is a common interface between Client and Tx,
+	// that can run queries on an EdgeDB database.
+	Executor = edgedb.Executor
+
 	// IsolationLevel documentation can be found here
 	// https://www.edgedb.com/docs/reference/edgeql/tx_start#parameters
 	IsolationLevel = edgedb.IsolationLevel

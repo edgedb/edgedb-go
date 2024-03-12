@@ -47,6 +47,18 @@ ErrorTag is the argument type to Error.HasTag().
     type ErrorTag = edgedb.ErrorTag
 
 
+*type* Executor
+---------------
+
+Executor is a common interface between Client and Tx,
+that can run queries on an EdgeDB database.
+
+
+.. code-block:: go
+
+    type Executor = edgedb.Executor
+
+
 *type* IsolationLevel
 ---------------------
 
