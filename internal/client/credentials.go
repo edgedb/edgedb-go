@@ -107,7 +107,8 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 	}
 
 	if inMap("database", data) && inMap("branch", data) {
-		return nil, errors.New("`database` and `branch` are mutually exclusive")
+		return nil, errors.New(
+			"`database` and `branch` are mutually exclusive")
 	}
 
 	if database, ok := data["database"]; ok {

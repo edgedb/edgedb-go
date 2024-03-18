@@ -454,7 +454,9 @@ func (r *configResolver) resolveOptions(
 }
 
 func queryContains(k string, m map[string]string) bool {
-	return inMap(k, m) || inMap(fmt.Sprintf("%s_env", k), m) || inMap(fmt.Sprintf("%s_file", k), m)
+	return inMap(k, m) ||
+		inMap(fmt.Sprintf("%s_env", k), m) ||
+		inMap(fmt.Sprintf("%s_file", k), m)
 }
 
 func (r *configResolver) resolveDSN(
@@ -511,8 +513,8 @@ func (r *configResolver) resolveDSN(
 		if err != nil {
 			return err
 		} else if val.val != nil {
-			db := strings.TrimPrefix(val.val.(string), "/")
-			if e := r.setBranch(db, source+val.source); e != nil {
+			br := strings.TrimPrefix(val.val.(string), "/")
+			if e := r.setBranch(br, source+val.source); e != nil {
 				return e
 			}
 		}
@@ -529,13 +531,14 @@ func (r *configResolver) resolveDSN(
 			if err != nil {
 				return err
 			} else if val.val != nil {
-				db := strings.TrimPrefix(val.val.(string), "/")
-				if e := r.setBranch(db, source+val.source); e != nil {
+				br := strings.TrimPrefix(val.val.(string), "/")
+				if e := r.setBranch(br, source+val.source); e != nil {
 					return e
 				}
 			}
 		} else {
-			val, err = popDSNValue(query, db, "database", r.database.val == nil)
+			val, err = popDSNValue(
+				query, db, "database", r.database.val == nil)
 			if err != nil {
 				return err
 			} else if val.val != nil {
@@ -952,11 +955,9 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		}
 		database = r.database.val.(string)
 		branch = database
-	} else {
-		if r.branch.val != nil {
-			branch = r.branch.val.(string)
-			database = branch
-		}
+	} else if r.branch.val != nil {
+		branch = r.branch.val.(string)
+		database = branch
 	}
 
 	user := "edgedb"
