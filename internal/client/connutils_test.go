@@ -108,6 +108,7 @@ func TestConUtils(t *testing.T) {
 					addr:               dialArgs{"tcp", "localhost:5656"},
 					user:               "user",
 					database:           "edgedb",
+					branch:             "__default__",
 					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
@@ -129,6 +130,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user",
 					password:           "passw",
 					database:           "testdb",
+					branch:             "testdb",
 					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
@@ -157,6 +159,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user2",
 					password:           "passw2",
 					database:           "db2",
+					branch:             "db2",
 					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
@@ -186,6 +189,7 @@ func TestConUtils(t *testing.T) {
 					user:     "user2",
 					password: "passw2",
 					database: "db2",
+					branch:   "db2",
 					serverSettings: newServerSettingValues(map[string][]byte{
 						"ssl": []byte("False"),
 					}),
@@ -210,6 +214,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
+					branch:             "abcdef",
 					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
@@ -225,6 +230,7 @@ func TestConUtils(t *testing.T) {
 					user:               "user3",
 					password:           "123123",
 					database:           "abcdef",
+					branch:             "abcdef",
 					serverSettings:     snc.NewServerSettings(),
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
@@ -308,6 +314,7 @@ func TestConUtils(t *testing.T) {
 					user:               "me",
 					password:           "ask",
 					database:           "db",
+					branch:             "db",
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -333,6 +340,7 @@ func TestConUtils(t *testing.T) {
 					user:               "me",
 					password:           "ask",
 					database:           "db",
+					branch:             "db",
 					waitUntilAvailable: 30 * time.Second,
 					tlsSecurity:        "strict",
 				},
@@ -606,6 +614,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 					}
 				}
 				options.Database = getStr(t, opts, "database")
+				options.Branch = getStr(t, opts, "branch")
 				options.User = getStr(t, opts, "user")
 				if opts["password"] != nil {
 					options.Password.Set(opts["password"].(string))
@@ -649,6 +658,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 					address: fmt.Sprintf("%v:%v", addr[0], addr[1]),
 				}
 				expectedResult.database = res["database"].(string)
+				expectedResult.branch = res["branch"].(string)
 				expectedResult.user = res["user"].(string)
 				if res["password"] != nil {
 					expectedResult.password = res["password"].(string)

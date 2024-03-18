@@ -71,6 +71,13 @@ type Options struct {
 	// environment variable, then project credentials.
 	Database string
 
+	// Branch is the name of the branch to use.
+	//
+	// If not specified, the value is resolved from any compound
+	// argument/option, then from EDGEDB_BRANCH, then any compound environment
+	// variable, then project credentials.
+	Branch string
+
 	// Password to be used for authentication, if the server requires one.
 	//
 	// If not specified, the value is resolved from any compound
