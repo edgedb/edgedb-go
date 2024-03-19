@@ -32,6 +32,7 @@ type credentials struct {
 	port        types.OptionalInt32
 	user        string
 	database    types.OptionalStr
+	branch      types.OptionalStr
 	password    types.OptionalStr
 	ca          types.OptionalBytes
 	tlsSecurity types.OptionalStr
@@ -105,12 +106,25 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		result.host.Set(h)
 	}
 
+	if inMap("database", data) && inMap("branch", data) {
+		return nil, errors.New(
+			"`database` and `branch` are mutually exclusive")
+	}
+
 	if database, ok := data["database"]; ok {
 		db, ok := database.(string)
 		if !ok {
 			return nil, errors.New("`database` must be a string")
 		}
 		result.database.Set(db)
+	}
+
+	if branch, ok := data["branch"]; ok {
+		br, ok := branch.(string)
+		if !ok {
+			return nil, errors.New("`branch` must be a string")
+		}
+		result.branch.Set(br)
 	}
 
 	if password, ok := data["password"]; ok {

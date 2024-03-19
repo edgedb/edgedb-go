@@ -61,6 +61,7 @@ type connConfig struct {
 	user               string
 	password           string
 	database           string
+	branch             string
 	connectTimeout     time.Duration
 	waitUntilAvailable time.Duration
 	tlsCAData          []byte
@@ -127,6 +128,7 @@ type configResolver struct {
 	host               cfgVal // string
 	port               cfgVal // int
 	database           cfgVal // string
+	branch             cfgVal // string
 	user               cfgVal // string
 	password           cfgVal // OptionalStr
 	tlsCAData          cfgVal // []byte
@@ -212,6 +214,17 @@ func (r *configResolver) setDatabase(val, source string) error {
 		return errors.New(`invalid database name: ""`)
 	}
 	r.database = cfgVal{val: val, source: source}
+	return nil
+}
+
+func (r *configResolver) setBranch(val, source string) error {
+	if r.branch.val != nil {
+		return nil
+	}
+	if val == "" {
+		return errors.New(`invalid branch name: ""`)
+	}
+	r.branch = cfgVal{val: val, source: source}
 	return nil
 }
 
@@ -340,6 +353,12 @@ func (r *configResolver) resolveOptions(
 		}
 	}
 
+	if opts.Branch != "" {
+		if e := r.setBranch(opts.Branch, "Branch options"); e != nil {
+			return e
+		}
+	}
+
 	if opts.User != "" {
 		if e := r.setUser(opts.User, "User options"); e != nil {
 			return e
@@ -434,6 +453,12 @@ func (r *configResolver) resolveOptions(
 	return nil
 }
 
+func queryContains(k string, m map[string]string) bool {
+	return inMap(k, m) ||
+		inMap(fmt.Sprintf("%s_env", k), m) ||
+		inMap(fmt.Sprintf("%s_file", k), m)
+}
+
 func (r *configResolver) resolveDSN(
 	dsn, source string,
 	paths *cfgPaths,
@@ -470,14 +495,58 @@ func (r *configResolver) resolveDSN(
 	}
 
 	db := strings.TrimPrefix(uri.Path, "/")
-	val, err = popDSNValue(query, db, "database", r.database.val == nil)
-	if err != nil {
-		return err
-	}
-	if val.val != nil {
-		db := strings.TrimPrefix(val.val.(string), "/")
-		if e := r.setDatabase(db, source+val.source); e != nil {
-			return e
+	if queryContains("branch", query) {
+		if queryContains("database", query) || db != "" {
+			return fmt.Errorf(
+				"`database` and `branch` " +
+					"cannot be present at the same time")
+		}
+
+		if r.database.val != nil {
+			return fmt.Errorf(
+				"`branch` in DSN and %s are mutually exclusive options",
+				r.database.source,
+			)
+		}
+
+		val, err = popDSNValue(query, db, "branch", r.branch.val == nil)
+		if err != nil {
+			return err
+		} else if val.val != nil {
+			br := strings.TrimPrefix(val.val.(string), "/")
+			if e := r.setBranch(br, source+val.source); e != nil {
+				return e
+			}
+		}
+	} else {
+		if r.branch.val != nil {
+			if queryContains("database", query) {
+				return fmt.Errorf(
+					"`database` in DSN and %s are mutually exclusive options",
+					r.branch.source,
+				)
+			}
+
+			val, err = popDSNValue(query, db, "branch", r.branch.val == nil)
+			if err != nil {
+				return err
+			} else if val.val != nil {
+				br := strings.TrimPrefix(val.val.(string), "/")
+				if e := r.setBranch(br, source+val.source); e != nil {
+					return e
+				}
+			}
+		} else {
+			val, err = popDSNValue(
+				query, db, "database", r.database.val == nil)
+			if err != nil {
+				return err
+			} else if val.val != nil {
+				db := strings.TrimPrefix(val.val.(string), "/")
+				if e := r.setDatabase(db, source+val.source); e != nil {
+					return e
+				}
+			}
 		}
 	}
 
@@ -637,6 +706,12 @@ func (r *configResolver) applyCredentials(
 		}
 	}
 
+	if br, ok := creds.branch.Get(); ok && br != "" {
+		if e := r.setBranch(br, source); e != nil {
+			return e
+		}
+	}
+
 	if e := r.setUser(creds.user, source); e != nil {
 		return e
 	}
@@ -661,6 +736,13 @@ func (r *configResolver) applyCredentials(
 func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	if db, ok := os.LookupEnv("EDGEDB_DATABASE"); ok {
 		err := r.setDatabase(db, "EDGEDB_DATABASE environment variable")
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if db, ok := os.LookupEnv("EDGEDB_BRANCH"); ok {
+		err := r.setBranch(db, "EDGEDB_BRANCH environment variable")
 		if err != nil {
 			return false, err
 		}
@@ -862,8 +944,20 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 	}
 
 	database := "edgedb"
+	branch := "__default__"
 	if r.database.val != nil {
+		if r.branch.val != nil {
+			return nil, fmt.Errorf(
+				"%s and %s are mutually exclusive options",
+				r.database.source,
+				r.branch.source,
+			)
+		}
 		database = r.database.val.(string)
+		branch = database
+	} else if r.branch.val != nil {
+		branch = r.branch.val.(string)
+		database = branch
 	}
 
 	user := "edgedb"
@@ -933,6 +1027,7 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		user:               user,
 		password:           password,
 		database:           database,
+		branch:             branch,
 		connectTimeout:     opts.ConnectTimeout,
 		waitUntilAvailable: waitUntilAvailable,
 		serverSettings:     r.serverSettings,
@@ -1168,6 +1263,7 @@ var dsnKeyLookup = map[string][]string{
 	"host":         {"host", "host_env", "host_file"},
 	"port":         {"port", "port_env", "port_file"},
 	"database":     {"database", "database_env", "database_file"},
+	"branch":       {"branch", "branch_env", "branch_file"},
 	"user":         {"user", "user_env", "user_file"},
 	"password":     {"password", "password_env", "password_file"},
 	"tls_ca_file":  {"tls_ca_file", "tls_ca_file_env"},
