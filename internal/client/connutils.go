@@ -1543,6 +1543,11 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 		profile := "default"
 		if r.profile.val != nil {
 			profile = r.profile.val.(string)
+		} else {
+			if p, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
+				r.setProfile(p, "EDGEDB_CLOUD_PROFILE environment variable")
+				profile = r.profile.val.(string)
+			}
 		}
 
 		path := path.Join(dir, "cloud-credentials", profile+".json")
