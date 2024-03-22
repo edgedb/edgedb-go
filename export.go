@@ -288,6 +288,10 @@ var (
 	// The following options are recognized: host, port, user, database, password.
 	CreateClientDSN = edgedb.CreateClientDSN
 
+	// DurationFromNanoseconds creates a Duration represented as microseconds
+	// from a [time.Duration] represented as nanoseconds.
+	DurationFromNanoseconds = edgedbtypes.DurationFromNanoseconds
+
 	// NewDateDuration returns a new DateDuration
 	NewDateDuration = edgedbtypes.NewDateDuration
 

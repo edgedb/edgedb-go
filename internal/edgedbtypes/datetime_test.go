@@ -19,6 +19,7 @@ package edgedbtypes
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -754,6 +755,50 @@ func TestUnmarshalDuration(t *testing.T) {
 			err = json.Unmarshal([]byte(c.input), &notEmpty)
 			require.NoError(t, err)
 			assert.Equal(t, c.expected, notEmpty)
+		})
+	}
+}
+
+func TestAsNanosecondsDuration(t *testing.T) {
+	var durationTruncMicroseconds = func(i int64) time.Duration {
+		return time.Duration(time.Duration(i).Microseconds() * 1000)
+	}
+
+	cases := []struct {
+		input    Duration
+		mustFail bool
+		expected time.Duration
+	}{
+		{Duration(math.MaxInt64), true, time.Duration(0)},
+		{Duration(math.MaxInt64 / 100), true, time.Duration(0)},
+		{Duration(math.MaxInt64/1000 + 1), true, time.Duration(0)},
+		// Maximum possible value:
+		{Duration(math.MaxInt64 / 1000), false,
+			durationTruncMicroseconds(math.MaxInt64)},
+		// Some arbitrary value within range
+		{Duration(math.MaxInt64 / 1452), false,
+			durationTruncMicroseconds(math.MaxInt64 / 1452 * 1000)},
+		{Duration(0), false, time.Duration(0)},
+		{Duration(math.MinInt64), true, time.Duration(0)},
+		{Duration(math.MinInt64 / 100), true, time.Duration(0)},
+		{Duration(math.MinInt64/1000 - 1), true, time.Duration(0)},
+		// Minimum possible value
+		{Duration(math.MinInt64 / 1000), false,
+			durationTruncMicroseconds(math.MinInt64)},
+		// Some arbitrary value within range
+		{Duration(math.MinInt64 / 6946), false,
+			durationTruncMicroseconds(math.MinInt64 / 6946 * 1000)},
+	}
+
+	for _, c := range cases {
+		t.Run(c.input.String(), func(t *testing.T) {
+			d, err := c.input.AsNanoseconds()
+			if c.mustFail {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, c.expected, d)
 		})
 	}
 }

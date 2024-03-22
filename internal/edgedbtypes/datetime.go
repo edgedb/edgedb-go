@@ -660,6 +660,26 @@ func (d Duration) String() string {
 	return strings.Join(buf, "")
 }
 
+// AsNanoseconds returns [time.Duration] represented as nanoseconds,
+// after transforming from Duration microsecond representation.
+// Returns an error if the Duration is too long and would cause an overflow of
+// the internal int64 representation.
+func (d Duration) AsNanoseconds() (time.Duration, error) {
+	if int64(d) > math.MaxInt64/int64(time.Microsecond) ||
+		int64(d) < math.MinInt64/int64(time.Microsecond) {
+		return time.Duration(0), fmt.Errorf(
+			"Duration is too large to be represented as nanoseconds",
+		)
+	}
+	return time.Duration(d) * time.Microsecond, nil
+}
+
+// DurationFromNanoseconds creates a Duration represented as microseconds
+// from a [time.Duration] represented as nanoseconds.
+func DurationFromNanoseconds(d time.Duration) Duration {
+	return Duration(math.RoundToEven(float64(d) / 1e3))
+}
+
 // NewOptionalDuration is a convenience function for creating an
 // OptionalDuration with its value set to v.
 func NewOptionalDuration(v Duration) OptionalDuration {

@@ -75,6 +75,19 @@ as an int64 microsecond count.
     type Duration int64
 
 
+*function* DurationFromNanoseconds
+..................................
+
+.. code-block:: go
+
+    func DurationFromNanoseconds(d time.Duration) Duration
+
+DurationFromNanoseconds creates a Duration represented as microseconds
+from a `time.Duration <https://pkg.go.dev/time>`_ represented as nanoseconds.
+
+
+
+
 *function* ParseDuration
 ........................
 
@@ -83,6 +96,21 @@ as an int64 microsecond count.
     func ParseDuration(s string) (Duration, error)
 
 ParseDuration parses an EdgeDB duration string.
+
+
+
+
+*method* AsNanoseconds
+......................
+
+.. code-block:: go
+
+    func (d Duration) AsNanoseconds() (time.Duration, error)
+
+AsNanoseconds returns `time.Duration <https://pkg.go.dev/time>`_ represented as nanoseconds,
+after transforming from Duration microsecond representation.
+Returns an error if the Duration is too long and would cause an overflow of
+the internal int64 representation.
 
 
 
