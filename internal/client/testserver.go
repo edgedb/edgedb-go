@@ -192,7 +192,6 @@ func initOptions(info serverInfo) {
 		Port:     info.Port,
 		User:     "test",
 		Password: edgedbtypes.NewOptionalStr("shhh"),
-		Database: "edgedb",
 		TLSOptions: TLSOptions{
 			CAFile:       info.TLSCertFile,
 			SecurityMode: TLSModeNoHostVerification,
