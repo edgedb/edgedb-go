@@ -58,6 +58,7 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 	var err error
 
 	params := map[string]string{
+		"branch":     cfg.branch,
 		"database":   cfg.database,
 		"user":       cfg.user,
 		"secret_key": cfg.secretKey,
