@@ -16,25 +16,25 @@
 
 package edgedbtypes
 
-// MultiRangeInt32 is a type alias for multi range of RangeInt32 values.
+// MultiRangeInt32 is a type alias for a slice of RangeInt32 values.
 type MultiRangeInt32 = []RangeInt32
 
-// MultiRangeInt64 is a type alias for multi range of RangeInt64 values.
+// MultiRangeInt64 is a type alias for a slice of RangeInt64 values.
 type MultiRangeInt64 = []RangeInt64
 
-// MultiRangeFloat32 is a type alias for multi range of RangeFloat32 values.
+// MultiRangeFloat32 is a type alias for a slice of RangeFloat32 values.
 type MultiRangeFloat32 = []RangeFloat32
 
-// MultiRangeFloat64 is a type alias for multi range of RangeFloat64 values.
+// MultiRangeFloat64 is a type alias for a slice of RangeFloat64 values.
 type MultiRangeFloat64 = []RangeFloat64
 
-// MultiRangeDateTime is a type alias for multi range of RangeDateTime values.
+// MultiRangeDateTime is a type alias for a slice of RangeDateTime values.
 type MultiRangeDateTime = []RangeDateTime
 
-// MultiRangeLocalDateTime is a type alias for multi range of
+// MultiRangeLocalDateTime is a type alias for a slice of
 // RangeLocalDateTime values.
 type MultiRangeLocalDateTime = []RangeLocalDateTime
 
-// MultiRangeLocalDate is a type alias for multi range of
+// MultiRangeLocalDate is a type alias for a slice of
 // RangeLocalDate values.
 type MultiRangeLocalDate = []RangeLocalDate
