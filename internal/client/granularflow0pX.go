@@ -211,10 +211,7 @@ func (c *protocolConnection) prepare0pX(r *buff.Reader, q *query) error {
 		}
 	}
 
-	if r.Err != nil {
-		return r.Err
-	}
-	return err
+	return wrapAll(err, r.Err)
 }
 
 func (c *protocolConnection) describe(
@@ -331,7 +328,7 @@ func (c *protocolConnection) execute0pX(
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return wrapAll(err, r.Err)
 	}
 
 	if !q.flat() {

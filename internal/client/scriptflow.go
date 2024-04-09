@@ -98,9 +98,5 @@ func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
 		}
 	}
 
-	if r.Err != nil {
-		return r.Err
-	}
-
-	return err
+	return wrapAll(err, r.Err)
 }

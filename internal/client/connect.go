@@ -143,11 +143,7 @@ func (c *protocolConnection) connect(r *buff.Reader, cfg *connConfig) error {
 		}
 	}
 
-	if r.Err != nil {
-		return r.Err
-	}
-
-	return err
+	return wrapAll(err, r.Err)
 }
 
 func (c *protocolConnection) authenticate(
@@ -206,12 +202,8 @@ func (c *protocolConnection) authenticate(
 		}
 	}
 
-	if r.Err != nil {
-		return r.Err
-	}
-
-	if err != nil {
-		return err
+	if err != nil || r.Err != nil {
+		return wrapAll(err, r.Err)
 	}
 
 	w = buff.NewWriter(c.writeMemory[:0])
@@ -264,11 +256,7 @@ func (c *protocolConnection) authenticate(
 		}
 	}
 
-	if r.Err != nil {
-		return r.Err
-	}
-
-	return err
+	return wrapAll(err, r.Err)
 }
 
 func (c *protocolConnection) terminate() error {
