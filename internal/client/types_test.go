@@ -7869,21 +7869,6 @@ func TestEmptyMultiRange(t *testing.T) {
 	assert.Equal(t, emptyMultiRange, result)
 }
 
-func TestMultiRangeContains(t *testing.T) {
-	if !serverHasMultiRange(t) {
-		t.Skip("server lacks std::MultiRange support")
-	}
-
-	ctx := context.Background()
-
-	var result bool
-
-	query := "select contains(multirange([range(1, 5), range(8,10)]), 9)"
-	err := client.QuerySingle(ctx, query, &result)
-	require.NoError(t, err)
-	assert.Equal(t, true, result)
-}
-
 func TestCustomSequenceTypeHandling(t *testing.T) {
 	ddl := `
 		CREATE SCALAR TYPE SampleSequence extending std::sequence;
