@@ -273,7 +273,7 @@ func (c *protocolConnection) execute2pX(
 	}
 
 	if r.Err != nil {
-		return r.Err
+		return wrapAll(err, r.Err)
 	}
 
 	if !q.flat() && q.fmt != Null {
