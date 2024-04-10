@@ -36,7 +36,7 @@ NewDateDuration returns a new DateDuration
 
     func (dd DateDuration) MarshalText() ([]byte, error)
 
-MarshalText returns rd marshaled as text.
+MarshalText returns dd marshaled as text.
 
 
 
@@ -58,7 +58,7 @@ MarshalText returns rd marshaled as text.
 
     func (dd *DateDuration) UnmarshalText(b []byte) error
 
-UnmarshalText unmarshals bytes into \*rd.
+UnmarshalText unmarshals bytes into \*dd.
 
 
 
@@ -350,6 +350,85 @@ MarshalText returns m marshaled as text.
 UnmarshalText unmarshals bytes into \*m.
 
 
+
+
+*type* MultiRangeDateTime
+-------------------------
+
+MultiRangeDateTime is a type alias for a slice of RangeDateTime values.
+
+
+.. code-block:: go
+
+    type MultiRangeDateTime = []RangeDateTime
+
+
+*type* MultiRangeFloat32
+------------------------
+
+MultiRangeFloat32 is a type alias for a slice of RangeFloat32 values.
+
+
+.. code-block:: go
+
+    type MultiRangeFloat32 = []RangeFloat32
+
+
+*type* MultiRangeFloat64
+------------------------
+
+MultiRangeFloat64 is a type alias for a slice of RangeFloat64 values.
+
+
+.. code-block:: go
+
+    type MultiRangeFloat64 = []RangeFloat64
+
+
+*type* MultiRangeInt32
+----------------------
+
+MultiRangeInt32 is a type alias for a slice of RangeInt32 values.
+
+
+.. code-block:: go
+
+    type MultiRangeInt32 = []RangeInt32
+
+
+*type* MultiRangeInt64
+----------------------
+
+MultiRangeInt64 is a type alias for a slice of RangeInt64 values.
+
+
+.. code-block:: go
+
+    type MultiRangeInt64 = []RangeInt64
+
+
+*type* MultiRangeLocalDate
+--------------------------
+
+MultiRangeLocalDate is a type alias for a slice of
+RangeLocalDate values.
+
+
+.. code-block:: go
+
+    type MultiRangeLocalDate = []RangeLocalDate
+
+
+*type* MultiRangeLocalDateTime
+------------------------------
+
+MultiRangeLocalDateTime is a type alias for a slice of
+RangeLocalDateTime values.
+
+
+.. code-block:: go
+
+    type MultiRangeLocalDateTime = []RangeLocalDateTime
 
 
 *type* Optional

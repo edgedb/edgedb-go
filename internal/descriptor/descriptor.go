@@ -71,6 +71,9 @@ const (
 
 	// Compound represents the compound descriptor type.
 	Compound
+
+	// MultiRange represents the multi range descriptor type.
+	MultiRange
 )
 
 // Descriptor is a type descriptor

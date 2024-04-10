@@ -154,7 +154,7 @@ func defaultBackoff(attempt int) time.Duration {
 	return time.Duration(backoff+jitter) * time.Millisecond
 }
 
-// RetryCondition represents scenarios that can caused a transaction
+// RetryCondition represents scenarios that can cause a transaction
 // run in Tx() methods to be retried.
 type RetryCondition int
 
