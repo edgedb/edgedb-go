@@ -327,7 +327,7 @@ UnmarshalText unmarshals bytes into \*m.
 *type* MultiRangeDateTime
 -------------------------
 
-MultiRangeDateTime is a type alias for multi range of RangeDateTime values.
+MultiRangeDateTime is a type alias for a slice of RangeDateTime values.
 
 
 .. code-block:: go
@@ -338,7 +338,7 @@ MultiRangeDateTime is a type alias for multi range of RangeDateTime values.
 *type* MultiRangeFloat32
 ------------------------
 
-MultiRangeFloat32 is a type alias for multi range of RangeFloat32 values.
+MultiRangeFloat32 is a type alias for a slice of RangeFloat32 values.
 
 
 .. code-block:: go
@@ -349,7 +349,7 @@ MultiRangeFloat32 is a type alias for multi range of RangeFloat32 values.
 *type* MultiRangeFloat64
 ------------------------
 
-MultiRangeFloat64 is a type alias for multi range of RangeFloat64 values.
+MultiRangeFloat64 is a type alias for a slice of RangeFloat64 values.
 
 
 .. code-block:: go
@@ -360,7 +360,7 @@ MultiRangeFloat64 is a type alias for multi range of RangeFloat64 values.
 *type* MultiRangeInt32
 ----------------------
 
-MultiRangeInt32 is a type alias for multi range of RangeInt32 values.
+MultiRangeInt32 is a type alias for a slice of RangeInt32 values.
 
 
 .. code-block:: go
@@ -371,7 +371,7 @@ MultiRangeInt32 is a type alias for multi range of RangeInt32 values.
 *type* MultiRangeInt64
 ----------------------
 
-MultiRangeInt64 is a type alias for multi range of RangeInt64 values.
+MultiRangeInt64 is a type alias for a slice of RangeInt64 values.
 
 
 .. code-block:: go
@@ -382,7 +382,7 @@ MultiRangeInt64 is a type alias for multi range of RangeInt64 values.
 *type* MultiRangeLocalDate
 --------------------------
 
-MultiRangeLocalDate is a type alias for multi range of
+MultiRangeLocalDate is a type alias for a slice of
 RangeLocalDate values.
 
 
@@ -394,7 +394,7 @@ RangeLocalDate values.
 *type* MultiRangeLocalDateTime
 ------------------------------
 
-MultiRangeLocalDateTime is a type alias for multi range of
+MultiRangeLocalDateTime is a type alias for a slice of
 RangeLocalDateTime values.
 
 
