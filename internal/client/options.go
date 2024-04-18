@@ -127,6 +127,8 @@ type TLSOptions struct {
 	CAFile string
 	// Determines how strict we are with TLS checks
 	SecurityMode TLSSecurityMode
+	// Used to verify the hostname on the returned certificates
+	ServerName string
 }
 
 // TLSSecurityMode specifies how strict TLS validation is.

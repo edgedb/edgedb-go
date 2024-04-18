@@ -626,6 +626,8 @@ func TestConnectionParameterResolution(t *testing.T) {
 				options.TLSOptions.CA = getBytes(t, opts, "tlsCA")
 				options.TLSOptions.SecurityMode = TLSSecurityMode(
 					getStr(t, opts, "tlsSecurity"))
+				options.TLSOptions.ServerName = getStr(
+					t, opts, "tlsServerName")
 				if opts["serverSettings"] != nil {
 					ss := opts["serverSettings"].(map[string]interface{})
 					options.ServerSettings = make(map[string][]byte, len(ss))
@@ -671,6 +673,10 @@ func TestConnectionParameterResolution(t *testing.T) {
 
 				if key := res["secretKey"]; key != nil {
 					expectedResult.secretKey = key.(string)
+				}
+
+				if key := res["tlsServerName"]; key != nil {
+					expectedResult.tlsServerName = key.(string)
 				}
 
 				ss := res["serverSettings"].(map[string]interface{})
