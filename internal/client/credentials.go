@@ -106,9 +106,11 @@ func validateCredentials(data map[string]interface{}) (*credentials, error) {
 		result.host.Set(h)
 	}
 
-	if inMap("database", data) && inMap("branch", data) {
+	if inMap("database", data) &&
+		inMap("branch", data) &&
+		data["database"] != data["branch"] {
 		return nil, errors.New(
-			"`database` and `branch` are mutually exclusive")
+			"`database` and `branch` are both set but do not match")
 	}
 
 	if database, ok := data["database"]; ok {
