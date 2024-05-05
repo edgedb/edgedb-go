@@ -58,14 +58,29 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+type options struct {
+	mixedCaps bool
+	pubTypes  bool
+	pubFuncs  bool
+	jsonTags  bool
+}
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("edgeql-go: ")
 
 	flag.Usage = usage
-	mixedCaps := flag.Bool("mixedcaps", false,
+	opts := options{}
+
+	flag.BoolVar(&opts.mixedCaps, "mixedcaps", false,
 		"Change snake_case names in shapes "+
 			"to MixedCaps names in go structs")
+	flag.BoolVar(&opts.pubTypes, "pubtypes", false,
+		"Make generated types public")
+	flag.BoolVar(&opts.pubFuncs, "pubfuncs", false,
+		"Make generated functions public")
+	flag.BoolVar(&opts.jsonTags, "jsontags", false,
+		"Add json tags to generated structs")
 	flag.Parse()
 
 	timer := time.AfterFunc(200*time.Millisecond, func() {
@@ -81,7 +96,15 @@ func main() {
 
 	fileQueue := queueFilesInBackground()
 
-	t, err := template.ParseFS(templates, "templates/*.template")
+	t, err := template.New("file.template").
+		Funcs(template.FuncMap{
+			"type":    opts.typeName,
+			"field":   opts.fieldName,
+			"func":    opts.funcName,
+			"private": privateName,
+			"public":  publicName,
+		}).
+		ParseFS(templates, "templates/*.template")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,7 +115,7 @@ func main() {
 		go func(queryFile string) {
 			defer wg.Done()
 			outFile := getOutFile(queryFile)
-			q, e := newQuery(ctx, c, queryFile, outFile, *mixedCaps)
+			q, e := newQuery(ctx, c, queryFile, outFile, opts)
 			if e != nil {
 				log.Fatalf("processing %s: %s", queryFile, e)
 			}

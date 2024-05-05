@@ -1,3 +1,4 @@
 edgedb
 *.test
 /.vscode
+/.idea

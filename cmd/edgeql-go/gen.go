@@ -28,7 +28,7 @@ func generateType(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	var (
 		err     error
@@ -38,11 +38,11 @@ func generateType(
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		types, imports, err = generateSlice(desc, path, mixedCaps)
+		types, imports, err = generateSlice(desc, path, opts)
 	case descriptor.Object, descriptor.NamedTuple:
-		types, imports, err = generateObject(desc, required, path, mixedCaps)
+		types, imports, err = generateObject(desc, required, path, opts)
 	case descriptor.Tuple:
-		types, imports, err = generateTuple(desc, required, path, mixedCaps)
+		types, imports, err = generateTuple(desc, required, path, opts)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
 		types, imports, err = generateBaseScalar(desc, required)
 	case descriptor.Range:
@@ -65,7 +65,7 @@ func generateTypeV2(
 	desc *descriptor.V2,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	var (
 		err     error
@@ -75,11 +75,11 @@ func generateTypeV2(
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		types, imports, err = generateSliceV2(desc, path, mixedCaps)
+		types, imports, err = generateSliceV2(desc, path, opts)
 	case descriptor.Object, descriptor.NamedTuple:
-		types, imports, err = generateObjectV2(desc, required, path, mixedCaps)
+		types, imports, err = generateObjectV2(desc, required, path, opts)
 	case descriptor.Tuple:
-		types, imports, err = generateTupleV2(desc, required, path, mixedCaps)
+		types, imports, err = generateTupleV2(desc, required, path, opts)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
 		types, imports, err = generateBaseScalarV2(desc, required)
 	case descriptor.Range:
@@ -181,13 +181,13 @@ func generateRangeV2(
 func generateSlice(
 	desc descriptor.Descriptor,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	types, imports, err := generateType(
 		desc.Fields[0].Desc,
 		true,
 		path,
-		mixedCaps,
+		opts,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -200,13 +200,13 @@ func generateSlice(
 func generateSliceV2(
 	desc *descriptor.V2,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	types, imports, err := generateTypeV2(
 		&desc.Fields[0].Desc,
 		true,
 		path,
-		mixedCaps,
+		opts,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -216,14 +216,55 @@ func generateSliceV2(
 	return append(typ, types...), imports, nil
 }
 
+func (f options) typeName(name string) string {
+	if len(name) == 0 {
+		return name
+	}
+	if f.pubTypes {
+		return publicName(name)
+	}
+	return privateName(name)
+}
+
+func privateName(name string) string {
+	return strings.ToLower(name[:1]) + name[1:]
+}
+
+func publicName(name string) string {
+	return strings.ToUpper(name[:1]) + name[1:]
+}
+
+func (f options) fieldName(name string) string {
+	if len(name) == 0 {
+		return name
+	}
+	if f.mixedCaps {
+		return publicName(name)
+	}
+	return privateName(name)
+}
+
+func (f options) funcName(name string) string {
+	if len(name) == 0 {
+		return name
+	}
+	if f.pubFuncs {
+		return publicName(name)
+	}
+	return privateName(name)
+}
+
 func generateObject(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	var imports []string
-	typ := goStruct{Name: nameFromPath(path), Required: required}
+	typ := goStruct{
+		Name:     opts.typeName(nameFromPath(path)),
+		Required: required,
+	}
 	types := []goType{&typ}
 
 	for _, field := range desc.Fields {
@@ -231,15 +272,19 @@ func generateObject(
 			field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			opts,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		if opts.jsonTags {
+			tag = fmt.Sprintf(`%s json:"%s"`, tag, field.Name)
+		}
+
 		name := field.Name
-		if mixedCaps {
+		if opts.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 
@@ -260,10 +305,13 @@ func generateObjectV2(
 	desc *descriptor.V2,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	var imports []string
-	typ := goStruct{Name: nameFromPath(path), Required: required}
+	typ := goStruct{
+		Name:     opts.typeName(nameFromPath(path)),
+		Required: required,
+	}
 	types := []goType{&typ}
 
 	for _, field := range desc.Fields {
@@ -271,15 +319,18 @@ func generateObjectV2(
 			&field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			opts,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		if opts.jsonTags {
+			tag = fmt.Sprintf(`%s json:"%s"`, tag, field.Name)
+		}
 		name := field.Name
-		if mixedCaps {
+		if opts.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 
@@ -300,7 +351,7 @@ func generateTuple(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := &goStruct{Name: nameFromPath(path), Required: required}
@@ -311,7 +362,7 @@ func generateTuple(
 			field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			opts,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -320,7 +371,7 @@ func generateTuple(
 		name := field.Name
 		if name != "" && name[0] >= '0' && name[0] <= '9' {
 			name = fmt.Sprintf("Element%s", name)
-		} else if mixedCaps {
+		} else if opts.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 
@@ -341,7 +392,7 @@ func generateTupleV2(
 	desc *descriptor.V2,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	opts options,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := &goStruct{Name: nameFromPath(path), Required: required}
@@ -352,7 +403,7 @@ func generateTupleV2(
 			&field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			opts,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -361,7 +412,7 @@ func generateTupleV2(
 		name := field.Name
 		if name != "" && name[0] >= '0' && name[0] <= '9' {
 			name = fmt.Sprintf("Element%s", name)
-		} else if mixedCaps {
+		} else if opts.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 

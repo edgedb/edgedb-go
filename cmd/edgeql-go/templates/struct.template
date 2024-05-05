@@ -1,6 +1,6 @@
 // {{.Name}}
 // is part of the return type for
-// {{.QueryFuncName}}()
+// {{.QueryFuncName | func }}()
 type {{.Name}} struct {
 {{- if not .Required}}
 edgedb.Optional
