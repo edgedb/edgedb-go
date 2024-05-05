@@ -10,22 +10,22 @@ var {{.CMDVarName}} string
 // runs the query found in
 // {{.QueryFile}}
 func {{.QueryName}}(
-	ctx context.Context, 
+	ctx context.Context,
 	client *edgedb.Client,
 	{{- range .SignatureArgs}}
-	{{.GoName}} {{.Type}},
+	{{.GoName | private }} {{.Type}},
 	{{- end}}
 ) ({{.SignatureReturnType}}, error) {
 	var result {{.SignatureReturnType}}
 
 	err := client.{{.Method}}(
-		ctx, 
-		{{.CMDVarName}}, 
+		ctx,
+		{{.CMDVarName}},
 		&result,
 		{{- if .SignatureArgs}}
 		map[string]interface{}{
 			{{- range .SignatureArgs}}
-			{{printf "%q" .EQLName}}: {{.GoName}},
+			{{printf "%q" .EQLName}}: {{.GoName | private}},
 			{{- end}}
 		},{{end}}
 	)
