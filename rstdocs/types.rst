@@ -576,6 +576,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalBigInt) Value() *big.Int
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalBool
 -------------------
 
@@ -659,6 +671,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalBool) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalBool) Value() bool
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -750,6 +774,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalBytes) Value() []byte
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalDateDuration
 ---------------------------
 
@@ -833,6 +869,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalDateDuration) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalDateDuration) Value() DateDuration
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -924,6 +972,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalDateTime) Value() time.Time
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalDuration
 -----------------------
 
@@ -1007,6 +1067,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalDuration) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalDuration) Value() Duration
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -1098,6 +1170,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalFloat32) Value() float32
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalFloat64
 ----------------------
 
@@ -1181,6 +1265,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalFloat64) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalFloat64) Value() float64
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -1272,6 +1368,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalInt16) Value() int16
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalInt32
 --------------------
 
@@ -1355,6 +1463,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalInt32) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalInt32) Value() int32
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -1446,6 +1566,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalInt64) Value() int64
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalLocalDate
 ------------------------
 
@@ -1529,6 +1661,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalLocalDate) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalLocalDate) Value() LocalDate
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -1620,6 +1764,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalLocalDateTime) Value() LocalDateTime
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalLocalTime
 ------------------------
 
@@ -1703,6 +1859,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalLocalTime) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalLocalTime) Value() LocalTime
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -1794,6 +1962,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalMemory) Value() Memory
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalRangeDateTime
 ----------------------------
 
@@ -1877,6 +2057,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalRangeDateTime) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o *OptionalRangeDateTime) Value() RangeDateTime
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -1968,6 +2160,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRangeFloat32) Value() RangeFloat32
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalRangeFloat64
 ---------------------------
 
@@ -2051,6 +2255,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalRangeFloat64) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRangeFloat64) Value() RangeFloat64
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -2142,6 +2358,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRangeInt32) Value() RangeInt32
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalRangeInt64
 -------------------------
 
@@ -2229,6 +2457,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRangeInt64) Value() RangeInt64
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalRangeLocalDate
 -----------------------------
 
@@ -2312,6 +2552,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalRangeLocalDate) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRangeLocalDate) Value() RangeLocalDate
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -2405,6 +2657,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRangeLocalDateTime) Value() RangeLocalDateTime
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalRelativeDuration
 -------------------------------
 
@@ -2488,6 +2752,18 @@ UnmarshalJSON unmarshals bytes into \*o.
     func (o *OptionalRelativeDuration) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalRelativeDuration) Value() RelativeDuration
+
+Value returns the value or the zero value if not set.
 
 
 
@@ -2579,6 +2855,18 @@ Unset marks the value as missing.
 
 
 
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalStr) Value() string
+
+Value returns the value or the zero value if not set.
+
+
+
+
 *type* OptionalUUID
 -------------------
 
@@ -2662,6 +2950,18 @@ UnmarshalJSON unmarshals bytes into \*o
     func (o *OptionalUUID) Unset()
 
 Unset marks the value as missing.
+
+
+
+
+*method* Value
+..............
+
+.. code-block:: go
+
+    func (o OptionalUUID) Value() UUID
+
+Value returns the value or the zero value if not set.
 
 
 
