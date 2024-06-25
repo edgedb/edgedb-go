@@ -28,7 +28,7 @@ func generateType(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	var (
 		err     error
@@ -38,11 +38,11 @@ func generateType(
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		types, imports, err = generateSlice(desc, path, mixedCaps)
+		types, imports, err = generateSlice(desc, path, cmdCfg)
 	case descriptor.Object, descriptor.NamedTuple:
-		types, imports, err = generateObject(desc, required, path, mixedCaps)
+		types, imports, err = generateObject(desc, required, path, cmdCfg)
 	case descriptor.Tuple:
-		types, imports, err = generateTuple(desc, required, path, mixedCaps)
+		types, imports, err = generateTuple(desc, required, path, cmdCfg)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
 		types, imports, err = generateBaseScalar(desc, required)
 	case descriptor.Range:
@@ -65,7 +65,7 @@ func generateTypeV2(
 	desc *descriptor.V2,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	var (
 		err     error
@@ -75,11 +75,11 @@ func generateTypeV2(
 
 	switch desc.Type {
 	case descriptor.Set, descriptor.Array:
-		types, imports, err = generateSliceV2(desc, path, mixedCaps)
+		types, imports, err = generateSliceV2(desc, path, cmdCfg)
 	case descriptor.Object, descriptor.NamedTuple:
-		types, imports, err = generateObjectV2(desc, required, path, mixedCaps)
+		types, imports, err = generateObjectV2(desc, required, path, cmdCfg)
 	case descriptor.Tuple:
-		types, imports, err = generateTupleV2(desc, required, path, mixedCaps)
+		types, imports, err = generateTupleV2(desc, required, path, cmdCfg)
 	case descriptor.BaseScalar, descriptor.Scalar, descriptor.Enum:
 		types, imports, err = generateBaseScalarV2(desc, required)
 	case descriptor.Range:
@@ -181,13 +181,13 @@ func generateRangeV2(
 func generateSlice(
 	desc descriptor.Descriptor,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	types, imports, err := generateType(
 		desc.Fields[0].Desc,
 		true,
 		path,
-		mixedCaps,
+		cmdCfg,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -200,13 +200,13 @@ func generateSlice(
 func generateSliceV2(
 	desc *descriptor.V2,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	types, imports, err := generateTypeV2(
 		&desc.Fields[0].Desc,
 		true,
 		path,
-		mixedCaps,
+		cmdCfg,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -220,7 +220,7 @@ func generateObject(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := goStruct{Name: nameFromPath(path), Required: required}
@@ -231,7 +231,7 @@ func generateObject(
 			field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			cmdCfg,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -239,7 +239,7 @@ func generateObject(
 
 		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
 		name := field.Name
-		if mixedCaps {
+		if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 
@@ -260,7 +260,7 @@ func generateObjectV2(
 	desc *descriptor.V2,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := goStruct{Name: nameFromPath(path), Required: required}
@@ -271,7 +271,7 @@ func generateObjectV2(
 			&field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			cmdCfg,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -279,7 +279,7 @@ func generateObjectV2(
 
 		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
 		name := field.Name
-		if mixedCaps {
+		if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 
@@ -300,7 +300,7 @@ func generateTuple(
 	desc descriptor.Descriptor,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := &goStruct{Name: nameFromPath(path), Required: required}
@@ -311,7 +311,7 @@ func generateTuple(
 			field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			cmdCfg,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -320,7 +320,7 @@ func generateTuple(
 		name := field.Name
 		if name != "" && name[0] >= '0' && name[0] <= '9' {
 			name = fmt.Sprintf("Element%s", name)
-		} else if mixedCaps {
+		} else if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 
@@ -341,7 +341,7 @@ func generateTupleV2(
 	desc *descriptor.V2,
 	required bool,
 	path []string,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	var imports []string
 	typ := &goStruct{Name: nameFromPath(path), Required: required}
@@ -352,7 +352,7 @@ func generateTupleV2(
 			&field.Desc,
 			field.Required,
 			append(path, field.Name),
-			mixedCaps,
+			cmdCfg,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -361,7 +361,7 @@ func generateTupleV2(
 		name := field.Name
 		if name != "" && name[0] >= '0' && name[0] <= '9' {
 			name = fmt.Sprintf("Element%s", name)
-		} else if mixedCaps {
+		} else if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
 		}
 

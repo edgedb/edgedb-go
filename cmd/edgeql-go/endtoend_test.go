@@ -50,6 +50,11 @@ var tests = []struct {
 		directory:   "testdata/mixedcaps",
 		args:        []string{"-mixedcaps"},
 	},
+	{
+		description: "invoke edgeql-go with -pubfuncs",
+		directory:   "testdata/pubfuncs",
+		args:        []string{"-pubfuncs"},
+	},
 }
 
 func TestMain(m *testing.M) {
