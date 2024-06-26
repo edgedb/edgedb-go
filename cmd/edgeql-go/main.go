@@ -58,6 +58,11 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+type cmdConfig struct {
+	mixedCaps bool
+	pubfuncs  bool
+}
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("edgeql-go: ")
@@ -66,7 +71,14 @@ func main() {
 	mixedCaps := flag.Bool("mixedcaps", false,
 		"Change snake_case names in shapes "+
 			"to MixedCaps names in go structs")
+	pubfuncs := flag.Bool("pubfuncs", false,
+		"Make generated functions public.")
 	flag.Parse()
+
+	cfg := &cmdConfig{
+		mixedCaps: *mixedCaps,
+		pubfuncs:  *pubfuncs,
+	}
 
 	timer := time.AfterFunc(200*time.Millisecond, func() {
 		log.Println("connecting to EdgeDB")
@@ -92,7 +104,7 @@ func main() {
 		go func(queryFile string) {
 			defer wg.Done()
 			outFile := getOutFile(queryFile)
-			q, e := newQuery(ctx, c, queryFile, outFile, *mixedCaps)
+			q, e := newQuery(ctx, c, queryFile, outFile, cfg)
 			if e != nil {
 				log.Fatalf("processing %s: %s", queryFile, e)
 			}

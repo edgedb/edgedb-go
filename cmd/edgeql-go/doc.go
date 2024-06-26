@@ -30,7 +30,11 @@
 //
 // Typically this process would be run using [go generate] like this:
 //
-//	//go:generate edgeql-go
+//	//go:generate edgeql-go -pubfuncs
+//
+// For a complete list of options:
+//
+//	edgeql-go -help
 //
 // [pinning tool dependencies]: https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module
 // [go generate]: https://go.dev/blog/generate

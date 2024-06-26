@@ -53,8 +53,13 @@ type queryConfigV1 struct{}
 type queryConfigV2 struct{}
 
 type querySetup interface {
-	setup(ctx context.Context, cmd, qryFile, outFile string,
-		mixedCaps bool, c *edgedb.Client,
+	setup(
+		ctx context.Context,
+		cmd,
+		qryFile,
+		outFile string,
+		cfg *cmdConfig,
+		c *edgedb.Client,
 	) (*queryConfig, error)
 }
 
@@ -63,7 +68,7 @@ func newQuery(
 	c *edgedb.Client,
 	qryFile,
 	outFile string,
-	mixedCaps bool,
+	cfg *cmdConfig,
 ) (*Query, error) {
 	var err error
 	qryFile, err = filepath.Abs(qryFile)
@@ -89,7 +94,7 @@ func newQuery(
 		qs = &queryConfigV1{}
 	}
 
-	q, err := qs.setup(ctx, string(queryBytes), qryFile, outFile, mixedCaps, c)
+	q, err := qs.setup(ctx, string(queryBytes), qryFile, outFile, cfg, c)
 	if err != nil {
 		log.Fatalf("failed to setup query: %s", err)
 	}
@@ -106,8 +111,13 @@ func newQuery(
 	}, nil
 }
 
-func (r *queryConfigV1) setup(ctx context.Context, cmd, qryFile,
-	outFile string, mixedCaps bool, c *edgedb.Client,
+func (r *queryConfigV1) setup(
+	ctx context.Context,
+	cmd,
+	qryFile,
+	outFile string,
+	cmdCfg *cmdConfig,
+	c *edgedb.Client,
 ) (*queryConfig, error) {
 	description, err := edgedb.Describe(ctx, c, cmd)
 
@@ -120,8 +130,8 @@ func (r *queryConfigV1) setup(ctx context.Context, cmd, qryFile,
 		return nil, errQueryNum
 	}
 
-	qryName := queryName(qryFile)
-	rTypes, imports, err := resultTypes(qryName, description, mixedCaps)
+	qryName := queryName(qryFile, cmdCfg)
+	rTypes, imports, err := resultTypes(qryFile, description, cmdCfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,7 +143,7 @@ func (r *queryConfigV1) setup(ctx context.Context, cmd, qryFile,
 		}
 	}
 
-	sTypes, i, err := signatureTypes(description, mixedCaps)
+	sTypes, i, err := signatureTypes(description, cmdCfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,18 +160,23 @@ func (r *queryConfigV1) setup(ctx context.Context, cmd, qryFile,
 	}
 
 	return &queryConfig{
-		qryName,
-		m,
-		qryFile,
-		imports,
-		rStructs,
-		sTypes,
-		rTypes,
+		name:    qryName,
+		method:  m,
+		file:    qryFile,
+		imports: imports,
+		structs: rStructs,
+		sTypes:  sTypes,
+		rTypes:  rTypes,
 	}, nil
 }
 
-func (r *queryConfigV2) setup(ctx context.Context, cmd, qryFile,
-	outFile string, mixedCaps bool, c *edgedb.Client,
+func (r *queryConfigV2) setup(
+	ctx context.Context,
+	cmd,
+	qryFile,
+	outFile string,
+	cmdCfg *cmdConfig,
+	c *edgedb.Client,
 ) (*queryConfig, error) {
 	description, err := edgedb.DescribeV2(ctx, c, cmd)
 
@@ -174,8 +189,8 @@ func (r *queryConfigV2) setup(ctx context.Context, cmd, qryFile,
 		return nil, errQueryNum
 	}
 
-	qryName := queryName(qryFile)
-	rTypes, imports, err := resultTypesV2(qryName, description, mixedCaps)
+	qryName := queryName(qryFile, cmdCfg)
+	rTypes, imports, err := resultTypesV2(qryFile, description, cmdCfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,7 +202,7 @@ func (r *queryConfigV2) setup(ctx context.Context, cmd, qryFile,
 		}
 	}
 
-	sTypes, i, err := signatureTypesV2(description, mixedCaps)
+	sTypes, i, err := signatureTypesV2(description, cmdCfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -204,13 +219,13 @@ func (r *queryConfigV2) setup(ctx context.Context, cmd, qryFile,
 	}
 
 	return &queryConfig{
-		qryName,
-		m,
-		qryFile,
-		imports,
-		rStructs,
-		sTypes,
-		rTypes,
+		name:    qryName,
+		method:  m,
+		file:    qryFile,
+		imports: imports,
+		structs: rStructs,
+		sTypes:  sTypes,
+		rTypes:  rTypes,
 	}, nil
 }
 
@@ -225,7 +240,16 @@ func cmdVarName(qryFile string) string {
 	return snakeToLowerMixedCase(name)
 }
 
-func queryName(qryFile string) string {
+func queryName(qryFile string, cmdCfg *cmdConfig) string {
+	name := filepath.Base(qryFile)
+	name = strings.TrimSuffix(name, ".edgeql")
+	if cmdCfg.pubfuncs {
+		return snakeToUpperMixedCase(name)
+	}
+	return snakeToLowerMixedCase(name)
+}
+
+func typeName(qryFile string, cmdCfg *cmdConfig) string {
 	name := filepath.Base(qryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
 	return snakeToLowerMixedCase(name)
@@ -233,9 +257,9 @@ func queryName(qryFile string) string {
 
 func signatureTypes(
 	description *edgedb.CommandDescription,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) (*goStruct, []string, error) {
-	types, imports, err := generateType(description.In, true, nil, mixedCaps)
+	types, imports, err := generateType(description.In, true, nil, cmdCfg)
 	if err != nil {
 		return &goStruct{}, nil, err
 	}
@@ -245,10 +269,10 @@ func signatureTypes(
 
 func signatureTypesV2(
 	description *edgedb.CommandDescriptionV2,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) (*goStruct, []string, error) {
 	types, imports, err := generateTypeV2(&description.In,
-		true, nil, mixedCaps)
+		true, nil, cmdCfg)
 	if err != nil {
 		return &goStruct{}, nil, err
 	}
@@ -257,9 +281,9 @@ func signatureTypesV2(
 }
 
 func resultTypes(
-	qryName string,
+	qryFile string,
 	description *edgedb.CommandDescription,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	outDesc := description.Out
 	var required bool
@@ -282,18 +306,19 @@ func resultTypes(
 		required = true
 	}
 
+	name := typeName(qryFile, cmdCfg)
 	return generateType(
 		outDesc,
 		required,
-		[]string{qryName + "Result"},
-		mixedCaps,
+		[]string{name + "Result"},
+		cmdCfg,
 	)
 }
 
 func resultTypesV2(
-	qryName string,
+	qryFile string,
 	description *edgedb.CommandDescriptionV2,
-	mixedCaps bool,
+	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	outDesc := description.Out
 	var required bool
@@ -316,11 +341,12 @@ func resultTypesV2(
 		required = true
 	}
 
+	name := typeName(qryFile, cmdCfg)
 	return generateTypeV2(
 		&outDesc,
 		required,
-		[]string{qryName + "Result"},
-		mixedCaps,
+		[]string{name + "Result"},
+		cmdCfg,
 	)
 }
 

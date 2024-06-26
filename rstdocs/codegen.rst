@@ -25,5 +25,11 @@ Typically this process would be run using `go generate <https://go.dev/blog/gene
 
 .. code-block:: go
 
-    //go:generate edgeql-go
+    //go:generate edgeql-go -pubfuncs
+    
+For a complete list of options:
+
+.. code-block:: go
+
+    edgeql-go -help
     
