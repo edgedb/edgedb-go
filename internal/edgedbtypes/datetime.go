@@ -87,6 +87,9 @@ func (o OptionalDateTime) Get() (time.Time, bool) {
 	return o.val, o.isSet
 }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalDateTime) Value() time.Time { return o.val }
+
 // Set sets the value.
 func (o *OptionalDateTime) Set(val time.Time) {
 	o.val = val
@@ -182,6 +185,9 @@ func (o OptionalLocalDateTime) Get() (LocalDateTime, bool) {
 	return o.val, o.isSet
 }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalLocalDateTime) Value() LocalDateTime { return o.val }
+
 // Set sets the value.
 func (o *OptionalLocalDateTime) Set(val LocalDateTime) {
 	o.val = val
@@ -269,6 +275,9 @@ type OptionalLocalDate struct {
 
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalLocalDate) Get() (LocalDate, bool) { return o.val, o.isSet }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalLocalDate) Value() LocalDate { return o.val }
 
 // Set sets the value.
 func (o *OptionalLocalDate) Set(val LocalDate) {
@@ -377,6 +386,9 @@ type OptionalLocalTime struct {
 
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalLocalTime) Get() (LocalTime, bool) { return o.val, o.isSet }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalLocalTime) Value() LocalTime { return o.val }
 
 // Set sets the value.
 func (o *OptionalLocalTime) Set(val LocalTime) {
@@ -697,6 +709,9 @@ type OptionalDuration struct {
 
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalDuration) Get() (Duration, bool) { return o.val, o.isSet }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalDuration) Value() Duration { return o.val }
 
 // Set sets the value.
 func (o *OptionalDuration) Set(val Duration) {
@@ -1102,6 +1117,9 @@ func (o OptionalRelativeDuration) Get() (RelativeDuration, bool) {
 	return o.val, o.isSet
 }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalRelativeDuration) Value() RelativeDuration { return o.val }
+
 // Set sets the value.
 func (o *OptionalRelativeDuration) Set(val RelativeDuration) {
 	o.val = val
@@ -1364,6 +1382,9 @@ type OptionalDateDuration struct {
 func (o *OptionalDateDuration) Get() (DateDuration, bool) {
 	return o.val, o.isSet
 }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalDateDuration) Value() DateDuration { return o.val }
 
 // Set sets the value.
 func (o *OptionalDateDuration) Set(val DateDuration) {

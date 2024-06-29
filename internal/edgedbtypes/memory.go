@@ -107,6 +107,9 @@ type OptionalMemory struct {
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalMemory) Get() (Memory, bool) { return o.val, o.isSet }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalMemory) Value() Memory { return o.val }
+
 // Set sets the value.
 func (o *OptionalMemory) Set(val Memory) {
 	o.val = val
