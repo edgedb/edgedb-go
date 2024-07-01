@@ -55,6 +55,11 @@ var tests = []struct {
 		directory:   "testdata/pubfuncs",
 		args:        []string{"-pubfuncs"},
 	},
+	{
+		description: "invoke edgeql-go with -pubtypes",
+		directory:   "testdata/pubtypes",
+		args:        []string{"-pubtypes"},
+	},
 }
 
 func TestMain(m *testing.M) {
