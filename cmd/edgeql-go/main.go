@@ -61,6 +61,7 @@ func usage() {
 type cmdConfig struct {
 	mixedCaps bool
 	pubfuncs  bool
+	pubtypes  bool
 }
 
 func main() {
@@ -73,11 +74,14 @@ func main() {
 			"to MixedCaps names in go structs")
 	pubfuncs := flag.Bool("pubfuncs", false,
 		"Make generated functions public.")
+	pubtypes := flag.Bool("pubtypes", false,
+		"Make generated types public.")
 	flag.Parse()
 
 	cfg := &cmdConfig{
 		mixedCaps: *mixedCaps,
 		pubfuncs:  *pubfuncs,
+		pubtypes:  *pubtypes,
 	}
 
 	timer := time.AfterFunc(200*time.Millisecond, func() {

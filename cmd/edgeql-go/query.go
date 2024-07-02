@@ -252,6 +252,9 @@ func queryName(qryFile string, cmdCfg *cmdConfig) string {
 func typeName(qryFile string, cmdCfg *cmdConfig) string {
 	name := filepath.Base(qryFile)
 	name = strings.TrimSuffix(name, ".edgeql")
+	if cmdCfg.pubtypes {
+		return snakeToUpperMixedCase(name)
+	}
 	return snakeToLowerMixedCase(name)
 }
 
