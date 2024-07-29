@@ -59,6 +59,9 @@ type OptionalInt16 struct {
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalInt16) Get() (int16, bool) { return o.val, o.isSet }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalInt16) Value() int16 { return o.val }
+
 // Set sets the value.
 func (o *OptionalInt16) Set(val int16) {
 	o.val = val
@@ -112,6 +115,9 @@ type OptionalInt32 struct {
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalInt32) Get() (int32, bool) { return o.val, o.isSet }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalInt32) Value() int32 { return o.val }
+
 // Set sets the value.
 func (o *OptionalInt32) Set(val int32) {
 	o.val = val
@@ -164,6 +170,9 @@ type OptionalInt64 struct {
 
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalInt64) Get() (int64, bool) { return o.val, o.isSet }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalInt64) Value() int64 { return o.val }
 
 // Set sets the value.
 func (o *OptionalInt64) Set(val int64) *OptionalInt64 {
@@ -220,6 +229,9 @@ type OptionalFloat32 struct {
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalFloat32) Get() (float32, bool) { return o.val, o.isSet }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalFloat32) Value() float32 { return o.val }
+
 // Set sets the value.
 func (o *OptionalFloat32) Set(val float32) {
 	o.val = val
@@ -272,6 +284,9 @@ type OptionalFloat64 struct {
 
 // Get returns the value and a boolean indicating if the value is present.
 func (o OptionalFloat64) Get() (float64, bool) { return o.val, o.isSet }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalFloat64) Value() float64 { return o.val }
 
 // Set sets the value.
 func (o *OptionalFloat64) Set(val float64) {
