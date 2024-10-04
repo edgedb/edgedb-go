@@ -49,7 +49,7 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(flag.CommandLine.Output(), ""+
+	_, _ = fmt.Fprintf(flag.CommandLine.Output(), ""+
 		"Generate go functions from edgeql files.\n"+
 		"\n"+
 		"USAGE:\n"+

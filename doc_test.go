@@ -22,7 +22,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/edgedb/edgedb-go"
+	edgedb "github.com/edgedb/edgedb-go"
 )
 
 type User struct {

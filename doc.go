@@ -15,8 +15,8 @@
 // limitations under the License.
 
 // Package edgedb is the official Go driver for [EdgeDB]. Additionally,
-// [github.com/edgedb/edgedb-go/cmd/edgeql-go] is a code generator that generates go functions from edgeql
-// files.
+// [github.com/edgedb/edgedb-go/cmd/edgeql-go] is a code generator that
+// generates go functions from edgeql files.
 //
 // Typical client usage looks like this:
 //

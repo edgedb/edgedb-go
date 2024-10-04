@@ -16,7 +16,7 @@
 
 package edgedb
 
-//go:generate stringer -type Cardinality
+//go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Cardinality
 
 // Cardinality is the result cardinality for a command.
 type Cardinality uint8

@@ -131,7 +131,7 @@ func buildTupleDecoder(
 
 	decoder := tupleDecoder{desc.ID, fields}
 
-	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+	if reflect.PointerTo(typ).Implements(optionalUnmarshalerType) {
 		return &optionalTupleDecoder{decoder, typ}, nil
 	}
 
@@ -179,7 +179,7 @@ func buildTupleDecoderV2(
 
 	decoder := tupleDecoder{desc.ID, fields}
 
-	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+	if reflect.PointerTo(typ).Implements(optionalUnmarshalerType) {
 		return &optionalTupleDecoder{decoder, typ}, nil
 	}
 

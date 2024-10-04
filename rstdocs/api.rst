@@ -50,7 +50,7 @@ ErrorTag is the argument type to Error.HasTag().
 *type* Executor
 ---------------
 
-Executor is a common interface between Client and Tx,
+Executor is a common interface between \*Client and \*Tx,
 that can run queries on an EdgeDB database.
 
 
@@ -108,7 +108,7 @@ before making the next attempt when retrying a transaction.
 *type* RetryCondition
 ---------------------
 
-RetryCondition represents scenarios that can caused a transaction
+RetryCondition represents scenarios that can cause a transaction
 run in Tx() methods to be retried.
 
 

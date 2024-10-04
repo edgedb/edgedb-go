@@ -16,8 +16,8 @@ EdgeDB Go Driver
 
 
 Package edgedb is the official Go driver for `EdgeDB <https://www.edgedb.com>`_. Additionally,
-`edgeql-go <https://pkg.go.dev/github.com/edgedb/edgedb-go/cmd/edgeql-go>`_ is a code generator that generates go functions from edgeql
-files.
+`edgeql-go <https://pkg.go.dev/github.com/edgedb/edgedb-go/cmd/edgeql-go>`_ is a code generator that
+generates go functions from edgeql files.
 
 Typical client usage looks like this:
 
@@ -212,7 +212,7 @@ Usage Example
         "log"
         "time"
     
-        "github.com/edgedb/edgedb-go"
+        edgedb "github.com/edgedb/edgedb-go"
     )
     
     type User struct {

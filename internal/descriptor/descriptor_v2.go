@@ -154,7 +154,7 @@ func PopV2(
 			}}
 			desc = V2{MultiRange, id, name, true, ancestors, fields}
 		default:
-			if 0x80 <= typ && typ <= 0xff {
+			if 0x80 <= typ {
 				// ignore unknown type annotations
 				r.PopBytes()
 				break

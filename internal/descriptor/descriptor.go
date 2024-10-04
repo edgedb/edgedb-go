@@ -30,7 +30,7 @@ import (
 // https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
 var IDZero = edgedbtypes.UUID{}
 
-//go:generate stringer -type Type
+//go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Type
 
 // Type represents a descriptor type.
 type Type uint8
@@ -147,7 +147,8 @@ func Pop(
 				Desc: descriptors[r.PopUint16()],
 			}}}
 		default:
-			if 0x80 <= typ && typ <= 0xff {
+
+			if 0x80 <= typ {
 				// ignore unknown type annotations
 				r.PopBytes()
 				break

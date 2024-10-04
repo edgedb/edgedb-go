@@ -16,7 +16,7 @@
 
 package edgedb
 
-//go:generate stringer -type Format
+//go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Format
 
 // Format is the query response format.
 type Format uint8
