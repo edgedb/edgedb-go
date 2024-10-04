@@ -1,7 +1,9 @@
+CHANGES:=$(shell git status --porcelain)
+
 quality: lint test bench
 
 lint:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1 run --sort-results
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0 run --sort-results
 
 test:
 	go test -v -count=1 -race -bench=$$^ -timeout=20m ./...
@@ -23,6 +25,9 @@ errors:
 	edb gen-errors-json --client | \
 		go run internal/cmd/generrexport/main.go > errors_gen.go
 	make format
+
+gen:
+	go generate ./...
 
 gendocs:
 	go run internal/cmd/gendocs/*.go

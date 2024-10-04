@@ -137,7 +137,7 @@ func buildUnmarshaler(
 		return nil, false, nil
 	}
 
-	ptr := reflect.PtrTo(typ)
+	ptr := reflect.PointerTo(typ)
 	if !ptr.Implements(iface.typ) {
 		return nil, false, nil
 	}
@@ -171,7 +171,7 @@ func buildUnmarshalerV2(
 		return nil, false, nil
 	}
 
-	ptr := reflect.PtrTo(typ)
+	ptr := reflect.PointerTo(typ)
 	if !ptr.Implements(iface.typ) {
 		return nil, false, nil
 	}

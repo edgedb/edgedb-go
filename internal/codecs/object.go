@@ -101,7 +101,7 @@ func buildObjectDecoder(
 
 	decoder := objectDecoder{desc.ID, fields}
 
-	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+	if reflect.PointerTo(typ).Implements(optionalUnmarshalerType) {
 		return &optionalObjectDecoder{decoder, typ}, nil
 	}
 
@@ -159,7 +159,7 @@ func buildObjectDecoderV2(
 
 	decoder := objectDecoder{desc.ID, fields}
 
-	if reflect.PtrTo(typ).Implements(optionalUnmarshalerType) {
+	if reflect.PointerTo(typ).Implements(optionalUnmarshalerType) {
 		return &optionalObjectDecoder{decoder, typ}, nil
 	}
 

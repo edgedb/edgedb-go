@@ -3,9 +3,11 @@ CreateClient
 CreateClientDSN
 DateDuration
 Duration
+DurationFromNanoseconds
 Error
 ErrorCategory
 ErrorTag
+Executor
 IsolationLevel
 LocalDate
 LocalDateTime
@@ -50,6 +52,7 @@ NewRangeInt64
 NewRangeLocalDate
 NewRangeLocalDateTime
 NewRelativeDuration
+NewRetryOptions
 NewRetryRule
 NewTxOptions
 Optional

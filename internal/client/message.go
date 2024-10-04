@@ -16,7 +16,7 @@
 
 package edgedb
 
-//go:generate stringer -type Cardinality
+//go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Message
 
 // Message is a protocol message type.
 type Message uint8

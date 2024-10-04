@@ -16,7 +16,7 @@
 
 package edgedb
 
-//go:generate stringer -type Aspect
+//go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Aspect
 
 // Aspect is the description aspect from protocol version 0.X
 type Aspect uint8

@@ -71,7 +71,7 @@ type (
 	// ErrorTag is the argument type to Error.HasTag().
 	ErrorTag = edgedb.ErrorTag
 
-	// Executor is a common interface between Client and Tx,
+	// Executor is a common interface between *Client and *Tx,
 	// that can run queries on an EdgeDB database.
 	Executor = edgedb.Executor
 
@@ -238,7 +238,7 @@ type (
 	// before making the next attempt when retrying a transaction.
 	RetryBackoff = edgedb.RetryBackoff
 
-	// RetryCondition represents scenarios that can caused a transaction
+	// RetryCondition represents scenarios that can cause a transaction
 	// run in Tx() methods to be retried.
 	RetryCondition = edgedb.RetryCondition
 
@@ -428,7 +428,7 @@ var (
 	// NewRelativeDuration returns a new RelativeDuration
 	NewRelativeDuration = edgedbtypes.NewRelativeDuration
 
-	// NewRetryOptions returns the default RetryOptions value.
+	// NewRetryOptions returns the default retry options.
 	NewRetryOptions = edgedb.NewRetryOptions
 
 	// NewRetryRule returns the default RetryRule value.
