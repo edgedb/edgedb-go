@@ -131,7 +131,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg2pX(
 	r *buff.Reader,
 	q *query,
 ) (*CommandDescriptionV2, error) {
-	discardHeaders(r)
+	discardHeaders0pX(r)
 	c.cacheCapabilities1pX(q, r.PopUint64())
 
 	var (
@@ -367,7 +367,7 @@ func (c *protocolConnection) decodeCommandCompleteMsg2pX(
 	q *query,
 	r *buff.Reader,
 ) error {
-	discardHeaders(r)
+	discardHeaders0pX(r)
 	c.cacheCapabilities1pX(q, r.PopUint64())
 	r.Discard(int(r.PopUint32())) // discard command status
 	if r.PopUUID() == descriptor.IDZero {

@@ -30,10 +30,10 @@ func ignoreHeaders(r *buff.Reader) {
 	}
 }
 
-func decodeHeaders(r *buff.Reader) header.Header {
+func decodeHeaders0pX(r *buff.Reader) header.Header0pX {
 	n := int(r.PopUint16())
 
-	headers := make(header.Header, n)
+	headers := make(header.Header0pX, n)
 	for i := 0; i < n; i++ {
 		key := r.PopUint16()
 		val := r.PopBytes()
@@ -44,7 +44,7 @@ func decodeHeaders(r *buff.Reader) header.Header {
 	return headers
 }
 
-func discardHeaders(r *buff.Reader) {
+func discardHeaders0pX(r *buff.Reader) {
 	n := int(r.PopUint16())
 
 	for i := 0; i < n; i++ {
@@ -53,7 +53,7 @@ func discardHeaders(r *buff.Reader) {
 	}
 }
 
-func writeHeaders(w *buff.Writer, headers header.Header) {
+func writeHeaders0pX(w *buff.Writer, headers header.Header0pX) {
 	w.PushUint16(uint16(len(headers)))
 
 	for key, val := range headers {
@@ -70,7 +70,7 @@ func (c *protocolConnection) execScriptFlow(r *buff.Reader, q *query) error {
 
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(ExecuteScript))
-	writeHeaders(w, q.headers0pX())
+	writeHeaders0pX(w, q.headers0pX())
 	w.PushString(q.cmd)
 	w.EndMessage()
 

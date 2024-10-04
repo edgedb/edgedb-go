@@ -98,7 +98,7 @@ func (c *protocolConnection) cacheTypeIDs(q *query, ids idPair) {
 
 func (c *protocolConnection) cacheCapabilities0pX(
 	q *query,
-	headers header.Header,
+	headers header.Header0pX,
 ) {
 	if capabilities, ok := headers[header.Capabilities]; ok {
 		x := binary.BigEndian.Uint64(capabilities)

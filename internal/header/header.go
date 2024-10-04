@@ -18,8 +18,8 @@ package header
 
 import "encoding/binary"
 
-// Header is a binary protocol header
-type Header map[uint16][]byte
+// Header0pX is a binary protocol header
+type Header0pX map[uint16][]byte
 
 const (
 	// AllowCapabilities tells the server what capabilities it should allow.

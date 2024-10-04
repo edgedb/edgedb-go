@@ -53,11 +53,11 @@ func (q *query) flat() bool {
 	return false
 }
 
-func (q *query) headers0pX() header.Header {
+func (q *query) headers0pX() header.Header0pX {
 	bts := make([]byte, 8)
 	binary.BigEndian.PutUint64(bts, q.capabilities)
 
-	return header.Header{header.AllowCapabilities: bts}
+	return header.Header0pX{header.AllowCapabilities: bts}
 }
 
 // newQuery returns a new granular flow query.
