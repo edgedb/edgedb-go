@@ -1126,3 +1126,56 @@ func TestWithConfigWrongServerVersion(t *testing.T) {
 		"are not supported by the server. "+
 		"Upgrade your server to version 2.0 or greater to use these features.")
 }
+
+func TestWithWarningHandler(t *testing.T) {
+	var hasWarnOnCall bool
+	ctx := context.Background()
+	err := client.QuerySingle(
+		ctx,
+		`
+		SELECT EXISTS (
+			SELECT schema::Function { id }
+			FILTER .name = 'std::_warn_on_call'
+		)
+		`,
+		&hasWarnOnCall,
+	)
+	require.NoError(t, err)
+
+	if !hasWarnOnCall {
+		t.Skip()
+	}
+
+	seen := []error{}
+	a := client.WithWarningHandler(func(warnings []error) error {
+		seen = append(seen, warnings...)
+		return nil
+	})
+
+	err = a.Execute(ctx, `SELECT _warn_on_call()`)
+	require.NoError(t, err)
+	require.Greater(t, len(seen), 0)
+
+	var resultMany []int64
+	seen = []error{}
+	err = a.Query(ctx, `SELECT _warn_on_call()`, &resultMany)
+	require.NoError(t, err)
+	require.Greater(t, len(seen), 0)
+
+	var resultJSON []byte
+	seen = []error{}
+	err = a.QueryJSON(ctx, `SELECT _warn_on_call()`, &resultJSON)
+	require.NoError(t, err)
+	require.Greater(t, len(seen), 0)
+
+	var resultSingle int64
+	seen = []error{}
+	err = a.QuerySingle(ctx, `SELECT _warn_on_call()`, &resultSingle)
+	require.NoError(t, err)
+	require.Greater(t, len(seen), 0)
+
+	seen = []error{}
+	err = a.QuerySingleJSON(ctx, `SELECT _warn_on_call()`, &resultJSON)
+	require.NoError(t, err)
+	require.Greater(t, len(seen), 0)
+}

@@ -116,6 +116,10 @@ type Options struct {
 
 	// SecretKey is used to connect to cloud instances.
 	SecretKey string
+
+	// WarningHandler is invoked when EdgeDB returns warnings. Defaults to
+	// edgedb.LogWarnings.
+	WarningHandler WarningHandler
 }
 
 // TLSOptions contains the parameters needed to configure TLS on EdgeDB
@@ -510,5 +514,18 @@ func (p Client) WithoutGlobals(globals ...string) *Client { // nolint:gocritic
 	}
 
 	p.state = state
+	return &p
+}
+
+// WithWarningHandler sets the warning handler for the returned client. If
+// warningHandler is nil edgedb.LogWarnings is used.
+func (p Client) WithWarningHandler( // nolint:gocritic
+	warningHandler WarningHandler,
+) *Client {
+	if warningHandler == nil {
+		warningHandler = LogWarnings
+	}
+
+	p.warningHandler = warningHandler
 	return &p
 }

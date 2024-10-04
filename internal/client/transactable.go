@@ -77,6 +77,7 @@ func (c *transactableConn) tx(
 	ctx context.Context,
 	action TxBlock,
 	state map[string]interface{},
+	warningHandler WarningHandler,
 ) (err error) {
 	conn, err := c.borrow("transaction")
 	if err != nil {
@@ -101,6 +102,7 @@ func (c *transactableConn) tx(
 				txState:        &txState{},
 				options:        c.txOpts,
 				state:          state,
+				warningHandler: warningHandler,
 			}
 			err = tx.start(ctx)
 			if err != nil {

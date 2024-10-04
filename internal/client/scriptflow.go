@@ -17,6 +17,8 @@
 package edgedb
 
 import (
+	"encoding/json"
+
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/header"
 )
@@ -52,6 +54,40 @@ func discardHeaders0pX(r *buff.Reader) {
 		r.PopBytes()
 	}
 }
+
+func decodeHeaders1pX(
+	r *buff.Reader,
+	warningHandler WarningHandler,
+) (header.Header1pX, error) {
+	n := int(r.PopUint16())
+
+	headers := make(header.Header1pX, n)
+	for i := 0; i < n; i++ {
+		headers[r.PopString()] = r.PopString()
+	}
+
+	if data, ok := headers["warnings"]; ok {
+		var warnings []Warning
+		err := json.Unmarshal([]byte(data), &warnings)
+		if err != nil {
+			return nil, err
+		}
+
+		errors := make([]error, len(warnings))
+		for i, warning := range warnings {
+			errors[i] = errorFromCode(warning.Code, warning.Message)
+		}
+
+		err = warningHandler(errors)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return headers, nil
+}
+
+var decodeHeaders2pX = decodeHeaders1pX
 
 func writeHeaders0pX(w *buff.Writer, headers header.Header0pX) {
 	w.PushUint16(uint16(len(headers)))

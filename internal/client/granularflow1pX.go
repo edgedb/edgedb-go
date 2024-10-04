@@ -125,14 +125,14 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg1pX(
 	r *buff.Reader,
 	q *query,
 ) (*CommandDescription, error) {
-	discardHeaders0pX(r)
+	_, err := decodeHeaders1pX(r, q.warningHandler)
+	if err != nil {
+		return nil, err
+	}
+
 	c.cacheCapabilities1pX(q, r.PopUint64())
 
-	var (
-		err   error
-		descs CommandDescription
-	)
-
+	var descs CommandDescription
 	descs.Card = Cardinality(r.PopUint8())
 	id := r.PopUUID()
 	descs.In, err = descriptor.Pop(

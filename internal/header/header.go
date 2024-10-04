@@ -18,8 +18,11 @@ package header
 
 import "encoding/binary"
 
-// Header0pX is a binary protocol header
+// Header0pX is a binary protocol header for protocol major version 0
 type Header0pX map[uint16][]byte
+
+// Header1pX is a binary protocol header for protocol major version 1
+type Header1pX map[string]string
 
 const (
 	// AllowCapabilities tells the server what capabilities it should allow.

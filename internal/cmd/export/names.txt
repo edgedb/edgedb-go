@@ -12,6 +12,7 @@ IsolationLevel
 LocalDate
 LocalDateTime
 LocalTime
+LogWarnings
 Memory
 ModuleAlias
 NetworkError
@@ -107,3 +108,5 @@ TxBlock
 TxConflict
 TxOptions
 UUID
+WarningHandler
+WarningsAsErrors

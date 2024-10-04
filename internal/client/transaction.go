@@ -76,8 +76,9 @@ func (s *txState) assertStarted(opName string) error {
 type Tx struct {
 	borrowableConn
 	*txState
-	options TxOptions
-	state   map[string]interface{}
+	options        TxOptions
+	state          map[string]interface{}
+	warningHandler WarningHandler
 }
 
 func (t *Tx) execute(
@@ -93,6 +94,7 @@ func (t *Tx) execute(
 		t.state,
 		nil,
 		false,
+		t.warningHandler,
 	)
 	if err != nil {
 		return err
@@ -171,6 +173,7 @@ func (t *Tx) Execute(
 		t.state,
 		nil,
 		true,
+		t.warningHandler,
 	)
 	if err != nil {
 		return err
@@ -186,7 +189,16 @@ func (t *Tx) Query(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "Query", cmd, out, args, t.state)
+	return runQuery(
+		ctx,
+		t,
+		"Query",
+		cmd,
+		out,
+		args,
+		t.state,
+		t.warningHandler,
+	)
 }
 
 // QuerySingle runs a singleton-returning query and returns its element.
@@ -199,7 +211,16 @@ func (t *Tx) QuerySingle(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingle", cmd, out, args, t.state)
+	return runQuery(
+		ctx,
+		t,
+		"QuerySingle",
+		cmd,
+		out,
+		args,
+		t.state,
+		t.warningHandler,
+	)
 }
 
 // QueryJSON runs a query and return the results as JSON.
@@ -209,7 +230,16 @@ func (t *Tx) QueryJSON(
 	out *[]byte,
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QueryJSON", cmd, out, args, t.state)
+	return runQuery(
+		ctx,
+		t,
+		"QueryJSON",
+		cmd,
+		out,
+		args,
+		t.state,
+		t.warningHandler,
+	)
 }
 
 // QuerySingleJSON runs a singleton-returning query.
@@ -221,5 +251,14 @@ func (t *Tx) QuerySingleJSON(
 	out interface{},
 	args ...interface{},
 ) error {
-	return runQuery(ctx, t, "QuerySingleJSON", cmd, out, args, t.state)
+	return runQuery(
+		ctx,
+		t,
+		"QuerySingleJSON",
+		cmd,
+		out,
+		args,
+		t.state,
+		t.warningHandler,
+	)
 }
