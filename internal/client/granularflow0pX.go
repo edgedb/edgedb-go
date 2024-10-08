@@ -171,7 +171,7 @@ func (c *protocolConnection) prepare0pX(r *buff.Reader, q *query) error {
 
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(Parse))
-	writeHeaders(w, headers)
+	writeHeaders0pX(w, headers)
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushUint32(0) // no statement name
@@ -194,7 +194,7 @@ func (c *protocolConnection) prepare0pX(r *buff.Reader, q *query) error {
 	for r.Next(done.Chan) {
 		switch Message(r.MsgType) {
 		case ParseComplete:
-			c.cacheCapabilities0pX(q, decodeHeaders(r))
+			c.cacheCapabilities0pX(q, decodeHeaders0pX(r))
 			r.Discard(1) // cardinality
 			ids := idPair{in: r.PopUUID(), out: r.PopUUID()}
 			c.cacheTypeIDs(q, ids)
@@ -269,7 +269,7 @@ func (c *protocolConnection) execute0pX(
 ) error {
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(Execute0pX))
-	writeHeaders(w, q.headers0pX())
+	writeHeaders0pX(w, q.headers0pX())
 	w.PushUint32(0) // no statement name
 	if e := cdcs.in.Encode(w, q.args, codecs.Path("args"), true); e != nil {
 		return &invalidArgumentError{msg: e.Error()}
@@ -348,7 +348,7 @@ func (c *protocolConnection) optimistic0pX(
 
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(Execute))
-	writeHeaders(w, headers)
+	writeHeaders0pX(w, headers)
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushString(q.cmd)
@@ -396,7 +396,7 @@ func (c *protocolConnection) optimistic0pX(
 			decodeCommandCompleteMsg0pX(r)
 		case CommandDataDescription:
 			var (
-				headers header.Header
+				headers header.Header0pX
 				e       error
 			)
 
@@ -482,8 +482,8 @@ func decodeDataMsg(
 func (c *protocolConnection) decodeCommandDataDescriptionMsg0pX(
 	r *buff.Reader,
 	q *query,
-) (*CommandDescription, header.Header, error) {
-	headers := decodeHeaders(r)
+) (*CommandDescription, header.Header0pX, error) {
+	headers := decodeHeaders0pX(r)
 	card := r.PopUint8()
 
 	var (

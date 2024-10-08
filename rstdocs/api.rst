@@ -196,3 +196,16 @@ TxOptions configures how transactions behave.
 .. code-block:: go
 
     type TxOptions = edgedb.TxOptions
+
+
+*type* WarningHandler
+---------------------
+
+WarningHandler takes a slice of edgedb.Error that represent warnings and
+optionally returns an error. This can be used to log warnings, increment
+metrics, promote warnings to errors by returning them etc.
+
+
+.. code-block:: go
+
+    type WarningHandler = edgedb.WarningHandler

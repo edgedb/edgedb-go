@@ -131,14 +131,14 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg2pX(
 	r *buff.Reader,
 	q *query,
 ) (*CommandDescriptionV2, error) {
-	discardHeaders(r)
+	_, err := decodeHeaders2pX(r, q.warningHandler)
+	if err != nil {
+		return nil, err
+	}
+
 	c.cacheCapabilities1pX(q, r.PopUint64())
 
-	var (
-		err   error
-		descs CommandDescriptionV2
-	)
-
+	var descs CommandDescriptionV2
 	descs.Card = Cardinality(r.PopUint8())
 	id := r.PopUUID()
 	descs.In, err = descriptor.PopV2(
@@ -231,9 +231,9 @@ func (c *protocolConnection) execute2pX(
 				err = wrapAll(err, e)
 			}
 		case CommandDataDescription:
-			descs, e := c.decodeCommandDataDescriptionMsg1pX(r, q)
+			descs, e := c.decodeCommandDataDescriptionMsg2pX(r, q)
 			err = wrapAll(err, e)
-			cdcs, e = c.codecsFromDescriptors1pX(q, descs)
+			cdcs, e = c.codecsFromDescriptors2pX(q, descs)
 			err = wrapAll(err, e)
 		case Data:
 			val, ok, e := decodeDataMsg(r, q, cdcs)
@@ -367,7 +367,7 @@ func (c *protocolConnection) decodeCommandCompleteMsg2pX(
 	q *query,
 	r *buff.Reader,
 ) error {
-	discardHeaders(r)
+	discardHeaders0pX(r)
 	c.cacheCapabilities1pX(q, r.PopUint64())
 	r.Discard(int(r.PopUint32())) // discard command status
 	if r.PopUUID() == descriptor.IDZero {

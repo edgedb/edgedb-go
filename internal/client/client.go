@@ -58,6 +58,8 @@ type Client struct {
 	cfg *connConfig
 	cacheCollection
 	state map[string]interface{}
+
+	warningHandler WarningHandler
 }
 
 // CreateClient returns a new client. The client connects lazily. Call
@@ -81,6 +83,11 @@ func CreateClientDSN(_ context.Context, dsn string, opts Options) (*Client, erro
 		return nil, err
 	}
 
+	warningHandler := LogWarnings
+	if opts.WarningHandler != nil {
+		warningHandler = opts.WarningHandler
+	}
+
 	False := false
 	p := &Client{
 		isClosed:             &False,
@@ -98,7 +105,8 @@ func CreateClientDSN(_ context.Context, dsn string, opts Options) (*Client, erro
 			outCodecCache:     cache.New(1_000),
 			capabilitiesCache: cache.New(1_000),
 		},
-		state: make(map[string]interface{}),
+		state:          make(map[string]interface{}),
+		warningHandler: warningHandler,
 	}
 
 	return p, nil
@@ -326,6 +334,7 @@ func (p *Client) Execute(
 		copyState(p.state),
 		nil,
 		true,
+		p.warningHandler,
 	)
 	if err != nil {
 		return err
@@ -347,7 +356,8 @@ func (p *Client) Query(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "Query", cmd, out, args, p.state)
+	err = runQuery(
+		ctx, conn, "Query", cmd, out, args, p.state, p.warningHandler)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -366,7 +376,16 @@ func (p *Client) QuerySingle(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QuerySingle", cmd, out, args, p.state)
+	err = runQuery(
+		ctx,
+		conn,
+		"QuerySingle",
+		cmd,
+		out,
+		args,
+		p.state,
+		p.warningHandler,
+	)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -382,7 +401,16 @@ func (p *Client) QueryJSON(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QueryJSON", cmd, out, args, p.state)
+	err = runQuery(
+		ctx,
+		conn,
+		"QueryJSON",
+		cmd,
+		out,
+		args,
+		p.state,
+		p.warningHandler,
+	)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -400,7 +428,16 @@ func (p *Client) QuerySingleJSON(
 		return err
 	}
 
-	err = runQuery(ctx, conn, "QuerySingleJSON", cmd, out, args, p.state)
+	err = runQuery(
+		ctx,
+		conn,
+		"QuerySingleJSON",
+		cmd,
+		out,
+		args,
+		p.state,
+		p.warningHandler,
+	)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -424,6 +461,6 @@ func (p *Client) Tx(ctx context.Context, action TxBlock) error {
 		return err
 	}
 
-	err = conn.tx(ctx, action, p.state)
+	err = conn.tx(ctx, action, p.state, p.warningHandler)
 	return firstError(err, p.release(conn, err))
 }

@@ -28,17 +28,23 @@ import (
 	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
+// WarningHandler takes a slice of edgedb.Error that represent warnings and
+// optionally returns an error. This can be used to log warnings, increment
+// metrics, promote warnings to errors by returning them etc.
+type WarningHandler = func([]error) error
+
 type query struct {
-	out          reflect.Value
-	outType      reflect.Type
-	method       string
-	cmd          string
-	fmt          Format
-	expCard      Cardinality
-	args         []interface{}
-	capabilities uint64
-	state        map[string]interface{}
-	parse        bool
+	out            reflect.Value
+	outType        reflect.Type
+	method         string
+	cmd            string
+	fmt            Format
+	expCard        Cardinality
+	args           []interface{}
+	capabilities   uint64
+	state          map[string]interface{}
+	parse          bool
+	warningHandler WarningHandler
 }
 
 func (q *query) flat() bool {
@@ -53,11 +59,11 @@ func (q *query) flat() bool {
 	return false
 }
 
-func (q *query) headers0pX() header.Header {
+func (q *query) headers0pX() header.Header0pX {
 	bts := make([]byte, 8)
 	binary.BigEndian.PutUint64(bts, q.capabilities)
 
-	return header.Header{header.AllowCapabilities: bts}
+	return header.Header0pX{header.AllowCapabilities: bts}
 }
 
 // newQuery returns a new granular flow query.
@@ -68,6 +74,7 @@ func newQuery(
 	state map[string]interface{},
 	out interface{},
 	parse bool,
+	warningHandler WarningHandler,
 ) (*query, error) {
 	var (
 		expCard Cardinality
@@ -77,14 +84,15 @@ func newQuery(
 	switch method {
 	case "Execute":
 		return &query{
-			method:       method,
-			cmd:          cmd,
-			fmt:          Null,
-			expCard:      Many,
-			args:         args,
-			capabilities: capabilities,
-			state:        state,
-			parse:        parse,
+			method:         method,
+			cmd:            cmd,
+			fmt:            Null,
+			expCard:        Many,
+			args:           args,
+			capabilities:   capabilities,
+			state:          state,
+			parse:          parse,
+			warningHandler: warningHandler,
 		}, nil
 	case "Query":
 		expCard = Many
@@ -103,14 +111,15 @@ func newQuery(
 	}
 
 	q := query{
-		method:       method,
-		cmd:          cmd,
-		fmt:          frmt,
-		expCard:      expCard,
-		args:         args,
-		capabilities: capabilities,
-		state:        state,
-		parse:        parse,
+		method:         method,
+		cmd:            cmd,
+		fmt:            frmt,
+		expCard:        expCard,
+		args:           args,
+		capabilities:   capabilities,
+		state:          state,
+		parse:          parse,
+		warningHandler: warningHandler,
 	}
 
 	var err error
@@ -152,6 +161,7 @@ func runQuery(
 	out interface{},
 	args []interface{},
 	state map[string]interface{},
+	warningHandler WarningHandler,
 ) error {
 	if method == "QuerySingleJSON" {
 		switch out.(type) {
@@ -171,6 +181,7 @@ func runQuery(
 		state,
 		out,
 		true,
+		warningHandler,
 	)
 	if err != nil {
 		return err

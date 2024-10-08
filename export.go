@@ -270,6 +270,11 @@ type (
 	// UUID is a universally unique identifier
 	// https://www.edgedb.com/docs/stdlib/uuid
 	UUID = edgedbtypes.UUID
+
+	// WarningHandler takes a slice of edgedb.Error that represent warnings and
+	// optionally returns an error. This can be used to log warnings, increment
+	// metrics, promote warnings to errors by returning them etc.
+	WarningHandler = edgedb.WarningHandler
 )
 
 var (
@@ -291,6 +296,9 @@ var (
 	// DurationFromNanoseconds creates a Duration represented as microseconds
 	// from a [time.Duration] represented as nanoseconds.
 	DurationFromNanoseconds = edgedbtypes.DurationFromNanoseconds
+
+	// LogWarnings is an edgedb.WarningHandler that logs warnings.
+	LogWarnings = edgedb.LogWarnings
 
 	// NewDateDuration returns a new DateDuration
 	NewDateDuration = edgedbtypes.NewDateDuration
@@ -439,4 +447,8 @@ var (
 
 	// ParseUUID parses s into a UUID or returns an error.
 	ParseUUID = edgedbtypes.ParseUUID
+
+	// WarningsAsErrors is an edgedb.WarningHandler that returns warnings as
+	// errors.
+	WarningsAsErrors = edgedb.WarningsAsErrors
 )
