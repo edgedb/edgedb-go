@@ -57,6 +57,7 @@ func discardHeaders0pX(r *buff.Reader) {
 
 func decodeHeaders1pX(
 	r *buff.Reader,
+	query string,
 	warningHandler WarningHandler,
 ) (header.Header1pX, error) {
 	n := int(r.PopUint16())
@@ -75,7 +76,7 @@ func decodeHeaders1pX(
 
 		errors := make([]error, len(warnings))
 		for i, warning := range warnings {
-			errors[i] = errorFromCode(warning.Code, warning.Message)
+			errors[i] = warning.Err(query)
 		}
 
 		err = warningHandler(errors)

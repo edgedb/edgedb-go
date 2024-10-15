@@ -125,7 +125,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg1pX(
 	r *buff.Reader,
 	q *query,
 ) (*CommandDescription, error) {
-	_, err := decodeHeaders1pX(r, q.warningHandler)
+	_, err := decodeHeaders1pX(r, q.cmd, q.warningHandler)
 	if err != nil {
 		return nil, err
 	}

@@ -18,13 +18,62 @@ package edgedb
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"strings"
+	"unicode/utf8"
 )
 
 // Warning is used to decode warnings in the protocol.
 type Warning struct {
 	Code    uint32 `json:"code"`
 	Message string `json:"message"`
+	Hint    string `json:"hint,omitempty"`
+	Line    *int   `json:"line,omitempty"`
+	Start   *int   `json:"start,omitempty"`
+}
+
+func (w *Warning) Err(query string) error {
+	if w.Line == nil || w.Start == nil {
+		return errorFromCode(w.Code, w.Message)
+	}
+
+	lineNo := *w.Line - 1
+	byteNo := *w.Start
+	lines := strings.Split(query, "\n")
+	if lineNo >= len(lines) {
+		return errorFromCode(w.Code, w.Message)
+	}
+
+	// replace tabs with a single space
+	// because we don't know how they will be printed.
+	line := strings.ReplaceAll(lines[lineNo], "\t", " ")
+
+	for i := 0; i < lineNo; i++ {
+		byteNo -= 1 + len(lines[i])
+	}
+
+	if byteNo >= len(line) {
+		byteNo = 0
+	}
+
+	hint := w.Hint
+	if hint == "" {
+		hint = "error"
+	}
+
+	runeCount := utf8.RuneCountInString(line[:byteNo])
+	padding := strings.Repeat(" ", runeCount)
+	msg := w.Message + fmt.Sprintf(
+		"\nquery:%v:%v\n\n%v\n%v^ %v",
+		1+lineNo,
+		1+runeCount,
+		line,
+		padding,
+		hint,
+	)
+
+	return errorFromCode(w.Code, msg)
 }
 
 // LogWarnings is an edgedb.WarningHandler that logs warnings.
