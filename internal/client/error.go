@@ -23,9 +23,7 @@ import (
 	"io"
 	"net"
 	"strconv"
-	"strings"
 	"syscall"
-	"unicode/utf8"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
 )
@@ -73,47 +71,41 @@ const (
 	lineStart     = 0xfff3
 )
 
-type position struct {
-	lineNo int
-	byteNo int
-}
-
-func positionFromHeaders(headers map[uint16]string) (position, bool, error) {
+func positionFromHeaders(headers map[uint16]string) (*int, *int, error) {
 	lineNoRaw, ok := headers[lineStart]
 	if !ok {
-		return position{}, false, nil
+		return nil, nil, nil
 	}
 
 	byteNoRaw, ok := headers[positionStart]
 	if !ok {
-		return position{}, false, nil
+		return nil, nil, nil
 	}
 
 	lineNo, err := strconv.Atoi(lineNoRaw)
 	if err != nil {
-		return position{}, false, &binaryProtocolError{
+		return nil, nil, &binaryProtocolError{
 			err: fmt.Errorf("decode lineNo: %q: %w", lineNoRaw, err),
 		}
 	}
 	byteNo, err := strconv.Atoi(byteNoRaw)
 	if err != nil {
-		return position{}, false, &binaryProtocolError{
+		return nil, nil, &binaryProtocolError{
 			err: fmt.Errorf("decode byteNo: %q: %w", byteNoRaw, err),
 		}
 	}
 
-	return position{
-		lineNo: lineNo - 1,
-		byteNo: byteNo,
-	}, true, nil
+	return &lineNo, &byteNo, nil
 }
 
 // decodeErrorResponseMsg decodes an error response
 // https://www.edgedb.com/docs/internals/protocol/messages#errorresponse
 func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 	r.Discard(1) // severity
-	code := r.PopUint32()
-	msg := r.PopString()
+	w := Warning{
+		Code:    r.PopUint32(),
+		Message: r.PopString(),
+	}
 
 	n := int(r.PopUint16())
 	headers := make(map[uint16]string, n)
@@ -121,49 +113,14 @@ func decodeErrorResponseMsg(r *buff.Reader, query string) error {
 		headers[r.PopUint16()] = r.PopString()
 	}
 
-	pos, ok, err := positionFromHeaders(headers)
+	var err error
+	w.Line, w.Start, err = positionFromHeaders(headers)
 	if err != nil {
-		return err
-	}
-	if !ok {
-		return errorFromCode(code, msg)
+		return errors.Join(w.Err(query), err)
 	}
 
-	hintmsg, ok := headers[hint]
-	if !ok {
-		hintmsg = "error"
-	}
-
-	lines := strings.Split(query, "\n")
-	if pos.lineNo >= len(lines) {
-		return errorFromCode(code, msg)
-	}
-
-	// replace tabs with a single space
-	// because we don't know how they will be printed.
-	line := strings.ReplaceAll(lines[pos.lineNo], "\t", " ")
-
-	for i := 0; i < pos.lineNo; i++ {
-		pos.byteNo -= 1 + len(lines[i])
-	}
-
-	if pos.byteNo >= len(line) {
-		pos.byteNo = 0
-	}
-
-	runeCount := utf8.RuneCountInString(line[:pos.byteNo])
-	padding := strings.Repeat(" ", runeCount)
-
-	msg += fmt.Sprintf(
-		"\nquery:%v:%v\n\n%v\n%v^ %v",
-		1+pos.lineNo,
-		1+runeCount,
-		line,
-		padding,
-		hintmsg,
-	)
-
-	return errorFromCode(code, msg)
+	w.Hint = headers[hint]
+	return w.Err(query)
 }
 
 type wrappedManyError struct {

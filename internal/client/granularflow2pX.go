@@ -131,7 +131,7 @@ func (c *protocolConnection) decodeCommandDataDescriptionMsg2pX(
 	r *buff.Reader,
 	q *query,
 ) (*CommandDescriptionV2, error) {
-	_, err := decodeHeaders2pX(r, q.warningHandler)
+	_, err := decodeHeaders2pX(r, q.cmd, q.warningHandler)
 	if err != nil {
 		return nil, err
 	}
