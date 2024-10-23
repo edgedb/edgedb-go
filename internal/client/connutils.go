@@ -47,7 +47,7 @@ var (
 		`^(\w(?:-?\w)*)$`,
 	)
 	cloudInstanceNameRe = regexp.MustCompile(
-		`^([A-Za-z0-9](?:-?[A-Za-z0-9])*)/([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
+		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
 	)
 	domainLabelMaxLength              = 63
 	crcTable             *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)
@@ -151,7 +151,7 @@ func (r *configResolver) setInstance(val, source string) error {
 	match := instanceNameRe.FindStringSubmatch(val)
 	if len(match) == 0 {
 		match = cloudInstanceNameRe.FindStringSubmatch(val)
-		if len(match) == 0 {
+		if len(match) == 0 || strings.Contains(match[1], "--") {
 			return fmt.Errorf("invalid instance name %q", val)
 		}
 		r.org = cfgVal{val: match[1], source: source}
