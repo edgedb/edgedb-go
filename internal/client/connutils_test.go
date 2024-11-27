@@ -362,7 +362,7 @@ func TestConUtils(t *testing.T) {
 			expected: Result{
 				err: &configurationError{},
 				errMessage: "edgedb.ConfigurationError: " +
-					`invalid DSN: scheme is expected to be "edgedb", got "pq"`,
+					`invalid DSN: scheme is expected to be "gel", got "pq"`,
 			},
 		},
 		{
