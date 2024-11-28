@@ -1209,9 +1209,9 @@ func parseDSN(dsn string) (*url.URL, map[string]string, error) {
 		return nil, nil, fmt.Errorf("could not parse DSN %q: %w", dsn, err)
 	}
 
-	if uri.Scheme != "edgedb" {
+	if uri.Scheme != "edgedb" && uri.Scheme != "gel" {
 		return nil, nil, fmt.Errorf(
-			`scheme is expected to be "edgedb", got %q`, uri.Scheme)
+			`scheme is expected to be "gel", got %q`, uri.Scheme)
 	}
 
 	query, err := url.ParseQuery(uri.RawQuery)
