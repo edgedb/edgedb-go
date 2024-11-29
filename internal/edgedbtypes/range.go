@@ -16,7 +16,9 @@
 
 package edgedbtypes
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type emptyRangeJSON struct {
 	Empty bool `json:"empty"`
@@ -143,6 +145,9 @@ type OptionalRangeInt32 struct {
 func (o OptionalRangeInt32) Get() (RangeInt32, bool) {
 	return o.val, o.isSet
 }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalRangeInt32) Value() RangeInt32 { return o.val }
 
 // Set sets the value.
 func (o *OptionalRangeInt32) Set(val RangeInt32) {
@@ -301,6 +306,9 @@ func (o OptionalRangeInt64) Get() (RangeInt64, bool) {
 	return o.val, o.isSet
 }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalRangeInt64) Value() RangeInt64 { return o.val }
+
 // Set sets the value.
 func (o *OptionalRangeInt64) Set(val RangeInt64) {
 	o.val = val
@@ -454,6 +462,9 @@ func NewOptionalRangeFloat32(v RangeFloat32) OptionalRangeFloat32 {
 func (o OptionalRangeFloat32) Get() (RangeFloat32, bool) {
 	return o.val, o.isSet
 }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalRangeFloat32) Value() RangeFloat32 { return o.val }
 
 // Set sets the value.
 func (o *OptionalRangeFloat32) Set(val RangeFloat32) {
@@ -609,6 +620,9 @@ func (o OptionalRangeFloat64) Get() (RangeFloat64, bool) {
 	return o.val, o.isSet
 }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalRangeFloat64) Value() RangeFloat64 { return o.val }
+
 // Set sets the value.
 func (o *OptionalRangeFloat64) Set(val RangeFloat64) {
 	o.val = val
@@ -762,6 +776,9 @@ type OptionalRangeDateTime struct {
 func (o *OptionalRangeDateTime) Get() (RangeDateTime, bool) {
 	return o.val, o.isSet
 }
+
+// Value returns the value or the zero value if not set.
+func (o *OptionalRangeDateTime) Value() RangeDateTime { return o.val }
 
 // Set sets the value.
 func (o *OptionalRangeDateTime) Set(val RangeDateTime) {
@@ -919,6 +936,9 @@ func (o OptionalRangeLocalDateTime) Get() (RangeLocalDateTime, bool) {
 	return o.val, o.isSet
 }
 
+// Value returns the value or the zero value if not set.
+func (o OptionalRangeLocalDateTime) Value() RangeLocalDateTime { return o.val }
+
 // Set sets the value.
 func (o *OptionalRangeLocalDateTime) Set(val RangeLocalDateTime) {
 	o.val = val
@@ -1075,6 +1095,9 @@ type OptionalRangeLocalDate struct {
 func (o OptionalRangeLocalDate) Get() (RangeLocalDate, bool) {
 	return o.val, o.isSet
 }
+
+// Value returns the value or the zero value if not set.
+func (o OptionalRangeLocalDate) Value() RangeLocalDate { return o.val }
 
 // Set sets the value.
 func (o *OptionalRangeLocalDate) Set(val RangeLocalDate) {
