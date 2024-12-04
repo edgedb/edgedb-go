@@ -162,10 +162,18 @@ func getProject() (*project, error) {
 			)
 		}
 
-		file := filepath.Join(dir, "edgedb.toml")
+		file := filepath.Join(dir, "gel.toml")
 		isTOML, err := isEdgeDBTOML(file)
 		if err != nil {
 			return nil, err
+		}
+
+		if !isTOML {
+			file = filepath.Join(dir, "edgedb.toml")
+			isTOML, err = isEdgeDBTOML(file)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if isTOML {
