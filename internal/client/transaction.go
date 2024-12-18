@@ -263,7 +263,7 @@ func (t *Tx) QuerySingleJSON(
 	)
 }
 
-// Execute a SQL command (or commands).
+// ExecuteSQL executes a SQL command (or commands).
 func (t *Tx) ExecuteSQL(
 	ctx context.Context,
 	cmd string,
@@ -286,7 +286,7 @@ func (t *Tx) ExecuteSQL(
 	return t.scriptFlow(ctx, q)
 }
 
-// Query runs a SQL query and returns the results.
+// QuerySQL runs a SQL query and returns the results.
 func (t *Tx) QuerySQL(
 	ctx context.Context,
 	cmd string,

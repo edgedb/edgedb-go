@@ -47,7 +47,8 @@ var (
 		`^(\w(?:-?\w)*)$`,
 	)
 	cloudInstanceNameRe = regexp.MustCompile(
-		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
+		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/` +
+			`([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
 	)
 	domainLabelMaxLength              = 63
 	crcTable             *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)

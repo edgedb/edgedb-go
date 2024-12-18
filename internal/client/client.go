@@ -441,7 +441,7 @@ func (p *Client) QuerySingleJSON(
 	return firstError(err, p.release(conn, err))
 }
 
-// Query runs a SQL query and returns the results.
+// QuerySQL runs a SQL query and returns the results.
 func (p *Client) QuerySQL(
 	ctx context.Context,
 	cmd string,
@@ -458,7 +458,7 @@ func (p *Client) QuerySQL(
 	return firstError(err, p.release(conn, err))
 }
 
-// Execute a SQL command (or commands).
+// ExecuteSQL executes a SQL command (or commands).
 func (p *Client) ExecuteSQL(
 	ctx context.Context,
 	cmd string,

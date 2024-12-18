@@ -217,7 +217,7 @@ func TestQuerySQL(t *testing.T) {
 		err = client.QuerySQL(ctx, "select 1 AS foo, 2 AS bar", &result2)
 		assert.NoError(t, err)
 		assert.Equal(t, []res2{
-			res2{
+			{
 				Foo: 1,
 				Bar: 2,
 			},
@@ -234,15 +234,17 @@ func TestQuerySQL(t *testing.T) {
 		err = client.QuerySQL(ctx, "select 1", &res)
 		assert.EqualError(
 			t, err,
-			"edgedb.UnsupportedFeatureError:"+
-				" the server does not support SQL queries, upgrade to 6.0 or newer",
+			"edgedb.UnsupportedFeatureError: "+
+				"the server does not support SQL queries, "+
+				"upgrade to 6.0 or newer",
 		)
 
 		err = client.ExecuteSQL(ctx, "select 1")
 		assert.EqualError(
 			t, err,
-			"edgedb.UnsupportedFeatureError:"+
-				" the server does not support SQL queries, upgrade to 6.0 or newer",
+			"edgedb.UnsupportedFeatureError: "+
+				"the server does not support SQL queries, "+
+				"upgrade to 6.0 or newer",
 		)
 	}
 }
