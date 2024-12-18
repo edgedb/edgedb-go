@@ -70,7 +70,7 @@ func buildArgEncoderV2(
 		}
 	}
 
-	if len(desc.Fields) > 0 && desc.Fields[0].Name != "0" {
+	if len(desc.Fields) > 0 && !(desc.Fields[0].Name == "0" || desc.Fields[0].Name == "1") {
 		return &kwargsEncoder{desc.ID, fields}, nil
 	}
 

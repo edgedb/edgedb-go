@@ -74,6 +74,9 @@ const (
 
 	// MultiRange represents the multi range descriptor type.
 	MultiRange
+
+	// SQLRecord represents the SQL record descriptor type.
+	SQLRecord
 )
 
 // Descriptor is a type descriptor

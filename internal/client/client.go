@@ -441,6 +441,52 @@ func (p *Client) QuerySingleJSON(
 	return firstError(err, p.release(conn, err))
 }
 
+// Query runs a SQL query and returns the results.
+func (p *Client) QuerySQL(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	conn, err := p.acquire(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = runQuery(
+		ctx, conn, "QuerySQL", cmd, out, args, p.state, p.warningHandler)
+	return firstError(err, p.release(conn, err))
+}
+
+// Execute a SQL command (or commands).
+func (p *Client) ExecuteSQL(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
+	conn, err := p.acquire(ctx)
+	if err != nil {
+		return err
+	}
+
+	q, err := newQuery(
+		"ExecuteSQL",
+		cmd,
+		args,
+		conn.capabilities1pX(),
+		copyState(p.state),
+		nil,
+		true,
+		p.warningHandler,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = conn.scriptFlow(ctx, q)
+	return firstError(err, p.release(conn, err))
+}
+
 // Tx runs an action in a transaction retrying failed actions
 // if they might succeed on a subsequent attempt.
 //

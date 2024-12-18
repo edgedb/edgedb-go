@@ -262,3 +262,45 @@ func (t *Tx) QuerySingleJSON(
 		t.warningHandler,
 	)
 }
+
+// Execute a SQL command (or commands).
+func (t *Tx) ExecuteSQL(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
+	q, err := newQuery(
+		"ExecuteSQL",
+		cmd,
+		args,
+		t.capabilities1pX(),
+		t.state,
+		nil,
+		true,
+		t.warningHandler,
+	)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
+}
+
+// Query runs a SQL query and returns the results.
+func (t *Tx) QuerySQL(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	return runQuery(
+		ctx,
+		t,
+		"QuerySQL",
+		cmd,
+		out,
+		args,
+		t.state,
+		t.warningHandler,
+	)
+}
