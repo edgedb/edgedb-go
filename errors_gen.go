@@ -52,6 +52,7 @@ const (
 	UnknownUserError                       = edgedb.UnknownUserError
 	UnknownDatabaseError                   = edgedb.UnknownDatabaseError
 	UnknownParameterError                  = edgedb.UnknownParameterError
+	DeprecatedScopingError                 = edgedb.DeprecatedScopingError
 	SchemaError                            = edgedb.SchemaError
 	SchemaDefinitionError                  = edgedb.SchemaDefinitionError
 	InvalidDefinitionError                 = edgedb.InvalidDefinitionError
@@ -102,6 +103,9 @@ const (
 	AuthenticationError                    = edgedb.AuthenticationError
 	AvailabilityError                      = edgedb.AvailabilityError
 	BackendUnavailableError                = edgedb.BackendUnavailableError
+	ServerOfflineError                     = edgedb.ServerOfflineError
+	UnknownTenantError                     = edgedb.UnknownTenantError
+	ServerBlockedError                     = edgedb.ServerBlockedError
 	BackendError                           = edgedb.BackendError
 	UnsupportedBackendFeatureError         = edgedb.UnsupportedBackendFeatureError
 	ClientError                            = edgedb.ClientError
