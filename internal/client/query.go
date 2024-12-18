@@ -37,6 +37,7 @@ type query struct {
 	out            reflect.Value
 	outType        reflect.Type
 	method         string
+	lang           Language
 	cmd            string
 	fmt            Format
 	expCard        Cardinality
@@ -81,10 +82,16 @@ func newQuery(
 		frmt    Format
 	)
 
+	lang := EdgeQL
+
 	switch method {
-	case "Execute":
+	case "Execute", "ExecuteSQL":
+		if method == "ExecuteSQL" {
+			lang = SQL
+		}
 		return &query{
 			method:         method,
+			lang:           lang,
 			cmd:            cmd,
 			fmt:            Null,
 			expCard:        Many,
@@ -106,12 +113,17 @@ func newQuery(
 	case "QuerySingleJSON":
 		expCard = AtMostOne
 		frmt = JSON
+	case "QuerySQL":
+		lang = SQL
+		expCard = Many
+		frmt = Binary
 	default:
 		return nil, fmt.Errorf("unknown query method %q", method)
 	}
 
 	q := query{
 		method:         method,
+		lang:           lang,
 		cmd:            cmd,
 		fmt:            frmt,
 		expCard:        expCard,

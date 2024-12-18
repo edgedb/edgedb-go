@@ -75,6 +75,9 @@ func (c *protocolConnection) parse2pX(
 	w.PushUint64(q.capabilities)
 	w.PushUint64(0) // no compilation_flags
 	w.PushUint64(0) // no implicit limit
+	if c.protocolVersion.GTE(protocolVersion3p0) {
+		w.PushUint8(uint8(q.lang))
+	}
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushString(q.cmd)
@@ -194,6 +197,9 @@ func (c *protocolConnection) execute2pX(
 	w.PushUint64(q.capabilities)
 	w.PushUint64(0) // no compilation_flags
 	w.PushUint64(0) // no implicit limit
+	if c.protocolVersion.GTE(protocolVersion3p0) {
+		w.PushUint8(uint8(q.lang))
+	}
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushString(q.cmd)

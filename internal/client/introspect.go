@@ -90,6 +90,7 @@ func DescribeV2(
 
 	q := &query{
 		method:       "Query",
+		lang:         EdgeQL,
 		cmd:          cmd,
 		fmt:          Binary,
 		expCard:      Many,

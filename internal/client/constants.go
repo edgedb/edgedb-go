@@ -31,10 +31,11 @@ var (
 	defaultConcurrency = max(4, runtime.NumCPU())
 
 	protocolVersionMin  = protocolVersion0p13
-	protocolVersionMax  = protocolVersion2p0
+	protocolVersionMax  = protocolVersion3p0
 	protocolVersion0p13 = internal.ProtocolVersion{Major: 0, Minor: 13}
 	protocolVersion1p0  = internal.ProtocolVersion{Major: 1, Minor: 0}
 	protocolVersion2p0  = internal.ProtocolVersion{Major: 2, Minor: 0}
+	protocolVersion3p0  = internal.ProtocolVersion{Major: 3, Minor: 0}
 
 	capabilitiesSessionConfig uint64 = 0x2
 	capabilitiesTransaction   uint64 = 0x4
