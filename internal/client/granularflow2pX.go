@@ -72,9 +72,12 @@ func (c *protocolConnection) parse2pX(
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(Parse))
 	w.PushUint16(0) // no headers
-	w.PushUint64(q.capabilities)
+	w.PushUint64(q.getCapabilities())
 	w.PushUint64(0) // no compilation_flags
-	w.PushUint64(0) // no implicit limit
+	w.PushUint64(q.queryOpts.ImplicitLimit)
+	if c.protocolVersion.GTE(protocolVersion3p0) {
+		w.PushUint8(uint8(q.lang))
+	}
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushString(q.cmd)
@@ -191,9 +194,12 @@ func (c *protocolConnection) execute2pX(
 	w := buff.NewWriter(c.writeMemory[:0])
 	w.BeginMessage(uint8(Execute))
 	w.PushUint16(0) // no headers
-	w.PushUint64(q.capabilities)
+	w.PushUint64(q.getCapabilities())
 	w.PushUint64(0) // no compilation_flags
-	w.PushUint64(0) // no implicit limit
+	w.PushUint64(q.queryOpts.ImplicitLimit)
+	if c.protocolVersion.GTE(protocolVersion3p0) {
+		w.PushUint8(uint8(q.lang))
+	}
 	w.PushUint8(uint8(q.fmt))
 	w.PushUint8(uint8(q.expCard))
 	w.PushString(q.cmd)

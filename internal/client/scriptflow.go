@@ -68,7 +68,7 @@ func decodeHeaders1pX(
 	}
 
 	if data, ok := headers["warnings"]; ok {
-		var warnings []Warning
+		var warnings []*Warning
 		err := json.Unmarshal([]byte(data), &warnings)
 		if err != nil {
 			return nil, err
