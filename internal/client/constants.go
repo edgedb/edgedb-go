@@ -37,6 +37,7 @@ var (
 	protocolVersion2p0  = internal.ProtocolVersion{Major: 2, Minor: 0}
 	protocolVersion3p0  = internal.ProtocolVersion{Major: 3, Minor: 0}
 
+	capabilitiesModifications uint64 = 0x1
 	capabilitiesSessionConfig uint64 = 0x2
 	capabilitiesTransaction   uint64 = 0x4
 	capabilitiesDDL           uint64 = 0x8
