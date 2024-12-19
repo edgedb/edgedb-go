@@ -44,8 +44,17 @@ type query struct {
 	args           []interface{}
 	capabilities   uint64
 	state          map[string]interface{}
+	queryOpts      QueryOptions
 	parse          bool
 	warningHandler WarningHandler
+}
+
+func (q *query) getCapabilities() uint64 {
+	capabilities := q.capabilities
+	if q.queryOpts.ReadOnly {
+		capabilities &^= capabilitiesModifications
+	}
+	return capabilities
 }
 
 func (q *query) flat() bool {
@@ -73,6 +82,7 @@ func newQuery(
 	args []interface{},
 	capabilities uint64,
 	state map[string]interface{},
+	queryOpts QueryOptions,
 	out interface{},
 	parse bool,
 	warningHandler WarningHandler,
@@ -98,6 +108,7 @@ func newQuery(
 			args:           args,
 			capabilities:   capabilities,
 			state:          state,
+			queryOpts:      queryOpts,
 			parse:          parse,
 			warningHandler: warningHandler,
 		}, nil
@@ -130,6 +141,7 @@ func newQuery(
 		args:           args,
 		capabilities:   capabilities,
 		state:          state,
+		queryOpts:      queryOpts,
 		parse:          parse,
 		warningHandler: warningHandler,
 	}
@@ -173,6 +185,7 @@ func runQuery(
 	out interface{},
 	args []interface{},
 	state map[string]interface{},
+	queryOpts QueryOptions,
 	warningHandler WarningHandler,
 ) error {
 	if method == "QuerySingleJSON" {
@@ -191,6 +204,7 @@ func runQuery(
 		args,
 		c.capabilities1pX(),
 		state,
+		queryOpts,
 		out,
 		true,
 		warningHandler,
