@@ -917,7 +917,7 @@ func (r *configResolver) resolveTOML(paths *cfgPaths) error {
 	}
 
 	if !exists(stashDir) {
-		return errors.New("Found `edgedb.toml` " +
+		return errors.New("Found `gel.toml` " +
 			"but the project is not initialized. Run `edgedb project init`.")
 	}
 
@@ -1465,33 +1465,37 @@ func findEdgeDBTOML(paths *cfgPaths) (string, error) {
 	}
 
 	for {
-		tomlPath := filepath.Join(dir, "edgedb.toml")
+		tomlPath := filepath.Join(dir, "gel.toml")
 		if _, e := os.Stat(tomlPath); os.IsNotExist(e) {
-			parent := filepath.Dir(dir)
-			// Stop searching when dir is the root directory.
-			if parent == dir {
-				return "", errNoTOMLFound
-			}
-
-			pDev, err := device(parent)
-			if err != nil {
-				return "", fmt.Errorf(
-					"searching for edgedb.toml in or above %q: %w",
-					filepath.Dir(tomlPath), err)
-			}
-
-			// Stop searching at file system boundaries.
-			if pDev != dev {
-				if err == nil { // nolint:govet
-					err = errNoTOMLFound
+			tomlPath = filepath.Join(dir, "edgedb.toml")
+			if _, e := os.Stat(tomlPath); os.IsNotExist(e) {
+				parent := filepath.Dir(dir)
+				// Stop searching when dir is the root directory.
+				if parent == dir {
+					return "", errNoTOMLFound
 				}
-				return "", fmt.Errorf("%w: stopped searching for edgedb.toml "+
-					"at file system boundary %q", err, dir)
-			}
 
-			dir = parent
-			dev = pDev
-			continue
+				pDev, err := device(parent)
+				if err != nil {
+					return "", fmt.Errorf(
+						"searching for gel.toml in or above %q: %w",
+						filepath.Dir(tomlPath), err)
+				}
+
+				// Stop searching at file system boundaries.
+				if pDev != dev {
+					if err == nil { // nolint:govet
+						err = errNoTOMLFound
+					}
+					return "", fmt.Errorf(
+						"%w: stopped searching for gel.toml "+
+							"at file system boundary %q", err, dir)
+				}
+
+				dir = parent
+				dev = pDev
+				continue
+			}
 		}
 		return tomlPath, nil
 	}
