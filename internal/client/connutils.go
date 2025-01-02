@@ -1478,7 +1478,7 @@ func findEdgeDBTOML(paths *cfgPaths) (string, error) {
 				pDev, err := device(parent)
 				if err != nil {
 					return "", fmt.Errorf(
-						"searching for edgedb.toml in or above %q: %w",
+						"searching for gel.toml in or above %q: %w",
 						filepath.Dir(tomlPath), err)
 				}
 
@@ -1488,7 +1488,7 @@ func findEdgeDBTOML(paths *cfgPaths) (string, error) {
 						err = errNoTOMLFound
 					}
 					return "", fmt.Errorf(
-						"%w: stopped searching for edgedb.toml "+
+						"%w: stopped searching for gel.toml "+
 							"at file system boundary %q", err, dir)
 				}
 
