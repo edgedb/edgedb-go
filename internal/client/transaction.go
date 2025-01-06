@@ -78,6 +78,7 @@ type Tx struct {
 	*txState
 	options        TxOptions
 	state          map[string]interface{}
+	queryOpts      QueryOptions
 	warningHandler WarningHandler
 }
 
@@ -92,6 +93,7 @@ func (t *Tx) execute(
 		nil,
 		txCapabilities,
 		t.state,
+		t.queryOpts,
 		nil,
 		false,
 		t.warningHandler,
@@ -171,6 +173,7 @@ func (t *Tx) Execute(
 		args,
 		t.capabilities1pX(),
 		t.state,
+		t.queryOpts,
 		nil,
 		true,
 		t.warningHandler,
@@ -197,6 +200,7 @@ func (t *Tx) Query(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -219,6 +223,7 @@ func (t *Tx) QuerySingle(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -238,6 +243,7 @@ func (t *Tx) QueryJSON(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -259,6 +265,51 @@ func (t *Tx) QuerySingleJSON(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
+		t.warningHandler,
+	)
+}
+
+// ExecuteSQL executes a SQL command (or commands).
+func (t *Tx) ExecuteSQL(
+	ctx context.Context,
+	cmd string,
+	args ...interface{},
+) error {
+	q, err := newQuery(
+		"ExecuteSQL",
+		cmd,
+		args,
+		t.capabilities1pX(),
+		t.state,
+		t.queryOpts,
+		nil,
+		true,
+		t.warningHandler,
+	)
+	if err != nil {
+		return err
+	}
+
+	return t.scriptFlow(ctx, q)
+}
+
+// QuerySQL runs a SQL query and returns the results.
+func (t *Tx) QuerySQL(
+	ctx context.Context,
+	cmd string,
+	out interface{},
+	args ...interface{},
+) error {
+	return runQuery(
+		ctx,
+		t,
+		"QuerySQL",
+		cmd,
+		out,
+		args,
+		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }

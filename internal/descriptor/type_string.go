@@ -21,11 +21,12 @@ func _() {
 	_ = x[ObjectShape-10]
 	_ = x[Compound-11]
 	_ = x[MultiRange-12]
+	_ = x[SQLRecord-13]
 }
 
-const _Type_name = "SetObjectBaseScalarScalarTupleNamedTupleArrayEnumInputShapeRangeObjectShapeCompoundMultiRange"
+const _Type_name = "SetObjectBaseScalarScalarTupleNamedTupleArrayEnumInputShapeRangeObjectShapeCompoundMultiRangeSQLRecord"
 
-var _Type_index = [...]uint8{0, 3, 9, 19, 25, 30, 40, 45, 49, 59, 64, 75, 83, 93}
+var _Type_index = [...]uint8{0, 3, 9, 19, 25, 30, 40, 45, 49, 59, 64, 75, 83, 93, 102}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

@@ -68,6 +68,7 @@ type idPair struct {
 }
 
 type queryKey struct {
+	lang    Language
 	cmd     string
 	fmt     Format
 	expCard Cardinality
@@ -76,6 +77,7 @@ type queryKey struct {
 
 func makeKey(q *query) queryKey {
 	return queryKey{
+		lang:    q.lang,
 		cmd:     q.cmd,
 		fmt:     q.fmt,
 		expCard: q.expCard,

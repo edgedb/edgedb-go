@@ -37,14 +37,24 @@ type query struct {
 	out            reflect.Value
 	outType        reflect.Type
 	method         string
+	lang           Language
 	cmd            string
 	fmt            Format
 	expCard        Cardinality
 	args           []interface{}
 	capabilities   uint64
 	state          map[string]interface{}
+	queryOpts      QueryOptions
 	parse          bool
 	warningHandler WarningHandler
+}
+
+func (q *query) getCapabilities() uint64 {
+	capabilities := q.capabilities
+	if q.queryOpts.ReadOnly {
+		capabilities &^= capabilitiesModifications
+	}
+	return capabilities
 }
 
 func (q *query) flat() bool {
@@ -72,6 +82,7 @@ func newQuery(
 	args []interface{},
 	capabilities uint64,
 	state map[string]interface{},
+	queryOpts QueryOptions,
 	out interface{},
 	parse bool,
 	warningHandler WarningHandler,
@@ -81,16 +92,23 @@ func newQuery(
 		frmt    Format
 	)
 
+	lang := EdgeQL
+
 	switch method {
-	case "Execute":
+	case "Execute", "ExecuteSQL":
+		if method == "ExecuteSQL" {
+			lang = SQL
+		}
 		return &query{
 			method:         method,
+			lang:           lang,
 			cmd:            cmd,
 			fmt:            Null,
 			expCard:        Many,
 			args:           args,
 			capabilities:   capabilities,
 			state:          state,
+			queryOpts:      queryOpts,
 			parse:          parse,
 			warningHandler: warningHandler,
 		}, nil
@@ -106,18 +124,24 @@ func newQuery(
 	case "QuerySingleJSON":
 		expCard = AtMostOne
 		frmt = JSON
+	case "QuerySQL":
+		lang = SQL
+		expCard = Many
+		frmt = Binary
 	default:
 		return nil, fmt.Errorf("unknown query method %q", method)
 	}
 
 	q := query{
 		method:         method,
+		lang:           lang,
 		cmd:            cmd,
 		fmt:            frmt,
 		expCard:        expCard,
 		args:           args,
 		capabilities:   capabilities,
 		state:          state,
+		queryOpts:      queryOpts,
 		parse:          parse,
 		warningHandler: warningHandler,
 	}
@@ -161,6 +185,7 @@ func runQuery(
 	out interface{},
 	args []interface{},
 	state map[string]interface{},
+	queryOpts QueryOptions,
 	warningHandler WarningHandler,
 ) error {
 	if method == "QuerySingleJSON" {
@@ -179,6 +204,7 @@ func runQuery(
 		args,
 		c.capabilities1pX(),
 		state,
+		queryOpts,
 		out,
 		true,
 		warningHandler,
