@@ -175,4 +175,4 @@
 // [EdgeDB]: https://www.edgedb.com
 // [json]: https://www.edgedb.com/docs/edgeql/insert#bulk-inserts
 // [client connection docs]: https://www.edgedb.com/docs/clients/connection
-package edgedb
+package gel

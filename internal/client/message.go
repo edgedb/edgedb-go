@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 //go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Message
 

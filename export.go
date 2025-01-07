@@ -17,7 +17,7 @@
 // This file is auto generated. Do not edit!
 // run 'go generate ./...' to regenerate
 
-package edgedb
+package gel
 
 import (
 	edgedb "github.com/edgedb/edgedb-go/internal/client"

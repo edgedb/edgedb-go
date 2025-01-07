@@ -204,7 +204,7 @@ Usage Example
 
 .. code-block:: go
     
-    package edgedb_test
+    package gel_test
     
     import (
         "context"

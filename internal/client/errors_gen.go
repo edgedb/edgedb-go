@@ -20,7 +20,7 @@
 // internal/cmd/export should ignore this file
 //go:build !export
 
-package edgedb
+package gel
 
 import "fmt"
 

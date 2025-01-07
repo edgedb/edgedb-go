@@ -183,7 +183,7 @@ func main() {
 `)
 
 	fmt.Println()
-	fmt.Println("package edgedb")
+	fmt.Println("package gel")
 	fmt.Println()
 	fmt.Print(`import "fmt"`)
 	printTags(tags)

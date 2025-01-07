@@ -17,7 +17,7 @@
 //go:build darwin
 // +build darwin
 
-package edgedb
+package gel
 
 import (
 	"crypto/x509"
