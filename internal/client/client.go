@@ -206,8 +206,8 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 }
 
 type systemConfig struct {
-	ID                 types.OptionalUUID     `edgedb:"id"`
-	SessionIdleTimeout types.OptionalDuration `edgedb:"session_idle_timeout"`
+	ID                 types.OptionalUUID     `gel:"id"`
+	SessionIdleTimeout types.OptionalDuration `gel:"session_idle_timeout"`
 }
 
 func (p *Client) release(conn *transactableConn, err error) error {

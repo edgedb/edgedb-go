@@ -40,8 +40,8 @@
 //	    var (
 //	        age   int64 = 21
 //	        users []struct {
-//	            ID   gel.UUID `edgedb:"id"`
-//	            Name string      `edgedb:"name"`
+//	            ID   gel.UUID `gel:"id"`
+//	            Name string   `gel:"name"`
 //	        }
 //	    )
 //
@@ -132,7 +132,7 @@
 //
 //	type User struct {
 //	    gel.Optional
-//	    Email string `edgedb:"email"`
+//	    Email string `gel:"email"`
 //	}
 //
 //	var result User
@@ -156,14 +156,14 @@
 //
 // By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
 // To treat an embedded struct's fields as part of the parent struct's fields,
-// tag the embedded struct with `edgedb:"$inline"`.
+// tag the embedded struct with `gel:"$inline"`.
 //
 //	type Object struct {
 //	    ID gel.UUID
 //	}
 //
 //	type User struct {
-//	    Object `edgedb:"$inline"`
+//	    Object `gel:"$inline"`
 //	    Name string
 //	}
 //

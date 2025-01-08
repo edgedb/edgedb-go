@@ -34,11 +34,11 @@ var (
 // [Link properties]: https://www.edgedb.com/docs/guides/link_properties
 func Example_linkProperty() {
 	var result []struct {
-		Name    string `edgedb:"name"`
+		Name    string `gel:"name"`
 		Friends []struct {
-			Name     string              `edgedb:"name"`
-			Strength gel.OptionalFloat64 `edgedb:"strength"`
-		} `edgedb:"friends"`
+			Name     string              `gel:"name"`
+			Strength gel.OptionalFloat64 `gel:"strength"`
+		} `gel:"friends"`
 	}
 
 	_ = client.Query(

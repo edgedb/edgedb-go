@@ -16,16 +16,16 @@ var selectLinkPropCmd string
 // is part of the return type for
 // selectLinkProp()
 type SelectLinkPropResult struct {
-	Name    string                            `edgedb:"Name"`
-	Friends []SelectLinkPropResultFriendsItem `edgedb:"Friends"`
+	Name    string                            `gel:"Name"`
+	Friends []SelectLinkPropResultFriendsItem `gel:"Friends"`
 }
 
 // SelectLinkPropResultFriendsItem
 // is part of the return type for
 // selectLinkProp()
 type SelectLinkPropResultFriendsItem struct {
-	Name     string              `edgedb:"Name"`
-	Strength gel.OptionalFloat64 `edgedb:"Strength"`
+	Name     string              `gel:"Name"`
+	Strength gel.OptionalFloat64 `gel:"Strength"`
 }
 
 // selectLinkProp

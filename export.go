@@ -102,7 +102,7 @@ type (
 	//
 	//	type User struct {
 	//	    gel.Optional
-	//	    Name string `edgedb:"name"`
+	//	    Name string `gel:"name"`
 	//	}
 	Optional = edgedbtypes.Optional
 

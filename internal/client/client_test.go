@@ -149,7 +149,7 @@ func TestQuerySingleMissingResult(t *testing.T) {
 	assert.Equal(t, edgedbtypes.OptionalStr{}, optionalResult)
 
 	var objectResult struct {
-		Name string `edgedb:"name"`
+		Name string `gel:"name"`
 	}
 	err = client.QuerySingle(ctx,
 		"SELECT sys::Database { name } FILTER .name = 'does not exist'",
@@ -159,7 +159,7 @@ func TestQuerySingleMissingResult(t *testing.T) {
 
 	var optionalObjectResult struct {
 		edgedbtypes.Optional
-		Name string `edgedb:"name"`
+		Name string `gel:"name"`
 	}
 	optionalObjectResult.SetMissing(false)
 	err = client.QuerySingle(ctx,

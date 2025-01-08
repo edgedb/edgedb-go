@@ -34,7 +34,7 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 
 	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
-			Val OptionalTuple `edgedb:"val"`
+			Val OptionalTuple `gel:"val"`
 		}
 		e := tx.Execute(ctx, `
 			CREATE TYPE Sample {
@@ -51,7 +51,7 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 
 	err = client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
-			Val OptionalNamedTuple `edgedb:"val"`
+			Val OptionalNamedTuple `gel:"val"`
 		}
 
 		e := tx.Execute(ctx, `
@@ -72,7 +72,7 @@ func TestObjectWithoutID(t *testing.T) {
 	ctx := context.Background()
 
 	type Function struct {
-		Name string `edgedb:"name"`
+		Name string `gel:"name"`
 	}
 
 	var result Function
@@ -186,7 +186,7 @@ SELECT 1 / <str>$0
 
 func TestArgumentTypeMissmatch(t *testing.T) {
 	type Tuple struct {
-		first int16 `edgedb:"0"` // nolint:unused,structcheck
+		first int16 `gel:"0"` // nolint:unused,structcheck
 	}
 
 	var res Tuple
@@ -302,20 +302,20 @@ func TestQuerySingleZeroResults(t *testing.T) {
 func TestQuerySingleNestedSlice(t *testing.T) {
 	ctx := context.Background()
 	type IDField struct {
-		ID types.UUID `edgedb:"id"`
+		ID types.UUID `gel:"id"`
 	}
 	type NameField struct {
-		Name types.OptionalStr `edgedb:"name"`
+		Name types.OptionalStr `gel:"name"`
 	}
 	type UserModel struct {
-		IDField   `edgedb:"$inline"`
-		NameField `edgedb:"$inline"`
+		IDField   `gel:"$inline"`
+		NameField `gel:"$inline"`
 	}
 	type UsersField struct {
-		Users []UserModel `edgedb:"users"`
+		Users []UserModel `gel:"users"`
 	}
 	type ViewModel struct {
-		UsersField `edgedb:"$inline"`
+		UsersField `gel:"$inline"`
 	}
 	result := ViewModel{}
 	err := client.QuerySingle(

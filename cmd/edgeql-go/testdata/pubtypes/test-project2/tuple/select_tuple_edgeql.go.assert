@@ -16,9 +16,9 @@ var selectTupleCmd string
 // is part of the return type for
 // selectTuple()
 type SelectTupleResult struct {
-	Element0 gel.OptionalStr        `edgedb:"0"`
-	Element1 gel.OptionalInt64      `edgedb:"1"`
-	Element2 SelectTupleResult2Item `edgedb:"2"`
+	Element0 gel.OptionalStr        `gel:"0"`
+	Element1 gel.OptionalInt64      `gel:"1"`
+	Element2 SelectTupleResult2Item `gel:"2"`
 }
 
 // SelectTupleResult2Item
@@ -26,8 +26,8 @@ type SelectTupleResult struct {
 // selectTuple()
 type SelectTupleResult2Item struct {
 	gel.Optional
-	Element0 gel.OptionalStr   `edgedb:"0"`
-	Element1 gel.OptionalInt64 `edgedb:"1"`
+	Element0 gel.OptionalStr   `gel:"0"`
+	Element1 gel.OptionalInt64 `gel:"1"`
 }
 
 // selectTuple

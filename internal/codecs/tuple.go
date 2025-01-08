@@ -107,7 +107,7 @@ func buildTupleDecoder(
 		sf, ok := introspect.StructField(typ, field.Name)
 		if !ok {
 			return nil, fmt.Errorf(
-				"expected %v to have a field with the tag `edgedb:\"%v\"`",
+				"expected %v to have a field with the tag `gel:\"%v\"`",
 				typ, field.Name,
 			)
 		}
@@ -155,7 +155,7 @@ func buildTupleDecoderV2(
 		sf, ok := introspect.StructField(typ, field.Name)
 		if !ok {
 			return nil, fmt.Errorf(
-				"expected %v to have a field with the tag `edgedb:\"%v\"`",
+				"expected %v to have a field with the tag `gel:\"%v\"`",
 				typ, field.Name,
 			)
 		}

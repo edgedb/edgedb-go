@@ -40,7 +40,7 @@ func TestMissmatchedUnmarshalerType(t *testing.T) {
 
 	// Decode into wrong Unmarshaler type
 	var wrongType struct {
-		Val CustomInt32 `edgedb:"val"`
+		Val CustomInt32 `gel:"val"`
 	}
 	err := client.QuerySingle(ctx, `
 		SELECT { val := 123_456_789_987_654_321 }`,
@@ -48,7 +48,7 @@ func TestMissmatchedUnmarshalerType(t *testing.T) {
 	)
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: expected "+
-		"struct { Val gel.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomInt32 \"gel:\\\"val\\\"\" }.val "+
 		"to be int64 or gel.OptionalInt64 got gel.CustomInt32")
 	assert.Equal(t, []byte(nil), wrongType.Val.data)
 }
@@ -88,11 +88,11 @@ func TestSendAndReceiveInt64(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string `edgedb:"encoded"`
-		Decoded   int64  `edgedb:"decoded"`
-		RoundTrip int64  `edgedb:"round_trip"`
-		IsEqual   bool   `edgedb:"is_equal"`
-		String    string `edgedb:"string"`
+		Encoded   string `gel:"encoded"`
+		Decoded   int64  `gel:"decoded"`
+		RoundTrip int64  `gel:"round_trip"`
+		IsEqual   bool   `gel:"is_equal"`
+		String    string `gel:"string"`
 	}
 
 	query := `
@@ -154,7 +154,7 @@ func (m *CustomInt64) UnmarshalEdgeDBInt64(data []byte) error {
 func TestReceiveInt64Unmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomInt64 `edgedb:"val"`
+		Val CustomInt64 `gel:"val"`
 	}
 
 	// Decode value
@@ -177,7 +177,7 @@ func TestReceiveInt64Unmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomInt64 at "+
-		"struct { Val gel.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomInt64 \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -185,7 +185,7 @@ func TestReceiveInt64Unmarshaler(t *testing.T) {
 func TestSendInt64Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalInt64 `edgedb:"val"`
+		Val types.OptionalInt64 `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -261,7 +261,7 @@ func TestReceiveOptionalInt64Unmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> int64; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalInt64 `edgedb:"val"`
+			Val CustomOptionalInt64 `gel:"val"`
 		}
 
 		// Decode value
@@ -286,7 +286,7 @@ func TestReceiveOptionalInt64Unmarshaler(t *testing.T) {
 func TestSendOptionalInt64Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalInt64 `edgedb:"val"`
+		Val types.OptionalInt64 `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalInt64 {
@@ -373,11 +373,11 @@ func TestSendAndReceiveInt32(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string `edgedb:"encoded"`
-		Decoded   int32  `edgedb:"decoded"`
-		RoundTrip int32  `edgedb:"round_trip"`
-		IsEqual   bool   `edgedb:"is_equal"`
-		String    string `edgedb:"string"`
+		Encoded   string `gel:"encoded"`
+		Decoded   int32  `gel:"decoded"`
+		RoundTrip int32  `gel:"round_trip"`
+		IsEqual   bool   `gel:"is_equal"`
+		String    string `gel:"string"`
 	}
 
 	query := `
@@ -439,7 +439,7 @@ func (m *CustomInt32) UnmarshalEdgeDBInt32(data []byte) error {
 func TestReceiveInt32Unmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomInt32 `edgedb:"val"`
+		Val CustomInt32 `gel:"val"`
 	}
 
 	// Decode value
@@ -459,7 +459,7 @@ func TestReceiveInt32Unmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomInt32 at "+
-		"struct { Val gel.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomInt32 \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -467,7 +467,7 @@ func TestReceiveInt32Unmarshaler(t *testing.T) {
 func TestSendInt32Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalInt32 `edgedb:"val"`
+		Val types.OptionalInt32 `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -531,7 +531,7 @@ func TestReceiveOptionalInt32Unmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> int32; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalInt32 `edgedb:"val"`
+			Val CustomOptionalInt32 `gel:"val"`
 		}
 
 		// Decode value
@@ -550,7 +550,7 @@ func TestReceiveOptionalInt32Unmarshaler(t *testing.T) {
 func TestSendOptionalInt32Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalInt32 `edgedb:"val"`
+		Val types.OptionalInt32 `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalInt32 {
@@ -631,7 +631,7 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 		}
 
 		type Result struct {
-			Int32 types.OptionalInt32 `edgedb:"int32"`
+			Int32 types.OptionalInt32 `gel:"int32"`
 		}
 
 		var result Result
@@ -710,11 +710,11 @@ func TestSendAndReceiveInt16(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string `edgedb:"encoded"`
-		Decoded   int16  `edgedb:"decoded"`
-		RoundTrip int16  `edgedb:"round_trip"`
-		IsEqual   bool   `edgedb:"is_equal"`
-		String    string `edgedb:"string"`
+		Encoded   string `gel:"encoded"`
+		Decoded   int16  `gel:"decoded"`
+		RoundTrip int16  `gel:"round_trip"`
+		IsEqual   bool   `gel:"is_equal"`
+		String    string `gel:"string"`
 	}
 
 	query := `
@@ -776,7 +776,7 @@ func (m *CustomInt16) UnmarshalEdgeDBInt16(data []byte) error {
 func TestReceiveInt16Unmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomInt16 `edgedb:"val"`
+		Val CustomInt16 `gel:"val"`
 	}
 
 	// Decode value
@@ -793,7 +793,7 @@ func TestReceiveInt16Unmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomInt16 at "+
-		"struct { Val gel.CustomInt16 \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomInt16 \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -801,7 +801,7 @@ func TestReceiveInt16Unmarshaler(t *testing.T) {
 func TestSendInt16Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalInt16 `edgedb:"val"`
+		Val types.OptionalInt16 `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -865,7 +865,7 @@ func TestReceiveOptionalInt16Unmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> int16; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalInt16 `edgedb:"val"`
+			Val CustomOptionalInt16 `gel:"val"`
 		}
 
 		// Decode value
@@ -884,7 +884,7 @@ func TestReceiveOptionalInt16Unmarshaler(t *testing.T) {
 func TestSendOptionalInt16Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalInt16 `edgedb:"val"`
+		Val types.OptionalInt16 `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalInt16 {
@@ -965,7 +965,7 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 		}
 
 		type Result struct {
-			Int16 types.OptionalInt16 `edgedb:"int16"`
+			Int16 types.OptionalInt16 `gel:"int16"`
 		}
 
 		var result Result
@@ -1047,11 +1047,11 @@ func TestSendAndReceiveBool(t *testing.T) {
 	`
 
 	type Result struct {
-		Encoded   string `edgedb:"encoded"`
-		Decoded   bool   `edgedb:"decoded"`
-		RoundTrip bool   `edgedb:"round_trip"`
-		IsEqual   bool   `edgedb:"is_equal"`
-		String    string `edgedb:"string"`
+		Encoded   string `gel:"encoded"`
+		Decoded   bool   `gel:"decoded"`
+		RoundTrip bool   `gel:"round_trip"`
+		IsEqual   bool   `gel:"is_equal"`
+		String    string `gel:"string"`
 	}
 
 	samples := []bool{true, false}
@@ -1091,7 +1091,7 @@ func (m *CustomBool) UnmarshalEdgeDBBool(data []byte) error {
 func TestReceiveBoolUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomBool `edgedb:"val"`
+		Val CustomBool `gel:"val"`
 	}
 
 	// Decode value
@@ -1108,7 +1108,7 @@ func TestReceiveBoolUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomBool at "+
-		"struct { Val gel.CustomBool \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomBool \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1116,7 +1116,7 @@ func TestReceiveBoolUnmarshaler(t *testing.T) {
 func TestSendBoolMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBool `edgedb:"val"`
+		Val types.OptionalBool `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -1176,7 +1176,7 @@ func TestReceiveOptionalBoolUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> bool; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalBool `edgedb:"val"`
+			Val CustomOptionalBool `gel:"val"`
 		}
 
 		// Decode value
@@ -1195,7 +1195,7 @@ func TestReceiveOptionalBoolUnmarshaler(t *testing.T) {
 func TestSendOptionalBoolMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBool `edgedb:"val"`
+		Val types.OptionalBool `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalBool {
@@ -1282,10 +1282,10 @@ func TestSendAndReceiveFloat64(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string  `edgedb:"encoded"`
-		Decoded   float64 `edgedb:"decoded"`
-		RoundTrip float64 `edgedb:"round_trip"`
-		IsEqual   bool    `edgedb:"is_equal"`
+		Encoded   string  `gel:"encoded"`
+		Decoded   float64 `gel:"decoded"`
+		RoundTrip float64 `gel:"round_trip"`
+		IsEqual   bool    `gel:"is_equal"`
 	}
 
 	query := `
@@ -1348,7 +1348,7 @@ func (m *CustomFloat64) UnmarshalEdgeDBFloat64(data []byte) error {
 func TestReceiveFloat64Unmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomFloat64 `edgedb:"val"`
+		Val CustomFloat64 `gel:"val"`
 	}
 
 	// Decode value
@@ -1369,7 +1369,7 @@ func TestReceiveFloat64Unmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomFloat64 at "+
-		"struct { Val gel.CustomFloat64 \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomFloat64 \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1377,7 +1377,7 @@ func TestReceiveFloat64Unmarshaler(t *testing.T) {
 func TestSendFloat64Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalFloat64 `edgedb:"val"`
+		Val types.OptionalFloat64 `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -1438,7 +1438,7 @@ func TestReceiveOptionalFloat64Unmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> float64; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalFloat64 `edgedb:"val"`
+			Val CustomOptionalFloat64 `gel:"val"`
 		}
 
 		// Decode value
@@ -1463,7 +1463,7 @@ func TestReceiveOptionalFloat64Unmarshaler(t *testing.T) {
 func TestSendOptionalFloat64Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalFloat64 `edgedb:"val"`
+		Val types.OptionalFloat64 `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalFloat64 {
@@ -1548,7 +1548,7 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 		}
 
 		type Result struct {
-			Float64 types.OptionalFloat64 `edgedb:"float64"`
+			Float64 types.OptionalFloat64 `gel:"float64"`
 		}
 
 		var result Result
@@ -1634,10 +1634,10 @@ func TestSendAndReceiveFloat32(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string  `edgedb:"encoded"`
-		Decoded   float32 `edgedb:"decoded"`
-		RoundTrip float32 `edgedb:"round_trip"`
-		IsEqual   bool    `edgedb:"is_equal"`
+		Encoded   string  `gel:"encoded"`
+		Decoded   float32 `gel:"decoded"`
+		RoundTrip float32 `gel:"round_trip"`
+		IsEqual   bool    `gel:"is_equal"`
 	}
 
 	query := `
@@ -1700,7 +1700,7 @@ func (m *CustomFloat32) UnmarshalEdgeDBFloat32(data []byte) error {
 func TestReceiveFloat32Unmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomFloat32 `edgedb:"val"`
+		Val CustomFloat32 `gel:"val"`
 	}
 
 	// Decode value
@@ -1718,7 +1718,7 @@ func TestReceiveFloat32Unmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomFloat32 at "+
-		"struct { Val gel.CustomFloat32 \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomFloat32 \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1726,7 +1726,7 @@ func TestReceiveFloat32Unmarshaler(t *testing.T) {
 func TestSendFloat32Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalFloat32 `edgedb:"val"`
+		Val types.OptionalFloat32 `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -1786,7 +1786,7 @@ func TestReceiveOptionalFloat32Unmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> float32; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalFloat32 `edgedb:"val"`
+			Val CustomOptionalFloat32 `gel:"val"`
 		}
 
 		// Decode value
@@ -1808,7 +1808,7 @@ func TestReceiveOptionalFloat32Unmarshaler(t *testing.T) {
 func TestSendOptionalFloat32Marshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalFloat32 `edgedb:"val"`
+		Val types.OptionalFloat32 `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalFloat32 {
@@ -1927,7 +1927,7 @@ func (m *CustomBytes) UnmarshalEdgeDBBytes(data []byte) error {
 func TestReceiveBytesUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomBytes `edgedb:"val"`
+		Val CustomBytes `gel:"val"`
 	}
 
 	// Decode value
@@ -1945,7 +1945,7 @@ func TestReceiveBytesUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomBytes at "+
-		"struct { Val gel.CustomBytes \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomBytes \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1953,7 +1953,7 @@ func TestReceiveBytesUnmarshaler(t *testing.T) {
 func TestSendBytesMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBytes `edgedb:"val"`
+		Val types.OptionalBytes `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -2030,7 +2030,7 @@ func TestReceiveOptionalBytesUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> bytes; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalBytes `edgedb:"val"`
+			Val CustomOptionalBytes `gel:"val"`
 		}
 
 		// Decode value
@@ -2052,7 +2052,7 @@ func TestReceiveOptionalBytesUnmarshaler(t *testing.T) {
 func TestSendOptionalBytesMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBytes `edgedb:"val"`
+		Val types.OptionalBytes `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalBytes {
@@ -2147,7 +2147,7 @@ func (m *CustomStr) UnmarshalEdgeDBStr(data []byte) error {
 func TestReceiveStrUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomStr `edgedb:"val"`
+		Val CustomStr `gel:"val"`
 	}
 
 	// Decode value
@@ -2167,7 +2167,7 @@ func TestReceiveStrUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomStr at "+
-		"struct { Val gel.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomStr \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -2175,7 +2175,7 @@ func TestReceiveStrUnmarshaler(t *testing.T) {
 func TestSendStrMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalStr `edgedb:"val"`
+		Val types.OptionalStr `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -2233,7 +2233,7 @@ func TestReceiveOptionalStrUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> str; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalStr `edgedb:"val"`
+			Val CustomOptionalStr `gel:"val"`
 		}
 
 		// Decode value
@@ -2252,7 +2252,7 @@ func TestReceiveOptionalStrUnmarshaler(t *testing.T) {
 func TestSendOptionalStrMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalStr `edgedb:"val"`
+		Val types.OptionalStr `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalStr {
@@ -2313,7 +2313,7 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 		}
 
 		type Result struct {
-			Str types.OptionalStr `edgedb:"str"`
+			Str types.OptionalStr `gel:"str"`
 		}
 
 		var result Result
@@ -2407,22 +2407,22 @@ type JSONObject struct {
 
 type OptionalJSONObject struct {
 	types.Optional
-	JSONObject `edgedb:"$inline"`
+	JSONObject `gel:"$inline"`
 }
 
 func TestReceiveJSONAndUnmarshal(t *testing.T) {
 	// nolint:lll
 	type Result struct {
-		Interface                interface{}        `edgedb:"interface"`
-		MissingInterface         interface{}        `edgedb:"missing_interface"`
-		Scalar                   string             `edgedb:"scalar"`
-		Slice                    []string           `edgedb:"slice"`
-		MissingSlice             []string           `edgedb:"missing_slice"`
-		Object                   JSONObject         `edgedb:"object"`
-		MissingObject            OptionalJSONObject `edgedb:"missing_object"`
-		NotMissingOptionalObject OptionalJSONObject `edgedb:"not_missing_optional_object"`
-		MissingScalar            types.OptionalStr  `edgedb:"missing_scalar"`
-		NotMissingOptionalScalar types.OptionalStr  `edgedb:"not_missing_optional_scalar"`
+		Interface                interface{}        `gel:"interface"`
+		MissingInterface         interface{}        `gel:"missing_interface"`
+		Scalar                   string             `gel:"scalar"`
+		Slice                    []string           `gel:"slice"`
+		MissingSlice             []string           `gel:"missing_slice"`
+		Object                   JSONObject         `gel:"object"`
+		MissingObject            OptionalJSONObject `gel:"missing_object"`
+		NotMissingOptionalObject OptionalJSONObject `gel:"not_missing_optional_object"`
+		MissingScalar            types.OptionalStr  `gel:"missing_scalar"`
+		NotMissingOptionalScalar types.OptionalStr  `gel:"not_missing_optional_scalar"`
 	}
 
 	result := Result{
@@ -2508,7 +2508,7 @@ func (m *CustomJSON) UnmarshalEdgeDBJSON(data []byte) error {
 func TestReceiveJSONUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomJSON `edgedb:"val"`
+		Val CustomJSON `gel:"val"`
 	}
 
 	// Decode value
@@ -2531,7 +2531,7 @@ func TestReceiveJSONUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomJSON at "+
-		"struct { Val gel.CustomJSON \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomJSON \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -2539,7 +2539,7 @@ func TestReceiveJSONUnmarshaler(t *testing.T) {
 func TestSendJSONMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBytes `edgedb:"val"`
+		Val types.OptionalBytes `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -2601,7 +2601,7 @@ func TestReceiveOptionalJSONUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> json; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalJSON `edgedb:"val"`
+			Val CustomOptionalJSON `gel:"val"`
 		}
 
 		// Decode value
@@ -2626,7 +2626,7 @@ func TestReceiveOptionalJSONUnmarshaler(t *testing.T) {
 func TestSendOptionalJSONMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBytes `edgedb:"val"`
+		Val types.OptionalBytes `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalJSON {
@@ -2683,11 +2683,11 @@ func TestSendAndReceiveEnum(t *testing.T) {
 	ctx := context.Background()
 
 	type Result struct {
-		Encoded   string `edgedb:"encoded"`
-		Decoded   string `edgedb:"decoded"`
-		RoundTrip string `edgedb:"round_trip"`
-		IsEqual   bool   `edgedb:"is_equal"`
-		String    string `edgedb:"string"`
+		Encoded   string `gel:"encoded"`
+		Decoded   string `gel:"decoded"`
+		RoundTrip string `gel:"round_trip"`
+		IsEqual   bool   `gel:"is_equal"`
+		String    string `gel:"string"`
 	}
 
 	query := `
@@ -2734,7 +2734,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 func TestReceiveEnumUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomStr `edgedb:"val"`
+		Val CustomStr `gel:"val"`
 	}
 
 	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
@@ -2756,7 +2756,7 @@ func TestReceiveEnumUnmarshaler(t *testing.T) {
 		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
 			"the \"out\" argument does not match query schema: "+
 			"expected gel.CustomStr at "+
-			"struct { Val gel.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
+			"struct { Val gel.CustomStr \"gel:\\\"val\\\"\" }.val "+
 			"to be OptionalUnmarshaler interface "+
 			"because the field is not required")
 
@@ -2768,7 +2768,7 @@ func TestReceiveEnumUnmarshaler(t *testing.T) {
 func TestSendEnumMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalStr `edgedb:"val"`
+		Val types.OptionalStr `gel:"val"`
 	}
 
 	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
@@ -2808,7 +2808,7 @@ func TestReceiveOptionalEnumUnmarshaler(t *testing.T) {
 	`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalStr `edgedb:"val"`
+			Val CustomOptionalStr `gel:"val"`
 		}
 
 		// Decode value
@@ -2827,7 +2827,7 @@ func TestReceiveOptionalEnumUnmarshaler(t *testing.T) {
 func TestSendOptionalEnumMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalStr `edgedb:"val"`
+		Val types.OptionalStr `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalStr {
@@ -2904,9 +2904,9 @@ func TestSendAndReceiveDuration(t *testing.T) {
 	}
 
 	type Result struct {
-		Decoded   types.Duration `edgedb:"decoded"`
-		RoundTrip types.Duration `edgedb:"round_trip"`
-		IsEqual   bool           `edgedb:"is_equal"`
+		Decoded   types.Duration `gel:"decoded"`
+		RoundTrip types.Duration `gel:"round_trip"`
+		IsEqual   bool           `gel:"is_equal"`
 	}
 
 	query := `
@@ -2963,7 +2963,7 @@ func (m *CustomDuration) UnmarshalEdgeDBDuration(data []byte) error {
 func TestReceiveDurationUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomDuration `edgedb:"val"`
+		Val CustomDuration `gel:"val"`
 	}
 
 	// Decode value
@@ -2990,7 +2990,7 @@ func TestReceiveDurationUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomDuration at "+
-		"struct { Val gel.CustomDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomDuration \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -2998,7 +2998,7 @@ func TestReceiveDurationUnmarshaler(t *testing.T) {
 func TestSendDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalDuration `edgedb:"val"`
+		Val types.OptionalDuration `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -3070,7 +3070,7 @@ func TestReceiveOptionalDurationUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> duration; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalDuration `edgedb:"val"`
+			Val CustomOptionalDuration `gel:"val"`
 		}
 
 		// Decode value
@@ -3099,7 +3099,7 @@ func TestReceiveOptionalDurationUnmarshaler(t *testing.T) {
 func TestSendOptionalDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalDuration `edgedb:"val"`
+		Val types.OptionalDuration `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalDuration {
@@ -3203,8 +3203,8 @@ func TestSendAndReceiveRelativeDuration(t *testing.T) {
 	}
 
 	type Result struct {
-		RoundTrip types.RelativeDuration `edgedb:"round_trip"`
-		Str       string                 `edgedb:"str"`
+		RoundTrip types.RelativeDuration `gel:"round_trip"`
+		Str       string                 `gel:"str"`
 	}
 
 	query := `
@@ -3251,7 +3251,7 @@ func (m *CustomRelativeDuration) UnmarshalEdgeDBRelativeDuration(
 func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomRelativeDuration `edgedb:"val"`
+		Val CustomRelativeDuration `gel:"val"`
 	}
 
 	// Decode value
@@ -3280,7 +3280,7 @@ func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomRelativeDuration at struct "+
-		"{ Val gel.CustomRelativeDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"{ Val gel.CustomRelativeDuration \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3288,7 +3288,7 @@ func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 func TestSendRelativeDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalRelativeDuration `edgedb:"val"`
+		Val types.OptionalRelativeDuration `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -3377,7 +3377,7 @@ func TestReceiveOptionalRelativeDurationUnmarshaler(t *testing.T) {
 	};`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalRelativeDuration `edgedb:"val"`
+			Val CustomOptionalRelativeDuration `gel:"val"`
 		}
 
 		// Decode value
@@ -3408,7 +3408,7 @@ func TestReceiveOptionalRelativeDurationUnmarshaler(t *testing.T) {
 func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalRelativeDuration `edgedb:"val"`
+		Val types.OptionalRelativeDuration `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalRelativeDuration {
@@ -3528,8 +3528,8 @@ func TestSendAndReceiveDateDuration(t *testing.T) {
 	}
 
 	type Result struct {
-		RoundTrip types.DateDuration `edgedb:"round_trip"`
-		Str       string             `edgedb:"str"`
+		RoundTrip types.DateDuration `gel:"round_trip"`
+		Str       string             `gel:"str"`
 	}
 
 	query := `
@@ -3579,7 +3579,7 @@ func TestReceiveDateDurationUnmarshaler(t *testing.T) {
 	}
 	ctx := context.Background()
 	var result struct {
-		Val CustomDateDuration `edgedb:"val"`
+		Val CustomDateDuration `gel:"val"`
 	}
 
 	// Decode value
@@ -3606,7 +3606,7 @@ func TestReceiveDateDurationUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomDateDuration at struct "+
-		"{ Val gel.CustomDateDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"{ Val gel.CustomDateDuration \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3618,7 +3618,7 @@ func TestSendDateDurationMarshaler(t *testing.T) {
 
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalDateDuration `edgedb:"val"`
+		Val types.OptionalDateDuration `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -3705,7 +3705,7 @@ func TestReceiveOptionalDateDurationUnmarshaler(t *testing.T) {
 	};`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalDateDuration `edgedb:"val"`
+			Val CustomOptionalDateDuration `gel:"val"`
 		}
 
 		// Decode value
@@ -3738,7 +3738,7 @@ func TestSendOptionalDateDurationMarshaler(t *testing.T) {
 
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalDateDuration `edgedb:"val"`
+		Val types.OptionalDateDuration `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalDateDuration {
@@ -3853,11 +3853,11 @@ func TestSendAndReceiveLocalTime(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string          `edgedb:"encoded"`
-		Decoded   types.LocalTime `edgedb:"decoded"`
-		RoundTrip types.LocalTime `edgedb:"round_trip"`
-		IsEqual   bool            `edgedb:"is_equal"`
-		String    string          `edgedb:"string"`
+		Encoded   string          `gel:"encoded"`
+		Decoded   types.LocalTime `gel:"decoded"`
+		RoundTrip types.LocalTime `gel:"round_trip"`
+		IsEqual   bool            `gel:"is_equal"`
+		String    string          `gel:"string"`
 	}
 
 	query := `
@@ -3918,7 +3918,7 @@ func (m *CustomLocalTime) UnmarshalEdgeDBLocalTime(data []byte) error {
 func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomLocalTime `edgedb:"val"`
+		Val CustomLocalTime `gel:"val"`
 	}
 
 	// Decode value
@@ -3941,7 +3941,7 @@ func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomLocalTime at "+
-		"struct { Val gel.CustomLocalTime \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomLocalTime \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3949,7 +3949,7 @@ func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 func TestSendLocalTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalLocalTime `edgedb:"val"`
+		Val types.OptionalLocalTime `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -4021,7 +4021,7 @@ func TestReceiveOptionalLocalTimeUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cal::local_time; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalLocalTime `edgedb:"val"`
+			Val CustomOptionalLocalTime `gel:"val"`
 		}
 
 		// Decode value
@@ -4046,7 +4046,7 @@ func TestReceiveOptionalLocalTimeUnmarshaler(t *testing.T) {
 func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalLocalTime `edgedb:"val"`
+		Val types.OptionalLocalTime `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalLocalTime {
@@ -4142,11 +4142,11 @@ func TestSendAndReceiveLocalDate(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string          `edgedb:"encoded"`
-		Decoded   types.LocalDate `edgedb:"decoded"`
-		RoundTrip types.LocalDate `edgedb:"round_trip"`
-		IsEqual   bool            `edgedb:"is_equal"`
-		String    string          `edgedb:"string"`
+		Encoded   string          `gel:"encoded"`
+		Decoded   types.LocalDate `gel:"decoded"`
+		RoundTrip types.LocalDate `gel:"round_trip"`
+		IsEqual   bool            `gel:"is_equal"`
+		String    string          `gel:"string"`
 	}
 
 	query := `
@@ -4208,7 +4208,7 @@ func (m *CustomLocalDate) UnmarshalEdgeDBLocalDate(data []byte) error {
 func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomLocalDate `edgedb:"val"`
+		Val CustomLocalDate `gel:"val"`
 	}
 
 	// Decode value
@@ -4228,7 +4228,7 @@ func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomLocalDate at "+
-		"struct { Val gel.CustomLocalDate \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomLocalDate \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -4236,7 +4236,7 @@ func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 func TestSendLocalDateMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalLocalDate `edgedb:"val"`
+		Val types.OptionalLocalDate `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -4306,7 +4306,7 @@ func TestReceiveOptionalLocalDateUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cal::local_date; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalLocalDate `edgedb:"val"`
+			Val CustomOptionalLocalDate `gel:"val"`
 		}
 
 		// Decode value
@@ -4328,7 +4328,7 @@ func TestReceiveOptionalLocalDateUnmarshaler(t *testing.T) {
 func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalLocalDate `edgedb:"val"`
+		Val types.OptionalLocalDate `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalLocalDate {
@@ -4429,11 +4429,11 @@ func TestSendAndReceiveLocalDateTime(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string              `edgedb:"encoded"`
-		Decoded   types.LocalDateTime `edgedb:"decoded"`
-		RoundTrip types.LocalDateTime `edgedb:"round_trip"`
-		IsEqual   bool                `edgedb:"is_equal"`
-		String    string              `edgedb:"string"`
+		Encoded   string              `gel:"encoded"`
+		Decoded   types.LocalDateTime `gel:"decoded"`
+		RoundTrip types.LocalDateTime `gel:"round_trip"`
+		IsEqual   bool                `gel:"is_equal"`
+		String    string              `gel:"string"`
 	}
 
 	query := `
@@ -4497,7 +4497,7 @@ func (m *CustomLocalDateTime) UnmarshalEdgeDBLocalDateTime(data []byte) error {
 func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomLocalDateTime `edgedb:"val"`
+		Val CustomLocalDateTime `gel:"val"`
 	}
 
 	// Decode value
@@ -4520,7 +4520,7 @@ func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomLocalDateTime at "+
-		"struct { Val gel.CustomLocalDateTime \"edgedb:\\\"val\\\"\" }.val"+
+		"struct { Val gel.CustomLocalDateTime \"gel:\\\"val\\\"\" }.val"+
 		" to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -4528,7 +4528,7 @@ func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 func TestSendLocalDateTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalLocalDateTime `edgedb:"val"`
+		Val types.OptionalLocalDateTime `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -4611,7 +4611,7 @@ func TestReceiveOptionalLocalDateTimeUnmarshaler(t *testing.T) {
 	};`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalLocalDateTime `edgedb:"val"`
+			Val CustomOptionalLocalDateTime `gel:"val"`
 		}
 
 		// Decode value
@@ -4636,7 +4636,7 @@ func TestReceiveOptionalLocalDateTimeUnmarshaler(t *testing.T) {
 func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalLocalDateTime `edgedb:"val"`
+		Val types.OptionalLocalDateTime `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalLocalDateTime {
@@ -4740,11 +4740,11 @@ func TestSendAndReceiveDateTime(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string    `edgedb:"encoded"`
-		Decoded   time.Time `edgedb:"decoded"`
-		RoundTrip time.Time `edgedb:"round_trip"`
-		IsEqual   bool      `edgedb:"is_equal"`
-		String    string    `edgedb:"string"`
+		Encoded   string    `gel:"encoded"`
+		Decoded   time.Time `gel:"decoded"`
+		RoundTrip time.Time `gel:"round_trip"`
+		IsEqual   bool      `gel:"is_equal"`
+		String    string    `gel:"string"`
 	}
 
 	query := `
@@ -4812,7 +4812,7 @@ func (m *CustomDateTime) UnmarshalEdgeDBDateTime(data []byte) error {
 func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomDateTime `edgedb:"val"`
+		Val CustomDateTime `gel:"val"`
 	}
 
 	// Decode value
@@ -4835,7 +4835,7 @@ func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomDateTime at "+
-		"struct { Val gel.CustomDateTime \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomDateTime \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -4843,7 +4843,7 @@ func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 func TestSendDateTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalDateTime `edgedb:"val"`
+		Val types.OptionalDateTime `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -4921,7 +4921,7 @@ func TestReceiveOptionalDateTimeUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> datetime; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalDateTime `edgedb:"val"`
+			Val CustomOptionalDateTime `gel:"val"`
 		}
 
 		// Decode value
@@ -4946,7 +4946,7 @@ func TestReceiveOptionalDateTimeUnmarshaler(t *testing.T) {
 func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalDateTime `edgedb:"val"`
+		Val types.OptionalDateTime `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalDateTime {
@@ -5040,11 +5040,11 @@ func TestSendAndReceiveBigInt(t *testing.T) {
 	`
 
 	type Result struct {
-		Encoded   string   `edgedb:"encoded"`
-		Decoded   *big.Int `edgedb:"decoded"`
-		RoundTrip *big.Int `edgedb:"round_trip"`
-		IsEqual   bool     `edgedb:"is_equal"`
-		String    string   `edgedb:"string"`
+		Encoded   string   `gel:"encoded"`
+		Decoded   *big.Int `gel:"decoded"`
+		RoundTrip *big.Int `gel:"round_trip"`
+		IsEqual   bool     `gel:"is_equal"`
+		String    string   `gel:"string"`
 	}
 
 	samples := []string{
@@ -5252,7 +5252,7 @@ func (m *CustomBigInt) UnmarshalEdgeDBBigInt(data []byte) error {
 func TestReceiveBigIntUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomBigInt `edgedb:"val"`
+		Val CustomBigInt `gel:"val"`
 	}
 
 	// Decode value
@@ -5279,7 +5279,7 @@ func TestReceiveBigIntUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomBigInt at "+
-		"struct { Val gel.CustomBigInt \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomBigInt \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -5287,7 +5287,7 @@ func TestReceiveBigIntUnmarshaler(t *testing.T) {
 func TestSendBigIntMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBigInt `edgedb:"val"`
+		Val types.OptionalBigInt `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -5363,7 +5363,7 @@ func TestReceiveOptionalBigIntUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> bigint; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalBigInt `edgedb:"val"`
+			Val CustomOptionalBigInt `gel:"val"`
 		}
 
 		// Decode value
@@ -5394,7 +5394,7 @@ func TestReceiveOptionalBigIntUnmarshaler(t *testing.T) {
 func TestSendOptionalBigIntMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalBigInt `edgedb:"val"`
+		Val types.OptionalBigInt `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalBigInt {
@@ -5490,7 +5490,7 @@ func (m *CustomDecimal) UnmarshalEdgeDBDecimal(data []byte) error {
 func TestReceiveDecimalUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomDecimal `edgedb:"val"`
+		Val CustomDecimal `gel:"val"`
 	}
 
 	// Decode value
@@ -5519,7 +5519,7 @@ func TestReceiveDecimalUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomDecimal at "+
-		"struct { Val gel.CustomDecimal \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomDecimal \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -5527,7 +5527,7 @@ func TestReceiveDecimalUnmarshaler(t *testing.T) {
 func TestSendDecimalMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomOptionalDecimal `edgedb:"val"`
+		Val CustomOptionalDecimal `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -5621,7 +5621,7 @@ func TestReceiveOptionalDecimalUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> decimal; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalDecimal `edgedb:"val"`
+			Val CustomOptionalDecimal `gel:"val"`
 		}
 
 		// Decode value
@@ -5652,7 +5652,7 @@ func TestReceiveOptionalDecimalUnmarshaler(t *testing.T) {
 func TestSendOptionalDecimalMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomOptionalDecimal `edgedb:"val"`
+		Val CustomOptionalDecimal `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -5760,11 +5760,11 @@ func TestSendAndReceiveUUID(t *testing.T) {
 	`
 
 	type Result struct {
-		Encoded   string     `edgedb:"encoded"`
-		Decoded   types.UUID `edgedb:"decoded"`
-		RoundTrip types.UUID `edgedb:"round_trip"`
-		IsEqual   bool       `edgedb:"is_equal"`
-		String    string     `edgedb:"string"`
+		Encoded   string     `gel:"encoded"`
+		Decoded   types.UUID `gel:"decoded"`
+		RoundTrip types.UUID `gel:"round_trip"`
+		IsEqual   bool       `gel:"is_equal"`
+		String    string     `gel:"string"`
 	}
 
 	samples := []string{
@@ -5819,7 +5819,7 @@ func (m *CustomUUID) UnmarshalEdgeDBUUID(data []byte) error {
 func TestReceiveUUIDUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomUUID `edgedb:"val"`
+		Val CustomUUID `gel:"val"`
 	}
 
 	// Decode value
@@ -5845,7 +5845,7 @@ func TestReceiveUUIDUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomUUID at "+
-		"struct { Val gel.CustomUUID \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomUUID \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -5853,7 +5853,7 @@ func TestReceiveUUIDUnmarshaler(t *testing.T) {
 func TestSendUUIDMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalUUID `edgedb:"val"`
+		Val types.OptionalUUID `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -5935,7 +5935,7 @@ func TestReceiveOptionalUUIDUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> uuid; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalUUID `edgedb:"val"`
+			Val CustomOptionalUUID `gel:"val"`
 		}
 
 		// Decode value
@@ -5963,7 +5963,7 @@ func TestReceiveOptionalUUIDUnmarshaler(t *testing.T) {
 func TestSendOptionalUUIDMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalUUID `edgedb:"val"`
+		Val types.OptionalUUID `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalUUID {
@@ -6067,10 +6067,10 @@ func TestSendAndReceiveCustomScalars(t *testing.T) {
 	`
 
 	type Result struct {
-		Encoded   string `edgedb:"encoded"`
-		Decoded   int64  `edgedb:"decoded"`
-		RoundTrip int64  `edgedb:"round_trip"`
-		IsEqual   bool   `edgedb:"is_equal"`
+		Encoded   string `gel:"encoded"`
+		Decoded   int64  `gel:"decoded"`
+		RoundTrip int64  `gel:"round_trip"`
+		IsEqual   bool   `gel:"is_equal"`
 	}
 
 	samples := []int64{0, 1, 9223372036854775807, -9223372036854775808}
@@ -6108,7 +6108,7 @@ func TestReceiveCustomScalarUnmarshaler(t *testing.T) {
 	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomInt64 `edgedb:"val"`
+			Val CustomInt64 `gel:"val"`
 		}
 
 		// Decode value
@@ -6131,7 +6131,7 @@ func TestReceiveCustomScalarUnmarshaler(t *testing.T) {
 		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 			"the \"out\" argument does not match query schema: "+
 			"expected gel.CustomInt64 at "+
-			"struct { Val gel.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
+			"struct { Val gel.CustomInt64 \"gel:\\\"val\\\"\" }.val "+
 			"to be OptionalUnmarshaler interface "+
 			"because the field is not required")
 	})
@@ -6141,7 +6141,7 @@ func TestSendCustomScalarMarshaler(t *testing.T) {
 	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val types.OptionalInt64 `edgedb:"val"`
+			Val types.OptionalInt64 `gel:"val"`
 		}
 
 		// encode value into required argument
@@ -6195,7 +6195,7 @@ func TestReceiveOptionalCustomScalarUnmarshaler(t *testing.T) {
 	`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalInt64 `edgedb:"val"`
+			Val CustomOptionalInt64 `gel:"val"`
 		}
 
 		// Decode value
@@ -6221,7 +6221,7 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 	ddl := `CREATE SCALAR TYPE CustomInt64 EXTENDING int64;`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val types.OptionalInt64 `edgedb:"val"`
+			Val types.OptionalInt64 `gel:"val"`
 		}
 
 		newValue := func(data []byte) CustomOptionalInt64 {
@@ -6300,18 +6300,18 @@ func TestDecodeDeeplyNestedTuple(t *testing.T) {
 	query := "SELECT ([(1, 2), (3, 4)], (5, (6, 7)))"
 
 	type Tuple struct {
-		first  int64 `edgedb:"0"`
-		second int64 `edgedb:"1"`
+		first  int64 `gel:"0"`
+		second int64 `gel:"1"`
 	}
 
 	type OtherTuple struct {
-		first  int64 `edgedb:"0"`
-		second Tuple `edgedb:"1"`
+		first  int64 `gel:"0"`
+		second Tuple `gel:"1"`
 	}
 
 	type ParentTuple struct {
-		first  []Tuple    `edgedb:"0"`
-		second OtherTuple `edgedb:"1"`
+		first  []Tuple    `gel:"0"`
+		second OtherTuple `gel:"1"`
 	}
 
 	var result ParentTuple
@@ -6346,17 +6346,17 @@ func TestReceiveObject(t *testing.T) {
 	`
 
 	type Params struct {
-		ID   types.UUID `edgedb:"id"`
-		Kind string     `edgedb:"kind"`
-		Num  int64      `edgedb:"num"`
-		Foo  int64      `edgedb:"foo"`
+		ID   types.UUID `gel:"id"`
+		Kind string     `gel:"kind"`
+		Num  int64      `gel:"num"`
+		Foo  int64      `gel:"foo"`
 	}
 
 	type Function struct {
-		ID     types.UUID    `edgedb:"id"`
-		Name   string        `edgedb:"name"`
-		Params []Params      `edgedb:"params"`
-		Tuple  []interface{} `edgedb:"tuple"`
+		ID     types.UUID    `gel:"id"`
+		Name   string        `gel:"name"`
+		Params []Params      `gel:"params"`
+		Tuple  []interface{} `gel:"tuple"`
 	}
 
 	var result Function
@@ -6372,7 +6372,7 @@ func TestReceiveNamedTuple(t *testing.T) {
 	ctx := context.Background()
 
 	type NamedTuple struct {
-		A int64 `edgedb:"a"`
+		A int64 `gel:"a"`
 	}
 
 	var result NamedTuple
@@ -6399,17 +6399,17 @@ func TestReceiveTuple(t *testing.T) {
 	require.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected struct { first int64 } to have a field "+
-		"with the tag `edgedb:\"0\"`")
+		"with the tag `gel:\"0\"`")
 
 	type NestedTuple struct {
-		second bool    `edgedb:"1"`
-		first  float64 `edgedb:"0"`
+		second bool    `gel:"1"`
+		first  float64 `gel:"0"`
 	}
 
 	type Tuple struct {
-		first  int64       `edgedb:"0"` // nolint:structcheck
-		second string      `edgedb:"1"` // nolint:structcheck
-		third  NestedTuple `edgedb:"2"` // nolint:structcheck
+		first  int64       `gel:"0"` // nolint:structcheck
+		second string      `gel:"1"` // nolint:structcheck
+		third  NestedTuple `gel:"2"` // nolint:structcheck
 	}
 
 	result := []Tuple{}
@@ -6454,7 +6454,7 @@ func TestSendAndReceiveArray(t *testing.T) {
 			"expected args[0] to be a slice got: string")
 
 	type Tuple struct {
-		first []int64 `edgedb:"0"`
+		first []int64 `gel:"0"`
 	}
 
 	var nested Tuple
@@ -6486,8 +6486,8 @@ func TestReceiveSet(t *testing.T) {
 	// decoding using pointers
 	{
 		type Function struct {
-			ID   types.UUID `edgedb:"id"`
-			Sets [][]int64  `edgedb:"sets"`
+			ID   types.UUID `gel:"id"`
+			Sets [][]int64  `gel:"sets"`
 		}
 
 		query := `
@@ -6507,17 +6507,17 @@ func TestReceiveSet(t *testing.T) {
 	// decoding using reflect
 	{
 		type NestedTuple struct {
-			first int64 `edgedb:"0"`
+			first int64 `gel:"0"`
 		}
 
 		type Tuple struct {
-			first  int64       `edgedb:"0"` // nolint:structcheck
-			second NestedTuple `edgedb:"1"` // nolint:structcheck
+			first  int64       `gel:"0"` // nolint:structcheck
+			second NestedTuple `gel:"1"` // nolint:structcheck
 		}
 
 		type Function struct {
-			ID   types.UUID `edgedb:"id"`
-			Sets [][]Tuple  `edgedb:"sets"`
+			ID   types.UUID `gel:"id"`
+			Sets [][]Tuple  `gel:"sets"`
 		}
 
 		query := `
@@ -6542,8 +6542,8 @@ func TestReceiveSet(t *testing.T) {
 }
 
 type OptionalTuple struct {
-	Zero int64 `edgedb:"0"`
-	One  int64 `edgedb:"1"`
+	Zero int64 `gel:"0"`
+	One  int64 `gel:"1"`
 	types.Optional
 }
 
@@ -6555,7 +6555,7 @@ func TestReceiveOptionalTuple(t *testing.T) {
 	`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val OptionalTuple `edgedb:"val"`
+			Val OptionalTuple `gel:"val"`
 		}
 
 		// Decode value
@@ -6577,8 +6577,8 @@ func TestReceiveOptionalTuple(t *testing.T) {
 }
 
 type OptionalNamedTuple struct {
-	A     int64 `edgedb:"a"`
-	B     int64 `edgedb:"b"`
+	A     int64 `gel:"a"`
+	B     int64 `gel:"b"`
 	isSet bool
 }
 
@@ -6611,7 +6611,7 @@ func TestReceiveOptionalNamedTuple(t *testing.T) {
 	`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val OptionalNamedTuple `edgedb:"val"`
+			Val OptionalNamedTuple `gel:"val"`
 		}
 
 		// Decode value
@@ -6649,12 +6649,12 @@ func TestReceiveOptionalObject(t *testing.T) {
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		type OptionalObject struct {
 			types.Optional
-			A types.OptionalInt64 `edgedb:"a"`
-			B types.OptionalInt64 `edgedb:"b"`
+			A types.OptionalInt64 `gel:"a"`
+			B types.OptionalInt64 `gel:"b"`
 		}
 
 		var result struct {
-			Val OptionalObject `edgedb:"val"`
+			Val OptionalObject `gel:"val"`
 		}
 
 		// Decode value
@@ -6685,7 +6685,7 @@ func TestReceiveOptionalArray(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> array<int64>; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val []int64 `edgedb:"val"`
+			Val []int64 `gel:"val"`
 		}
 
 		// Decode value
@@ -6704,7 +6704,7 @@ func TestReceiveOptionalArray(t *testing.T) {
 func TestSendOptionalArray(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val []int64 `edgedb:"val"`
+		Val []int64 `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -6746,7 +6746,7 @@ func TestSendOptionalArray(t *testing.T) {
 }
 
 type OtherSample struct {
-	SimpleScalar CustomOptionalInt64 `edgedb:"simple_scalar"`
+	SimpleScalar CustomOptionalInt64 `gel:"simple_scalar"`
 	types.Optional
 }
 
@@ -6766,12 +6766,12 @@ func TestMissingObjectFields(t *testing.T) {
 	`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		type Sample struct {
-			SimpleScalar CustomOptionalInt64 `edgedb:"simple_scalar"`
-			Array        []int64             `edgedb:"array"`
-			Tuple        OptionalTuple       `edgedb:"tuple"`
-			NamedTuple   OptionalNamedTuple  `edgedb:"named_tuple"`
-			Object       OtherSample         `edgedb:"object"`
-			Set          []Sample            `edgedb:"set_"`
+			SimpleScalar CustomOptionalInt64 `gel:"simple_scalar"`
+			Array        []int64             `gel:"array"`
+			Tuple        OptionalTuple       `gel:"tuple"`
+			NamedTuple   OptionalNamedTuple  `gel:"named_tuple"`
+			Object       OtherSample         `gel:"object"`
+			Set          []Sample            `gel:"set_"`
 		}
 
 		var result Sample
@@ -6854,7 +6854,7 @@ func TestMissingObjectFields(t *testing.T) {
 		assert.Equal(t, expected, result)
 
 		type WrongType struct {
-			SimpleScalar int64 `edgedb:"simple_scalar"`
+			SimpleScalar int64 `gel:"simple_scalar"`
 		}
 
 		var result2 WrongType
@@ -6905,11 +6905,11 @@ func TestSendAndReceiveMemory(t *testing.T) {
 	}
 
 	type Result struct {
-		Encoded   string       `edgedb:"encoded"`
-		Decoded   types.Memory `edgedb:"decoded"`
-		RoundTrip types.Memory `edgedb:"round_trip"`
-		IsEqual   bool         `edgedb:"is_equal"`
-		String    string       `edgedb:"string"`
+		Encoded   string       `gel:"encoded"`
+		Decoded   types.Memory `gel:"decoded"`
+		RoundTrip types.Memory `gel:"round_trip"`
+		IsEqual   bool         `gel:"is_equal"`
+		String    string       `gel:"string"`
 	}
 
 	query := `
@@ -6971,7 +6971,7 @@ func (m *CustomMemory) UnmarshalEdgeDBMemory(data []byte) error {
 func TestReceiveMemoryUnmarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val CustomMemory `edgedb:"val"`
+		Val CustomMemory `gel:"val"`
 	}
 
 	// Decode value
@@ -6994,7 +6994,7 @@ func TestReceiveMemoryUnmarshaler(t *testing.T) {
 	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected gel.CustomMemory at "+
-		"struct { Val gel.CustomMemory \"edgedb:\\\"val\\\"\" }.val "+
+		"struct { Val gel.CustomMemory \"gel:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -7002,7 +7002,7 @@ func TestReceiveMemoryUnmarshaler(t *testing.T) {
 func TestSendMemoryMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalMemory `edgedb:"val"`
+		Val types.OptionalMemory `gel:"val"`
 	}
 
 	// encode value into required argument
@@ -7078,7 +7078,7 @@ func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
 	ddl := `CREATE TYPE Sample { CREATE PROPERTY val -> cfg::memory; };`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val CustomOptionalMemory `edgedb:"val"`
+			Val CustomOptionalMemory `gel:"val"`
 		}
 
 		// Decode value
@@ -7103,7 +7103,7 @@ func TestReceiveOptionalMemoryUnmarshaler(t *testing.T) {
 func TestSendOptionalMemoryMarshaler(t *testing.T) {
 	ctx := context.Background()
 	var result struct {
-		Val types.OptionalMemory `edgedb:"val"`
+		Val types.OptionalMemory `gel:"val"`
 	}
 
 	newValue := func(data []byte) CustomOptionalMemory {
@@ -7222,10 +7222,10 @@ func TestSendAndReceiveRangeInt32(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                   `edgedb:"encoded"`
-		RoundTrip  types.RangeInt32         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeInt32 `edgedb:"missing"`
-		NotMissing types.OptionalRangeInt32 `edgedb:"not_missing"`
+		Encoded    []byte                   `gel:"encoded"`
+		RoundTrip  types.RangeInt32         `gel:"round_trip"`
+		Missing    types.OptionalRangeInt32 `gel:"missing"`
+		NotMissing types.OptionalRangeInt32 `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7304,10 +7304,10 @@ func TestSendAndReceiveRangeInt64(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                   `edgedb:"encoded"`
-		RoundTrip  types.RangeInt64         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeInt64 `edgedb:"missing"`
-		NotMissing types.OptionalRangeInt64 `edgedb:"not_missing"`
+		Encoded    []byte                   `gel:"encoded"`
+		RoundTrip  types.RangeInt64         `gel:"round_trip"`
+		Missing    types.OptionalRangeInt64 `gel:"missing"`
+		NotMissing types.OptionalRangeInt64 `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7391,10 +7391,10 @@ func TestSendAndReceiveRangeFloat32(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                     `edgedb:"encoded"`
-		RoundTrip  types.RangeFloat32         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeFloat32 `edgedb:"missing"`
-		NotMissing types.OptionalRangeFloat32 `edgedb:"not_missing"`
+		Encoded    []byte                     `gel:"encoded"`
+		RoundTrip  types.RangeFloat32         `gel:"round_trip"`
+		Missing    types.OptionalRangeFloat32 `gel:"missing"`
+		NotMissing types.OptionalRangeFloat32 `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7478,10 +7478,10 @@ func TestSendAndReceiveRangeFloat64(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                     `edgedb:"encoded"`
-		RoundTrip  types.RangeFloat64         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeFloat64 `edgedb:"missing"`
-		NotMissing types.OptionalRangeFloat64 `edgedb:"not_missing"`
+		Encoded    []byte                     `gel:"encoded"`
+		RoundTrip  types.RangeFloat64         `gel:"round_trip"`
+		Missing    types.OptionalRangeFloat64 `gel:"missing"`
+		NotMissing types.OptionalRangeFloat64 `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7571,10 +7571,10 @@ func TestSendAndReceiveRangeDateTime(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                      `edgedb:"encoded"`
-		RoundTrip  types.RangeDateTime         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeDateTime `edgedb:"missing"`
-		NotMissing types.OptionalRangeDateTime `edgedb:"not_missing"`
+		Encoded    []byte                      `gel:"encoded"`
+		RoundTrip  types.RangeDateTime         `gel:"round_trip"`
+		Missing    types.OptionalRangeDateTime `gel:"missing"`
+		NotMissing types.OptionalRangeDateTime `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7668,10 +7668,10 @@ func TestSendAndReceiveRangeLocalDateTime(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                           `edgedb:"encoded"`
-		RoundTrip  types.RangeLocalDateTime         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeLocalDateTime `edgedb:"missing"`
-		NotMissing types.OptionalRangeLocalDateTime `edgedb:"not_missing"`
+		Encoded    []byte                           `gel:"encoded"`
+		RoundTrip  types.RangeLocalDateTime         `gel:"round_trip"`
+		Missing    types.OptionalRangeLocalDateTime `gel:"missing"`
+		NotMissing types.OptionalRangeLocalDateTime `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7758,10 +7758,10 @@ func TestSendAndReceiveRangeLocalDate(t *testing.T) {
 
 	ctx := context.Background()
 	var results []struct {
-		Encoded    []byte                       `edgedb:"encoded"`
-		RoundTrip  types.RangeLocalDate         `edgedb:"round_trip"`
-		Missing    types.OptionalRangeLocalDate `edgedb:"missing"`
-		NotMissing types.OptionalRangeLocalDate `edgedb:"not_missing"`
+		Encoded    []byte                       `gel:"encoded"`
+		RoundTrip  types.RangeLocalDate         `gel:"round_trip"`
+		Missing    types.OptionalRangeLocalDate `gel:"missing"`
+		NotMissing types.OptionalRangeLocalDate `gel:"not_missing"`
 	}
 	err := client.Query(
 		ctx,
@@ -7876,7 +7876,7 @@ func TestCustomSequenceTypeHandling(t *testing.T) {
 	`
 	inRolledBackTx(t, ddl, func(ctx context.Context, tx *Tx) {
 		var result struct {
-			Val types.OptionalInt64 `edgedb:"val"`
+			Val types.OptionalInt64 `gel:"val"`
 		}
 
 		// Decode value

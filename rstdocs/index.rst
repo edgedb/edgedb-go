@@ -43,8 +43,8 @@ Typical client usage looks like this:
         var (
             age   int64 = 21
             users []struct {
-                ID   gel.UUID `edgedb:"id"`
-                Name string      `edgedb:"name"`
+                ID   gel.UUID `gel:"id"`
+                Name string   `gel:"name"`
             }
         )
     
@@ -151,7 +151,7 @@ optional.
 
     type User struct {
         gel.Optional
-        Email string `edgedb:"email"`
+        Email string `gel:"email"`
     }
     
     var result User
@@ -177,7 +177,7 @@ instead.
 
 By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
 To treat an embedded struct's fields as part of the parent struct's fields,
-tag the embedded struct with \`edgedb:"$inline"\`.
+tag the embedded struct with \`gel:"$inline"\`.
 
 .. code-block:: go
 
@@ -186,7 +186,7 @@ tag the embedded struct with \`edgedb:"$inline"\`.
     }
     
     type User struct {
-        Object `edgedb:"$inline"`
+        Object `gel:"$inline"`
         Name string
     }
     
@@ -216,9 +216,9 @@ Usage Example
     )
     
     type User struct {
-        ID   gel.UUID `edgedb:"id"`
-        Name string      `edgedb:"name"`
-        DOB  time.Time   `edgedb:"dob"`
+        ID   gel.UUID  `gel:"id"`
+        Name string    `gel:"name"`
+        DOB  time.Time `gel:"dob"`
     }
     
     func Example() {

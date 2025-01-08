@@ -237,7 +237,7 @@ func generateObject(
 			return nil, nil, err
 		}
 
-		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		tag := fmt.Sprintf(`gel:"%s"`, field.Name)
 		name := field.Name
 		if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
@@ -277,7 +277,7 @@ func generateObjectV2(
 			return nil, nil, err
 		}
 
-		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		tag := fmt.Sprintf(`gel:"%s"`, field.Name)
 		name := field.Name
 		if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
@@ -328,7 +328,7 @@ func generateTuple(
 			EQLName: field.Name,
 			GoName:  name,
 			Type:    t[0].Reference(),
-			Tag:     fmt.Sprintf(`edgedb:"%s"`, field.Name),
+			Tag:     fmt.Sprintf(`gel:"%s"`, field.Name),
 		})
 		types = append(types, t...)
 		imports = append(imports, i...)
@@ -369,7 +369,7 @@ func generateTupleV2(
 			EQLName: field.Name,
 			GoName:  name,
 			Type:    t[0].Reference(),
-			Tag:     fmt.Sprintf(`edgedb:"%s"`, field.Name),
+			Tag:     fmt.Sprintf(`gel:"%s"`, field.Name),
 		})
 		types = append(types, t...)
 		imports = append(imports, i...)

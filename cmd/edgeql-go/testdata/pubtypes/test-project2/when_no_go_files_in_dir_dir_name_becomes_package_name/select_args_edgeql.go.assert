@@ -17,8 +17,8 @@ var selectArgsCmd string
 // is part of the return type for
 // selectArgs()
 type SelectArgsResult struct {
-	Str      string    `edgedb:"Str"`
-	DateTime time.Time `edgedb:"DateTime"`
+	Str      string    `gel:"Str"`
+	DateTime time.Time `gel:"DateTime"`
 }
 
 // selectArgs

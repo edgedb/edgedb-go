@@ -441,7 +441,7 @@ Optional is embedded in structs to make them optional. For example:
 
     type User struct {
         gel.Optional
-        Name string `edgedb:"name"`
+        Name string `gel:"name"`
     }
     
 

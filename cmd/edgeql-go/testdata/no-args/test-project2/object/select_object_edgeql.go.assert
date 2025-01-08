@@ -17,17 +17,17 @@ var selectObjectCmd string
 // selectObject()
 type selectObjectResult struct {
 	gel.Optional
-	Name     string                         `edgedb:"Name"`
-	Language string                         `edgedb:"Language"`
-	Params   []selectObjectResultParamsItem `edgedb:"Params"`
+	Name     string                         `gel:"Name"`
+	Language string                         `gel:"Language"`
+	Params   []selectObjectResultParamsItem `gel:"Params"`
 }
 
 // selectObjectResultParamsItem
 // is part of the return type for
 // selectObject()
 type selectObjectResultParamsItem struct {
-	Name    string          `edgedb:"Name"`
-	Default gel.OptionalStr `edgedb:"Default"`
+	Name    string          `gel:"Name"`
+	Default gel.OptionalStr `gel:"Default"`
 }
 
 // selectObject

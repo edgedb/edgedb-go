@@ -26,9 +26,9 @@ import (
 )
 
 type User struct {
-	ID   gel.UUID  `edgedb:"id"`
-	Name string    `edgedb:"name"`
-	DOB  time.Time `edgedb:"dob"`
+	ID   gel.UUID  `gel:"id"`
+	Name string    `gel:"name"`
+	DOB  time.Time `gel:"dob"`
 }
 
 func Example() {

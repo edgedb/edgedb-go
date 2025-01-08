@@ -28,17 +28,17 @@ import (
 )
 
 type Person struct {
-	ID        types.UUID `edgedb:"id"`
-	FirstName string     `edgedb:"first_name"`
-	LastName  string     `edgedb:"last_name"`
+	ID        types.UUID `gel:"id"`
+	FirstName string     `gel:"first_name"`
+	LastName  string     `gel:"last_name"`
 }
 
 type Movie struct {
-	ID       types.UUID          `edgedb:"id"`
-	Title    string              `edgedb:"title"`
-	Year     types.OptionalInt64 `edgedb:"year"`
-	Director Person              `edgedb:"director"`
-	Actors   []Person            `edgedb:"actors"`
+	ID       types.UUID          `gel:"id"`
+	Title    string              `gel:"title"`
+	Year     types.OptionalInt64 `gel:"year"`
+	Director Person              `gel:"director"`
+	Actors   []Person            `gel:"actors"`
 }
 
 func TestTutorial(t *testing.T) {

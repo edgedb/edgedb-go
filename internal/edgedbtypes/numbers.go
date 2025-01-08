@@ -25,7 +25,7 @@ import (
 //
 //	type User struct {
 //	    gel.Optional
-//	    Name string `edgedb:"name"`
+//	    Name string `gel:"name"`
 //	}
 type Optional struct {
 	isSet bool
