@@ -886,9 +886,14 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			return false, err
 		}
 	}
-	credentials, credsOk := os.LookupEnv("EDGEDB_CREDENTIALS_FILE")
+	credentialsEnvVarName := "GEL_CREDENTIALS_FILE"
+	credentials, credsOk := os.LookupEnv(credentialsEnvVarName)
+	if !credsOk {
+		credentialsEnvVarName = "EDGEDB_CREDENTIALS_FILE"
+		credentials, credsOk = os.LookupEnv(credentialsEnvVarName)
+	}
 	if credsOk {
-		names = append(names, "EDGEDB_CREDENTIALS_FILE")
+		names = append(names, credentialsEnvVarName)
 	}
 
 	hostEnvVarName := "GEL_HOST"
@@ -932,10 +937,17 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		r.setProfile(profile, "EDGEDB_CLOUD_PROFILE environment variable")
 	}
 
-	secretKey, keyOk := os.LookupEnv("EDGEDB_SECRET_KEY")
-	if keyOk {
+	if secretKey, ok := os.LookupEnv("GEL_SECRET_KEY"); ok {
 		e := r.setSecretKey(
 			secretKey,
+			"GEL_SECRET_KEY environment variable",
+		)
+		if e != nil {
+			return false, e
+		}
+	} else if key, ok := os.LookupEnv("EDGEDB_SECRET_KEY"); ok {
+		e := r.setSecretKey(
+			key,
 			"EDGEDB_SECRET_KEY environment variable",
 		)
 		if e != nil {
@@ -974,7 +986,7 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			return false, e
 		}
 	case instanceOk || credsOk:
-		source := "EDGEDB_CREDENTIALS_FILE environment variable"
+		source := fmt.Sprintf("%s environment variable", credentialsEnvVarName)
 		if instanceOk {
 			source = fmt.Sprintf("%s environment variable", instanceEnvVarName)
 		}
@@ -1265,7 +1277,7 @@ func newConfigResolver(
 					"specified either via arguments to connect API " +
 					"or via environment variables " +
 					"GEL_HOST/GEL_PORT, GEL_INSTANCE, " +
-					"GEL_DSN or EDGEDB_CREDENTIALS_FILE",
+					"GEL_DSN or GEL_CREDENTIALS_FILE",
 			)
 		}
 		if err != nil {
