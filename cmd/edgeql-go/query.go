@@ -29,7 +29,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal"
 	gel "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 var (
@@ -353,8 +353,8 @@ func resultTypesV2(
 	)
 }
 
-func randomID() (edgedbtypes.UUID, error) {
-	var id edgedbtypes.UUID
+func randomID() (geltypes.UUID, error) {
+	var id geltypes.UUID
 	_, err := rand.Read(id[:])
 	return id, err
 }

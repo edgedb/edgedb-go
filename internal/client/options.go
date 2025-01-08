@@ -21,7 +21,7 @@ import (
 	"math"
 	"time"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 // Options for connecting to a Gel server

@@ -50,7 +50,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	typ, err := buildLookup("internal/edgedbtypes", "edgedbtypes")
+	typ, err := buildLookup("internal/geltypes", "geltypes")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func main() {
 		"PackageName": "gel",
 		"Imports": []string{
 			`gel "github.com/edgedb/edgedb-go/internal/client"`,
-			`"github.com/edgedb/edgedb-go/internal/edgedbtypes"`,
+			`"github.com/edgedb/edgedb-go/internal/geltypes"`,
 		},
 		"Constants": exports[token.CONST],
 		"Types":     exports[token.TYPE],

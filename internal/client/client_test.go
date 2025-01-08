@@ -22,8 +22,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
+	types "github.com/edgedb/edgedb-go/internal/geltypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -146,7 +146,7 @@ func TestQuerySingleMissingResult(t *testing.T) {
 	optionalResult := types.NewOptionalStr("this should be set to missing")
 	err = client.QuerySingle(ctx, "SELECT <str>{}", &optionalResult)
 	assert.NoError(t, err)
-	assert.Equal(t, edgedbtypes.OptionalStr{}, optionalResult)
+	assert.Equal(t, geltypes.OptionalStr{}, optionalResult)
 
 	var objectResult struct {
 		Name string `gel:"name"`
@@ -158,7 +158,7 @@ func TestQuerySingleMissingResult(t *testing.T) {
 	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	var optionalObjectResult struct {
-		edgedbtypes.Optional
+		geltypes.Optional
 		Name string `gel:"name"`
 	}
 	optionalObjectResult.SetMissing(false)
@@ -183,7 +183,7 @@ func TestQuerySingleJSONMissingResult(t *testing.T) {
 	)
 	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &optionalResult)
 	assert.NoError(t, err)
-	assert.Equal(t, edgedbtypes.OptionalBytes{}, optionalResult)
+	assert.Equal(t, geltypes.OptionalBytes{}, optionalResult)
 
 	var wrongType string
 	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &wrongType)

@@ -23,7 +23,7 @@ import (
 	"unsafe"
 
 	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/edgedb/edgedb-go/internal/geltypes"
 	"github.com/edgedb/edgedb-go/internal/marshal"
 )
 
@@ -149,7 +149,7 @@ func (c *LocalDateTimeCodec) Type() reflect.Type { return localDateTimeType }
 // DescriptorID returns the codecs descriptor id.
 func (c *LocalDateTimeCodec) DescriptorID() types.UUID { return LocalDTID }
 
-// localDateTimeLayout is the memory layout for edgedbtypes.LocalDateTime
+// localDateTimeLayout is the memory layout for geltypes.LocalDateTime
 type localDateTimeLayout struct {
 	usec uint64
 }
@@ -249,7 +249,7 @@ func (c *LocalDateCodec) Type() reflect.Type { return localDateType }
 // DescriptorID returns the codecs descriptor id.
 func (c *LocalDateCodec) DescriptorID() types.UUID { return LocalDateID }
 
-// localDateLayout is the memory layout for edgedbtypes.LocalDate
+// localDateLayout is the memory layout for geltypes.LocalDate
 type localDateLayout struct {
 	days uint32
 }
@@ -347,7 +347,7 @@ func (c *LocalTimeCodec) Type() reflect.Type { return localTimeType }
 // DescriptorID returns the codecs descriptor id.
 func (c *LocalTimeCodec) DescriptorID() types.UUID { return LocalTimeID }
 
-// localTimeLayout is the memory layout for edgedbtypes.LocalTime
+// localTimeLayout is the memory layout for geltypes.LocalTime
 type localTimeLayout struct {
 	usec uint64
 }

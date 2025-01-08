@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/edgedb/edgedb-go/internal/geltypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

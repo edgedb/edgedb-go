@@ -22,7 +22,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 func buildObjectOrNamedTupleEncoder(
@@ -66,11 +66,11 @@ func buildObjectOrNamedTupleEncoderV2(
 }
 
 type objectEncoder struct {
-	id     edgedbtypes.UUID
+	id     geltypes.UUID
 	fields []*encoderField
 }
 
-func (c *objectEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *objectEncoder) DescriptorID() geltypes.UUID { return c.id }
 
 func (c *objectEncoder) Encode(
 	w *buff.Writer,

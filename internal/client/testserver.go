@@ -34,7 +34,7 @@ import (
 	"time"
 
 	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 var (
@@ -191,7 +191,7 @@ func initOptions(info serverInfo) {
 		Host:     "127.0.0.1",
 		Port:     info.Port,
 		User:     "test",
-		Password: edgedbtypes.NewOptionalStr("shhh"),
+		Password: geltypes.NewOptionalStr("shhh"),
 		TLSOptions: TLSOptions{
 			CAFile:       info.TLSCertFile,
 			SecurityMode: TLSModeNoHostVerification,

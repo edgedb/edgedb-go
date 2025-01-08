@@ -25,7 +25,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 // Encoder can encode objects into the data wire format.

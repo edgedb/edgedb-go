@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/edgedb/edgedb-go/internal/cache"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 const defaultIdleConnectionTimeout = 30 * time.Second

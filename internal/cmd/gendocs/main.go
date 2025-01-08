@@ -76,7 +76,7 @@ func writeFile(filename string, content string) {
 }
 
 func renderTypesPage() []string {
-	dir, err := os.ReadDir("internal/edgedbtypes")
+	dir, err := os.ReadDir("internal/geltypes")
 	if err != nil {
 		panic(err)
 	}
@@ -88,12 +88,12 @@ func renderTypesPage() []string {
 		if !file.IsDir() {
 			files = append(
 				files, readAndParseFile(
-					fset, "internal/edgedbtypes/"+file.Name()))
+					fset, "internal/geltypes/"+file.Name()))
 		}
 	}
 
 	p, err := doc.NewFromFiles(
-		fset, files, "github.com/edgedb/edgedb-go/internal/edgedbtypes")
+		fset, files, "github.com/edgedb/edgedb-go/internal/geltypes")
 	if err != nil {
 		panic(err)
 	}

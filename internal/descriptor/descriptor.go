@@ -23,12 +23,12 @@ import (
 
 	"github.com/edgedb/edgedb-go/internal"
 	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 // IDZero is descriptor ID 00000000-0000-0000-0000-000000000000
 // https://www.edgedb.com/docs/internals/protocol/typedesc#type-descriptors
-var IDZero = edgedbtypes.UUID{}
+var IDZero = geltypes.UUID{}
 
 //go:generate go run golang.org/x/tools/cmd/stringer@v0.25.0 -type Type
 
@@ -80,7 +80,7 @@ const (
 // https://www.edgedb.com/docs/internals/protocol/typedesc
 type Descriptor struct {
 	Type   Type
-	ID     edgedbtypes.UUID
+	ID     geltypes.UUID
 	Fields []*Field
 }
 

@@ -36,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
 	"github.com/edgedb/edgedb-go/internal/snc"
 	"github.com/sigurn/crc16"
 )
@@ -292,7 +292,7 @@ func (r *configResolver) setWaitUntilAvailable(
 }
 
 func (r *configResolver) setWaitUntilAvailableStr(val, source string) error {
-	d, err := edgedbtypes.ParseDuration(val)
+	d, err := geltypes.ParseDuration(val)
 	if err != nil {
 		return fmt.Errorf("invalid WaitUntilAvailable: %w", err)
 	}

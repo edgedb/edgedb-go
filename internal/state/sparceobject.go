@@ -23,7 +23,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/buff"
 	"github.com/edgedb/edgedb-go/internal/codecs"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/edgedb/edgedb-go/internal/geltypes"
 )
 
 func buildSparceObjectEncoder(
@@ -67,11 +67,11 @@ func buildSparceObjectEncoderV2(
 }
 
 type sparceObjectEncoder struct {
-	id     edgedbtypes.UUID
+	id     geltypes.UUID
 	fields []*encoderField
 }
 
-func (c *sparceObjectEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *sparceObjectEncoder) DescriptorID() geltypes.UUID { return c.id }
 
 func (c *sparceObjectEncoder) Encode(
 	w *buff.Writer,
