@@ -24,7 +24,7 @@ import (
 	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
-// Options for connecting to an EdgeDB server
+// Options for connecting to a Gel server
 type Options struct {
 	// Host is an EdgeDB server host address, given as either an IP address or
 	// domain name. (Unix-domain socket paths are not supported)
@@ -122,7 +122,7 @@ type Options struct {
 	WarningHandler WarningHandler
 }
 
-// TLSOptions contains the parameters needed to configure TLS on EdgeDB
+// TLSOptions contains the parameters needed to configure TLS on Gel
 // server connections.
 type TLSOptions struct {
 	// PEM-encoded CA certificate

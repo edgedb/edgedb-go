@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package edgedb is the official Go driver for [EdgeDB]. Additionally,
+// Package gel is the official Go driver for [Gel]. Additionally,
 // [github.com/edgedb/edgedb-go/cmd/edgeql-go] is a code generator that
 // generates go functions from edgeql files.
 //
@@ -55,7 +55,7 @@
 //
 // You may also connect to a database using a DSN:
 //
-//	url := "edgedb://edgedb@localhost/edgedb"
+//	url := "gel://edgedb@localhost/edgedb"
 //	client, err := gel.CreateClientDSN(ctx, url, opts)
 //
 // Or you can use Option fields.
@@ -70,29 +70,29 @@
 //
 // # Errors
 //
-// edgedb never returns underlying errors directly.
+// gel never returns underlying errors directly.
 // If you are checking for things like context expiration
 // use errors.Is() or errors.As().
 //
 //	err := client.Query(...)
 //	if errors.Is(err, context.Canceled) { ... }
 //
-// Most errors returned by the edgedb package will satisfy the gel.Error
+// Most errors returned by the gel package will satisfy the gel.Error
 // interface which has methods for introspecting.
 //
 //	err := client.Query(...)
 //
-//	var edbErr gel.Error
-//	if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){
+//	var gelErr gel.Error
+//	if errors.As(err, &gelErr) && gelErr.Category(gel.NoDataError){
 //	    ...
 //	}
 //
 // # Datatypes
 //
 // The following list shows the marshal/unmarshal
-// mapping between EdgeDB types and go types:
+// mapping between Gel types and go types:
 //
-//	EdgeDB                   Go
+//	Gel                      Go
 //	---------                ---------
 //	Set                      []anytype
 //	array<anytype>           []anytype
@@ -122,7 +122,7 @@
 //
 //	decimal                  user defined (see Custom Marshalers)
 //
-// Note that EdgeDB's std::duration type is represented in int64 microseconds
+// Note that Gel's std::duration type is represented in int64 microseconds
 // while go's time.Duration type is int64 nanoseconds. It is incorrect to cast
 // one directly to the other.
 //
@@ -145,7 +145,7 @@
 //	// Output: false
 //
 // Not all types listed above are valid query parameters.  To pass a slice of
-// scalar values use array in your query. EdgeDB doesn't currently support
+// scalar values use array in your query. Gel doesn't currently support
 // using sets as parameters.
 //
 //	query := `select User filter .id in array_unpack(<array<uuid>>$1)`
@@ -154,7 +154,7 @@
 // Nested structures are also not directly allowed but you can use [json]
 // instead.
 //
-// By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
+// By default Gel will ignore embedded structs when marshaling/unmarshaling.
 // To treat an embedded struct's fields as part of the parent struct's fields,
 // tag the embedded struct with `gel:"$inline"`.
 //
@@ -172,7 +172,7 @@
 // Interfaces for user defined marshaler/unmarshalers  are documented in the
 // internal/marshal package.
 //
-// [EdgeDB]: https://www.edgedb.com
+// [Gel]: https://www.edgedb.com
 // [json]: https://www.edgedb.com/docs/edgeql/insert#bulk-inserts
 // [client connection docs]: https://www.edgedb.com/docs/clients/connection
 package gel

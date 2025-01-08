@@ -28,7 +28,7 @@ Error is the error type returned from gel.
 *type* ErrorCategory
 --------------------
 
-ErrorCategory values represent EdgeDB's error types.
+ErrorCategory values represent Gel's error types.
 
 
 .. code-block:: go
@@ -51,7 +51,7 @@ ErrorTag is the argument type to Error.HasTag().
 ---------------
 
 Executor is a common interface between \*Client and \*Tx,
-that can run queries on an EdgeDB database.
+that can run queries on an Gel database.
 
 
 .. code-block:: go
@@ -85,7 +85,7 @@ ModuleAlias is an alias name and module name pair.
 *type* Options
 --------------
 
-Options for connecting to an EdgeDB server
+Options for connecting to a Gel server
 
 
 .. code-block:: go
@@ -145,7 +145,7 @@ methods. See Client.Tx() for details.
 *type* TLSOptions
 -----------------
 
-TLSOptions contains the parameters needed to configure TLS on EdgeDB
+TLSOptions contains the parameters needed to configure TLS on Gel
 server connections.
 
 

@@ -41,7 +41,7 @@ var (
 // ErrorTag is the argument type to Error.HasTag().
 type ErrorTag string
 
-// ErrorCategory values represent EdgeDB's error types.
+// ErrorCategory values represent Gel's error types.
 type ErrorCategory string
 
 // Error is the error type returned from gel.

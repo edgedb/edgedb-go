@@ -65,14 +65,14 @@ type (
 	// Error is the error type returned from gel.
 	Error = gel.Error
 
-	// ErrorCategory values represent EdgeDB's error types.
+	// ErrorCategory values represent Gel's error types.
 	ErrorCategory = gel.ErrorCategory
 
 	// ErrorTag is the argument type to Error.HasTag().
 	ErrorTag = gel.ErrorTag
 
 	// Executor is a common interface between *Client and *Tx,
-	// that can run queries on an EdgeDB database.
+	// that can run queries on an Gel database.
 	Executor = gel.Executor
 
 	// IsolationLevel documentation can be found here
@@ -206,7 +206,7 @@ type (
 	// parameters when a shape field is not required.
 	OptionalUUID = edgedbtypes.OptionalUUID
 
-	// Options for connecting to an EdgeDB server
+	// Options for connecting to a Gel server
 	Options = gel.Options
 
 	// RangeDateTime is an interval of time.Time values.
@@ -251,7 +251,7 @@ type (
 	// methods. See Client.Tx() for details.
 	RetryRule = gel.RetryRule
 
-	// TLSOptions contains the parameters needed to configure TLS on EdgeDB
+	// TLSOptions contains the parameters needed to configure TLS on Gel
 	// server connections.
 	TLSOptions = gel.TLSOptions
 

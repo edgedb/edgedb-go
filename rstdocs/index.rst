@@ -1,7 +1,7 @@
 .. _edgedb-go-intro:
 
 ================
-EdgeDB Go Driver
+Gel Go Driver
 ================
 
 
@@ -15,7 +15,7 @@ EdgeDB Go Driver
 
 
 
-Package edgedb is the official Go driver for `EdgeDB <https://www.edgedb.com>`_. Additionally,
+Package gel is the official Go driver for `Gel <https://www.edgedb.com>`_. Additionally,
 `edgeql-go <https://pkg.go.dev/github.com/edgedb/edgedb-go/cmd/edgeql-go>`_ is a code generator that
 generates go functions from edgeql files.
 
@@ -60,7 +60,7 @@ You may also connect to a database using a DSN:
 
 .. code-block:: go
 
-    url := "edgedb://edgedb@localhost/edgedb"
+    url := "gel://edgedb@localhost/edgedb"
     client, err := gel.CreateClientDSN(ctx, url, opts)
     
 Or you can use Option fields.
@@ -79,7 +79,7 @@ Or you can use Option fields.
 Errors
 ------
 
-edgedb never returns underlying errors directly.
+gel never returns underlying errors directly.
 If you are checking for things like context expiration
 use errors.Is() or errors.As().
 
@@ -88,15 +88,15 @@ use errors.Is() or errors.As().
     err := client.Query(...)
     if errors.Is(err, context.Canceled) { ... }
     
-Most errors returned by the edgedb package will satisfy the gel.Error
+Most errors returned by the gel package will satisfy the gel.Error
 interface which has methods for introspecting.
 
 .. code-block:: go
 
     err := client.Query(...)
     
-    var edbErr gel.Error
-    if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){
+    var gelErr gel.Error
+    if errors.As(err, &gelErr) && gelErr.Category(gel.NoDataError){
         ...
     }
     
@@ -105,11 +105,11 @@ Datatypes
 ---------
 
 The following list shows the marshal/unmarshal
-mapping between EdgeDB types and go types:
+mapping between Gel types and go types:
 
 .. code-block:: go
 
-    EdgeDB                   Go
+    Gel                      Go
     ---------                ---------
     Set                      []anytype
     array<anytype>           []anytype
@@ -139,7 +139,7 @@ mapping between EdgeDB types and go types:
     
     decimal                  user defined (see Custom Marshalers)
     
-Note that EdgeDB's std::duration type is represented in int64 microseconds
+Note that Gel's std::duration type is represented in int64 microseconds
 while go's time.Duration type is int64 nanoseconds. It is incorrect to cast
 one directly to the other.
 
@@ -164,7 +164,7 @@ optional.
     // Output: false
     
 Not all types listed above are valid query parameters.  To pass a slice of
-scalar values use array in your query. EdgeDB doesn't currently support
+scalar values use array in your query. Gel doesn't currently support
 using sets as parameters.
 
 .. code-block:: go
@@ -175,7 +175,7 @@ using sets as parameters.
 Nested structures are also not directly allowed but you can use `json <https://www.edgedb.com/docs/edgeql/insert#bulk-inserts>`_
 instead.
 
-By default EdgeDB will ignore embedded structs when marshaling/unmarshaling.
+By default Gel will ignore embedded structs when marshaling/unmarshaling.
 To treat an embedded struct's fields as part of the parent struct's fields,
 tag the embedded struct with \`gel:"$inline"\`.
 
@@ -224,7 +224,7 @@ Usage Example
     func Example() {
         opts := gel.Options{Concurrency: 4}
         ctx := context.Background()
-        db, err := gel.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
+        db, err := gel.CreateClientDSN(ctx, "gel://edgedb@localhost/test", opts)
         if err != nil {
             log.Fatal(err)
         }

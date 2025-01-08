@@ -34,7 +34,7 @@ type User struct {
 func Example() {
 	opts := gel.Options{Concurrency: 4}
 	ctx := context.Background()
-	db, err := gel.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
+	db, err := gel.CreateClientDSN(ctx, "gel://edgedb@localhost/test", opts)
 	if err != nil {
 		log.Fatal(err)
 	}
