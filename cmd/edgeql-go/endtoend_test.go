@@ -206,8 +206,7 @@ func copyFile(t *testing.T, to, from string) {
 func run(t *testing.T, dir, name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), fmt.Sprintf("EDGEDB_DSN=%s", dsn))
-	require.NoError(t, cmd.Run())
+	stdoutStderr, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(stdoutStderr))
 }
