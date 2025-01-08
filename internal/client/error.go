@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	errNoTOMLFound             = errors.New("no edgedb.toml found")
+	errNoTOMLFound             = errors.New("no gel.toml found")
 	errZeroResults       error = &noDataError{msg: "zero results"}
 	errStateNotSupported       = &interfaceError{msg: "client methods " +
 		"WithConfig, WithGlobals, and WithModuleAliases " +
@@ -44,7 +44,7 @@ type ErrorTag string
 // ErrorCategory values represent EdgeDB's error types.
 type ErrorCategory string
 
-// Error is the error type returned from edgedb.
+// Error is the error type returned from gel.
 type Error interface {
 	Error() string
 	Unwrap() error

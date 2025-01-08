@@ -331,7 +331,7 @@ func (r *configResolver) resolveOptions(
 ) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("invalid edgedb.Options: %w", err)
+			err = fmt.Errorf("invalid gel.Options: %w", err)
 		}
 	}()
 
@@ -1104,15 +1104,15 @@ func newConfigResolver(
 		names = append(names, "dsn")
 	}
 	if opts.Credentials != nil {
-		names = append(names, "edgedb.Options.Credentials")
+		names = append(names, "gel.Options.Credentials")
 	}
 	if opts.CredentialsFile != "" {
-		names = append(names, "edgedb.Options.CredentialsFile")
+		names = append(names, "gel.Options.CredentialsFile")
 	}
 	if opts.Host != "" {
-		names = append(names, "edgedb.Options.Host")
+		names = append(names, "gel.Options.Host")
 	} else if opts.Port != 0 {
-		names = append(names, "edgedb.Options.Port")
+		names = append(names, "gel.Options.Port")
 	}
 	if len(names) > 1 {
 		return nil, fmt.Errorf(
@@ -1161,7 +1161,7 @@ func newConfigResolver(
 		err = cfg.resolveTOML(paths)
 		if errors.Is(err, errNoTOMLFound) {
 			return nil, errors.New(
-				"no `edgedb.toml` found and no connection options " +
+				"no `gel.toml` found and no connection options " +
 					"specified either via arguments to connect API " +
 					"or via environment variables " +
 					"EDGEDB_HOST/EDGEDB_PORT, EDGEDB_INSTANCE, " +

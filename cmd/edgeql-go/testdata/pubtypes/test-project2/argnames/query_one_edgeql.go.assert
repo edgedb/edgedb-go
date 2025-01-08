@@ -6,7 +6,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 
 //go:embed query_one.edgeql
@@ -17,7 +17,7 @@ var queryOneCmd string
 // query_one.edgeql
 func queryOne(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 	arg_name_with_underscores int64,
 ) (int64, error) {
 	var result int64
@@ -40,7 +40,7 @@ func queryOne(
 // returning the results as json encoded bytes
 func queryOneJSON(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 	arg_name_with_underscores int64,
 ) ([]byte, error) {
 	var result []byte

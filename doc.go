@@ -31,7 +31,7 @@
 //
 //	func main() {
 //	    ctx := context.Background()
-//	    client, err := edgedb.CreateClient(ctx, edgedb.Options{})
+//	    client, err := gel.CreateClient(ctx, gel.Options{})
 //	    if err != nil {
 //	        log.Fatal(err)
 //	    }
@@ -40,7 +40,7 @@
 //	    var (
 //	        age   int64 = 21
 //	        users []struct {
-//	            ID   edgedb.UUID `edgedb:"id"`
+//	            ID   gel.UUID `edgedb:"id"`
 //	            Name string      `edgedb:"name"`
 //	        }
 //	    )
@@ -56,17 +56,17 @@
 // You may also connect to a database using a DSN:
 //
 //	url := "edgedb://edgedb@localhost/edgedb"
-//	client, err := edgedb.CreateClientDSN(ctx, url, opts)
+//	client, err := gel.CreateClientDSN(ctx, url, opts)
 //
 // Or you can use Option fields.
 //
-//	opts := edgedb.Options{
+//	opts := gel.Options{
 //	    Database:    "edgedb",
 //	    User:        "edgedb",
 //	    Concurrency: 4,
 //	}
 //
-//	client, err := edgedb.CreateClient(ctx, opts)
+//	client, err := gel.CreateClient(ctx, opts)
 //
 // # Errors
 //
@@ -77,12 +77,12 @@
 //	err := client.Query(...)
 //	if errors.Is(err, context.Canceled) { ... }
 //
-// Most errors returned by the edgedb package will satisfy the edgedb.Error
+// Most errors returned by the edgedb package will satisfy the gel.Error
 // interface which has methods for introspecting.
 //
 //	err := client.Query(...)
 //
-//	var edbErr edgedb.Error
+//	var edbErr gel.Error
 //	if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){
 //	    ...
 //	}
@@ -99,26 +99,26 @@
 //	tuple                    struct
 //	named tuple              struct
 //	Object                   struct
-//	bool                     bool, edgedb.OptionalBool
-//	bytes                    []byte, edgedb.OptionalBytes
-//	str                      string, edgedb.OptionalStr
-//	anyenum                  string, edgedb.OptionalStr
-//	datetime                 time.Time, edgedb.OptionalDateTime
-//	cal::local_datetime      edgedb.LocalDateTime,
-//	                         edgedb.OptionalLocalDateTime
-//	cal::local_date          edgedb.LocalDate, edgedb.OptionalLocalDate
-//	cal::local_time          edgedb.LocalTime, edgedb.OptionalLocalTime
-//	duration                 edgedb.Duration, edgedb.OptionalDuration
-//	cal::relative_duration   edgedb.RelativeDuration,
-//	                         edgedb.OptionalRelativeDuration
-//	float32                  float32, edgedb.OptionalFloat32
-//	float64                  float64, edgedb.OptionalFloat64
-//	int16                    int16, edgedb.OptionalFloat16
-//	int32                    int32, edgedb.OptionalInt16
-//	int64                    int64, edgedb.OptionalInt64
-//	uuid                     edgedb.UUID, edgedb.OptionalUUID
-//	json                     []byte, edgedb.OptionalBytes
-//	bigint                   *big.Int, edgedb.OptionalBigInt
+//	bool                     bool, gel.OptionalBool
+//	bytes                    []byte, gel.OptionalBytes
+//	str                      string, gel.OptionalStr
+//	anyenum                  string, gel.OptionalStr
+//	datetime                 time.Time, gel.OptionalDateTime
+//	cal::local_datetime      gel.LocalDateTime,
+//	                         gel.OptionalLocalDateTime
+//	cal::local_date          gel.LocalDate, gel.OptionalLocalDate
+//	cal::local_time          gel.LocalTime, gel.OptionalLocalTime
+//	duration                 gel.Duration, gel.OptionalDuration
+//	cal::relative_duration   gel.RelativeDuration,
+//	                         gel.OptionalRelativeDuration
+//	float32                  float32, gel.OptionalFloat32
+//	float64                  float64, gel.OptionalFloat64
+//	int16                    int16, gel.OptionalFloat16
+//	int32                    int32, gel.OptionalInt16
+//	int64                    int64, gel.OptionalInt64
+//	uuid                     gel.UUID, gel.OptionalUUID
+//	json                     []byte, gel.OptionalBytes
+//	bigint                   *big.Int, gel.OptionalBigInt
 //
 //	decimal                  user defined (see Custom Marshalers)
 //
@@ -127,11 +127,11 @@
 // one directly to the other.
 //
 // Shape fields that are not required must use optional types for receiving
-// query results. The edgedb.Optional struct can be embedded to make structs
+// query results. The gel.Optional struct can be embedded to make structs
 // optional.
 //
 //	type User struct {
-//	    edgedb.Optional
+//	    gel.Optional
 //	    Email string `edgedb:"email"`
 //	}
 //
@@ -149,7 +149,7 @@
 // using sets as parameters.
 //
 //	query := `select User filter .id in array_unpack(<array<uuid>>$1)`
-//	client.QuerySingle(ctx, query, $user, []edgedb.UUID{...})
+//	client.QuerySingle(ctx, query, $user, []gel.UUID{...})
 //
 // Nested structures are also not directly allowed but you can use [json]
 // instead.
@@ -159,7 +159,7 @@
 // tag the embedded struct with `edgedb:"$inline"`.
 //
 //	type Object struct {
-//	    ID edgedb.UUID
+//	    ID gel.UUID
 //	}
 //
 //	type User struct {

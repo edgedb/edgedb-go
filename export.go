@@ -20,39 +20,39 @@
 package gel
 
 import (
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
+	gel "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
 )
 
 const (
 	// NetworkError indicates that the transaction was interupted
 	// by a network error.
-	NetworkError = edgedb.NetworkError
+	NetworkError = gel.NetworkError
 
 	// Serializable is the only isolation level
-	Serializable = edgedb.Serializable
+	Serializable = gel.Serializable
 
 	// TLSModeDefault makes security mode inferred from other options
-	TLSModeDefault = edgedb.TLSModeDefault
+	TLSModeDefault = gel.TLSModeDefault
 
 	// TLSModeInsecure results in no certificate verification whatsoever
-	TLSModeInsecure = edgedb.TLSModeInsecure
+	TLSModeInsecure = gel.TLSModeInsecure
 
 	// TLSModeNoHostVerification enables certificate verification
 	// against CAs, but hostname matching is not performed.
-	TLSModeNoHostVerification = edgedb.TLSModeNoHostVerification
+	TLSModeNoHostVerification = gel.TLSModeNoHostVerification
 
 	// TLSModeStrict enables full certificate and hostname verification.
-	TLSModeStrict = edgedb.TLSModeStrict
+	TLSModeStrict = gel.TLSModeStrict
 
 	// TxConflict indicates that the server could not complete a transaction
 	// because it encountered a deadlock or serialization error.
-	TxConflict = edgedb.TxConflict
+	TxConflict = gel.TxConflict
 )
 
 type (
 	// Client is a connection pool and is safe for concurrent use.
-	Client = edgedb.Client
+	Client = gel.Client
 
 	// DateDuration represents the elapsed time between two dates in a fuzzy human
 	// way.
@@ -62,22 +62,22 @@ type (
 	// as an int64 microsecond count.
 	Duration = edgedbtypes.Duration
 
-	// Error is the error type returned from edgedb.
-	Error = edgedb.Error
+	// Error is the error type returned from gel.
+	Error = gel.Error
 
 	// ErrorCategory values represent EdgeDB's error types.
-	ErrorCategory = edgedb.ErrorCategory
+	ErrorCategory = gel.ErrorCategory
 
 	// ErrorTag is the argument type to Error.HasTag().
-	ErrorTag = edgedb.ErrorTag
+	ErrorTag = gel.ErrorTag
 
 	// Executor is a common interface between *Client and *Tx,
 	// that can run queries on an EdgeDB database.
-	Executor = edgedb.Executor
+	Executor = gel.Executor
 
 	// IsolationLevel documentation can be found here
 	// https://www.edgedb.com/docs/reference/edgeql/tx_start#parameters
-	IsolationLevel = edgedb.IsolationLevel
+	IsolationLevel = gel.IsolationLevel
 
 	// LocalDate is a date without a time zone.
 	// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_date
@@ -95,13 +95,13 @@ type (
 	Memory = edgedbtypes.Memory
 
 	// ModuleAlias is an alias name and module name pair.
-	ModuleAlias = edgedb.ModuleAlias
+	ModuleAlias = gel.ModuleAlias
 
 	// Optional represents a shape field that is not required.
 	// Optional is embedded in structs to make them optional. For example:
 	//
 	//	type User struct {
-	//	    edgedb.Optional
+	//	    gel.Optional
 	//	    Name string `edgedb:"name"`
 	//	}
 	Optional = edgedbtypes.Optional
@@ -207,7 +207,7 @@ type (
 	OptionalUUID = edgedbtypes.OptionalUUID
 
 	// Options for connecting to an EdgeDB server
-	Options = edgedb.Options
+	Options = gel.Options
 
 	// RangeDateTime is an interval of time.Time values.
 	RangeDateTime = edgedbtypes.RangeDateTime
@@ -236,51 +236,51 @@ type (
 
 	// RetryBackoff returns the duration to wait after the nth attempt
 	// before making the next attempt when retrying a transaction.
-	RetryBackoff = edgedb.RetryBackoff
+	RetryBackoff = gel.RetryBackoff
 
 	// RetryCondition represents scenarios that can cause a transaction
 	// run in Tx() methods to be retried.
-	RetryCondition = edgedb.RetryCondition
+	RetryCondition = gel.RetryCondition
 
 	// RetryOptions configures how Tx() retries failed transactions.  Use
 	// NewRetryOptions to get a default RetryOptions value instead of creating one
 	// yourself.
-	RetryOptions = edgedb.RetryOptions
+	RetryOptions = gel.RetryOptions
 
 	// RetryRule determines how transactions should be retried when run in Tx()
 	// methods. See Client.Tx() for details.
-	RetryRule = edgedb.RetryRule
+	RetryRule = gel.RetryRule
 
 	// TLSOptions contains the parameters needed to configure TLS on EdgeDB
 	// server connections.
-	TLSOptions = edgedb.TLSOptions
+	TLSOptions = gel.TLSOptions
 
 	// TLSSecurityMode specifies how strict TLS validation is.
-	TLSSecurityMode = edgedb.TLSSecurityMode
+	TLSSecurityMode = gel.TLSSecurityMode
 
 	// Tx is a transaction. Use Client.Tx() to get a transaction.
-	Tx = edgedb.Tx
+	Tx = gel.Tx
 
 	// TxBlock is work to be done in a transaction.
-	TxBlock = edgedb.TxBlock
+	TxBlock = gel.TxBlock
 
 	// TxOptions configures how transactions behave.
-	TxOptions = edgedb.TxOptions
+	TxOptions = gel.TxOptions
 
 	// UUID is a universally unique identifier
 	// https://www.edgedb.com/docs/stdlib/uuid
 	UUID = edgedbtypes.UUID
 
-	// WarningHandler takes a slice of edgedb.Error that represent warnings and
+	// WarningHandler takes a slice of gel.Error that represent warnings and
 	// optionally returns an error. This can be used to log warnings, increment
 	// metrics, promote warnings to errors by returning them etc.
-	WarningHandler = edgedb.WarningHandler
+	WarningHandler = gel.WarningHandler
 )
 
 var (
 	// CreateClient returns a new client. The client connects lazily. Call
 	// Client.EnsureConnected() to force a connection.
-	CreateClient = edgedb.CreateClient
+	CreateClient = gel.CreateClient
 
 	// CreateClientDSN returns a new client. See also CreateClient.
 	//
@@ -291,14 +291,14 @@ var (
 	//	edgedb://user:password@host:port/database?option=value.
 	//
 	// The following options are recognized: host, port, user, database, password.
-	CreateClientDSN = edgedb.CreateClientDSN
+	CreateClientDSN = gel.CreateClientDSN
 
 	// DurationFromNanoseconds creates a Duration represented as microseconds
 	// from a [time.Duration] represented as nanoseconds.
 	DurationFromNanoseconds = edgedbtypes.DurationFromNanoseconds
 
-	// LogWarnings is an edgedb.WarningHandler that logs warnings.
-	LogWarnings = edgedb.LogWarnings
+	// LogWarnings is an gel.WarningHandler that logs warnings.
+	LogWarnings = gel.LogWarnings
 
 	// NewDateDuration returns a new DateDuration
 	NewDateDuration = edgedbtypes.NewDateDuration
@@ -437,18 +437,18 @@ var (
 	NewRelativeDuration = edgedbtypes.NewRelativeDuration
 
 	// NewRetryOptions returns the default retry options.
-	NewRetryOptions = edgedb.NewRetryOptions
+	NewRetryOptions = gel.NewRetryOptions
 
 	// NewRetryRule returns the default RetryRule value.
-	NewRetryRule = edgedb.NewRetryRule
+	NewRetryRule = gel.NewRetryRule
 
 	// NewTxOptions returns the default TxOptions value.
-	NewTxOptions = edgedb.NewTxOptions
+	NewTxOptions = gel.NewTxOptions
 
 	// ParseUUID parses s into a UUID or returns an error.
 	ParseUUID = edgedbtypes.ParseUUID
 
-	// WarningsAsErrors is an edgedb.WarningHandler that returns warnings as
+	// WarningsAsErrors is an gel.WarningHandler that returns warnings as
 	// errors.
-	WarningsAsErrors = edgedb.WarningsAsErrors
+	WarningsAsErrors = gel.WarningsAsErrors
 )

@@ -440,7 +440,7 @@ Optional is embedded in structs to make them optional. For example:
 .. code-block:: go
 
     type User struct {
-        edgedb.Optional
+        gel.Optional
         Name string `edgedb:"name"`
     }
     

@@ -101,7 +101,7 @@ func main() {
 	err = t.Execute(&buf, map[string]any{
 		"PackageName": "edgedb",
 		"Imports": []string{
-			`edgedb "github.com/edgedb/edgedb-go/internal/client"`,
+			`gel "github.com/edgedb/edgedb-go/internal/client"`,
 			`"github.com/edgedb/edgedb-go/internal/edgedbtypes"`,
 		},
 		"Constants": exports[token.CONST],

@@ -118,7 +118,7 @@ type Options struct {
 	SecretKey string
 
 	// WarningHandler is invoked when EdgeDB returns warnings. Defaults to
-	// edgedb.LogWarnings.
+	// gel.LogWarnings.
 	WarningHandler WarningHandler
 }
 
@@ -518,7 +518,7 @@ func (p Client) WithoutGlobals(globals ...string) *Client { // nolint:gocritic
 }
 
 // WithWarningHandler sets the warning handler for the returned client. If
-// warningHandler is nil edgedb.LogWarnings is used.
+// warningHandler is nil gel.LogWarnings is used.
 func (p Client) WithWarningHandler( // nolint:gocritic
 	warningHandler WarningHandler,
 ) *Client {

@@ -22,19 +22,19 @@ import (
 	"log"
 	"time"
 
-	edgedb "github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 
 type User struct {
-	ID   edgedb.UUID `edgedb:"id"`
-	Name string      `edgedb:"name"`
-	DOB  time.Time   `edgedb:"dob"`
+	ID   gel.UUID  `edgedb:"id"`
+	Name string    `edgedb:"name"`
+	DOB  time.Time `edgedb:"dob"`
 }
 
 func Example() {
-	opts := edgedb.Options{Concurrency: 4}
+	opts := gel.Options{Concurrency: 4}
 	ctx := context.Background()
-	db, err := edgedb.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
+	db, err := gel.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func Example() {
 	}
 
 	// Insert a new user.
-	var inserted struct{ id edgedb.UUID }
+	var inserted struct{ id gel.UUID }
 	err = db.QuerySingle(ctx, `
 		INSERT User {
 			name := <str>$0,

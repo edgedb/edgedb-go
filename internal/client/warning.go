@@ -76,7 +76,7 @@ func (w *Warning) Err(query string) error {
 	return errorFromCode(w.Code, msg)
 }
 
-// LogWarnings is an edgedb.WarningHandler that logs warnings.
+// LogWarnings is an gel.WarningHandler that logs warnings.
 func LogWarnings(errors []error) error {
 	for _, err := range errors {
 		log.Println("EdgeDB warning:", err.Error())
@@ -85,7 +85,7 @@ func LogWarnings(errors []error) error {
 	return nil
 }
 
-// WarningsAsErrors is an edgedb.WarningHandler that returns warnings as
+// WarningsAsErrors is an gel.WarningHandler that returns warnings as
 // errors.
 func WarningsAsErrors(warnings []error) error {
 	return errors.Join(warnings...)

@@ -175,7 +175,7 @@ func TestWithConfigInTx(t *testing.T) {
 		e = tx.Execute(ctx, `insert User { id := <uuid>$0 }`, id)
 		assert.True(t, strings.HasPrefix(
 			e.Error(),
-			"edgedb.QueryError: cannot assign to property 'id'",
+			"gel.QueryError: cannot assign to property 'id'",
 		))
 
 		return errors.New("rollback")

@@ -34,7 +34,7 @@ Typical client usage looks like this:
     
     func main() {
         ctx := context.Background()
-        client, err := edgedb.CreateClient(ctx, edgedb.Options{})
+        client, err := gel.CreateClient(ctx, gel.Options{})
         if err != nil {
             log.Fatal(err)
         }
@@ -43,7 +43,7 @@ Typical client usage looks like this:
         var (
             age   int64 = 21
             users []struct {
-                ID   edgedb.UUID `edgedb:"id"`
+                ID   gel.UUID `edgedb:"id"`
                 Name string      `edgedb:"name"`
             }
         )
@@ -61,19 +61,19 @@ You may also connect to a database using a DSN:
 .. code-block:: go
 
     url := "edgedb://edgedb@localhost/edgedb"
-    client, err := edgedb.CreateClientDSN(ctx, url, opts)
+    client, err := gel.CreateClientDSN(ctx, url, opts)
     
 Or you can use Option fields.
 
 .. code-block:: go
 
-    opts := edgedb.Options{
+    opts := gel.Options{
         Database:    "edgedb",
         User:        "edgedb",
         Concurrency: 4,
     }
     
-    client, err := edgedb.CreateClient(ctx, opts)
+    client, err := gel.CreateClient(ctx, opts)
     
 
 Errors
@@ -88,14 +88,14 @@ use errors.Is() or errors.As().
     err := client.Query(...)
     if errors.Is(err, context.Canceled) { ... }
     
-Most errors returned by the edgedb package will satisfy the edgedb.Error
+Most errors returned by the edgedb package will satisfy the gel.Error
 interface which has methods for introspecting.
 
 .. code-block:: go
 
     err := client.Query(...)
     
-    var edbErr edgedb.Error
+    var edbErr gel.Error
     if errors.As(err, &edbErr) && edbErr.Category(edgedb.NoDataError){
         ...
     }
@@ -116,26 +116,26 @@ mapping between EdgeDB types and go types:
     tuple                    struct
     named tuple              struct
     Object                   struct
-    bool                     bool, edgedb.OptionalBool
-    bytes                    []byte, edgedb.OptionalBytes
-    str                      string, edgedb.OptionalStr
-    anyenum                  string, edgedb.OptionalStr
-    datetime                 time.Time, edgedb.OptionalDateTime
-    cal::local_datetime      edgedb.LocalDateTime,
-                             edgedb.OptionalLocalDateTime
-    cal::local_date          edgedb.LocalDate, edgedb.OptionalLocalDate
-    cal::local_time          edgedb.LocalTime, edgedb.OptionalLocalTime
-    duration                 edgedb.Duration, edgedb.OptionalDuration
-    cal::relative_duration   edgedb.RelativeDuration,
-                             edgedb.OptionalRelativeDuration
-    float32                  float32, edgedb.OptionalFloat32
-    float64                  float64, edgedb.OptionalFloat64
-    int16                    int16, edgedb.OptionalFloat16
-    int32                    int32, edgedb.OptionalInt16
-    int64                    int64, edgedb.OptionalInt64
-    uuid                     edgedb.UUID, edgedb.OptionalUUID
-    json                     []byte, edgedb.OptionalBytes
-    bigint                   *big.Int, edgedb.OptionalBigInt
+    bool                     bool, gel.OptionalBool
+    bytes                    []byte, gel.OptionalBytes
+    str                      string, gel.OptionalStr
+    anyenum                  string, gel.OptionalStr
+    datetime                 time.Time, gel.OptionalDateTime
+    cal::local_datetime      gel.LocalDateTime,
+                             gel.OptionalLocalDateTime
+    cal::local_date          gel.LocalDate, gel.OptionalLocalDate
+    cal::local_time          gel.LocalTime, gel.OptionalLocalTime
+    duration                 gel.Duration, gel.OptionalDuration
+    cal::relative_duration   gel.RelativeDuration,
+                             gel.OptionalRelativeDuration
+    float32                  float32, gel.OptionalFloat32
+    float64                  float64, gel.OptionalFloat64
+    int16                    int16, gel.OptionalFloat16
+    int32                    int32, gel.OptionalInt16
+    int64                    int64, gel.OptionalInt64
+    uuid                     gel.UUID, gel.OptionalUUID
+    json                     []byte, gel.OptionalBytes
+    bigint                   *big.Int, gel.OptionalBigInt
     
     decimal                  user defined (see Custom Marshalers)
     
@@ -144,13 +144,13 @@ while go's time.Duration type is int64 nanoseconds. It is incorrect to cast
 one directly to the other.
 
 Shape fields that are not required must use optional types for receiving
-query results. The edgedb.Optional struct can be embedded to make structs
+query results. The gel.Optional struct can be embedded to make structs
 optional.
 
 .. code-block:: go
 
     type User struct {
-        edgedb.Optional
+        gel.Optional
         Email string `edgedb:"email"`
     }
     
@@ -170,7 +170,7 @@ using sets as parameters.
 .. code-block:: go
 
     query := `select User filter .id in array_unpack(<array<uuid>>$1)`
-    client.QuerySingle(ctx, query, $user, []edgedb.UUID{...})
+    client.QuerySingle(ctx, query, $user, []gel.UUID{...})
     
 Nested structures are also not directly allowed but you can use `json <https://www.edgedb.com/docs/edgeql/insert#bulk-inserts>`_
 instead.
@@ -182,7 +182,7 @@ tag the embedded struct with \`edgedb:"$inline"\`.
 .. code-block:: go
 
     type Object struct {
-        ID edgedb.UUID
+        ID gel.UUID
     }
     
     type User struct {
@@ -212,19 +212,19 @@ Usage Example
         "log"
         "time"
     
-        edgedb "github.com/edgedb/edgedb-go"
+        gel "github.com/edgedb/edgedb-go"
     )
     
     type User struct {
-        ID   edgedb.UUID `edgedb:"id"`
+        ID   gel.UUID `edgedb:"id"`
         Name string      `edgedb:"name"`
         DOB  time.Time   `edgedb:"dob"`
     }
     
     func Example() {
-        opts := edgedb.Options{Concurrency: 4}
+        opts := gel.Options{Concurrency: 4}
         ctx := context.Background()
-        db, err := edgedb.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
+        db, err := gel.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
         if err != nil {
             log.Fatal(err)
         }
@@ -242,7 +242,7 @@ Usage Example
         }
     
         // Insert a new user.
-        var inserted struct{ id edgedb.UUID }
+        var inserted struct{ id gel.UUID }
         err = db.QuerySingle(ctx, `
             INSERT User {
                 name := <str>$0,

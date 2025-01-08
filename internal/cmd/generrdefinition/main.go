@@ -55,7 +55,7 @@ func (e *%[2]v) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.%[1]v: " + msg
+	return "gel.%[1]v: " + msg
 }
 
 func (e *%[2]v) Unwrap() error { return e.err }

@@ -49,7 +49,7 @@ func TestAuth(t *testing.T) {
 
 	// A connection should not be closeable more than once.
 	err = p.Close()
-	msg := "edgedb.InterfaceError: client closed"
+	msg := "gel.InterfaceError: client closed"
 	assert.EqualError(t, err, msg)
 
 	// Copied connections should not be closeable after another copy is closed.

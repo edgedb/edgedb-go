@@ -6,7 +6,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 
 //go:embed select_scalar.edgeql
@@ -17,7 +17,7 @@ var selectScalarCmd string
 // select_scalar.edgeql
 func selectScalar(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 ) (int64, error) {
 	var result int64
 
@@ -36,7 +36,7 @@ func selectScalar(
 // returning the results as json encoded bytes
 func selectScalarJSON(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 ) ([]byte, error) {
 	var result []byte
 

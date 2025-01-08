@@ -29,7 +29,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	client, err := edgedb.CreateClient(ctx, edgedb.Options{})
+	client, err := gel.CreateClient(ctx, gel.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}

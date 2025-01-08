@@ -46,10 +46,10 @@ func TestMissmatchedUnmarshalerType(t *testing.T) {
 		SELECT { val := 123_456_789_987_654_321 }`,
 		&wrongType,
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: expected "+
-		"struct { Val edgedb.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
-		"to be int64 or edgedb.OptionalInt64 got edgedb.CustomInt32")
+		"struct { Val gel.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
+		"to be int64 or gel.OptionalInt64 got gel.CustomInt32")
 	assert.Equal(t, []byte(nil), wrongType.Val.data)
 }
 
@@ -174,10 +174,10 @@ func TestReceiveInt64Unmarshaler(t *testing.T) {
 		&result,
 		types.OptionalInt64{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomInt64 at "+
-		"struct { Val edgedb.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomInt64 at "+
+		"struct { Val gel.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -224,8 +224,8 @@ func TestSendInt64Marshaler(t *testing.T) {
 		&result,
 		CustomInt64{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomInt64 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomInt64 "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -334,8 +334,8 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 		&result,
 		CustomOptionalInt64{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalInt64 at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalInt64 at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -344,8 +344,8 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalInt64 "+
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -354,8 +354,8 @@ func TestSendOptionalInt64Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalInt64 "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -456,10 +456,10 @@ func TestReceiveInt32Unmarshaler(t *testing.T) {
 		&result,
 		types.OptionalInt32{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomInt32 at "+
-		"struct { Val edgedb.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomInt32 at "+
+		"struct { Val gel.CustomInt32 \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -494,8 +494,8 @@ func TestSendInt32Marshaler(t *testing.T) {
 		&result,
 		CustomInt32{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomInt32 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomInt32 "+
 		"at args[0] expected 4, got 1")
 }
 
@@ -590,8 +590,8 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 		&result,
 		CustomOptionalInt32{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalInt32 at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalInt32 at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -600,8 +600,8 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalInt32 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalInt32 "+
 		"at args[0] expected 4, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -610,8 +610,8 @@ func TestSendOptionalInt32Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalInt32 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalInt32 "+
 		"at args[0] expected 4, got 1")
 }
 
@@ -686,8 +686,8 @@ func TestSendAndReceiveOptionalInt32(t *testing.T) {
 			&result,
 			types.OptionalInt32{},
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
-			"cannot encode edgedb.OptionalInt32 at args[0] "+
+		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
+			"cannot encode gel.OptionalInt32 at args[0] "+
 			"because its value is missing")
 
 		return errors.New("rollback")
@@ -790,10 +790,10 @@ func TestReceiveInt16Unmarshaler(t *testing.T) {
 		&result,
 		types.OptionalInt16{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomInt16 at "+
-		"struct { Val edgedb.CustomInt16 \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomInt16 at "+
+		"struct { Val gel.CustomInt16 \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -828,8 +828,8 @@ func TestSendInt16Marshaler(t *testing.T) {
 		&result,
 		CustomInt16{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomInt16 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomInt16 "+
 		"at args[0] expected 2, got 1")
 }
 
@@ -924,8 +924,8 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 		&result,
 		CustomOptionalInt16{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalInt16 at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalInt16 at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -934,8 +934,8 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalInt16 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalInt16 "+
 		"at args[0] expected 2, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -944,8 +944,8 @@ func TestSendOptionalInt16Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalInt16 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalInt16 "+
 		"at args[0] expected 2, got 1")
 }
 
@@ -1020,8 +1020,8 @@ func TestSendAndReceiveOptionalInt16(t *testing.T) {
 			&result,
 			types.OptionalInt16{},
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
-			"cannot encode edgedb.OptionalInt16 at args[0] "+
+		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
+			"cannot encode gel.OptionalInt16 at args[0] "+
 			"because its value is missing")
 
 		return errors.New("rollback")
@@ -1105,10 +1105,10 @@ func TestReceiveBoolUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalBool{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomBool at "+
-		"struct { Val edgedb.CustomBool \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomBool at "+
+		"struct { Val gel.CustomBool \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1143,8 +1143,8 @@ func TestSendBoolMarshaler(t *testing.T) {
 		&result,
 		CustomBool{data: []byte{0x01, 0x02}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomBool "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomBool "+
 		"at args[0] expected 1, got 2")
 }
 
@@ -1238,8 +1238,8 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalBool{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalBool at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalBool at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -1248,8 +1248,8 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01, 0x02}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalBool "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalBool "+
 		"at args[0] expected 1, got 2")
 
 	// encode wrong number of bytes with optional argument
@@ -1258,8 +1258,8 @@ func TestSendOptionalBoolMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01, 0x02}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalBool "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalBool "+
 		"at args[0] expected 1, got 2")
 }
 
@@ -1366,10 +1366,10 @@ func TestReceiveFloat64Unmarshaler(t *testing.T) {
 		&result,
 		types.OptionalFloat64{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomFloat64 at "+
-		"struct { Val edgedb.CustomFloat64 \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomFloat64 at "+
+		"struct { Val gel.CustomFloat64 \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1405,8 +1405,8 @@ func TestSendFloat64Marshaler(t *testing.T) {
 		&result,
 		CustomFloat64{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomFloat64 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomFloat64 "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -1507,8 +1507,8 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 		&result,
 		CustomOptionalFloat64{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalFloat64 at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalFloat64 at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -1517,8 +1517,8 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalFloat64 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalFloat64 "+
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -1527,8 +1527,8 @@ func TestSendOptionalFloat64Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalFloat64 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalFloat64 "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -1605,8 +1605,8 @@ func TestSendAndReceiveOptionalFloat64(t *testing.T) {
 			&result,
 			types.OptionalFloat64{},
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
-			"cannot encode edgedb.OptionalFloat64 at args[0] "+
+		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
+			"cannot encode gel.OptionalFloat64 at args[0] "+
 			"because its value is missing")
 
 		return errors.New("rollback")
@@ -1715,10 +1715,10 @@ func TestReceiveFloat32Unmarshaler(t *testing.T) {
 		&result,
 		types.OptionalFloat32{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomFloat32 at "+
-		"struct { Val edgedb.CustomFloat32 \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomFloat32 at "+
+		"struct { Val gel.CustomFloat32 \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1753,8 +1753,8 @@ func TestSendFloat32Marshaler(t *testing.T) {
 		&result,
 		CustomFloat32{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomFloat32 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomFloat32 "+
 		"at args[0] expected 4, got 1")
 }
 
@@ -1851,8 +1851,8 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 		&result,
 		CustomOptionalFloat32{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalFloat32 at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalFloat32 at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -1861,8 +1861,8 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalFloat32 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalFloat32 "+
 		"at args[0] expected 4, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -1871,8 +1871,8 @@ func TestSendOptionalFloat32Marshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalFloat32 "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalFloat32 "+
 		"at args[0] expected 4, got 1")
 }
 
@@ -1942,10 +1942,10 @@ func TestReceiveBytesUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalBytes{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomBytes at "+
-		"struct { Val edgedb.CustomBytes \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomBytes at "+
+		"struct { Val gel.CustomBytes \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -1997,8 +1997,8 @@ func TestSendBytesMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalBytes{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalBytes at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalBytes at args[0] "+
 		"because its value is missing")
 }
 
@@ -2103,8 +2103,8 @@ func TestSendOptionalBytesMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalBytes{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalBytes at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalBytes at args[0] "+
 		"because its value is missing")
 }
 
@@ -2164,10 +2164,10 @@ func TestReceiveStrUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalStr{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomStr at "+
-		"struct { Val edgedb.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomStr at "+
+		"struct { Val gel.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -2292,8 +2292,8 @@ func TestSendOptionalStrMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalStr{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalStr at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalStr at args[0] "+
 		"because its value is missing")
 }
 
@@ -2366,8 +2366,8 @@ func TestSendAndReceiveOptionalStr(t *testing.T) {
 			&result,
 			types.OptionalStr{},
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
-			"cannot encode edgedb.OptionalStr at args[0] "+
+		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
+			"cannot encode gel.OptionalStr at args[0] "+
 			"because its value is missing")
 
 		return errors.New("rollback")
@@ -2528,10 +2528,10 @@ func TestReceiveJSONUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalBytes{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomJSON at "+
-		"struct { Val edgedb.CustomJSON \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomJSON at "+
+		"struct { Val gel.CustomJSON \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -2674,8 +2674,8 @@ func TestSendOptionalJSONMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalJSON{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalJSON at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalJSON at args[0] "+
 		"because its value is missing")
 }
 
@@ -2722,7 +2722,7 @@ func TestSendAndReceiveEnum(t *testing.T) {
 		query = "SELECT (decoded := <Color><str>$0)"
 		e = tx.QuerySingle(ctx, query, &result, "invalid")
 
-		expected := "edgedb.InvalidValueError: " +
+		expected := "gel.InvalidValueError: " +
 			"invalid input value for enum 'default::Color': \"invalid\""
 		assert.EqualError(t, e, expected)
 
@@ -2753,10 +2753,10 @@ func TestReceiveEnumUnmarshaler(t *testing.T) {
 			&result,
 			types.OptionalStr{},
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
+		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
 			"the \"out\" argument does not match query schema: "+
-			"expected edgedb.CustomStr at "+
-			"struct { Val edgedb.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
+			"expected gel.CustomStr at "+
+			"struct { Val gel.CustomStr \"edgedb:\\\"val\\\"\" }.val "+
 			"to be OptionalUnmarshaler interface "+
 			"because the field is not required")
 
@@ -2872,8 +2872,8 @@ func TestSendOptionalEnumMarshaler(t *testing.T) {
 			&result,
 			CustomOptionalStr{},
 		)
-		assert.EqualError(t, e, "edgedb.InvalidArgumentError: "+
-			"cannot encode edgedb.CustomOptionalStr at args[0] "+
+		assert.EqualError(t, e, "gel.InvalidArgumentError: "+
+			"cannot encode gel.CustomOptionalStr at args[0] "+
 			"because its value is missing")
 
 		return errors.New("rollback")
@@ -2987,10 +2987,10 @@ func TestReceiveDurationUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalDuration{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomDuration at "+
-		"struct { Val edgedb.CustomDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomDuration at "+
+		"struct { Val gel.CustomDuration \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3033,8 +3033,8 @@ func TestSendDurationMarshaler(t *testing.T) {
 		&result,
 		CustomDuration{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomDuration "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomDuration "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -3147,8 +3147,8 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDuration{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalDuration at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalDuration at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -3157,8 +3157,8 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalDuration "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalDuration "+
 		"at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -3167,8 +3167,8 @@ func TestSendOptionalDurationMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalDuration "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalDuration "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -3277,10 +3277,10 @@ func TestReceiveRelativeDurationUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalRelativeDuration{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomRelativeDuration at struct "+
-		"{ Val edgedb.CustomRelativeDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomRelativeDuration at struct "+
+		"{ Val gel.CustomRelativeDuration \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3335,8 +3335,8 @@ func TestSendRelativeDurationMarshaler(t *testing.T) {
 		&result,
 		CustomRelativeDuration{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomRelativeDuration "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomRelativeDuration "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -3468,8 +3468,8 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalRelativeDuration{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalRelativeDuration at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalRelativeDuration at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -3478,9 +3478,9 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"wrong number of bytes encoded by "+
-		"edgedb.CustomOptionalRelativeDuration at args[0] expected 16, got 1")
+		"gel.CustomOptionalRelativeDuration at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
 	err = client.QuerySingle(ctx, `
@@ -3488,9 +3488,9 @@ func TestSendOptionalRelativeDurationMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"wrong number of bytes encoded "+
-		"by edgedb.CustomOptionalRelativeDuration "+
+		"by gel.CustomOptionalRelativeDuration "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -3603,10 +3603,10 @@ func TestReceiveDateDurationUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalDateDuration{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomDateDuration at struct "+
-		"{ Val edgedb.CustomDateDuration \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomDateDuration at struct "+
+		"{ Val gel.CustomDateDuration \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3659,8 +3659,8 @@ func TestSendDateDurationMarshaler(t *testing.T) {
 		&result,
 		CustomDateDuration{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomDateDuration "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomDateDuration "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -3792,8 +3792,8 @@ func TestSendOptionalDateDurationMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDateDuration{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalDateDuration at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalDateDuration at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -3802,9 +3802,9 @@ func TestSendOptionalDateDurationMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"wrong number of bytes encoded by "+
-		"edgedb.CustomOptionalDateDuration at args[0] expected 16, got 1")
+		"gel.CustomOptionalDateDuration at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
 	err = client.QuerySingle(ctx, `
@@ -3812,9 +3812,9 @@ func TestSendOptionalDateDurationMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"wrong number of bytes encoded "+
-		"by edgedb.CustomOptionalDateDuration "+
+		"by gel.CustomOptionalDateDuration "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -3938,10 +3938,10 @@ func TestReceiveLocalTimeUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalLocalTime{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomLocalTime at "+
-		"struct { Val edgedb.CustomLocalTime \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomLocalTime at "+
+		"struct { Val gel.CustomLocalTime \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -3984,8 +3984,8 @@ func TestSendLocalTimeMarshaler(t *testing.T) {
 		&result,
 		CustomLocalTime{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomLocalTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomLocalTime "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -4092,8 +4092,8 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalLocalTime{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalLocalTime at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalLocalTime at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -4102,8 +4102,8 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalLocalTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalLocalTime "+
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -4112,8 +4112,8 @@ func TestSendOptionalLocalTimeMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalLocalTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalLocalTime "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -4225,10 +4225,10 @@ func TestReceiveLocalDateUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalLocalDate{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomLocalDate at "+
-		"struct { Val edgedb.CustomLocalDate \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomLocalDate at "+
+		"struct { Val gel.CustomLocalDate \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -4269,8 +4269,8 @@ func TestSendLocalDateMarshaler(t *testing.T) {
 		&result,
 		CustomLocalDate{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomLocalDate "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomLocalDate "+
 		"at args[0] expected 4, got 1")
 }
 
@@ -4374,8 +4374,8 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalLocalDate{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalLocalDate at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalLocalDate at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -4384,8 +4384,8 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDate "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalLocalDate "+
 		"at args[0] expected 4, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -4394,8 +4394,8 @@ func TestSendOptionalLocalDateMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDate "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalLocalDate "+
 		"at args[0] expected 4, got 1")
 }
 
@@ -4517,10 +4517,10 @@ func TestReceiveLocalDateTimeUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalLocalDateTime{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomLocalDateTime at "+
-		"struct { Val edgedb.CustomLocalDateTime \"edgedb:\\\"val\\\"\" }.val"+
+		"expected gel.CustomLocalDateTime at "+
+		"struct { Val gel.CustomLocalDateTime \"edgedb:\\\"val\\\"\" }.val"+
 		" to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -4569,8 +4569,8 @@ func TestSendLocalDateTimeMarshaler(t *testing.T) {
 		&result,
 		CustomLocalDateTime{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomLocalDateTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomLocalDateTime "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -4688,8 +4688,8 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalLocalDateTime{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalLocalDateTime at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalLocalDateTime at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -4698,8 +4698,8 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDateTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalLocalDateTime "+
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -4708,8 +4708,8 @@ func TestSendOptionalLocalDateTimeMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalLocalDateTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalLocalDateTime "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -4832,10 +4832,10 @@ func TestReceiveDateTimeUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalDateTime{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomDateTime at "+
-		"struct { Val edgedb.CustomDateTime \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomDateTime at "+
+		"struct { Val gel.CustomDateTime \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -4884,8 +4884,8 @@ func TestSendDateTimeMarshaler(t *testing.T) {
 		&result,
 		CustomDateTime{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomDateTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomDateTime "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -4998,8 +4998,8 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDateTime{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalDateTime at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalDateTime at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -5008,8 +5008,8 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalDateTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalDateTime "+
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -5018,8 +5018,8 @@ func TestSendOptionalDateTimeMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalDateTime "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalDateTime "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -5276,10 +5276,10 @@ func TestReceiveBigIntUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalBigInt{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomBigInt at "+
-		"struct { Val edgedb.CustomBigInt \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomBigInt at "+
+		"struct { Val gel.CustomBigInt \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -5326,8 +5326,8 @@ func TestSendBigIntMarshaler(t *testing.T) {
 		&result,
 		CustomBigInt{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomBigInt "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomBigInt "+
 		"at args[0] expected at least 8, got 1")
 }
 
@@ -5446,8 +5446,8 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalBigInt{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalBigInt at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalBigInt at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -5456,8 +5456,8 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalBigInt "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalBigInt "+
 		"at args[0] expected at least 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -5466,8 +5466,8 @@ func TestSendOptionalBigIntMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalBigInt "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalBigInt "+
 		"at args[0] expected at least 8, got 1")
 }
 
@@ -5516,10 +5516,10 @@ func TestReceiveDecimalUnmarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDecimal{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomDecimal at "+
-		"struct { Val edgedb.CustomDecimal \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomDecimal at "+
+		"struct { Val gel.CustomDecimal \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -5584,8 +5584,8 @@ func TestSendDecimalMarshaler(t *testing.T) {
 		&result,
 		CustomDecimal{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomDecimal "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomDecimal "+
 		"at args[0] expected at least 8, got 1")
 }
 
@@ -5718,8 +5718,8 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDecimal{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalDecimal at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalDecimal at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -5728,8 +5728,8 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDecimal{isSet: true, data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalDecimal "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalDecimal "+
 		"at args[0] expected at least 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -5738,8 +5738,8 @@ func TestSendOptionalDecimalMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalDecimal{isSet: true, data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalDecimal "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalDecimal "+
 		"at args[0] expected at least 8, got 1")
 }
 
@@ -5842,10 +5842,10 @@ func TestReceiveUUIDUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalUUID{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomUUID at "+
-		"struct { Val edgedb.CustomUUID \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomUUID at "+
+		"struct { Val gel.CustomUUID \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -5898,8 +5898,8 @@ func TestSendUUIDMarshaler(t *testing.T) {
 		&result,
 		CustomUUID{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomUUID "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomUUID "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -6020,8 +6020,8 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalUUID{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalUUID at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalUUID at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -6030,8 +6030,8 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalUUID "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalUUID "+
 		"at args[0] expected 16, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -6040,8 +6040,8 @@ func TestSendOptionalUUIDMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalUUID "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalUUID "+
 		"at args[0] expected 16, got 1")
 }
 
@@ -6128,10 +6128,10 @@ func TestReceiveCustomScalarUnmarshaler(t *testing.T) {
 			&result,
 			types.OptionalInt64{},
 		)
-		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 			"the \"out\" argument does not match query schema: "+
-			"expected edgedb.CustomInt64 at "+
-			"struct { Val edgedb.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
+			"expected gel.CustomInt64 at "+
+			"struct { Val gel.CustomInt64 \"edgedb:\\\"val\\\"\" }.val "+
 			"to be OptionalUnmarshaler interface "+
 			"because the field is not required")
 	})
@@ -6180,8 +6180,8 @@ func TestSendCustomScalarMarshaler(t *testing.T) {
 			&result,
 			CustomInt64{data: []byte{0x01}},
 		)
-		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-			"wrong number of bytes encoded by edgedb.CustomInt64 "+
+		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+			"wrong number of bytes encoded by gel.CustomInt64 "+
 			"at args[0] expected 8, got 1")
 	})
 }
@@ -6269,8 +6269,8 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 			&result,
 			CustomOptionalInt64{},
 		)
-		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-			"cannot encode edgedb.CustomOptionalInt64 at args[0] "+
+		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+			"cannot encode gel.CustomOptionalInt64 at args[0] "+
 			"because its value is missing")
 
 		// encode wrong number of bytes with required argument
@@ -6279,8 +6279,8 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 			&result,
 			newValue([]byte{0x01}),
 		)
-		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-			"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+			"wrong number of bytes encoded by gel.CustomOptionalInt64 "+
 			"at args[0] expected 8, got 1")
 
 		// encode wrong number of bytes with optional argument
@@ -6289,8 +6289,8 @@ func TestSendOptionalCustomScalarMarshaler(t *testing.T) {
 			&result,
 			newValue([]byte{0x01}),
 		)
-		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-			"wrong number of bytes encoded by edgedb.CustomOptionalInt64 "+
+		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+			"wrong number of bytes encoded by gel.CustomOptionalInt64 "+
 			"at args[0] expected 8, got 1")
 	})
 }
@@ -6386,7 +6386,7 @@ func TestReceiveTuple(t *testing.T) {
 
 	var wrongType string
 	err := client.QuerySingle(ctx, `SELECT ()`, &wrongType)
-	require.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	require.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected string to be a struct got string")
 
@@ -6396,7 +6396,7 @@ func TestReceiveTuple(t *testing.T) {
 
 	var missingTag struct{ first int64 }
 	err = client.QuerySingle(ctx, `SELECT (<int64>$0,)`, &missingTag, int64(1))
-	require.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	require.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
 		"expected struct { first int64 } to have a field "+
 		"with the tag `edgedb:\"0\"`")
@@ -6450,7 +6450,7 @@ func TestSendAndReceiveArray(t *testing.T) {
 	var result []int64
 	err := client.QuerySingle(ctx, "SELECT <array<int64>>$0", &result, "hello")
 	assert.EqualError(t, err,
-		"edgedb.InvalidArgumentError: "+
+		"gel.InvalidArgumentError: "+
 			"expected args[0] to be a slice got: string")
 
 	type Tuple struct {
@@ -6740,7 +6740,7 @@ func TestSendOptionalArray(t *testing.T) {
 		&result.Val,
 		[]int64(nil),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"cannot encode []int64 at args[0] "+
 		"because its value is missing")
 }
@@ -6862,10 +6862,10 @@ func TestMissingObjectFields(t *testing.T) {
 			SELECT Sample { simple_scalar } LIMIT 1`,
 			&result2,
 		)
-		assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+		assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 			`the "out" argument does not match query schema: `+
-			`expected int64 at edgedb.WrongType.simple_scalar to be `+
-			`edgedb.OptionalInt64 because the field is not required`)
+			`expected int64 at gel.WrongType.simple_scalar to be `+
+			`gel.OptionalInt64 because the field is not required`)
 	})
 }
 
@@ -6991,10 +6991,10 @@ func TestReceiveMemoryUnmarshaler(t *testing.T) {
 		&result,
 		types.OptionalMemory{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
 		"the \"out\" argument does not match query schema: "+
-		"expected edgedb.CustomMemory at "+
-		"struct { Val edgedb.CustomMemory \"edgedb:\\\"val\\\"\" }.val "+
+		"expected gel.CustomMemory at "+
+		"struct { Val gel.CustomMemory \"edgedb:\\\"val\\\"\" }.val "+
 		"to be OptionalUnmarshaler interface "+
 		"because the field is not required")
 }
@@ -7041,8 +7041,8 @@ func TestSendMemoryMarshaler(t *testing.T) {
 		&result,
 		CustomMemory{data: []byte{0x01}},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomMemory "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomMemory "+
 		"at args[0] expected 8, got 1")
 }
 
@@ -7151,8 +7151,8 @@ func TestSendOptionalMemoryMarshaler(t *testing.T) {
 		&result,
 		CustomOptionalMemory{},
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"cannot encode edgedb.CustomOptionalMemory at args[0] "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"cannot encode gel.CustomOptionalMemory at args[0] "+
 		"because its value is missing")
 
 	// encode wrong number of bytes with required argument
@@ -7161,8 +7161,8 @@ func TestSendOptionalMemoryMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalMemory "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalMemory "+
 		"at args[0] expected 8, got 1")
 
 	// encode wrong number of bytes with optional argument
@@ -7171,8 +7171,8 @@ func TestSendOptionalMemoryMarshaler(t *testing.T) {
 		&result,
 		newValue([]byte{0x01}),
 	)
-	assert.EqualError(t, err, "edgedb.InvalidArgumentError: "+
-		"wrong number of bytes encoded by edgedb.CustomOptionalMemory "+
+	assert.EqualError(t, err, "gel.InvalidArgumentError: "+
+		"wrong number of bytes encoded by gel.CustomOptionalMemory "+
 		"at args[0] expected 8, got 1")
 }
 

@@ -58,16 +58,16 @@ func main() {
 
 package gel
 
-import edgedb "github.com/edgedb/edgedb-go/internal/client"
+import gel "github.com/edgedb/edgedb-go/internal/client"
 
 const (
 `)
 	for _, typ := range types {
-		fmt.Printf("\t%s = edgedb.%s\n", typ.Name, typ.Name)
+		fmt.Printf("\t%s = gel.%s\n", typ.Name, typ.Name)
 	}
 
 	for _, tag := range tags {
-		fmt.Printf("\t%s = edgedb.%s\n", tag.Identifyer(), tag.Identifyer())
+		fmt.Printf("\t%s = gel.%s\n", tag.Identifyer(), tag.Identifyer())
 	}
 
 	fmt.Println(")")

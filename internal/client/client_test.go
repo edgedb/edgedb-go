@@ -45,11 +45,11 @@ func TestConnectClient(t *testing.T) {
 
 	// Client should not be closeable a second time.
 	err = p.Close()
-	assert.EqualError(t, err, "edgedb.InterfaceError: client closed")
+	assert.EqualError(t, err, "gel.InterfaceError: client closed")
 
 	// Copied clients should be closed if a different copy is closed.
 	err = p2.Close()
-	assert.EqualError(t, err, "edgedb.InterfaceError: client closed")
+	assert.EqualError(t, err, "gel.InterfaceError: client closed")
 }
 
 func TestClientRejectsTransaction(t *testing.T) {
@@ -57,7 +57,7 @@ func TestClientRejectsTransaction(t *testing.T) {
 	p, err := CreateClient(ctx, opts)
 	require.NoError(t, err)
 
-	expected := "edgedb.DisabledCapabilityError: " +
+	expected := "gel.DisabledCapabilityError: " +
 		"cannot execute transaction control commands.*"
 
 	err = p.Execute(ctx, "START TRANSACTION")
@@ -141,7 +141,7 @@ func TestQuerySingleMissingResult(t *testing.T) {
 
 	var result string
 	err := client.QuerySingle(ctx, "SELECT <str>{}", &result)
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	optionalResult := types.NewOptionalStr("this should be set to missing")
 	err = client.QuerySingle(ctx, "SELECT <str>{}", &optionalResult)
@@ -155,7 +155,7 @@ func TestQuerySingleMissingResult(t *testing.T) {
 		"SELECT sys::Database { name } FILTER .name = 'does not exist'",
 		&objectResult,
 	)
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	var optionalObjectResult struct {
 		edgedbtypes.Optional
@@ -176,7 +176,7 @@ func TestQuerySingleJSONMissingResult(t *testing.T) {
 
 	var result []byte
 	err := client.QuerySingleJSON(ctx, "SELECT <str>{}", &result)
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	optionalResult := types.NewOptionalBytes(
 		[]byte("this should be set to missing"),
@@ -187,7 +187,7 @@ func TestQuerySingleJSONMissingResult(t *testing.T) {
 
 	var wrongType string
 	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &wrongType)
-	assert.EqualError(t, err, "edgedb.InterfaceError: "+
+	assert.EqualError(t, err, "gel.InterfaceError: "+
 		"the \"out\" argument must be *[]byte or *OptionalBytes, got *string")
 }
 

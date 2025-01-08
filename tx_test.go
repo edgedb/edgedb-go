@@ -20,7 +20,7 @@ import (
 	"context"
 	"log"
 
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
+	gel "github.com/edgedb/edgedb-go/internal/client"
 )
 
 // Transactions can be executed using the Tx() method. Note that queries are
@@ -32,12 +32,12 @@ import (
 // RetryOptions.
 func ExampleTx() {
 	ctx := context.Background()
-	client, err := edgedb.CreateClient(ctx, edgedb.Options{})
+	client, err := gel.CreateClient(ctx, gel.Options{})
 	if err != nil {
 		log.Println(err)
 	}
 
-	err = client.Tx(ctx, func(ctx context.Context, tx *edgedb.Tx) error {
+	err = client.Tx(ctx, func(ctx context.Context, tx *gel.Tx) error {
 		return tx.Execute(ctx, "INSERT User { name := 'Don' }")
 	})
 	if err != nil {

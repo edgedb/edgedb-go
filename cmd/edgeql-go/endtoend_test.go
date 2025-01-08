@@ -28,7 +28,7 @@ import (
 	"sync"
 	"testing"
 
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
+	gel "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,7 +63,7 @@ var tests = []struct {
 }
 
 func TestMain(m *testing.M) {
-	o := edgedb.TestClientOptions()
+	o := gel.TestClientOptions()
 	pwd, ok := o.Password.Get()
 	if !ok {
 		log.Fatal("missing password")

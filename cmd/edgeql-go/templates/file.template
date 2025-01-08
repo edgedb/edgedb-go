@@ -9,7 +9,7 @@ import (
 	{{- end}}
 	_ "embed"
 
-	"github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 {{range .Queries}}
 {{template "query.template" .}}

@@ -86,7 +86,7 @@ func TestUUIDUnmarshalJSONInvalid(t *testing.T) {
 		t.Run(s, func(t *testing.T) {
 			var uuid UUID
 			err := json.Unmarshal([]byte(s), &uuid)
-			assert.EqualError(t, err, "malformed edgedb.UUID")
+			assert.EqualError(t, err, "malformed gel.UUID")
 		})
 	}
 }

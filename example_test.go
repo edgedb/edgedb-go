@@ -20,12 +20,12 @@ import (
 	"context"
 	"testing"
 
-	edgedb "github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 
 var (
 	ctx    context.Context
-	client *edgedb.Client
+	client *gel.Client
 )
 
 // [Link properties] are treated as fields in the linked to struct, and the @
@@ -36,8 +36,8 @@ func Example_linkProperty() {
 	var result []struct {
 		Name    string `edgedb:"name"`
 		Friends []struct {
-			Name     string                 `edgedb:"name"`
-			Strength edgedb.OptionalFloat64 `edgedb:"strength"`
+			Name     string              `edgedb:"name"`
+			Strength gel.OptionalFloat64 `edgedb:"strength"`
 		} `edgedb:"friends"`
 	}
 

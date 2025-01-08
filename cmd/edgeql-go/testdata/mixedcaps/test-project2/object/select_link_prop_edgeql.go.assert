@@ -6,7 +6,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 
 //go:embed select_link_prop.edgeql
@@ -24,8 +24,8 @@ type selectLinkPropResult struct {
 // is part of the return type for
 // selectLinkProp()
 type selectLinkPropResultFriendsItem struct {
-	Name     string                 `edgedb:"Name"`
-	Strength edgedb.OptionalFloat64 `edgedb:"Strength"`
+	Name     string              `edgedb:"Name"`
+	Strength gel.OptionalFloat64 `edgedb:"Strength"`
 }
 
 // selectLinkProp
@@ -33,7 +33,7 @@ type selectLinkPropResultFriendsItem struct {
 // select_link_prop.edgeql
 func selectLinkProp(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 ) ([]selectLinkPropResult, error) {
 	var result []selectLinkPropResult
 
@@ -52,7 +52,7 @@ func selectLinkProp(
 // returning the results as json encoded bytes
 func selectLinkPropJSON(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 ) ([]byte, error) {
 	var result []byte
 

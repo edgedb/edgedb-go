@@ -64,7 +64,7 @@ func (c *StrCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, str) },
 			func() error {
-				return missingValueError("edgedb.OptionalStr", path)
+				return missingValueError("gel.OptionalStr", path)
 			})
 	case optionalStrMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -73,7 +73,7 @@ func (c *StrCodec) Encode(
 	case marshal.StrMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be string, edgedb.OptionalStr "+
+		return fmt.Errorf("expected %v to be string, gel.OptionalStr "+
 			"or StrMarshaler got %T", path, val)
 	}
 }

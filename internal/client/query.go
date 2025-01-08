@@ -28,7 +28,7 @@ import (
 	"github.com/edgedb/edgedb-go/internal/introspect"
 )
 
-// WarningHandler takes a slice of edgedb.Error that represent warnings and
+// WarningHandler takes a slice of gel.Error that represent warnings and
 // optionally returns an error. This can be used to log warnings, increment
 // metrics, promote warnings to errors by returning them etc.
 type WarningHandler = func([]error) error

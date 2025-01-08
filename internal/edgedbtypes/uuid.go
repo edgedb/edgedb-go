@@ -65,7 +65,7 @@ func (id UUID) MarshalText() ([]byte, error) {
 	return []byte(id.String()), nil
 }
 
-var errMalformedUUID = errors.New("malformed edgedb.UUID")
+var errMalformedUUID = errors.New("malformed gel.UUID")
 
 // UnmarshalText unmarshals the id from a string.
 func (id *UUID) UnmarshalText(b []byte) error {

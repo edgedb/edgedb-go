@@ -36,7 +36,7 @@ import (
 	"text/template"
 	"time"
 
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
+	gel "github.com/edgedb/edgedb-go/internal/client"
 	"github.com/edgedb/edgedb-go/internal/descriptor"
 	toml "github.com/pelletier/go-toml/v2"
 	"golang.org/x/text/cases"
@@ -90,7 +90,7 @@ func main() {
 	defer timer.Stop()
 
 	ctx := context.Background()
-	c, err := edgedb.CreateClient(ctx, edgedb.Options{})
+	c, err := gel.CreateClient(ctx, gel.Options{})
 	if err != nil {
 		log.Fatalf("creating client: %s", err) // nolint:gocritic
 	}
@@ -156,7 +156,7 @@ func getProject() (*project, error) {
 		parent := filepath.Dir(dir)
 		if dir == parent {
 			return nil, fmt.Errorf(
-				"could not find edgedb.toml, " +
+				"could not find gel.toml, " +
 					"fix this by initializing a project, run: " +
 					" edgedb project init",
 			)

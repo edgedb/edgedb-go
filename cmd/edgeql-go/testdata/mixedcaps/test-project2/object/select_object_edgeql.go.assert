@@ -6,7 +6,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/edgedb/edgedb-go"
+	gel "github.com/edgedb/edgedb-go"
 )
 
 //go:embed select_object.edgeql
@@ -16,7 +16,7 @@ var selectObjectCmd string
 // is part of the return type for
 // selectObject()
 type selectObjectResult struct {
-	edgedb.Optional
+	gel.Optional
 	Name     string                         `edgedb:"Name"`
 	Language string                         `edgedb:"Language"`
 	Params   []selectObjectResultParamsItem `edgedb:"Params"`
@@ -26,8 +26,8 @@ type selectObjectResult struct {
 // is part of the return type for
 // selectObject()
 type selectObjectResultParamsItem struct {
-	Name    string             `edgedb:"Name"`
-	Default edgedb.OptionalStr `edgedb:"Default"`
+	Name    string          `edgedb:"Name"`
+	Default gel.OptionalStr `edgedb:"Default"`
 }
 
 // selectObject
@@ -35,7 +35,7 @@ type selectObjectResultParamsItem struct {
 // select_object.edgeql
 func selectObject(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 ) (selectObjectResult, error) {
 	var result selectObjectResult
 
@@ -54,7 +54,7 @@ func selectObject(
 // returning the results as json encoded bytes
 func selectObjectJSON(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 ) ([]byte, error) {
 	var result []byte
 
