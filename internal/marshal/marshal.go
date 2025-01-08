@@ -16,7 +16,7 @@
 
 // Package marshal documents marshaling interfaces.
 //
-// User defined marshaler/unmarshalers can be defined for any scalar EdgeDB
+// User defined marshaler/unmarshalers can be defined for any scalar Gel
 // type except arrays. They must implement the interface for their type.
 // For example a custom int64 unmarshaler should implement Int64Unmarshaler.
 //

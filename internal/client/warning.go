@@ -79,7 +79,7 @@ func (w *Warning) Err(query string) error {
 // LogWarnings is an gel.WarningHandler that logs warnings.
 func LogWarnings(errors []error) error {
 	for _, err := range errors {
-		log.Println("EdgeDB warning:", err.Error())
+		log.Println("Gel warning:", err.Error())
 	}
 
 	return nil

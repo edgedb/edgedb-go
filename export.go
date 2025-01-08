@@ -288,7 +288,7 @@ var (
 	// https://www.edgedb.com/docs/clients/connection
 	// or it specifies a single string in the following format:
 	//
-	//	edgedb://user:password@host:port/database?option=value.
+	//	gel://user:password@host:port/database?option=value.
 	//
 	// The following options are recognized: host, port, user, database, password.
 	CreateClientDSN = gel.CreateClientDSN

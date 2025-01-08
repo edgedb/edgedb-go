@@ -1018,7 +1018,7 @@ func (r *configResolver) resolveTOML(paths *cfgPaths) error {
 
 	if !exists(stashDir) {
 		return errors.New("Found `gel.toml` " +
-			"but the project is not initialized. Run `edgedb project init`.")
+			"but the project is not initialized. Run `gel project init`.")
 	}
 
 	instance, err := os.ReadFile(filepath.Join(stashDir, "instance-name"))

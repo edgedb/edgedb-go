@@ -85,7 +85,7 @@ func main() {
 	}
 
 	timer := time.AfterFunc(200*time.Millisecond, func() {
-		log.Println("connecting to EdgeDB")
+		log.Println("connecting to Gel")
 	})
 	defer timer.Stop()
 
@@ -158,7 +158,7 @@ func getProject() (*project, error) {
 			return nil, fmt.Errorf(
 				"could not find gel.toml, " +
 					"fix this by initializing a project, run: " +
-					" edgedb project init",
+					" gel project init",
 			)
 		}
 

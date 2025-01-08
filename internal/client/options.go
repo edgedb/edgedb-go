@@ -26,7 +26,7 @@ import (
 
 // Options for connecting to a Gel server
 type Options struct {
-	// Host is an EdgeDB server host address, given as either an IP address or
+	// Host is an Gel server host address, given as either an IP address or
 	// domain name. (Unix-domain socket paths are not supported)
 	//
 	// Host cannot be specified alongside the 'dsn' argument, or
@@ -100,7 +100,7 @@ type Options struct {
 	// Has no effect for single connections.
 	Concurrency uint
 
-	// Parameters used to configure TLS connections to EdgeDB server.
+	// Parameters used to configure TLS connections to Gel server.
 	TLSOptions TLSOptions
 
 	// Read the TLS certificate from this file.
@@ -117,7 +117,7 @@ type Options struct {
 	// SecretKey is used to connect to cloud instances.
 	SecretKey string
 
-	// WarningHandler is invoked when EdgeDB returns warnings. Defaults to
+	// WarningHandler is invoked when Gel returns warnings. Defaults to
 	// gel.LogWarnings.
 	WarningHandler WarningHandler
 }

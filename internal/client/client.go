@@ -74,7 +74,7 @@ func CreateClient(ctx context.Context, opts Options) (*Client, error) { // nolin
 // https://www.edgedb.com/docs/clients/connection
 // or it specifies a single string in the following format:
 //
-//	edgedb://user:password@host:port/database?option=value.
+//	gel://user:password@host:port/database?option=value.
 //
 // The following options are recognized: host, port, user, database, password.
 func CreateClientDSN(_ context.Context, dsn string, opts Options) (*Client, error) { // nolint:gocritic,lll
@@ -170,7 +170,7 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
+		return nil, fmt.Errorf("gel: %w", ctx.Err())
 	default:
 	}
 
@@ -200,7 +200,7 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 			}
 			return conn, nil
 		case <-ctx.Done():
-			return nil, fmt.Errorf("edgedb: %w", ctx.Err())
+			return nil, fmt.Errorf("gel: %w", ctx.Err())
 		}
 	}
 }
