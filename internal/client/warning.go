@@ -33,6 +33,7 @@ type Warning struct {
 	Start   *int   `json:"start,omitempty"`
 }
 
+// Err makes the warning into an error.
 func (w *Warning) Err(query string) error {
 	if w.Line == nil || w.Start == nil {
 		return errorFromCode(w.Code, w.Message)

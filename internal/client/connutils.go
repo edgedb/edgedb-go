@@ -47,7 +47,8 @@ var (
 		`^(\w(?:-?\w)*)$`,
 	)
 	cloudInstanceNameRe = regexp.MustCompile(
-		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
+		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/` +
+			`([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
 	)
 	domainLabelMaxLength              = 63
 	crcTable             *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)
@@ -1101,7 +1102,7 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		return nil, err
 	} else if !ok {
 		clientSecurityVarName = "EDGEDB_CLIENT_SECURITY"
-		security, ok, err = getEnvVarSetting(clientSecurityVarName, "default",
+		security, _, err = getEnvVarSetting(clientSecurityVarName, "default",
 			"default", "insecure_dev_mode", "strict")
 		if err != nil {
 			return nil, err
@@ -1159,7 +1160,11 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 	}, nil
 }
 
-func getEnvVarSetting(name, defalt string, values ...string) (string, bool, error) {
+func getEnvVarSetting(
+	name,
+	defalt string,
+	values ...string,
+) (string, bool, error) {
 	value, ok := os.LookupEnv(name)
 	if !ok || value == "default" || value == "" {
 		return defalt, false, nil

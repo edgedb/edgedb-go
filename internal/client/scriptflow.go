@@ -75,8 +75,8 @@ func decodeHeaders1pX(
 		}
 
 		errors := make([]error, len(warnings))
-		for i, warning := range warnings {
-			errors[i] = warning.Err(query)
+		for i := range warnings {
+			errors[i] = warnings[i].Err(query)
 		}
 
 		err = warningHandler(errors)
