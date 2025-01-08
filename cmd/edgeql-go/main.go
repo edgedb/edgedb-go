@@ -36,8 +36,8 @@ import (
 	"text/template"
 	"time"
 
-	gel "github.com/edgedb/edgedb-go/internal/client"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
+	gel "github.com/geldata/gel-go/internal/client"
+	"github.com/geldata/gel-go/internal/descriptor"
 	toml "github.com/pelletier/go-toml/v2"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

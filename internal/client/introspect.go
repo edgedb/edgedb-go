@@ -19,8 +19,8 @@ package gel
 import (
 	"context"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/descriptor"
 )
 
 // CommandDescription is the information returned in the CommandDataDescription

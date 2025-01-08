@@ -101,8 +101,8 @@ func main() {
 	err = t.Execute(&buf, map[string]any{
 		"PackageName": "gel",
 		"Imports": []string{
-			`gel "github.com/edgedb/edgedb-go/internal/client"`,
-			`"github.com/edgedb/edgedb-go/internal/geltypes"`,
+			`gel "github.com/geldata/gel-go/internal/client"`,
+			`"github.com/geldata/gel-go/internal/geltypes"`,
 		},
 		"Constants": exports[token.CONST],
 		"Types":     exports[token.TYPE],

@@ -1,6 +1,6 @@
 # The Go driver for Gel
 
-[![Build Status](https://github.com/edgedb/edgedb-go/workflows/Tests/badge.svg?event=push&branch=master)](https://github.com/edgedb/edgedb-go/actions)
+[![Build Status](https://github.com/geldata/gel-go/workflows/Tests/badge.svg?event=push&branch=master)](https://github.com/geldata/gel-go/actions)
 [![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
 ## Installation
@@ -8,7 +8,7 @@
 In your module directory, run the following command.
 
 ```bash
-$ go get github.com/edgedb/edgedb-go
+$ go get github.com/geldata/gel-go
 ```
 
 ## Basic Usage
@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/edgedb/edgedb-go"
+	"github.com/geldata/gel-go"
 )
 
 func main() {
@@ -56,4 +56,4 @@ To run lints `make lint`.
 
 ## License
 
-edgedb-go is developed and distributed under the Apache 2.0 license.
+gel-go is developed and distributed under the Apache 2.0 license.

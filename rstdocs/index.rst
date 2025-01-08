@@ -16,7 +16,7 @@ Gel Go Driver
 
 
 Package gel is the official Go driver for `Gel <https://www.edgedb.com>`_. Additionally,
-`edgeql-go <https://pkg.go.dev/github.com/edgedb/edgedb-go/cmd/edgeql-go>`_ is a code generator that
+`edgeql-go <https://pkg.go.dev/github.com/geldata/gel-go/cmd/edgeql-go>`_ is a code generator that
 generates go functions from edgeql files.
 
 Typical client usage looks like this:
@@ -29,7 +29,7 @@ Typical client usage looks like this:
         "context"
         "log"
     
-        "github.com/edgedb/edgedb-go"
+        "github.com/geldata/gel-go"
     )
     
     func main() {
@@ -212,7 +212,7 @@ Usage Example
         "log"
         "time"
     
-        gel "github.com/edgedb/edgedb-go"
+        gel "github.com/geldata/gel-go"
     )
     
     type User struct {

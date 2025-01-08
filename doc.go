@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // Package gel is the official Go driver for [Gel]. Additionally,
-// [github.com/edgedb/edgedb-go/cmd/edgeql-go] is a code generator that
+// [github.com/geldata/gel-go/cmd/edgeql-go] is a code generator that
 // generates go functions from edgeql files.
 //
 // Typical client usage looks like this:
@@ -26,7 +26,7 @@
 //	    "context"
 //	    "log"
 //
-//	    "github.com/edgedb/edgedb-go"
+//	    "github.com/geldata/gel-go"
 //	)
 //
 //	func main() {

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
 	"github.com/xdg/scram"
 	"golang.org/x/exp/slices"
 )

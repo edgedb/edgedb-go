@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/geltypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // JSONCodec encodes/decodes json.

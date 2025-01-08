@@ -19,7 +19,7 @@
 
 package gel
 
-import gel "github.com/edgedb/edgedb-go/internal/client"
+import gel "github.com/geldata/gel-go/internal/client"
 
 const (
 	InternalServerError                    = gel.InternalServerError

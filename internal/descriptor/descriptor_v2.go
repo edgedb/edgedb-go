@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 // V2 is a type descriptor

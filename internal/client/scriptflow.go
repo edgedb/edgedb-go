@@ -19,8 +19,8 @@ package gel
 import (
 	"encoding/json"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/header"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/header"
 )
 
 func ignoreHeaders(r *buff.Reader) {

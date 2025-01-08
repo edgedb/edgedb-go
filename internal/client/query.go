@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"reflect"
 
-	types "github.com/edgedb/edgedb-go/internal/geltypes"
-	"github.com/edgedb/edgedb-go/internal/header"
-	"github.com/edgedb/edgedb-go/internal/introspect"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/header"
+	"github.com/geldata/gel-go/internal/introspect"
 )
 
 // WarningHandler takes a slice of gel.Error that represent warnings and

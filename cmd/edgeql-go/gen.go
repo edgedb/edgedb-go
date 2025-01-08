@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal/codecs"
+	"github.com/geldata/gel-go/internal/descriptor"
 )
 
 func generateType(

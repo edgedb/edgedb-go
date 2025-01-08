@@ -36,8 +36,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/geltypes"
-	"github.com/edgedb/edgedb-go/internal/snc"
+	"github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/snc"
 	"github.com/sigurn/crc16"
 )
 

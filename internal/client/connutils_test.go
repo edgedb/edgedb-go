@@ -31,8 +31,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/geltypes"
-	"github.com/edgedb/edgedb-go/internal/snc"
+	"github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/snc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -567,7 +567,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 			if _, ok := testcase["platform"]; ok {
 				t.Skip("platform specific tests not supported")
 			}
-			tmpDir, err := os.MkdirTemp(os.TempDir(), "edgedb-go-tests")
+			tmpDir, err := os.MkdirTemp(os.TempDir(), "gel-go-tests")
 			require.NoError(t, err)
 			defer os.RemoveAll(tmpDir) // nolint:errcheck
 			paths := newCfgPaths()

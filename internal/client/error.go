@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/geldata/gel-go/internal/buff"
 )
 
 var (

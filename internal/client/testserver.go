@@ -33,8 +33,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 var (

@@ -13,7 +13,7 @@ Install
 
 .. code-block:: go
 
-    go install github.com/edgedb/edgedb-go/cmd/edgeql-go@latest
+    go install github.com/geldata/gel-go/cmd/edgeql-go@latest
     
 See also `pinning tool dependencies <https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module>`_.
 

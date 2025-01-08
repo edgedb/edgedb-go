@@ -21,10 +21,10 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/descriptor"
+	types "github.com/geldata/gel-go/internal/geltypes"
 )
 
 func buildArrayEncoder(
