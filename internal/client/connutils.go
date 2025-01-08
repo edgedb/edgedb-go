@@ -901,21 +901,23 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	if hostOk {
 		names = append(names, hostEnvVarName)
 	}
-	portName := "GEL_PORT"
-	port, portOk := os.LookupEnv(portName)
+	portEnvVarName := "GEL_PORT"
+	port, portOk := os.LookupEnv(portEnvVarName)
 	if !portOk {
-		portName = "EDGEDB_PORT"
-		port, portOk = os.LookupEnv(portName)
+		portEnvVarName = "EDGEDB_PORT"
+		port, portOk = os.LookupEnv(portEnvVarName)
 	}
 	if portOk && strings.HasPrefix(port, "tcp://") {
 		// EDGEDB_PORT is set by 'docker --link' so ignore and warn
-		log.Println(
-			"Warning: ignoring EDGEDB_PORT in 'tcp://host:port' format")
+		log.Printf(
+			"Warning: ignoring %s in 'tcp://host:port' format\n",
+			portEnvVarName,
+		)
 		portOk = false
 	}
 
 	if !hostOk && portOk {
-		names = append(names, "EDGEDB_PORT")
+		names = append(names, portEnvVarName)
 	}
 
 	if len(names) > 1 {
@@ -944,7 +946,10 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	switch {
 	case hostOk || portOk:
 		if portOk {
-			err := r.setPortStr(port, "EDGEDB_PORT environment variable")
+			err := r.setPortStr(
+				port,
+				fmt.Sprintf("%s environment variable", portEnvVarName),
+			)
 			if err != nil {
 				return false, err
 			}
