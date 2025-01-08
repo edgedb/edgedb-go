@@ -60,7 +60,7 @@ type Options struct {
 	// User is the name of the database role used for authentication.
 	//
 	// If not specified, the value is resolved from any compound
-	// argument/option, then from EDGEDB_USER, then any compound environment
+	// argument/option, then from GEL_USER, then any compound environment
 	// variable, then project credentials.
 	User string
 
@@ -74,14 +74,14 @@ type Options struct {
 	// Branch is the name of the branch to use.
 	//
 	// If not specified, the value is resolved from any compound
-	// argument/option, then from EDGEDB_BRANCH, then any compound environment
+	// argument/option, then from GEL_BRANCH, then any compound environment
 	// variable, then project credentials.
 	Branch string
 
 	// Password to be used for authentication, if the server requires one.
 	//
 	// If not specified, the value is resolved from any compound
-	// argument/option, then from EDGEDB_PASSWORD, then any compound
+	// argument/option, then from GEL_PASSWORD, then any compound
 	// environment variable, then project credentials.
 	// Note that the use of the environment variable is discouraged
 	// as other users and applications may be able to read it
