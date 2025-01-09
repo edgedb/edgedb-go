@@ -199,8 +199,8 @@ func TestQuerySQL(t *testing.T) {
 	assert.NoError(t, err)
 
 	if version >= 6 {
-		// err = client.ExecuteSQL(ctx, "select 1")
-		// assert.NoError(t, err)
+		err = client.ExecuteSQL(ctx, "select 1")
+		assert.NoError(t, err)
 
 		var result []struct {
 			Col1 int32 `edgedb:"col~1"`

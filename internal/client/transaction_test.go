@@ -243,10 +243,9 @@ func TestSQLTx(t *testing.T) {
 			}
 			assert.Equal(t, "123", res)
 
-			var updateRes []interface{}
-			if e := tx.QuerySQL(ctx, fmt.Sprintf(`
-		    UPDATE "%s" SET prop1 = '345';
-		  `, typename), &updateRes); e != nil {
+			if e := tx.ExecuteSQL(ctx, fmt.Sprintf(`
+				UPDATE "%s" SET prop1 = '345';
+			`, typename)); e != nil {
 				return e
 			}
 
@@ -256,9 +255,19 @@ func TestSQLTx(t *testing.T) {
 			}
 			assert.Equal(t, "345", res2)
 
+			var updateRes []struct {
+				Prop1 string `edgedb:"prop1"`
+			}
+			if e := tx.QuerySQL(ctx, fmt.Sprintf(`
+		    UPDATE "%s" SET prop1 = '567' RETURNING prop1;
+		  `, typename), &updateRes); e != nil {
+				return e
+			}
+			assert.Equal(t, "567", updateRes[0].Prop1)
+
 			return rollback
 		})
-		assert.Equal(t, err, rollback)
+		assert.Equal(t, rollback, err)
 	} else {
 		err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 			if e := tx.ExecuteSQL(ctx, "SELECT 1"); e != nil {
