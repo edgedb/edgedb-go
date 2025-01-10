@@ -22,10 +22,10 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/descriptor"
+	types "github.com/geldata/gel-go/internal/geltypes"
 )
 
 // Encoder can encode objects into the data wire format.
@@ -197,8 +197,8 @@ func BuildScalarEncoder(desc descriptor.Descriptor) (Encoder, error) {
 		return &Float64Codec{}, nil
 	case DecimalID:
 		return nil, errors.New("decimal codec not implemented. " +
-			"Consider implementing your own edgedb.DecimalMarshaler " +
-			"and edgedb.DecimalUnmarshaler.")
+			"Consider implementing your own gel.DecimalMarshaler " +
+			"and gel.DecimalUnmarshaler.")
 	case BoolID:
 		return &BoolCodec{}, nil
 	case DateTimeID:
@@ -260,8 +260,8 @@ func BuildScalarEncoderV2(desc *descriptor.V2) (Encoder, error) {
 		return &Float64Codec{}, nil
 	case DecimalID:
 		return nil, errors.New("decimal codec not implemented. " +
-			"Consider implementing your own edgedb.DecimalMarshaler " +
-			"and edgedb.DecimalUnmarshaler.")
+			"Consider implementing your own gel.DecimalMarshaler " +
+			"and gel.DecimalUnmarshaler.")
 	case BoolID:
 		return &BoolCodec{}, nil
 	case DateTimeID:
@@ -382,7 +382,7 @@ func buildScalarDecoder(
 		case optionalStrType:
 			return &optionalStrDecoder{StrID}, nil
 		default:
-			expectedType = "string or edgedb.OptionalStr"
+			expectedType = "string or gel.OptionalStr"
 			goto TypeMissmatch
 		}
 	}
@@ -395,7 +395,7 @@ func buildScalarDecoder(
 		case optionalUUIDType:
 			return &optionalUUIDDecoder{}, nil
 		default:
-			expectedType = "uuid or edgedb.OptionalUUID"
+			expectedType = "uuid or gel.OptionalUUID"
 		}
 	case StrID:
 		switch typ {
@@ -404,7 +404,7 @@ func buildScalarDecoder(
 		case optionalStrType:
 			return &optionalStrDecoder{StrID}, nil
 		default:
-			expectedType = "string or edgedb.OptionalStr"
+			expectedType = "string or gel.OptionalStr"
 		}
 	case BytesID:
 		switch typ {
@@ -413,7 +413,7 @@ func buildScalarDecoder(
 		case optionalBytesType:
 			return &optionalBytesDecoder{BytesID}, nil
 		default:
-			expectedType = "[]byte or edgedb.OptionalBytes"
+			expectedType = "[]byte or gel.OptionalBytes"
 		}
 	case Int16ID:
 		switch typ {
@@ -422,7 +422,7 @@ func buildScalarDecoder(
 		case optionalInt16Type:
 			return &optionalInt16Decoder{}, nil
 		default:
-			expectedType = "int16 or edgedb.OptionalInt16"
+			expectedType = "int16 or gel.OptionalInt16"
 		}
 	case Int32ID:
 		switch typ {
@@ -431,7 +431,7 @@ func buildScalarDecoder(
 		case optionalInt32Type:
 			return &optionalInt32Decoder{}, nil
 		default:
-			expectedType = "int32 or edgedb.OptionalInt32"
+			expectedType = "int32 or gel.OptionalInt32"
 		}
 	case Int64ID:
 		switch typ {
@@ -440,7 +440,7 @@ func buildScalarDecoder(
 		case optionalInt64Type:
 			return &optionalInt64Decoder{}, nil
 		default:
-			expectedType = "int64 or edgedb.OptionalInt64"
+			expectedType = "int64 or gel.OptionalInt64"
 		}
 	case Float32ID:
 		switch typ {
@@ -449,7 +449,7 @@ func buildScalarDecoder(
 		case optionalFloat32Type:
 			return &optionalFloat32Decoder{}, nil
 		default:
-			expectedType = "float32 or edgedb.OptionalFloat32"
+			expectedType = "float32 or gel.OptionalFloat32"
 		}
 	case Float64ID:
 		switch typ {
@@ -458,12 +458,12 @@ func buildScalarDecoder(
 		case optionalFloat64Type:
 			return &optionalFloat64Decoder{}, nil
 		default:
-			expectedType = "float64 or edgedb.OptionalFloat64"
+			expectedType = "float64 or gel.OptionalFloat64"
 		}
 	case DecimalID:
 		return nil, errors.New("decimal codec not implemented. " +
-			"Consider implementing your own edgedb.DecimalMarshaler " +
-			"and edgedb.DecimalUnmarshaler.")
+			"Consider implementing your own gel.DecimalMarshaler " +
+			"and gel.DecimalUnmarshaler.")
 	case BoolID:
 		switch typ {
 		case boolType:
@@ -471,7 +471,7 @@ func buildScalarDecoder(
 		case optionalBoolType:
 			return &optionalBoolDecoder{}, nil
 		default:
-			expectedType = "bool or edgedb.OptionalBool"
+			expectedType = "bool or gel.OptionalBool"
 		}
 	case DateTimeID:
 		switch typ {
@@ -480,7 +480,7 @@ func buildScalarDecoder(
 		case optionalDateTimeType:
 			return &optionalDateTimeDecoder{}, nil
 		default:
-			expectedType = "edgedb.DateTime or edgedb.OptionalDateTime"
+			expectedType = "gel.DateTime or gel.OptionalDateTime"
 		}
 	case LocalDTID:
 		switch typ {
@@ -489,8 +489,8 @@ func buildScalarDecoder(
 		case optionalLocalDateTimeType:
 			return &optionalLocalDateTimeDecoder{}, nil
 		default:
-			expectedType = "edgedb.LocalDateTime or " +
-				"edgedb.OptionalLocalDateTime"
+			expectedType = "gel.LocalDateTime or " +
+				"gel.OptionalLocalDateTime"
 		}
 	case LocalDateID:
 		switch typ {
@@ -499,7 +499,7 @@ func buildScalarDecoder(
 		case optionalLocalDateType:
 			return &optionalLocalDateDecoder{}, nil
 		default:
-			expectedType = "edgedb.LocalDate or edgedb.OptionalLocalDate"
+			expectedType = "gel.LocalDate or gel.OptionalLocalDate"
 		}
 	case LocalTimeID:
 		switch typ {
@@ -508,7 +508,7 @@ func buildScalarDecoder(
 		case optionalLocalTimeType:
 			return &optionalLocalTimeDecoder{}, nil
 		default:
-			expectedType = "edgedb.LocalTime or edgedb.OptionalLocalTime"
+			expectedType = "gel.LocalTime or gel.OptionalLocalTime"
 		}
 	case DurationID:
 		switch typ {
@@ -517,7 +517,7 @@ func buildScalarDecoder(
 		case optionalDurationType:
 			return &optionalDurationDecoder{}, nil
 		default:
-			expectedType = "edgedb.Duration or edgedb.OptionalDuration"
+			expectedType = "gel.Duration or gel.OptionalDuration"
 		}
 	case JSONID:
 		ptr := reflect.PointerTo(typ)
@@ -545,7 +545,7 @@ func buildScalarDecoder(
 		case optionalBigIntType:
 			return &optionalBigIntDecoder{}, nil
 		default:
-			expectedType = "*big.Int or edgedb.OptionalBigInt"
+			expectedType = "*big.Int or gel.OptionalBigInt"
 		}
 	case RelativeDurationID:
 		switch typ {
@@ -554,8 +554,8 @@ func buildScalarDecoder(
 		case optionalRelativeDurationType:
 			return &optionalRelativeDurationDecoder{}, nil
 		default:
-			expectedType = "edgedb.RealtiveDuration or " +
-				"edgedb.OptionalRelativeDuration"
+			expectedType = "gel.RealtiveDuration or " +
+				"gel.OptionalRelativeDuration"
 		}
 	case DateDurationID:
 		switch typ {
@@ -564,8 +564,8 @@ func buildScalarDecoder(
 		case optionalDateDurationType:
 			return &optionalDateDurationDecoder{}, nil
 		default:
-			expectedType = "edgedb.DateDuration or " +
-				"edgedb.OptionalDateDuration"
+			expectedType = "gel.DateDuration or " +
+				"gel.OptionalDateDuration"
 		}
 	case MemoryID:
 		switch typ {
@@ -574,7 +574,7 @@ func buildScalarDecoder(
 		case optionalMemoryType:
 			return &optionalMemoryDecoder{}, nil
 		default:
-			expectedType = "edgedb.Memory or edgedb.OptionalMemory"
+			expectedType = "gel.Memory or gel.OptionalMemory"
 		}
 	default:
 		s := fmt.Sprintf("%#v\n", desc)
@@ -613,7 +613,7 @@ func buildScalarDecoderV2(
 		case optionalStrType:
 			return &optionalStrDecoder{StrID}, nil
 		default:
-			expectedType = "string or edgedb.OptionalStr"
+			expectedType = "string or gel.OptionalStr"
 			goto TypeMissmatch
 		}
 	}
@@ -626,7 +626,7 @@ func buildScalarDecoderV2(
 		case optionalUUIDType:
 			return &optionalUUIDDecoder{}, nil
 		default:
-			expectedType = "uuid or edgedb.OptionalUUID"
+			expectedType = "uuid or gel.OptionalUUID"
 		}
 	case StrID:
 		switch typ {
@@ -635,7 +635,7 @@ func buildScalarDecoderV2(
 		case optionalStrType:
 			return &optionalStrDecoder{StrID}, nil
 		default:
-			expectedType = "string or edgedb.OptionalStr"
+			expectedType = "string or gel.OptionalStr"
 		}
 	case BytesID:
 		switch typ {
@@ -644,7 +644,7 @@ func buildScalarDecoderV2(
 		case optionalBytesType:
 			return &optionalBytesDecoder{BytesID}, nil
 		default:
-			expectedType = "[]byte or edgedb.OptionalBytes"
+			expectedType = "[]byte or gel.OptionalBytes"
 		}
 	case Int16ID:
 		switch typ {
@@ -653,7 +653,7 @@ func buildScalarDecoderV2(
 		case optionalInt16Type:
 			return &optionalInt16Decoder{}, nil
 		default:
-			expectedType = "int16 or edgedb.OptionalInt16"
+			expectedType = "int16 or gel.OptionalInt16"
 		}
 	case Int32ID:
 		switch typ {
@@ -662,7 +662,7 @@ func buildScalarDecoderV2(
 		case optionalInt32Type:
 			return &optionalInt32Decoder{}, nil
 		default:
-			expectedType = "int32 or edgedb.OptionalInt32"
+			expectedType = "int32 or gel.OptionalInt32"
 		}
 	case Int64ID:
 		switch typ {
@@ -671,7 +671,7 @@ func buildScalarDecoderV2(
 		case optionalInt64Type:
 			return &optionalInt64Decoder{}, nil
 		default:
-			expectedType = "int64 or edgedb.OptionalInt64"
+			expectedType = "int64 or gel.OptionalInt64"
 		}
 	case Float32ID:
 		switch typ {
@@ -680,7 +680,7 @@ func buildScalarDecoderV2(
 		case optionalFloat32Type:
 			return &optionalFloat32Decoder{}, nil
 		default:
-			expectedType = "float32 or edgedb.OptionalFloat32"
+			expectedType = "float32 or gel.OptionalFloat32"
 		}
 	case Float64ID:
 		switch typ {
@@ -689,12 +689,12 @@ func buildScalarDecoderV2(
 		case optionalFloat64Type:
 			return &optionalFloat64Decoder{}, nil
 		default:
-			expectedType = "float64 or edgedb.OptionalFloat64"
+			expectedType = "float64 or gel.OptionalFloat64"
 		}
 	case DecimalID:
 		return nil, errors.New("decimal codec not implemented. " +
-			"Consider implementing your own edgedb.DecimalMarshaler " +
-			"and edgedb.DecimalUnmarshaler.")
+			"Consider implementing your own gel.DecimalMarshaler " +
+			"and gel.DecimalUnmarshaler.")
 	case BoolID:
 		switch typ {
 		case boolType:
@@ -702,7 +702,7 @@ func buildScalarDecoderV2(
 		case optionalBoolType:
 			return &optionalBoolDecoder{}, nil
 		default:
-			expectedType = "bool or edgedb.OptionalBool"
+			expectedType = "bool or gel.OptionalBool"
 		}
 	case DateTimeID:
 		switch typ {
@@ -711,7 +711,7 @@ func buildScalarDecoderV2(
 		case optionalDateTimeType:
 			return &optionalDateTimeDecoder{}, nil
 		default:
-			expectedType = "edgedb.DateTime or edgedb.OptionalDateTime"
+			expectedType = "gel.DateTime or gel.OptionalDateTime"
 		}
 	case LocalDTID:
 		switch typ {
@@ -720,8 +720,8 @@ func buildScalarDecoderV2(
 		case optionalLocalDateTimeType:
 			return &optionalLocalDateTimeDecoder{}, nil
 		default:
-			expectedType = "edgedb.LocalDateTime or " +
-				"edgedb.OptionalLocalDateTime"
+			expectedType = "gel.LocalDateTime or " +
+				"gel.OptionalLocalDateTime"
 		}
 	case LocalDateID:
 		switch typ {
@@ -730,7 +730,7 @@ func buildScalarDecoderV2(
 		case optionalLocalDateType:
 			return &optionalLocalDateDecoder{}, nil
 		default:
-			expectedType = "edgedb.LocalDate or edgedb.OptionalLocalDate"
+			expectedType = "gel.LocalDate or gel.OptionalLocalDate"
 		}
 	case LocalTimeID:
 		switch typ {
@@ -739,7 +739,7 @@ func buildScalarDecoderV2(
 		case optionalLocalTimeType:
 			return &optionalLocalTimeDecoder{}, nil
 		default:
-			expectedType = "edgedb.LocalTime or edgedb.OptionalLocalTime"
+			expectedType = "gel.LocalTime or gel.OptionalLocalTime"
 		}
 	case DurationID:
 		switch typ {
@@ -748,7 +748,7 @@ func buildScalarDecoderV2(
 		case optionalDurationType:
 			return &optionalDurationDecoder{}, nil
 		default:
-			expectedType = "edgedb.Duration or edgedb.OptionalDuration"
+			expectedType = "gel.Duration or gel.OptionalDuration"
 		}
 	case JSONID:
 		ptr := reflect.PointerTo(typ)
@@ -776,7 +776,7 @@ func buildScalarDecoderV2(
 		case optionalBigIntType:
 			return &optionalBigIntDecoder{}, nil
 		default:
-			expectedType = "*big.Int or edgedb.OptionalBigInt"
+			expectedType = "*big.Int or gel.OptionalBigInt"
 		}
 	case RelativeDurationID:
 		switch typ {
@@ -785,8 +785,8 @@ func buildScalarDecoderV2(
 		case optionalRelativeDurationType:
 			return &optionalRelativeDurationDecoder{}, nil
 		default:
-			expectedType = "edgedb.RealtiveDuration or " +
-				"edgedb.OptionalRelativeDuration"
+			expectedType = "gel.RealtiveDuration or " +
+				"gel.OptionalRelativeDuration"
 		}
 	case DateDurationID:
 		switch typ {
@@ -795,8 +795,8 @@ func buildScalarDecoderV2(
 		case optionalDateDurationType:
 			return &optionalDateDurationDecoder{}, nil
 		default:
-			expectedType = "edgedb.DateDuration or " +
-				"edgedb.OptionalDateDuration"
+			expectedType = "gel.DateDuration or " +
+				"gel.OptionalDateDuration"
 		}
 	case MemoryID:
 		switch typ {
@@ -805,7 +805,7 @@ func buildScalarDecoderV2(
 		case optionalMemoryType:
 			return &optionalMemoryDecoder{}, nil
 		default:
-			expectedType = "edgedb.Memory or edgedb.OptionalMemory"
+			expectedType = "gel.Memory or gel.OptionalMemory"
 		}
 	default:
 		s := fmt.Sprintf("%#v\n", desc)

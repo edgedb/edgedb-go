@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // MemoryCodec encodes/decodes Memory values.
@@ -61,7 +61,7 @@ func (c *MemoryCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalMemory", path)
+				return missingValueError("gel.OptionalMemory", path)
 			})
 	case optionalMemoryMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -70,8 +70,8 @@ func (c *MemoryCodec) Encode(
 	case marshal.MemoryMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.Memory, "+
-			"edgedb.OptionalMemory or MemoryMarshaler got %T", path, val)
+		return fmt.Errorf("expected %v to be gel.Memory, "+
+			"gel.OptionalMemory or MemoryMarshaler got %T", path, val)
 	}
 }
 

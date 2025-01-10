@@ -17,4 +17,4 @@
 //go:generate go run internal/cmd/export/main.go
 //go:generate gofmt -s -w .
 
-package edgedb
+package gel

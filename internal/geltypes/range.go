@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 import "encoding/json"
 
@@ -55,11 +55,11 @@ func NewRangeInt32(
 
 // RangeInt32 is an interval of int32 values.
 type RangeInt32 struct {
-	lower    OptionalInt32 `edgedb:"lower"`
-	upper    OptionalInt32 `edgedb:"upper"`
-	incLower bool          `edgedb:"inc_lower"`
-	incUpper bool          `edgedb:"inc_upper"`
-	empty    bool          `edgedb:"empty"`
+	lower    OptionalInt32 `gel:"lower"`
+	upper    OptionalInt32 `gel:"upper"`
+	incLower bool          `gel:"inc_lower"`
+	incUpper bool          `gel:"inc_upper"`
+	empty    bool          `gel:"empty"`
 }
 
 // Lower returns the lower bound.
@@ -212,11 +212,11 @@ func NewRangeInt64(
 
 // RangeInt64 is an interval of int64 values.
 type RangeInt64 struct {
-	lower    OptionalInt64 `edgedb:"lower"`
-	upper    OptionalInt64 `edgedb:"upper"`
-	incLower bool          `edgedb:"inc_lower"`
-	incUpper bool          `edgedb:"inc_upper"`
-	empty    bool          `edgedb:"empty"`
+	lower    OptionalInt64 `gel:"lower"`
+	upper    OptionalInt64 `gel:"upper"`
+	incLower bool          `gel:"inc_lower"`
+	incUpper bool          `gel:"inc_upper"`
+	empty    bool          `gel:"empty"`
 }
 
 // Lower returns the lower bound.
@@ -366,11 +366,11 @@ func NewRangeFloat32(
 
 // RangeFloat32 is an interval of float32 values.
 type RangeFloat32 struct {
-	lower    OptionalFloat32 `edgedb:"lower"`
-	upper    OptionalFloat32 `edgedb:"upper"`
-	incLower bool            `edgedb:"inc_lower"`
-	incUpper bool            `edgedb:"inc_upper"`
-	empty    bool            `edgedb:"empty"`
+	lower    OptionalFloat32 `gel:"lower"`
+	upper    OptionalFloat32 `gel:"upper"`
+	incLower bool            `gel:"inc_lower"`
+	incUpper bool            `gel:"inc_upper"`
+	empty    bool            `gel:"empty"`
 }
 
 // Lower returns the lower bound.
@@ -520,11 +520,11 @@ func NewRangeFloat64(
 
 // RangeFloat64 is an interval of float64 values.
 type RangeFloat64 struct {
-	lower    OptionalFloat64 `edgedb:"lower"`
-	upper    OptionalFloat64 `edgedb:"upper"`
-	incLower bool            `edgedb:"inc_lower"`
-	incUpper bool            `edgedb:"inc_upper"`
-	empty    bool            `edgedb:"empty"`
+	lower    OptionalFloat64 `gel:"lower"`
+	upper    OptionalFloat64 `gel:"upper"`
+	incLower bool            `gel:"inc_lower"`
+	incUpper bool            `gel:"inc_upper"`
+	empty    bool            `gel:"empty"`
 }
 
 // Lower returns the lower bound.
@@ -674,11 +674,11 @@ func NewRangeDateTime(
 
 // RangeDateTime is an interval of time.Time values.
 type RangeDateTime struct {
-	lower    OptionalDateTime `edgedb:"lower"`
-	upper    OptionalDateTime `edgedb:"upper"`
-	incLower bool             `edgedb:"inc_lower"`
-	incUpper bool             `edgedb:"inc_upper"`
-	empty    bool             `edgedb:"empty"`
+	lower    OptionalDateTime `gel:"lower"`
+	upper    OptionalDateTime `gel:"upper"`
+	incLower bool             `gel:"inc_lower"`
+	incUpper bool             `gel:"inc_upper"`
+	empty    bool             `gel:"empty"`
 }
 
 // Lower returns the lower bound.
@@ -828,11 +828,11 @@ func NewRangeLocalDateTime(
 
 // RangeLocalDateTime is an interval of LocalDateTime values.
 type RangeLocalDateTime struct {
-	lower    OptionalLocalDateTime `edgedb:"lower"`
-	upper    OptionalLocalDateTime `edgedb:"upper"`
-	incLower bool                  `edgedb:"inc_lower"`
-	incUpper bool                  `edgedb:"inc_upper"`
-	empty    bool                  `edgedb:"empty"`
+	lower    OptionalLocalDateTime `gel:"lower"`
+	upper    OptionalLocalDateTime `gel:"upper"`
+	incLower bool                  `gel:"inc_lower"`
+	incUpper bool                  `gel:"inc_upper"`
+	empty    bool                  `gel:"empty"`
 }
 
 // Lower returns the lower bound.
@@ -987,11 +987,11 @@ func NewRangeLocalDate(
 
 // RangeLocalDate is an interval of LocalDate values.
 type RangeLocalDate struct {
-	lower    OptionalLocalDate `edgedb:"lower"`
-	upper    OptionalLocalDate `edgedb:"upper"`
-	incLower bool              `edgedb:"inc_lower"`
-	incUpper bool              `edgedb:"inc_upper"`
-	empty    bool              `edgedb:"empty"`
+	lower    OptionalLocalDate `gel:"lower"`
+	upper    OptionalLocalDate `gel:"upper"`
+	incLower bool              `gel:"inc_lower"`
+	incUpper bool              `gel:"inc_upper"`
+	empty    bool              `gel:"empty"`
 }
 
 // Lower returns the lower bound.

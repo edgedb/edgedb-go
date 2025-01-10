@@ -28,36 +28,36 @@ import (
 type SomeStruct struct {
 	First  string
 	Second int
-	Third  []byte `edgedb:"First"`
+	Third  []byte `gel:"First"`
 }
 
 type InlinedSomeStruct struct {
-	SomeStruct `edgedb:"$inline"`
+	SomeStruct `gel:"$inline"`
 	Zebra      string
 }
 
 type InnerOne struct {
-	One         string `edgedb:"one"`
-	OnePointOne string `edgedb:"one_point_one"`
+	One         string `gel:"one"`
+	OnePointOne string `gel:"one_point_one"`
 }
 
 type InnerTwo struct {
-	Two string `edgedb:"two"`
+	Two string `gel:"two"`
 }
 
 type InnerThree struct {
-	Three string `edgedb:"three"`
+	Three string `gel:"three"`
 }
 
 type InlinedMultipleStructs struct {
-	InnerOne   `edgedb:"$inline"`
-	InnerTwo   `edgedb:"$inline"`
-	InnerThree `edgedb:"$inline"`
+	InnerOne   `gel:"$inline"`
+	InnerTwo   `gel:"$inline"`
+	InnerThree `gel:"$inline"`
 }
 
 type InlinedMultipleLayers struct {
-	InlinedSomeStruct      `edgedb:"$inline"`
-	InlinedMultipleStructs `edgedb:"$inline"`
+	InlinedSomeStruct      `gel:"$inline"`
+	InlinedMultipleStructs `gel:"$inline"`
 }
 
 func checkInlinedSomeStruct(t *testing.T, typ reflect.Type, offset uintptr) {
@@ -189,4 +189,15 @@ func TestValueOfSlice(t *testing.T) {
 	require.NoError(t, err)
 	val.SetBytes([]byte{1, 2, 3})
 	assert.Equal(t, []byte{1, 2, 3}, thing)
+}
+
+type EdgeDBTag struct {
+	FieldName string `edgedb:"tag_name"`
+}
+
+func TestEdgeDBTagAccepted(t *testing.T) {
+	typ := reflect.TypeOf(EdgeDBTag{})
+	field, ok := StructField(typ, "tag_name")
+	require.True(t, ok)
+	assert.Equal(t, "FieldName", field.Name)
 }

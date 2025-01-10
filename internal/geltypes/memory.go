@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 import (
 	"encoding/json"
@@ -77,12 +77,12 @@ func (m *Memory) UnmarshalText(b []byte) error {
 	case strings.HasSuffix(s, "B"):
 		suffixLen = 1
 	default:
-		return fmt.Errorf("malformed edgedb.Memory: %q", s)
+		return fmt.Errorf("malformed gel.Memory: %q", s)
 	}
 
 	i, err := strconv.ParseInt(s[:len(s)-suffixLen], 10, 64)
 	if err != nil {
-		return fmt.Errorf("malformed edgedb.Memory: %w", err)
+		return fmt.Errorf("malformed gel.Memory: %w", err)
 	}
 
 	*m = Memory(i * multiplier)

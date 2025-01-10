@@ -14,19 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"fmt"
 	"math"
 	"time"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/geldata/gel-go/internal/geltypes"
 )
 
-// Options for connecting to an EdgeDB server
+// Options for connecting to a Gel server
 type Options struct {
-	// Host is an EdgeDB server host address, given as either an IP address or
+	// Host is an Gel server host address, given as either an IP address or
 	// domain name. (Unix-domain socket paths are not supported)
 	//
 	// Host cannot be specified alongside the 'dsn' argument, or
@@ -60,7 +60,7 @@ type Options struct {
 	// User is the name of the database role used for authentication.
 	//
 	// If not specified, the value is resolved from any compound
-	// argument/option, then from EDGEDB_USER, then any compound environment
+	// argument/option, then from GEL_USER, then any compound environment
 	// variable, then project credentials.
 	User string
 
@@ -76,14 +76,14 @@ type Options struct {
 	// Branch is the name of the branch to use.
 	//
 	// If not specified, the value is resolved from any compound
-	// argument/option, then from EDGEDB_BRANCH, then any compound environment
+	// argument/option, then from GEL_BRANCH, then any compound environment
 	// variable, then project credentials.
 	Branch string
 
 	// Password to be used for authentication, if the server requires one.
 	//
 	// If not specified, the value is resolved from any compound
-	// argument/option, then from EDGEDB_PASSWORD, then any compound
+	// argument/option, then from GEL_PASSWORD, then any compound
 	// environment variable, then project credentials.
 	// Note that the use of the environment variable is discouraged
 	// as other users and applications may be able to read it
@@ -102,7 +102,7 @@ type Options struct {
 	// Has no effect for single connections.
 	Concurrency uint
 
-	// Parameters used to configure TLS connections to EdgeDB server.
+	// Parameters used to configure TLS connections to Gel server.
 	TLSOptions TLSOptions
 
 	// Read the TLS certificate from this file.
@@ -119,12 +119,12 @@ type Options struct {
 	// SecretKey is used to connect to cloud instances.
 	SecretKey string
 
-	// WarningHandler is invoked when EdgeDB returns warnings. Defaults to
-	// edgedb.LogWarnings.
+	// WarningHandler is invoked when Gel returns warnings. Defaults to
+	// gel.LogWarnings.
 	WarningHandler WarningHandler
 }
 
-// TLSOptions contains the parameters needed to configure TLS on EdgeDB
+// TLSOptions contains the parameters needed to configure TLS on Gel
 // server connections.
 type TLSOptions struct {
 	// PEM-encoded CA certificate
@@ -520,7 +520,7 @@ func (p Client) WithoutGlobals(globals ...string) *Client { // nolint:gocritic
 }
 
 // WithWarningHandler sets the warning handler for the returned client. If
-// warningHandler is nil edgedb.LogWarnings is used.
+// warningHandler is nil gel.LogWarnings is used.
 func (p Client) WithWarningHandler( // nolint:gocritic
 	warningHandler WarningHandler,
 ) *Client {

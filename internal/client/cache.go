@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 /*
 All caches should be LRU with max items set to 1000 or so.
@@ -47,9 +47,9 @@ import (
 	"encoding/binary"
 	"reflect"
 
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/header"
+	"github.com/geldata/gel-go/internal/codecs"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/header"
 )
 
 type codecKey struct {

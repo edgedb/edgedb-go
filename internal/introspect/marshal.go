@@ -24,7 +24,11 @@ import (
 func fieldByTag(t reflect.Type, name string) (reflect.StructField, bool) {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		switch field.Tag.Get("edgedb") {
+		tag, ok := field.Tag.Lookup("gel")
+		if !ok {
+			tag = field.Tag.Get("edgedb")
+		}
+		switch tag {
 		case name:
 			return field, true
 		case "$inline":

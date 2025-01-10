@@ -1,4 +1,4 @@
-module github.com/edgedb/edgedb-go
+module github.com/geldata/gel-go
 
 go 1.18
 

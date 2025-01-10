@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import "context"
 
 // Executor is a common interface between *Client and *Tx,
-// that can run queries on an EdgeDB database.
+// that can run queries on an Gel database.
 type Executor interface {
 	Execute(context.Context, string, ...any) error
 	Query(context.Context, string, any, ...any) error

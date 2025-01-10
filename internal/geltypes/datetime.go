@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 import (
 	"encoding/json"
@@ -437,7 +437,7 @@ func popISOUnit(re *regexp.Regexp, str string) (float64, string, error) {
 
 func parseDurationISO(str string) (Duration, error) {
 	if !strings.HasPrefix(str, "PT") {
-		return 0, fmt.Errorf("could not parse edgedb.Duration from %q", str)
+		return 0, fmt.Errorf("could not parse gel.Duration from %q", str)
 	}
 
 	time := str[2:]
@@ -446,7 +446,7 @@ func parseDurationISO(str string) (Duration, error) {
 		hours, err := strconv.ParseFloat(match, 64)
 		if err != nil {
 			return 0, fmt.Errorf(
-				"could not parse edgedb.Duration from %q: %w",
+				"could not parse gel.Duration from %q: %w",
 				str, err)
 		}
 
@@ -456,27 +456,27 @@ func parseDurationISO(str string) (Duration, error) {
 	hours, time, err := popISOUnit(isoHoursRegex, time)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 
 	minutes, time, err := popISOUnit(isoMinutesRegex, time)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 
 	seconds, time, err := popISOUnit(isoSecondsRegex, time)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 
 	if time != "" {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 
@@ -537,7 +537,7 @@ func parseDurationHuman(str string) (Duration, error) {
 	hour, f, s, err := popHumanDurationUnit(humanDurationHoursRegex, str)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 	found = found || f
@@ -545,7 +545,7 @@ func parseDurationHuman(str string) (Duration, error) {
 	minute, f, s, err := popHumanDurationUnit(humanDurationMinutesRegex, s)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 	found = found || f
@@ -553,7 +553,7 @@ func parseDurationHuman(str string) (Duration, error) {
 	second, f, s, err := popHumanDurationUnit(humanDurationSecondsRegex, s)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 	found = found || f
@@ -561,7 +561,7 @@ func parseDurationHuman(str string) (Duration, error) {
 	ms, f, s, err := popHumanDurationUnit(humanDurationMSRegex, s)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 	found = found || f
@@ -569,20 +569,20 @@ func parseDurationHuman(str string) (Duration, error) {
 	us, f, s, err := popHumanDurationUnit(humanDurationUSRegex, s)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: %w",
+			"could not parse gel.Duration from %q: %w",
 			str, err)
 	}
 	found = found || f
 
 	if !found {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: no duration found",
+			"could not parse gel.Duration from %q: no duration found",
 			str)
 	}
 
 	if strings.TrimSpace(s) != "" {
 		return 0, fmt.Errorf(
-			"could not parse edgedb.Duration from %q: extra characters %q",
+			"could not parse gel.Duration from %q: extra characters %q",
 			str,
 			strings.TrimSpace(s),
 		)
@@ -597,7 +597,7 @@ func parseDurationHuman(str string) (Duration, error) {
 	), nil
 }
 
-// ParseDuration parses an EdgeDB duration string.
+// ParseDuration parses an Gel duration string.
 func ParseDuration(s string) (Duration, error) {
 	if strings.HasPrefix(s, "PT") {
 		return parseDurationISO(s)
@@ -839,7 +839,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -850,7 +850,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -858,7 +858,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		decade, f, s, err := popHumanDurationUnit(humanDurationDecadesRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -866,7 +866,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		year, f, s, err := popHumanDurationUnit(humanDurationYearsRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -874,7 +874,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		month, f, s, err := popHumanDurationUnit(humanDurationMonthsRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -882,7 +882,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		week, f, s, err := popHumanDurationUnit(humanDurationWeeksRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -890,7 +890,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		day, f, s, err := popHumanDurationUnit(humanDurationDaysRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -898,7 +898,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		hour, f, s, err := popHumanDurationUnit(humanDurationHoursRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -906,7 +906,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		minute, f, s, err := popHumanDurationUnit(humanDurationMinutesRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -914,7 +914,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		second, f, s, err := popHumanDurationUnit(humanDurationSecondsRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -922,7 +922,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		ms, f, s, err := popHumanDurationUnit(humanDurationMSRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -930,21 +930,21 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		us, f, s, err := popHumanDurationUnit(humanDurationUSRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
 
 		if !found {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: "+
+				"could not parse gel.RelativeDuration from %q: "+
 					"no duration found",
 				str)
 		}
 
 		if strings.TrimSpace(s) != "" {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: "+
+				"could not parse gel.RelativeDuration from %q: "+
 					"extra characters %q",
 				str, strings.TrimSpace(s))
 		}
@@ -980,34 +980,34 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 	years, date, err := popISOUnit(isoYearsRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: %w",
+			"could not parse gel.RelativeDuration from %q: %w",
 			str, err)
 	}
 
 	months, date, err := popISOUnit(isoMonthsRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: %w",
+			"could not parse gel.RelativeDuration from %q: %w",
 			str, err)
 	}
 
 	weeks, date, err := popISOUnit(isoWeeksRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: %w",
+			"could not parse gel.RelativeDuration from %q: %w",
 			str, err)
 	}
 
 	days, date, err := popISOUnit(isoDaysRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: %w",
+			"could not parse gel.RelativeDuration from %q: %w",
 			str, err)
 	}
 
 	if date != "" {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: "+
+			"could not parse gel.RelativeDuration from %q: "+
 				"extra characters in date",
 			str)
 	}
@@ -1018,7 +1018,7 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 		hours, err = strconv.ParseFloat(match, 64)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.RelativeDuration from %q: %w",
+				"could not parse gel.RelativeDuration from %q: %w",
 				str, err)
 		}
 
@@ -1041,27 +1041,27 @@ func (rd *RelativeDuration) UnmarshalText(b []byte) error {
 	hours, time, err := popISOUnit(isoHoursRegex, time)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: %w",
+			"could not parse gel.RelativeDuration from %q: %w",
 			str, err)
 	}
 
 	minutes, time, err := popISOUnit(isoMinutesRegex, time)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.relativeduration from %q: %w",
+			"could not parse gel.relativeduration from %q: %w",
 			str, err)
 	}
 
 	seconds, time, err := popISOUnit(isoSecondsRegex, time)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.relativeduration from %q: %w",
+			"could not parse gel.relativeduration from %q: %w",
 			str, err)
 	}
 
 	if time != "" {
 		return fmt.Errorf(
-			"could not parse edgedb.RelativeDuration from %q: "+
+			"could not parse gel.RelativeDuration from %q: "+
 				"extra characters in time",
 			str)
 	}
@@ -1193,7 +1193,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -1204,7 +1204,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -1212,7 +1212,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		decade, f, s, err := popHumanDurationUnit(humanDurationDecadesRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -1220,7 +1220,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		year, f, s, err := popHumanDurationUnit(humanDurationYearsRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -1228,7 +1228,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		month, f, s, err := popHumanDurationUnit(humanDurationMonthsRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -1236,7 +1236,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		week, f, s, err := popHumanDurationUnit(humanDurationWeeksRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
@@ -1244,21 +1244,21 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		day, f, s, err := popHumanDurationUnit(humanDurationDaysRegex, s)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 		found = found || f
 
 		if !found {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: "+
+				"could not parse gel.DateDuration from %q: "+
 					"no duration found",
 				str)
 		}
 
 		if strings.TrimSpace(s) != "" {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: "+
+				"could not parse gel.DateDuration from %q: "+
 					"extra characters %q",
 				str, strings.TrimSpace(s))
 		}
@@ -1274,7 +1274,7 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 
 		if daysFraction != 0 {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: "+
+				"could not parse gel.DateDuration from %q: "+
 					"units smaller than days cannot be used",
 				str)
 		}
@@ -1289,55 +1289,55 @@ func (dd *DateDuration) UnmarshalText(b []byte) error {
 		float, s, err := popISOUnit(isoUnitlessHoursRegex, time)
 		if err != nil {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: %w",
+				"could not parse gel.DateDuration from %q: %w",
 				str, err)
 		}
 
 		if float != 0 {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q: "+
+				"could not parse gel.DateDuration from %q: "+
 					"units smaller than days cannot be used",
 				str)
 		}
 
 		if s != "" {
 			return fmt.Errorf(
-				"could not parse edgedb.DateDuration from %q", str)
+				"could not parse gel.DateDuration from %q", str)
 		}
 	}
 
 	years, date, err := popISOUnit(isoYearsRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.DateDuration from %q: %w", str, err)
+			"could not parse gel.DateDuration from %q: %w", str, err)
 	}
 
 	months, date, err := popISOUnit(isoMonthsRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.DateDuration from %q: %w", str, err)
+			"could not parse gel.DateDuration from %q: %w", str, err)
 	}
 
 	weeks, date, err := popISOUnit(isoWeeksRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.DateDuration from %q: %w", str, err)
+			"could not parse gel.DateDuration from %q: %w", str, err)
 	}
 
 	days, date, err := popISOUnit(isoDaysRegex, date)
 	if err != nil {
 		return fmt.Errorf(
-			"could not parse edgedb.DateDuration from %q: %w", str, err)
+			"could not parse gel.DateDuration from %q: %w", str, err)
 	}
 
 	if date != "" {
-		return fmt.Errorf("could not parse edgedb.DateDuration from %q", str)
+		return fmt.Errorf("could not parse gel.DateDuration from %q", str)
 	}
 
 	months, monthsFraction := math.Modf(months)
 	days, daysFraction := math.Modf(days + 7*weeks + 30*monthsFraction)
 	if daysFraction != 0 {
-		return fmt.Errorf("could not parse edgedb.DateDuration from %q", str)
+		return fmt.Errorf("could not parse gel.DateDuration from %q", str)
 	}
 
 	dd.months = int32(months + math.Round(12*years))

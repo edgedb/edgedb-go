@@ -17,7 +17,7 @@
 //go:build windows
 // +build windows
 
-package edgedb
+package gel
 
 import (
 	"crypto/x509"

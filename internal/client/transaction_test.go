@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/geldata/gel-go/internal/geltypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -175,7 +175,7 @@ func TestWithConfigInTx(t *testing.T) {
 		e = tx.Execute(ctx, `insert User { id := <uuid>$0 }`, id)
 		assert.True(t, strings.HasPrefix(
 			e.Error(),
-			"edgedb.QueryError: cannot assign to property 'id'",
+			"gel.QueryError: cannot assign to property 'id'",
 		))
 
 		return errors.New("rollback")

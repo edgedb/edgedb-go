@@ -15,14 +15,14 @@
 // limitations under the License.
 
 // edgeql-go is a tool to generate go functions from edgeql queries. When run
-// in an EdgeDB project directory (or subdirectory) a *_edgeql.go source file
+// in an Gel project directory (or subdirectory) a *_edgeql.go source file
 // will be generated for each *.edgeql file.  The generated go will have an
 // edgeqlFileName and edgeqlFileNameJSON function with typed arguments and
 // return value matching the query's arguments and result shape.
 //
 // # Install
 //
-//	go install github.com/edgedb/edgedb-go/cmd/edgeql-go@latest
+//	go install github.com/geldata/gel-go/cmd/edgeql-go@latest
 //
 // See also [pinning tool dependencies].
 //

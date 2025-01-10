@@ -95,7 +95,7 @@ func (p *rstPrinter) text(out *bytes.Buffer, x []comment.Text) {
 			if len(t.Text) == 1 {
 				if s, ok := t.Text[0].(comment.Plain); ok &&
 					strings.HasPrefix(
-						string(s), "github.com/edgedb/edgedb-go") {
+						string(s), "github.com/geldata/gel-go") {
 					urlParts := strings.Split(string(s), "/")
 					out.WriteString(urlParts[len(urlParts)-1])
 				} else {

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/cache"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal/cache"
+	types "github.com/geldata/gel-go/internal/geltypes"
 )
 
 const defaultIdleConnectionTimeout = 30 * time.Second
@@ -74,7 +74,7 @@ func CreateClient(ctx context.Context, opts Options) (*Client, error) { // nolin
 // https://www.edgedb.com/docs/clients/connection
 // or it specifies a single string in the following format:
 //
-//	edgedb://user:password@host:port/database?option=value.
+//	gel://user:password@host:port/database?option=value.
 //
 // The following options are recognized: host, port, user, database, password.
 func CreateClientDSN(_ context.Context, dsn string, opts Options) (*Client, error) { // nolint:gocritic,lll
@@ -170,7 +170,7 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 	// force do nothing if context is expired
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("edgedb: %w", ctx.Err())
+		return nil, fmt.Errorf("gel: %w", ctx.Err())
 	default:
 	}
 
@@ -200,14 +200,14 @@ func (p *Client) acquire(ctx context.Context) (*transactableConn, error) {
 			}
 			return conn, nil
 		case <-ctx.Done():
-			return nil, fmt.Errorf("edgedb: %w", ctx.Err())
+			return nil, fmt.Errorf("gel: %w", ctx.Err())
 		}
 	}
 }
 
 type systemConfig struct {
-	ID                 types.OptionalUUID     `edgedb:"id"`
-	SessionIdleTimeout types.OptionalDuration `edgedb:"session_idle_timeout"`
+	ID                 types.OptionalUUID     `gel:"id"`
+	SessionIdleTimeout types.OptionalDuration `gel:"session_idle_timeout"`
 }
 
 func (p *Client) release(conn *transactableConn, err error) error {

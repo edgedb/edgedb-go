@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -25,11 +25,11 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
+	"github.com/geldata/gel-go/internal/buff"
 )
 
 var (
-	errNoTOMLFound             = errors.New("no edgedb.toml found")
+	errNoTOMLFound             = errors.New("no gel.toml found")
 	errZeroResults       error = &noDataError{msg: "zero results"}
 	errStateNotSupported       = &interfaceError{msg: "client methods " +
 		"WithConfig, WithGlobals, and WithModuleAliases " +
@@ -41,10 +41,10 @@ var (
 // ErrorTag is the argument type to Error.HasTag().
 type ErrorTag string
 
-// ErrorCategory values represent EdgeDB's error types.
+// ErrorCategory values represent Gel's error types.
 type ErrorCategory string
 
-// Error is the error type returned from edgedb.
+// Error is the error type returned from gel.
 type Error interface {
 	Error() string
 	Unwrap() error

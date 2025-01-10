@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"fmt"
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/header"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/codecs"
+	"github.com/geldata/gel-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal/header"
 )
 
 func (c *protocolConnection) execGranularFlow0pX(

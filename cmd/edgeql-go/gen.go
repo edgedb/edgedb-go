@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal/codecs"
+	"github.com/geldata/gel-go/internal/descriptor"
 )
 
 func generateType(
@@ -133,7 +133,7 @@ func generateRange(
 	}
 
 	types := []goType{
-		&goScalar{Name: fmt.Sprintf("edgedb.%sRange%s", optional, typ)},
+		&goScalar{Name: fmt.Sprintf("gel.%sRange%s", optional, typ)},
 	}
 	return types, nil, nil
 }
@@ -173,7 +173,7 @@ func generateRangeV2(
 	}
 
 	types := []goType{
-		&goScalar{Name: fmt.Sprintf("edgedb.%sRange%s", optional, typ)},
+		&goScalar{Name: fmt.Sprintf("gel.%sRange%s", optional, typ)},
 	}
 	return types, nil, nil
 }
@@ -237,7 +237,7 @@ func generateObject(
 			return nil, nil, err
 		}
 
-		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		tag := fmt.Sprintf(`gel:"%s"`, field.Name)
 		name := field.Name
 		if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
@@ -277,7 +277,7 @@ func generateObjectV2(
 			return nil, nil, err
 		}
 
-		tag := fmt.Sprintf(`edgedb:"%s"`, field.Name)
+		tag := fmt.Sprintf(`gel:"%s"`, field.Name)
 		name := field.Name
 		if cmdCfg.mixedCaps {
 			name = snakeToUpperMixedCase(name)
@@ -328,7 +328,7 @@ func generateTuple(
 			EQLName: field.Name,
 			GoName:  name,
 			Type:    t[0].Reference(),
-			Tag:     fmt.Sprintf(`edgedb:"%s"`, field.Name),
+			Tag:     fmt.Sprintf(`gel:"%s"`, field.Name),
 		})
 		types = append(types, t...)
 		imports = append(imports, i...)
@@ -369,7 +369,7 @@ func generateTupleV2(
 			EQLName: field.Name,
 			GoName:  name,
 			Type:    t[0].Reference(),
-			Tag:     fmt.Sprintf(`edgedb:"%s"`, field.Name),
+			Tag:     fmt.Sprintf(`gel:"%s"`, field.Name),
 		})
 		types = append(types, t...)
 		imports = append(imports, i...)
@@ -391,7 +391,7 @@ func generateBaseScalar(
 		if required {
 			name = "string"
 		} else {
-			name = "edgedb.OptionalStr"
+			name = "gel.OptionalStr"
 		}
 
 		return []goType{&goScalar{Name: name}}, nil, nil
@@ -401,113 +401,113 @@ func generateBaseScalar(
 	switch desc.ID {
 	case codecs.UUIDID:
 		if required {
-			name = "edgedb.UUID"
+			name = "gel.UUID"
 		} else {
-			name = "edgedb.OptionalUUID"
+			name = "gel.OptionalUUID"
 		}
 	case codecs.StrID:
 		if required {
 			name = "string"
 		} else {
-			name = "edgedb.OptionalStr"
+			name = "gel.OptionalStr"
 		}
 	case codecs.BytesID, codecs.JSONID:
 		if required {
 			name = "[]byte"
 		} else {
-			name = "edgedb.OptionalBytes"
+			name = "gel.OptionalBytes"
 		}
 	case codecs.Int16ID:
 		if required {
 			name = "int16"
 		} else {
-			name = "edgedb.OptionalInt16"
+			name = "gel.OptionalInt16"
 		}
 	case codecs.Int32ID:
 		if required {
 			name = "int32"
 		} else {
-			name = "edgedb.OptionalInt32"
+			name = "gel.OptionalInt32"
 		}
 	case codecs.Int64ID:
 		if required {
 			name = "int64"
 		} else {
-			name = "edgedb.OptionalInt64"
+			name = "gel.OptionalInt64"
 		}
 	case codecs.Float32ID:
 		if required {
 			name = "float32"
 		} else {
-			name = "edgedb.OptionalFloat32"
+			name = "gel.OptionalFloat32"
 		}
 	case codecs.Float64ID:
 		if required {
 			name = "float64"
 		} else {
-			name = "edgedb.OptionalFloat64"
+			name = "gel.OptionalFloat64"
 		}
 	case codecs.BoolID:
 		if required {
 			name = "bool"
 		} else {
-			name = "edgedb.OptionalBool"
+			name = "gel.OptionalBool"
 		}
 	case codecs.DateTimeID:
 		if required {
 			imports = append(imports, "time")
 			name = "time.Time"
 		} else {
-			name = "edgedb.OptionalDateTime"
+			name = "gel.OptionalDateTime"
 		}
 	case codecs.LocalDTID:
 		if required {
-			name = "edgedb.LocalDateTime"
+			name = "gel.LocalDateTime"
 		} else {
-			name = "edgedb.OptionalLocalDateTime"
+			name = "gel.OptionalLocalDateTime"
 		}
 	case codecs.LocalDateID:
 		if required {
-			name = "edgedb.LocalDate"
+			name = "gel.LocalDate"
 		} else {
-			name = "edgedb.OptionalLocalDate"
+			name = "gel.OptionalLocalDate"
 		}
 	case codecs.LocalTimeID:
 		if required {
-			name = "edgedb.LocalTime"
+			name = "gel.LocalTime"
 		} else {
-			name = "edgedb.OptionalLocalTime"
+			name = "gel.OptionalLocalTime"
 		}
 	case codecs.DurationID:
 		if required {
-			name = "edgedb.Duration"
+			name = "gel.Duration"
 		} else {
-			name = "edgedb.OptionalDuration"
+			name = "gel.OptionalDuration"
 		}
 	case codecs.BigIntID:
 		if required {
 			imports = append(imports, "math/big")
 			name = "*big.Int"
 		} else {
-			name = "edgedb.OptionalBigInt"
+			name = "gel.OptionalBigInt"
 		}
 	case codecs.RelativeDurationID:
 		if required {
-			name = "edgedb.RelativeDuration"
+			name = "gel.RelativeDuration"
 		} else {
-			name = "edgedb.OptionalRelativeDuration"
+			name = "gel.OptionalRelativeDuration"
 		}
 	case codecs.DateDurationID:
 		if required {
-			name = "edgedb.DateDuration"
+			name = "gel.DateDuration"
 		} else {
-			name = "edgedb.OptionalDateDuration"
+			name = "gel.OptionalDateDuration"
 		}
 	case codecs.MemoryID:
 		if required {
-			name = "edgedb.Memory"
+			name = "gel.Memory"
 		} else {
-			name = "edgedb.OptionalMemory"
+			name = "gel.OptionalMemory"
 		}
 	}
 
@@ -527,7 +527,7 @@ func generateBaseScalarV2(
 		if required {
 			name = "string"
 		} else {
-			name = "edgedb.OptionalStr"
+			name = "gel.OptionalStr"
 		}
 
 		return []goType{&goScalar{Name: name}}, nil, nil
@@ -537,113 +537,113 @@ func generateBaseScalarV2(
 	switch desc.ID {
 	case codecs.UUIDID:
 		if required {
-			name = "edgedb.UUID"
+			name = "gel.UUID"
 		} else {
-			name = "edgedb.OptionalUUID"
+			name = "gel.OptionalUUID"
 		}
 	case codecs.StrID:
 		if required {
 			name = "string"
 		} else {
-			name = "edgedb.OptionalStr"
+			name = "gel.OptionalStr"
 		}
 	case codecs.BytesID, codecs.JSONID:
 		if required {
 			name = "[]byte"
 		} else {
-			name = "edgedb.OptionalBytes"
+			name = "gel.OptionalBytes"
 		}
 	case codecs.Int16ID:
 		if required {
 			name = "int16"
 		} else {
-			name = "edgedb.OptionalInt16"
+			name = "gel.OptionalInt16"
 		}
 	case codecs.Int32ID:
 		if required {
 			name = "int32"
 		} else {
-			name = "edgedb.OptionalInt32"
+			name = "gel.OptionalInt32"
 		}
 	case codecs.Int64ID:
 		if required {
 			name = "int64"
 		} else {
-			name = "edgedb.OptionalInt64"
+			name = "gel.OptionalInt64"
 		}
 	case codecs.Float32ID:
 		if required {
 			name = "float32"
 		} else {
-			name = "edgedb.OptionalFloat32"
+			name = "gel.OptionalFloat32"
 		}
 	case codecs.Float64ID:
 		if required {
 			name = "float64"
 		} else {
-			name = "edgedb.OptionalFloat64"
+			name = "gel.OptionalFloat64"
 		}
 	case codecs.BoolID:
 		if required {
 			name = "bool"
 		} else {
-			name = "edgedb.OptionalBool"
+			name = "gel.OptionalBool"
 		}
 	case codecs.DateTimeID:
 		if required {
 			imports = append(imports, "time")
 			name = "time.Time"
 		} else {
-			name = "edgedb.OptionalDateTime"
+			name = "gel.OptionalDateTime"
 		}
 	case codecs.LocalDTID:
 		if required {
-			name = "edgedb.LocalDateTime"
+			name = "gel.LocalDateTime"
 		} else {
-			name = "edgedb.OptionalLocalDateTime"
+			name = "gel.OptionalLocalDateTime"
 		}
 	case codecs.LocalDateID:
 		if required {
-			name = "edgedb.LocalDate"
+			name = "gel.LocalDate"
 		} else {
-			name = "edgedb.OptionalLocalDate"
+			name = "gel.OptionalLocalDate"
 		}
 	case codecs.LocalTimeID:
 		if required {
-			name = "edgedb.LocalTime"
+			name = "gel.LocalTime"
 		} else {
-			name = "edgedb.OptionalLocalTime"
+			name = "gel.OptionalLocalTime"
 		}
 	case codecs.DurationID:
 		if required {
-			name = "edgedb.Duration"
+			name = "gel.Duration"
 		} else {
-			name = "edgedb.OptionalDuration"
+			name = "gel.OptionalDuration"
 		}
 	case codecs.BigIntID:
 		if required {
 			imports = append(imports, "math/big")
 			name = "*big.Int"
 		} else {
-			name = "edgedb.OptionalBigInt"
+			name = "gel.OptionalBigInt"
 		}
 	case codecs.RelativeDurationID:
 		if required {
-			name = "edgedb.RelativeDuration"
+			name = "gel.RelativeDuration"
 		} else {
-			name = "edgedb.OptionalRelativeDuration"
+			name = "gel.OptionalRelativeDuration"
 		}
 	case codecs.DateDurationID:
 		if required {
-			name = "edgedb.DateDuration"
+			name = "gel.DateDuration"
 		} else {
-			name = "edgedb.OptionalDateDuration"
+			name = "gel.OptionalDateDuration"
 		}
 	case codecs.MemoryID:
 		if required {
-			name = "edgedb.Memory"
+			name = "gel.Memory"
 		} else {
-			name = "edgedb.OptionalMemory"
+			name = "gel.OptionalMemory"
 		}
 	}
 

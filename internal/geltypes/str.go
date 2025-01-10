@@ -14,47 +14,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
-// NewOptionalBytes is a convenience function for creating an OptionalBytes
-// with its value set to v.
-func NewOptionalBytes(v []byte) OptionalBytes {
-	o := OptionalBytes{}
+// NewOptionalStr is a convenience function for creating an OptionalStr with
+// its value set to v.
+func NewOptionalStr(v string) OptionalStr {
+	o := OptionalStr{}
 	o.Set(v)
 	return o
 }
 
-// OptionalBytes is an optional []byte. Optional types must be used for out
+// OptionalStr is an optional string. Optional types must be used for out
 // parameters when a shape field is not required.
-type OptionalBytes struct {
-	val   []byte
+type OptionalStr struct {
+	val   string
 	isSet bool
 }
 
 // Get returns the value and a boolean indicating if the value is present.
-func (o OptionalBytes) Get() ([]byte, bool) { return o.val, o.isSet }
+func (o OptionalStr) Get() (string, bool) { return o.val, o.isSet }
 
 // Set sets the value.
-func (o *OptionalBytes) Set(val []byte) {
-	if val == nil {
-		o.Unset()
-		return
-	}
-
+func (o *OptionalStr) Set(val string) {
 	o.val = val
 	o.isSet = true
 }
 
 // Unset marks the value as missing.
-func (o *OptionalBytes) Unset() {
-	o.val = nil
+func (o *OptionalStr) Unset() {
+	o.val = ""
 	o.isSet = false
 }
 
 // MarshalJSON returns o marshaled as json.
-func (o OptionalBytes) MarshalJSON() ([]byte, error) {
+func (o OptionalStr) MarshalJSON() ([]byte, error) {
 	if o.isSet {
 		return json.Marshal(o.val)
 	}
@@ -62,7 +59,7 @@ func (o OptionalBytes) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON unmarshals bytes into *o.
-func (o *OptionalBytes) UnmarshalJSON(bytes []byte) error {
+func (o *OptionalStr) UnmarshalJSON(bytes []byte) error {
 	if bytes[0] == 0x6e { // null
 		o.Unset()
 		return nil

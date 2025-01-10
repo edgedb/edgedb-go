@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"testing"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/geldata/gel-go/internal/geltypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -20,8 +20,8 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
 )
 
 func BenchmarkDecodeUUID(b *testing.B) {

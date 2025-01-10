@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // Int16Codec encodes/decodes int16.
@@ -62,7 +62,7 @@ func (c *Int16Codec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalInt16", path)
+				return missingValueError("gel.OptionalInt16", path)
 			})
 	case optionalInt16Marshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -73,7 +73,7 @@ func (c *Int16Codec) Encode(
 	case marshal.Int16Marshaler:
 		return encodeMarshaler(w, in, in.MarshalEdgeDBInt16, 2, path)
 	default:
-		return fmt.Errorf("expected %v to be int16, edgedb.OptionalInt16 or "+
+		return fmt.Errorf("expected %v to be int16, gel.OptionalInt16 or "+
 			"Int16Marshaler got %T", path, val)
 	}
 }
@@ -144,7 +144,7 @@ func (c *Int32Codec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalInt32", path)
+				return missingValueError("gel.OptionalInt32", path)
 			})
 	case optionalInt32Marshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -155,7 +155,7 @@ func (c *Int32Codec) Encode(
 	case marshal.Int32Marshaler:
 		return encodeMarshaler(w, in, in.MarshalEdgeDBInt32, 4, path)
 	default:
-		return fmt.Errorf("expected %v to be int32, edgedb.OptionalInt32 "+
+		return fmt.Errorf("expected %v to be int32, gel.OptionalInt32 "+
 			"or Int32Marshaler got %T", path, val)
 	}
 }
@@ -226,7 +226,7 @@ func (c *Int64Codec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalInt64", path)
+				return missingValueError("gel.OptionalInt64", path)
 			})
 	case optionalInt64Marshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -237,7 +237,7 @@ func (c *Int64Codec) Encode(
 	case marshal.Int64Marshaler:
 		return encodeMarshaler(w, in, in.MarshalEdgeDBInt64, 8, path)
 	default:
-		return fmt.Errorf("expected %v to be int64, edgedb.OptionalInt64 or "+
+		return fmt.Errorf("expected %v to be int64, gel.OptionalInt64 or "+
 			"Int64Marshaler got %T", path, val)
 	}
 }
@@ -308,7 +308,7 @@ func (c *Float32Codec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalFloat32", path)
+				return missingValueError("gel.OptionalFloat32", path)
 			})
 	case optionalFloat32Marshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -319,7 +319,7 @@ func (c *Float32Codec) Encode(
 	case marshal.Float32Marshaler:
 		return encodeMarshaler(w, in, in.MarshalEdgeDBFloat32, 4, path)
 	default:
-		return fmt.Errorf("expected %v to be float32, edgedb.OptionalFloat32 "+
+		return fmt.Errorf("expected %v to be float32, gel.OptionalFloat32 "+
 			"or Float32Marshaler got %T", path, val)
 	}
 }
@@ -390,7 +390,7 @@ func (c *Float64Codec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalFloat64", path)
+				return missingValueError("gel.OptionalFloat64", path)
 			})
 	case optionalFloat64Marshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -401,7 +401,7 @@ func (c *Float64Codec) Encode(
 	case marshal.Float64Marshaler:
 		return encodeMarshaler(w, in, in.MarshalEdgeDBFloat64, 8, path)
 	default:
-		return fmt.Errorf("expected %v to be float64, edgedb.OptionalFloat64 "+
+		return fmt.Errorf("expected %v to be float64, gel.OptionalFloat64 "+
 			"or Float64Marshaler got %T", path, val)
 	}
 }

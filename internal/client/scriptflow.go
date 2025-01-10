@@ -14,13 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"encoding/json"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/header"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/header"
 )
 
 func ignoreHeaders(r *buff.Reader) {
@@ -75,8 +75,8 @@ func decodeHeaders1pX(
 		}
 
 		errors := make([]error, len(warnings))
-		for i, warning := range warnings {
-			errors[i] = warning.Err(query)
+		for i := range warnings {
+			errors[i] = warnings[i].Err(query)
 		}
 
 		err = warningHandler(errors)

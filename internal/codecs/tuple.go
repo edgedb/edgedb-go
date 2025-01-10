@@ -21,11 +21,11 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/introspect"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/descriptor"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/introspect"
 )
 
 func buildTupleEncoder(
@@ -107,7 +107,7 @@ func buildTupleDecoder(
 		sf, ok := introspect.StructField(typ, field.Name)
 		if !ok {
 			return nil, fmt.Errorf(
-				"expected %v to have a field with the tag `edgedb:\"%v\"`",
+				"expected %v to have a field with the tag `gel:\"%v\"`",
 				typ, field.Name,
 			)
 		}
@@ -155,7 +155,7 @@ func buildTupleDecoderV2(
 		sf, ok := introspect.StructField(typ, field.Name)
 		if !ok {
 			return nil, fmt.Errorf(
-				"expected %v to have a field with the tag `edgedb:\"%v\"`",
+				"expected %v to have a field with the tag `gel:\"%v\"`",
 				typ, field.Name,
 			)
 		}

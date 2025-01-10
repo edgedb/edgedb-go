@@ -22,11 +22,11 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/introspect"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/descriptor"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/introspect"
 )
 
 func buildRangeDecoder(
@@ -55,7 +55,7 @@ func buildRangeDecoder(
 	}
 
 	return nil, fmt.Errorf(
-		"expected %v to be an edgedb.Range type got %v",
+		"expected %v to be an gel.Range type got %v",
 		path, typ)
 }
 
@@ -85,7 +85,7 @@ func buildRangeDecoderV2(
 	}
 
 	return nil, fmt.Errorf(
-		"expected %v to be an edgedb.Range type got %v",
+		"expected %v to be an gel.Range type got %v",
 		path, typ)
 }
 
@@ -474,7 +474,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeInt32",
+					"gel.OptionalRangeInt32",
 					path,
 				)
 			},
@@ -485,7 +485,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeInt64",
+					"gel.OptionalRangeInt64",
 					path,
 				)
 			},
@@ -496,7 +496,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeFloat32",
+					"gel.OptionalRangeFloat32",
 					path,
 				)
 			},
@@ -507,7 +507,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeFloat64",
+					"gel.OptionalRangeFloat64",
 					path,
 				)
 			},
@@ -518,7 +518,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeDateTime",
+					"gel.OptionalRangeDateTime",
 					path,
 				)
 			},
@@ -529,7 +529,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeLocalDateTime",
+					"gel.OptionalRangeLocalDateTime",
 					path,
 				)
 			},
@@ -540,7 +540,7 @@ func (c *rangeEncoder) Encode(
 			func() error { return c.encode(w, data, path) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRangeLocalDate",
+					"gel.OptionalRangeLocalDate",
 					path,
 				)
 			},

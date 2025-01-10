@@ -20,16 +20,16 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 // V2 is a type descriptor
 // https://www.edgedb.com/docs/internals/protocol/typedesc
 type V2 struct {
 	Type          Type
-	ID            edgedbtypes.UUID
+	ID            geltypes.UUID
 	Name          string
 	SchemaDefined bool
 	Ancestors     []*FieldV2

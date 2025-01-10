@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -31,8 +31,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/snc"
+	"github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/snc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -150,7 +150,7 @@ func TestConUtils(t *testing.T) {
 				Host:     "host2",
 				Port:     456,
 				User:     "user2",
-				Password: edgedbtypes.NewOptionalStr("passw2"),
+				Password: geltypes.NewOptionalStr("passw2"),
 				Database: "db2",
 			},
 			expected: Result{
@@ -179,7 +179,7 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb://user3:123123@localhost/abcdef",
 			opts: Options{
 				User:           "user2",
-				Password:       edgedbtypes.NewOptionalStr("passw2"),
+				Password:       geltypes.NewOptionalStr("passw2"),
 				Database:       "db2",
 				ServerSettings: map[string][]byte{"ssl": []byte("False")},
 			},
@@ -242,7 +242,7 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@host1,host2/db",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+				errMessage: `gel.ConfigurationError: invalid DSN: ` +
 					`invalid host: "host1,host2"`,
 			},
 		},
@@ -251,7 +251,7 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@host1:1111,host2:2222/db",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+				errMessage: `gel.ConfigurationError: invalid DSN: ` +
 					`invalid host: "host1:1111,host2"`,
 			},
 		},
@@ -264,7 +264,7 @@ func TestConUtils(t *testing.T) {
 			dsn: "",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: ` +
+				errMessage: `gel.ConfigurationError: ` +
 					`invalid host: "host1:1111,host2:2222"`,
 			},
 		},
@@ -276,7 +276,7 @@ func TestConUtils(t *testing.T) {
 			dsn: "edgedb:///db?host=host1:1111,host2:2222",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+				errMessage: `gel.ConfigurationError: invalid DSN: ` +
 					`invalid host: "host1:1111,host2:2222"`,
 			},
 		},
@@ -291,9 +291,9 @@ func TestConUtils(t *testing.T) {
 			},
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: ` +
+				errMessage: `gel.ConfigurationError: ` +
 					`mutually exclusive connection options specified: ` +
-					`dsn and edgedb.Options.Host`,
+					`dsn and gel.Options.Host`,
 			},
 		},
 		{
@@ -302,7 +302,7 @@ func TestConUtils(t *testing.T) {
 				"&port=2222&database=testdb",
 			opts: Options{
 				User:     "me",
-				Password: edgedbtypes.NewOptionalStr("ask"),
+				Password: geltypes.NewOptionalStr("ask"),
 				Database: "db",
 			},
 			expected: Result{
@@ -326,7 +326,7 @@ func TestConUtils(t *testing.T) {
 				"&port=2222&database=testdb",
 			opts: Options{
 				User:           "me",
-				Password:       edgedbtypes.NewOptionalStr("ask"),
+				Password:       geltypes.NewOptionalStr("ask"),
 				Database:       "db",
 				ServerSettings: map[string][]byte{"aa": []byte("bb")},
 			},
@@ -351,7 +351,7 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+				errMessage: `gel.ConfigurationError: invalid DSN: ` +
 					`invalid host: unix socket paths not supported, ` +
 					`got "/unix_sock/test"`,
 			},
@@ -361,7 +361,7 @@ func TestConUtils(t *testing.T) {
 			dsn:  "pq:///dbname?host=/unix_sock/test&user=spam",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: "edgedb.ConfigurationError: " +
+				errMessage: "gel.ConfigurationError: " +
 					`invalid DSN: scheme is expected to be "gel", got "pq"`,
 			},
 		},
@@ -370,7 +370,7 @@ func TestConUtils(t *testing.T) {
 			dsn:  "edgedb://user@?port=56226&host=%2Ftmp",
 			expected: Result{
 				err: &configurationError{},
-				errMessage: `edgedb.ConfigurationError: invalid DSN: ` +
+				errMessage: `gel.ConfigurationError: invalid DSN: ` +
 					`invalid host: unix socket paths not supported, ` +
 					`got "/tmp"`,
 			},
@@ -400,7 +400,7 @@ func TestConUtils(t *testing.T) {
 var testcaseErrorMapping = map[string]string{
 	"credentials_file_not_found": "cannot read credentials",
 	"project_not_initialised":    "project is not initialized",
-	"no_options_or_toml": "no `edgedb.toml` found and no connection options " +
+	"no_options_or_toml": "no `gel.toml` found and no connection options " +
 		"specified either",
 	"invalid_credentials_file":     "cannot parse credentials",
 	"invalid_dsn_or_instance_name": "invalid DSN|invalid instance name",
@@ -460,7 +460,7 @@ func getDuration(
 	str, ok := val.(string)
 	require.True(t, ok, "%q should be a string", key)
 
-	dur, err := edgedbtypes.ParseDuration(str)
+	dur, err := geltypes.ParseDuration(str)
 	require.NoError(t, err, "could not parse %q duration", key)
 
 	return time.Duration(1_000 * dur)
@@ -567,7 +567,7 @@ func TestConnectionParameterResolution(t *testing.T) {
 			if _, ok := testcase["platform"]; ok {
 				t.Skip("platform specific tests not supported")
 			}
-			tmpDir, err := os.MkdirTemp(os.TempDir(), "edgedb-go-tests")
+			tmpDir, err := os.MkdirTemp(os.TempDir(), "gel-go-tests")
 			require.NoError(t, err)
 			defer os.RemoveAll(tmpDir) // nolint:errcheck
 			paths := newCfgPaths()
@@ -792,7 +792,7 @@ func TestConnectInvalidName(t *testing.T) {
 	// dial tcp: lookup invalid.example.org: no such host
 	// dial tcp: lookup invalid.example.org on 127.0.0.1:53: no such host
 	assert.Contains(t, err.Error(),
-		"edgedb.ClientConnectionFailedTemporarilyError: "+
+		"gel.ClientConnectionFailedTemporarilyError: "+
 			"dial tcp: lookup invalid.example.org")
 	assert.Contains(t, err.Error(), "no such host")
 

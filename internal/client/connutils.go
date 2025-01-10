@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"crypto/sha1"
@@ -36,8 +36,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/snc"
+	"github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/snc"
 	"github.com/sigurn/crc16"
 )
 
@@ -47,7 +47,8 @@ var (
 		`^(\w(?:-?\w)*)$`,
 	)
 	cloudInstanceNameRe = regexp.MustCompile(
-		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
+		`^([A-Za-z0-9_\-](?:-?[A-Za-z_0-9\-])*)/` +
+			`([A-Za-z0-9](?:-?[A-Za-z0-9])*)$`,
 	)
 	domainLabelMaxLength              = 63
 	crcTable             *crc16.Table = crc16.MakeTable(crc16.CRC16_XMODEM)
@@ -292,7 +293,7 @@ func (r *configResolver) setWaitUntilAvailable(
 }
 
 func (r *configResolver) setWaitUntilAvailableStr(val, source string) error {
-	d, err := edgedbtypes.ParseDuration(val)
+	d, err := geltypes.ParseDuration(val)
 	if err != nil {
 		return fmt.Errorf("invalid WaitUntilAvailable: %w", err)
 	}
@@ -331,7 +332,7 @@ func (r *configResolver) resolveOptions(
 ) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("invalid edgedb.Options: %w", err)
+			err = fmt.Errorf("invalid gel.Options: %w", err)
 		}
 	}()
 
@@ -740,30 +741,57 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		}
 	}
 
-	if branch, ok := os.LookupEnv("EDGEDB_BRANCH"); ok {
+	branchEnvVarName := "GEL_BRANCH"
+	branch, branchOk := os.LookupEnv(branchEnvVarName)
+	if !branchOk {
+		branchEnvVarName = "EDGEDB_BRANCH"
+		branch, branchOk = os.LookupEnv(branchEnvVarName)
+	}
+
+	if branchOk {
 		if dbOk {
-			return false, errors.New(
-				"mutually exclusive options EDGEDB_DATABASE and " +
-					"EDGEDB_BRANCH environment variables are set")
+			return false, fmt.Errorf(
+				"mutually exclusive options EDGEDB_DATABASE and "+
+					"%s environment variables are set",
+				branchEnvVarName,
+			)
 		}
-		err := r.setDatabase(branch, "EDGEDB_BRANCH environment variable")
+		err := r.setDatabase(
+			branch,
+			fmt.Sprintf("%s environment variable", branchEnvVarName),
+		)
 		if err != nil {
 			return false, err
 		}
 	}
 
-	if user, ok := os.LookupEnv("EDGEDB_USER"); ok {
+	if user, ok := os.LookupEnv("GEL_USER"); ok {
+		err := r.setUser(user, "GEL_USER environment variable")
+		if err != nil {
+			return false, err
+		}
+	} else if user, ok := os.LookupEnv("EDGEDB_USER"); ok {
 		err := r.setUser(user, "EDGEDB_USER environment variable")
 		if err != nil {
 			return false, err
 		}
 	}
 
-	if pwd, ok := os.LookupEnv("EDGEDB_PASSWORD"); ok {
+	if pwd, ok := os.LookupEnv("GEL_PASSWORD"); ok {
+		r.setPassword(pwd, "GEL_PASSWORD environment variable")
+	} else if pwd, ok := os.LookupEnv("EDGEDB_PASSWORD"); ok {
 		r.setPassword(pwd, "EDGEDB_PASSWORD environment variable")
 	}
 
-	if wua, ok := os.LookupEnv("EDGEDB_WAIT_UNTIL_AVAILABLE"); ok {
+	if wua, ok := os.LookupEnv("GEL_WAIT_UNTIL_AVAILABLE"); ok {
+		err := r.setWaitUntilAvailableStr(
+			wua,
+			"GEL_WAIT_UNTIL_AVAILABLE environment variable",
+		)
+		if err != nil {
+			return false, err
+		}
+	} else if wua, ok := os.LookupEnv("EDGEDB_WAIT_UNTIL_AVAILABLE"); ok {
 		err := r.setWaitUntilAvailableStr(
 			wua,
 			"EDGEDB_WAIT_UNTIL_AVAILABLE environment variable",
@@ -775,12 +803,21 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 
 	var tlsCaSources []string
 
-	if caString, ok := os.LookupEnv("EDGEDB_TLS_CA"); ok {
+	if caString, ok := os.LookupEnv("GEL_TLS_CA"); ok {
+		r.setTLSCAData([]byte(caString), "GEL_TLS_CA environment variable")
+		tlsCaSources = append(tlsCaSources, "GEL_TLS_CA")
+	} else if caString, ok := os.LookupEnv("EDGEDB_TLS_CA"); ok {
 		r.setTLSCAData([]byte(caString), "EDGEDB_TLS_CA environment variable")
 		tlsCaSources = append(tlsCaSources, "EDGEDB_TLS_CA")
 	}
 
-	if file, ok := os.LookupEnv("EDGEDB_TLS_CA_FILE"); ok {
+	if file, ok := os.LookupEnv("GEL_TLS_CA_FILE"); ok {
+		e := r.setTLSCAFile(file, "GEL_TLS_CA_FILE environment variable")
+		tlsCaSources = append(tlsCaSources, "GEL_TLS_CA_FILE")
+		if e != nil {
+			return false, e
+		}
+	} else if file, ok := os.LookupEnv("EDGEDB_TLS_CA_FILE"); ok {
 		e := r.setTLSCAFile(file, "EDGEDB_TLS_CA_FILE environment variable")
 		tlsCaSources = append(tlsCaSources, "EDGEDB_TLS_CA_FILE")
 		if e != nil {
@@ -788,7 +825,15 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		}
 	}
 
-	if val, ok := os.LookupEnv("EDGEDB_TLS_SERVER_NAME"); ok {
+	if val, ok := os.LookupEnv("GEL_TLS_SERVER_NAME"); ok {
+		e := r.setTLSServerName(
+			val,
+			"GEL_TLS_SERVER_NAME environment variable",
+		)
+		if e != nil {
+			return false, e
+		}
+	} else if val, ok := os.LookupEnv("EDGEDB_TLS_SERVER_NAME"); ok {
 		e := r.setTLSServerName(
 			val,
 			"EDGEDB_TLS_SERVER_NAME environment variable",
@@ -804,7 +849,12 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			englishList(tlsCaSources, "and"))
 	}
 
-	if verify, ok := os.LookupEnv("EDGEDB_CLIENT_TLS_SECURITY"); ok {
+	if verify, ok := os.LookupEnv("GEL_CLIENT_TLS_SECURITY"); ok {
+		source := "GEL_CLIENT_TLS_SECURITY environment variable"
+		if e := r.setTLSSecurity(verify, source); e != nil {
+			return false, e
+		}
+	} else if verify, ok := os.LookupEnv("EDGEDB_CLIENT_TLS_SECURITY"); ok {
 		source := "EDGEDB_CLIENT_TLS_SECURITY environment variable"
 		if e := r.setTLSSecurity(verify, source); e != nil {
 			return false, e
@@ -812,36 +862,68 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	}
 
 	var names []string
-	dsn, dsnOk := os.LookupEnv("EDGEDB_DSN")
-	if dsnOk {
-		names = append(names, "EDGEDB_DSN")
+	dsnEnvVarName := "GEL_DSN"
+	dsn, dsnOk := os.LookupEnv(dsnEnvVarName)
+	if !dsnOk {
+		dsnEnvVarName = "EDGEDB_DSN"
+		dsn, dsnOk = os.LookupEnv(dsnEnvVarName)
 	}
-	instance, instanceOk := os.LookupEnv("EDGEDB_INSTANCE")
+	if dsnOk {
+		names = append(names, dsnEnvVarName)
+	}
+	instanceEnvVarName := "GEL_INSTANCE"
+	instance, instanceOk := os.LookupEnv(instanceEnvVarName)
+	if !instanceOk {
+		instanceEnvVarName = "EDGEDB_INSTANCE"
+		instance, instanceOk = os.LookupEnv(instanceEnvVarName)
+	}
 	if instanceOk {
-		names = append(names, "EDGEDB_INSTANCE")
-		err := r.setInstance(instance, "EDGEDB_INSTANCE environment variable")
+		names = append(names, instanceEnvVarName)
+		err := r.setInstance(
+			instance,
+			fmt.Sprintf("%s environment variable", instanceEnvVarName),
+		)
 		if err != nil {
 			return false, err
 		}
 	}
-	credentials, credsOk := os.LookupEnv("EDGEDB_CREDENTIALS_FILE")
+	credentialsEnvVarName := "GEL_CREDENTIALS_FILE"
+	credentials, credsOk := os.LookupEnv(credentialsEnvVarName)
+	if !credsOk {
+		credentialsEnvVarName = "EDGEDB_CREDENTIALS_FILE"
+		credentials, credsOk = os.LookupEnv(credentialsEnvVarName)
+	}
 	if credsOk {
-		names = append(names, "EDGEDB_CREDENTIALS_FILE")
+		names = append(names, credentialsEnvVarName)
 	}
-	host, hostOk := os.LookupEnv("EDGEDB_HOST")
+
+	hostEnvVarName := "GEL_HOST"
+	host, hostOk := os.LookupEnv(hostEnvVarName)
+	if !hostOk {
+		hostEnvVarName = "EDGEDB_HOST"
+		host, hostOk = os.LookupEnv(hostEnvVarName)
+	}
+
 	if hostOk {
-		names = append(names, "EDGEDB_HOST")
+		names = append(names, hostEnvVarName)
 	}
-	port, portOk := os.LookupEnv("EDGEDB_PORT")
+	portEnvVarName := "GEL_PORT"
+	port, portOk := os.LookupEnv(portEnvVarName)
+	if !portOk {
+		portEnvVarName = "EDGEDB_PORT"
+		port, portOk = os.LookupEnv(portEnvVarName)
+	}
 	if portOk && strings.HasPrefix(port, "tcp://") {
 		// EDGEDB_PORT is set by 'docker --link' so ignore and warn
-		log.Println(
-			"Warning: ignoring EDGEDB_PORT in 'tcp://host:port' format")
+		log.Printf(
+			"Warning: ignoring %s in 'tcp://host:port' format\n",
+			portEnvVarName,
+		)
 		portOk = false
 	}
 
 	if !hostOk && portOk {
-		names = append(names, "EDGEDB_PORT")
+		names = append(names, portEnvVarName)
 	}
 
 	if len(names) > 1 {
@@ -850,14 +932,23 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			englishList(names, "and"))
 	}
 
-	if profile, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
+	if profile, ok := os.LookupEnv("GEL_CLOUD_PROFILE"); ok {
+		r.setProfile(profile, "GEL_CLOUD_PROFILE environment variable")
+	} else if profile, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
 		r.setProfile(profile, "EDGEDB_CLOUD_PROFILE environment variable")
 	}
 
-	secretKey, keyOk := os.LookupEnv("EDGEDB_SECRET_KEY")
-	if keyOk {
+	if secretKey, ok := os.LookupEnv("GEL_SECRET_KEY"); ok {
 		e := r.setSecretKey(
 			secretKey,
+			"GEL_SECRET_KEY environment variable",
+		)
+		if e != nil {
+			return false, e
+		}
+	} else if key, ok := os.LookupEnv("EDGEDB_SECRET_KEY"); ok {
+		e := r.setSecretKey(
+			key,
 			"EDGEDB_SECRET_KEY environment variable",
 		)
 		if e != nil {
@@ -868,27 +959,37 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 	switch {
 	case hostOk || portOk:
 		if portOk {
-			err := r.setPortStr(port, "EDGEDB_PORT environment variable")
+			err := r.setPortStr(
+				port,
+				fmt.Sprintf("%s environment variable", portEnvVarName),
+			)
 			if err != nil {
 				return false, err
 			}
 		}
 
 		if hostOk {
-			err := r.setHost(host, "EDGEDB_HOST environment variable")
+			err := r.setHost(
+				host,
+				fmt.Sprintf("%s environment variable", hostEnvVarName),
+			)
 			if err != nil {
 				return false, err
 			}
 		}
 	case dsnOk:
-		e := r.resolveDSN(dsn, "EDGEDB_DSN environment variable", paths)
+		e := r.resolveDSN(
+			dsn,
+			fmt.Sprintf("%s environment variable", dsnEnvVarName),
+			paths,
+		)
 		if e != nil {
 			return false, e
 		}
 	case instanceOk || credsOk:
-		source := "EDGEDB_CREDENTIALS_FILE environment variable"
+		source := fmt.Sprintf("%s environment variable", credentialsEnvVarName)
 		if instanceOk {
-			source = "EDGEDB_INSTANCE environment variable"
+			source = fmt.Sprintf("%s environment variable", instanceEnvVarName)
 		}
 		err := r.resolveCredentials(
 			credentials,
@@ -918,7 +1019,7 @@ func (r *configResolver) resolveTOML(paths *cfgPaths) error {
 
 	if !exists(stashDir) {
 		return errors.New("Found `gel.toml` " +
-			"but the project is not initialized. Run `edgedb project init`.")
+			"but the project is not initialized. Run `gel project init`.")
 	}
 
 	instance, err := os.ReadFile(filepath.Join(stashDir, "instance-name"))
@@ -994,10 +1095,18 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		secretKey = r.secretKey.val.(string)
 	}
 
-	security, err := getEnvVarSetting("EDGEDB_CLIENT_SECURITY", "default",
+	clientSecurityVarName := "GEL_CLIENT_SECURITY"
+	security, ok, err := getEnvVarSetting(clientSecurityVarName, "default",
 		"default", "insecure_dev_mode", "strict")
 	if err != nil {
 		return nil, err
+	} else if !ok {
+		clientSecurityVarName = "EDGEDB_CLIENT_SECURITY"
+		security, _, err = getEnvVarSetting(clientSecurityVarName, "default",
+			"default", "insecure_dev_mode", "strict")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	switch security {
@@ -1012,9 +1121,13 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 			tlsSecurity = "strict"
 		case "no_host_verification", "insecure":
 			return nil, fmt.Errorf(
-				"EDGEDB_CLIENT_SECURITY=strict but tls_security=%v, "+
+				"%s=strict but tls_security=%v, "+
 					"tls_security must be set to strict "+
-					"when EDGEDB_CLIENT_SECURITY is strict", tlsSecurity)
+					"when %s is strict",
+				clientSecurityVarName,
+				tlsSecurity,
+				clientSecurityVarName,
+			)
 		}
 	}
 
@@ -1047,19 +1160,23 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 	}, nil
 }
 
-func getEnvVarSetting(name, defalt string, values ...string) (string, error) {
+func getEnvVarSetting(
+	name,
+	defalt string,
+	values ...string,
+) (string, bool, error) {
 	value, ok := os.LookupEnv(name)
 	if !ok || value == "default" || value == "" {
-		return defalt, nil
+		return defalt, false, nil
 	}
 
 	for _, v := range values {
 		if value == v {
-			return value, nil
+			return value, true, nil
 		}
 	}
 
-	return "", fmt.Errorf(
+	return "", true, fmt.Errorf(
 		"environment variable %v should be one of %v, got: %q",
 		name, englishList(append(values, "default"), "or"), value)
 }
@@ -1104,15 +1221,15 @@ func newConfigResolver(
 		names = append(names, "dsn")
 	}
 	if opts.Credentials != nil {
-		names = append(names, "edgedb.Options.Credentials")
+		names = append(names, "gel.Options.Credentials")
 	}
 	if opts.CredentialsFile != "" {
-		names = append(names, "edgedb.Options.CredentialsFile")
+		names = append(names, "gel.Options.CredentialsFile")
 	}
 	if opts.Host != "" {
-		names = append(names, "edgedb.Options.Host")
+		names = append(names, "gel.Options.Host")
 	} else if opts.Port != 0 {
-		names = append(names, "edgedb.Options.Port")
+		names = append(names, "gel.Options.Port")
 	}
 	if len(names) > 1 {
 		return nil, fmt.Errorf(
@@ -1161,11 +1278,11 @@ func newConfigResolver(
 		err = cfg.resolveTOML(paths)
 		if errors.Is(err, errNoTOMLFound) {
 			return nil, errors.New(
-				"no `edgedb.toml` found and no connection options " +
+				"no `gel.toml` found and no connection options " +
 					"specified either via arguments to connect API " +
 					"or via environment variables " +
-					"EDGEDB_HOST/EDGEDB_PORT, EDGEDB_INSTANCE, " +
-					"EDGEDB_DSN or EDGEDB_CREDENTIALS_FILE",
+					"GEL_HOST/GEL_PORT, GEL_INSTANCE, " +
+					"GEL_DSN or GEL_CREDENTIALS_FILE",
 			)
 		}
 		if err != nil {
@@ -1563,7 +1680,10 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 		if r.profile.val != nil {
 			profile = r.profile.val.(string)
 		} else {
-			if p, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
+			if p, ok := os.LookupEnv("GEL_CLOUD_PROFILE"); ok {
+				r.setProfile(p, "GEL_CLOUD_PROFILE environment variable")
+				profile = r.profile.val.(string)
+			} else if p, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
 				r.setProfile(p, "EDGEDB_CLOUD_PROFILE environment variable")
 				profile = r.profile.val.(string)
 			}

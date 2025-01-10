@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // BoolCodec encodes/decodes bool.
@@ -61,7 +61,7 @@ func (c *BoolCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalBool", path)
+				return missingValueError("gel.OptionalBool", path)
 			})
 	case optionalBoolMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -70,7 +70,7 @@ func (c *BoolCodec) Encode(
 	case marshal.BoolMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be bool, edgedb.OptionalBool or "+
+		return fmt.Errorf("expected %v to be bool, gel.OptionalBool or "+
 			"BoolMarshaler got %T", path, val)
 	}
 }

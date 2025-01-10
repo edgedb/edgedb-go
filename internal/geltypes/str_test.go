@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 import (
 	"encoding/json"
@@ -24,13 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMarshalOptionalBytes(t *testing.T) {
+func TestMarshalOptionalStr(t *testing.T) {
 	cases := []struct {
-		input    OptionalBytes
+		input    OptionalStr
 		expected string
 	}{
-		{OptionalBytes{}, "null"},
-		{OptionalBytes{[]byte("text"), true}, `"dGV4dA=="`},
+		{OptionalStr{}, "null"},
+		{OptionalStr{"text", true}, `"text"`},
 	}
 
 	for _, c := range cases {
@@ -42,23 +42,23 @@ func TestMarshalOptionalBytes(t *testing.T) {
 	}
 }
 
-func TestUnmarshalOptionalBytes(t *testing.T) {
+func TestUnmarshalOptionalStr(t *testing.T) {
 	cases := []struct {
-		expected OptionalBytes
+		expected OptionalStr
 		input    string
 	}{
-		{OptionalBytes{}, "null"},
-		{OptionalBytes{[]byte("text"), true}, `"dGV4dA=="`},
+		{OptionalStr{}, "null"},
+		{OptionalStr{"text", true}, `"text"`},
 	}
 
 	for _, c := range cases {
 		t.Run(c.input, func(t *testing.T) {
-			var empty OptionalBytes
+			var empty OptionalStr
 			err := json.Unmarshal([]byte(c.input), &empty)
 			require.NoError(t, err)
 			assert.Equal(t, c.expected, empty)
 
-			notEmpty := OptionalBytes{[]byte("garbage"), true}
+			notEmpty := OptionalStr{"garbage", true}
 			err = json.Unmarshal([]byte(c.input), &notEmpty)
 			require.NoError(t, err)
 			assert.Equal(t, c.expected, notEmpty)

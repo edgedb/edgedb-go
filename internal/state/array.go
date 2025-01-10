@@ -19,10 +19,10 @@ package state
 import (
 	"fmt"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/codecs"
+	"github.com/geldata/gel-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 func buildArrayEncoder(
@@ -50,11 +50,11 @@ func buildArrayEncoderV2(
 }
 
 type arrayOrSetEncoder struct {
-	id    edgedbtypes.UUID
+	id    geltypes.UUID
 	child codecs.Encoder
 }
 
-func (c *arrayOrSetEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *arrayOrSetEncoder) DescriptorID() geltypes.UUID { return c.id }
 
 func (c *arrayOrSetEncoder) Encode(
 	w *buff.Writer,

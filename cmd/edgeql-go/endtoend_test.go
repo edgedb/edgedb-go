@@ -28,7 +28,7 @@ import (
 	"sync"
 	"testing"
 
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
+	gel "github.com/geldata/gel-go/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,7 +63,7 @@ var tests = []struct {
 }
 
 func TestMain(m *testing.M) {
-	o := edgedb.TestClientOptions()
+	o := gel.TestClientOptions()
 	pwd, ok := o.Password.Get()
 	if !ok {
 		log.Fatal("missing password")
@@ -206,8 +206,7 @@ func copyFile(t *testing.T, to, from string) {
 func run(t *testing.T, dir, name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), fmt.Sprintf("EDGEDB_DSN=%s", dsn))
-	require.NoError(t, cmd.Run())
+	stdoutStderr, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(stdoutStderr))
 }

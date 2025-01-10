@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // BigIntCodec encodes/decodes *big.Int
@@ -90,7 +90,7 @@ func (c *BigIntCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalBigInt", path)
+				return missingValueError("gel.OptionalBigInt", path)
 			})
 	case optionalBigIntMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -99,7 +99,7 @@ func (c *BigIntCodec) Encode(
 	case marshal.BigIntMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be *big.Int, edgedb.OptionalBitInt "+
+		return fmt.Errorf("expected %v to be *big.Int, gel.OptionalBitInt "+
 			"or BigIntMarshaler got %T", path, val)
 	}
 }

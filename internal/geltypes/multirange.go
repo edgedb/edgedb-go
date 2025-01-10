@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 // MultiRangeInt32 is a type alias for a slice of RangeInt32 values.
 type MultiRangeInt32 = []RangeInt32

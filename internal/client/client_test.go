@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -22,8 +22,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal/geltypes"
+	types "github.com/geldata/gel-go/internal/geltypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,11 +45,11 @@ func TestConnectClient(t *testing.T) {
 
 	// Client should not be closeable a second time.
 	err = p.Close()
-	assert.EqualError(t, err, "edgedb.InterfaceError: client closed")
+	assert.EqualError(t, err, "gel.InterfaceError: client closed")
 
 	// Copied clients should be closed if a different copy is closed.
 	err = p2.Close()
-	assert.EqualError(t, err, "edgedb.InterfaceError: client closed")
+	assert.EqualError(t, err, "gel.InterfaceError: client closed")
 }
 
 func TestClientRejectsTransaction(t *testing.T) {
@@ -57,7 +57,7 @@ func TestClientRejectsTransaction(t *testing.T) {
 	p, err := CreateClient(ctx, opts)
 	require.NoError(t, err)
 
-	expected := "edgedb.DisabledCapabilityError: " +
+	expected := "gel.DisabledCapabilityError: " +
 		"cannot execute transaction control commands.*"
 
 	err = p.Execute(ctx, "START TRANSACTION")
@@ -141,25 +141,25 @@ func TestQuerySingleMissingResult(t *testing.T) {
 
 	var result string
 	err := client.QuerySingle(ctx, "SELECT <str>{}", &result)
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	optionalResult := types.NewOptionalStr("this should be set to missing")
 	err = client.QuerySingle(ctx, "SELECT <str>{}", &optionalResult)
 	assert.NoError(t, err)
-	assert.Equal(t, edgedbtypes.OptionalStr{}, optionalResult)
+	assert.Equal(t, geltypes.OptionalStr{}, optionalResult)
 
 	var objectResult struct {
-		Name string `edgedb:"name"`
+		Name string `gel:"name"`
 	}
 	err = client.QuerySingle(ctx,
 		"SELECT sys::Database { name } FILTER .name = 'does not exist'",
 		&objectResult,
 	)
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	var optionalObjectResult struct {
-		edgedbtypes.Optional
-		Name string `edgedb:"name"`
+		geltypes.Optional
+		Name string `gel:"name"`
 	}
 	optionalObjectResult.SetMissing(false)
 	err = client.QuerySingle(ctx,
@@ -176,18 +176,18 @@ func TestQuerySingleJSONMissingResult(t *testing.T) {
 
 	var result []byte
 	err := client.QuerySingleJSON(ctx, "SELECT <str>{}", &result)
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	optionalResult := types.NewOptionalBytes(
 		[]byte("this should be set to missing"),
 	)
 	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &optionalResult)
 	assert.NoError(t, err)
-	assert.Equal(t, edgedbtypes.OptionalBytes{}, optionalResult)
+	assert.Equal(t, geltypes.OptionalBytes{}, optionalResult)
 
 	var wrongType string
 	err = client.QuerySingleJSON(ctx, "SELECT <str>{}", &wrongType)
-	assert.EqualError(t, err, "edgedb.InterfaceError: "+
+	assert.EqualError(t, err, "gel.InterfaceError: "+
 		"the \"out\" argument must be *[]byte or *OptionalBytes, got *string")
 }
 
