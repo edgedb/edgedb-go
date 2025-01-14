@@ -153,6 +153,9 @@ func PopV2(
 				},
 			}}
 			desc = V2{MultiRange, id, name, true, ancestors, fields}
+		case SQLRecord:
+			fields := sqlRecordFields(r, descriptorsV2)
+			desc = V2{SQLRecord, id, "", false, nil, fields}
 		default:
 			if 0x80 <= typ {
 				// ignore unknown type annotations
@@ -263,4 +266,22 @@ func objectFields2pX(r *buff.Reader, descriptors []V2, input bool) (
 	}
 
 	return fields, nil
+}
+
+func sqlRecordFields(
+	r *buff.Reader,
+	descriptors []V2,
+) []*FieldV2 {
+	n := int(r.PopUint16())
+	fields := make([]*FieldV2, n)
+
+	for i := 0; i < n; i++ {
+		fields[i] = &FieldV2{
+			Name:     r.PopString(),
+			Desc:     descriptors[r.PopUint16()],
+			Required: true,
+		}
+	}
+
+	return fields
 }

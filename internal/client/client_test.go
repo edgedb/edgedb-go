@@ -191,6 +191,64 @@ func TestQuerySingleJSONMissingResult(t *testing.T) {
 		"the \"out\" argument must be *[]byte or *OptionalBytes, got *string")
 }
 
+func TestQuerySQL(t *testing.T) {
+	ctx := context.Background()
+
+	var version int64
+	err := client.QuerySingle(ctx, "SELECT sys::get_version().major", &version)
+	assert.NoError(t, err)
+
+	if version >= 6 {
+		err = client.ExecuteSQL(ctx, "select 1")
+		assert.NoError(t, err)
+
+		var result []struct {
+			Col1 int32 `edgedb:"col~1"`
+		}
+		err = client.QuerySQL(ctx, "select 1", &result)
+		assert.NoError(t, err)
+		assert.Equal(t, int32(1), result[0].Col1)
+
+		type res2 struct {
+			Foo int32 `edgedb:"foo"`
+			Bar int32 `edgedb:"bar"`
+		}
+		var result2 []res2
+		err = client.QuerySQL(ctx, "select 1 AS foo, 2 AS bar", &result2)
+		assert.NoError(t, err)
+		assert.Equal(t, []res2{
+			{
+				Foo: 1,
+				Bar: 2,
+			},
+		}, result2)
+
+		var result3 []struct {
+			Col1 int64 `edgedb:"col~1"`
+		}
+		err = client.QuerySQL(ctx, "select 1 + $1::int8", &result3, int64(41))
+		assert.NoError(t, err)
+		assert.Equal(t, int64(42), result3[0].Col1)
+	} else {
+		var res []interface{}
+		err = client.QuerySQL(ctx, "select 1", &res)
+		assert.EqualError(
+			t, err,
+			"edgedb.UnsupportedFeatureError: "+
+				"the server does not support SQL queries, "+
+				"upgrade to 6.0 or newer",
+		)
+
+		err = client.ExecuteSQL(ctx, "select 1")
+		assert.EqualError(
+			t, err,
+			"edgedb.UnsupportedFeatureError: "+
+				"the server does not support SQL queries, "+
+				"upgrade to 6.0 or newer",
+		)
+	}
+}
+
 // TODO: return when session_idle_timeout changes
 // will be reflected at connection creation
 

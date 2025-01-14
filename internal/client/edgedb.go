@@ -183,6 +183,13 @@ func (c *protocolConnection) isClosed() bool {
 }
 
 func (c *protocolConnection) scriptFlow(ctx context.Context, q *query) error {
+	if q.lang == SQL && c.protocolVersion.LT(protocolVersion3p0) {
+		return &unsupportedFeatureError{
+			msg: "the server does not support SQL queries, " +
+				"upgrade to 6.0 or newer",
+		}
+	}
+
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
@@ -210,6 +217,13 @@ func (c *protocolConnection) granularFlow(
 	ctx context.Context,
 	q *query,
 ) error {
+	if q.lang == SQL && c.protocolVersion.LT(protocolVersion3p0) {
+		return &unsupportedFeatureError{
+			msg: "the server does not support SQL queries, " +
+				"upgrade to 6.0 or newer",
+		}
+	}
+
 	r, err := c.acquireReader(ctx)
 	if err != nil {
 		return err
