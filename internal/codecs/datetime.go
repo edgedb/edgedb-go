@@ -22,9 +22,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // DateTimeCodec encodes/decodes time.Time values.
@@ -68,7 +68,7 @@ func (c *DateTimeCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalDateTime", path)
+				return missingValueError("gel.OptionalDateTime", path)
 			})
 	case optionalDateTimeMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -78,7 +78,7 @@ func (c *DateTimeCodec) Encode(
 		return c.encodeMarshaler(w, in, path)
 	default:
 		return fmt.Errorf("expected %v to be time.Time, "+
-			"edgedb.OptionalDateTime or DateTimeMarshaler got %T", path, val)
+			"gel.OptionalDateTime or DateTimeMarshaler got %T", path, val)
 	}
 }
 
@@ -149,7 +149,7 @@ func (c *LocalDateTimeCodec) Type() reflect.Type { return localDateTimeType }
 // DescriptorID returns the codecs descriptor id.
 func (c *LocalDateTimeCodec) DescriptorID() types.UUID { return LocalDTID }
 
-// localDateTimeLayout is the memory layout for edgedbtypes.LocalDateTime
+// localDateTimeLayout is the memory layout for geltypes.LocalDateTime
 type localDateTimeLayout struct {
 	usec uint64
 }
@@ -174,7 +174,7 @@ func (c *LocalDateTimeCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalLocalDateTime", path)
+				return missingValueError("gel.OptionalLocalDateTime", path)
 			})
 	case optionalLocalDateTimeMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -183,8 +183,8 @@ func (c *LocalDateTimeCodec) Encode(
 	case marshal.LocalDateTimeMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.LocalDateTime, "+
-			"edgedb.OptionalLocalDateTime or LocalDateTimeMarshaler got %T",
+		return fmt.Errorf("expected %v to be gel.LocalDateTime, "+
+			"gel.OptionalLocalDateTime or LocalDateTimeMarshaler got %T",
 			path, val)
 	}
 }
@@ -249,7 +249,7 @@ func (c *LocalDateCodec) Type() reflect.Type { return localDateType }
 // DescriptorID returns the codecs descriptor id.
 func (c *LocalDateCodec) DescriptorID() types.UUID { return LocalDateID }
 
-// localDateLayout is the memory layout for edgedbtypes.LocalDate
+// localDateLayout is the memory layout for geltypes.LocalDate
 type localDateLayout struct {
 	days uint32
 }
@@ -274,7 +274,7 @@ func (c *LocalDateCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalLocalDate", path)
+				return missingValueError("gel.OptionalLocalDate", path)
 			})
 	case optionalLocalDateMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -283,8 +283,8 @@ func (c *LocalDateCodec) Encode(
 	case marshal.LocalDateMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.LocalDate, "+
-			"edgedb.OptionalLocalDate or LocalDateMarshaler got %T", path, val)
+		return fmt.Errorf("expected %v to be gel.LocalDate, "+
+			"gel.OptionalLocalDate or LocalDateMarshaler got %T", path, val)
 	}
 }
 
@@ -347,7 +347,7 @@ func (c *LocalTimeCodec) Type() reflect.Type { return localTimeType }
 // DescriptorID returns the codecs descriptor id.
 func (c *LocalTimeCodec) DescriptorID() types.UUID { return LocalTimeID }
 
-// localTimeLayout is the memory layout for edgedbtypes.LocalTime
+// localTimeLayout is the memory layout for geltypes.LocalTime
 type localTimeLayout struct {
 	usec uint64
 }
@@ -372,7 +372,7 @@ func (c *LocalTimeCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalLocalTime", path)
+				return missingValueError("gel.OptionalLocalTime", path)
 			})
 	case optionalLocalTimeMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -381,8 +381,8 @@ func (c *LocalTimeCodec) Encode(
 	case marshal.LocalTimeMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.LocalTime, "+
-			"edgedb.OptionalLocalTime or LocalTimeMarshaler got %T", path, val)
+		return fmt.Errorf("expected %v to be gel.LocalTime, "+
+			"gel.OptionalLocalTime or LocalTimeMarshaler got %T", path, val)
 	}
 }
 
@@ -472,7 +472,7 @@ func (c *DurationCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalDuration", path)
+				return missingValueError("gel.OptionalDuration", path)
 			})
 	case optionalDurationMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -481,8 +481,8 @@ func (c *DurationCodec) Encode(
 	case marshal.DurationMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.Duration, "+
-			"edgedb.OptionalDuration or DurationMarshaler got %T", path, val)
+		return fmt.Errorf("expected %v to be gel.Duration, "+
+			"gel.OptionalDuration or DurationMarshaler got %T", path, val)
 	}
 }
 
@@ -582,7 +582,7 @@ func (c *RelativeDurationCodec) Encode(
 			func() error { return c.encodeData(w, data) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalRelativeDuration",
+					"gel.OptionalRelativeDuration",
 					path,
 				)
 			})
@@ -593,8 +593,8 @@ func (c *RelativeDurationCodec) Encode(
 	case marshal.RelativeDurationMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.RelativeDuration, "+
-			"edgedb.OptionalRelativeDuration or "+
+		return fmt.Errorf("expected %v to be gel.RelativeDuration, "+
+			"gel.OptionalRelativeDuration or "+
 			"RelativeDurationMarshaler got %T", path, val)
 	}
 }
@@ -699,7 +699,7 @@ func (c *DateDurationCodec) Encode(
 			func() error { return c.encodeData(w, data) },
 			func() error {
 				return missingValueError(
-					"edgedb.OptionalDateDuration",
+					"gel.OptionalDateDuration",
 					path,
 				)
 			})
@@ -710,8 +710,8 @@ func (c *DateDurationCodec) Encode(
 	case marshal.DateDurationMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be edgedb.DateDuration, "+
-			"edgedb.OptionalDateDuration or "+
+		return fmt.Errorf("expected %v to be gel.DateDuration, "+
+			"gel.OptionalDateDuration or "+
 			"DateDurationMarshaler got %T", path, val)
 	}
 }

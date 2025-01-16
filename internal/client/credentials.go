@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 	"math"
 	"os"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/geldata/gel-go/internal/geltypes"
 )
 
 type credentials struct {

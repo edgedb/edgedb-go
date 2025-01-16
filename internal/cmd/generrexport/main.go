@@ -24,7 +24,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/edgedb/edgedb-go/internal/errgen"
+	"github.com/geldata/gel-go/internal/errgen"
 )
 
 //nolint:typecheck
@@ -56,18 +56,18 @@ func main() {
 // This file is auto generated. Do not edit!
 // run 'make errors' to regenerate
 
-package edgedb
+package gel
 
-import edgedb "github.com/edgedb/edgedb-go/internal/client"
+import gel "github.com/geldata/gel-go/internal/client"
 
 const (
 `)
 	for _, typ := range types {
-		fmt.Printf("\t%s = edgedb.%s\n", typ.Name, typ.Name)
+		fmt.Printf("\t%s = gel.%s\n", typ.Name, typ.Name)
 	}
 
 	for _, tag := range tags {
-		fmt.Printf("\t%s = edgedb.%s\n", tag.Identifyer(), tag.Identifyer())
+		fmt.Printf("\t%s = gel.%s\n", tag.Identifyer(), tag.Identifyer())
 	}
 
 	fmt.Println(")")

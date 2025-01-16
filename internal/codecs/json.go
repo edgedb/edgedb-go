@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/marshal"
+	"github.com/geldata/gel-go/internal/buff"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/marshal"
 )
 
 // JSONCodec encodes/decodes json.
@@ -80,7 +80,7 @@ func (c *JSONCodec) Encode(
 		return encodeOptional(w, !ok, required,
 			func() error { return c.encodeData(w, data) },
 			func() error {
-				return missingValueError("edgedb.OptionalBytes", path)
+				return missingValueError("gel.OptionalBytes", path)
 			})
 	case optionalJSONMarshaler:
 		return encodeOptional(w, in.Missing(), required,
@@ -89,7 +89,7 @@ func (c *JSONCodec) Encode(
 	case marshal.JSONMarshaler:
 		return c.encodeMarshaler(w, in, path)
 	default:
-		return fmt.Errorf("expected %v to be []byte, edgedb.OptionalBytes or "+
+		return fmt.Errorf("expected %v to be []byte, gel.OptionalBytes or "+
 			"JSONMarshaler got %T", path, val)
 	}
 }

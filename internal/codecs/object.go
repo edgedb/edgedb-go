@@ -21,33 +21,33 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/introspect"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/descriptor"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/introspect"
 )
 
 var optionalTypeNameLookup = map[reflect.Type]string{
-	reflect.TypeOf(&BoolCodec{}):          "edgedb.OptionalBool",
-	reflect.TypeOf(&BytesCodec{}):         "edgedb.OptionalBytes",
-	reflect.TypeOf(&DateTimeCodec{}):      "edgedb.OptionalDateTime",
-	reflect.TypeOf(&LocalDateTimeCodec{}): "edgedb.OptionalLocalDateTime",
-	reflect.TypeOf(&LocalDateCodec{}):     "edgedb.OptionalLocalDate",
-	reflect.TypeOf(&LocalTimeCodec{}):     "edgedb.OptionalLocalTime",
-	reflect.TypeOf(&DurationCodec{}):      "edgedb.OptionalDuration",
+	reflect.TypeOf(&BoolCodec{}):          "gel.OptionalBool",
+	reflect.TypeOf(&BytesCodec{}):         "gel.OptionalBytes",
+	reflect.TypeOf(&DateTimeCodec{}):      "gel.OptionalDateTime",
+	reflect.TypeOf(&LocalDateTimeCodec{}): "gel.OptionalLocalDateTime",
+	reflect.TypeOf(&LocalDateCodec{}):     "gel.OptionalLocalDate",
+	reflect.TypeOf(&LocalTimeCodec{}):     "gel.OptionalLocalTime",
+	reflect.TypeOf(&DurationCodec{}):      "gel.OptionalDuration",
 	reflect.TypeOf(
-		&RelativeDurationCodec{}): "edgedb.OptionalRelativeDuration",
-	reflect.TypeOf(&namedTupleDecoder{}): "edgedb.Optional",
-	reflect.TypeOf(&Int16Codec{}):        "edgedb.OptionalInt16",
-	reflect.TypeOf(&Int32Codec{}):        "edgedb.OptionalInt32",
-	reflect.TypeOf(&Int64Codec{}):        "edgedb.OptionalInt64",
-	reflect.TypeOf(&Float32Codec{}):      "edgedb.OptionalFloat32",
-	reflect.TypeOf(&Float64Codec{}):      "edgedb.OptionalFloat64",
-	reflect.TypeOf(&BigIntCodec{}):       "edgedb.OptionalBigInt",
-	reflect.TypeOf(&objectDecoder{}):     "edgedb.Optional",
-	reflect.TypeOf(&StrCodec{}):          "edgedb.OptionalStr",
-	reflect.TypeOf(&tupleDecoder{}):      "edgedb.Optional",
-	reflect.TypeOf(&UUIDCodec{}):         "edgedb.OptionalUUID",
+		&RelativeDurationCodec{}): "gel.OptionalRelativeDuration",
+	reflect.TypeOf(&namedTupleDecoder{}): "gel.Optional",
+	reflect.TypeOf(&Int16Codec{}):        "gel.OptionalInt16",
+	reflect.TypeOf(&Int32Codec{}):        "gel.OptionalInt32",
+	reflect.TypeOf(&Int64Codec{}):        "gel.OptionalInt64",
+	reflect.TypeOf(&Float32Codec{}):      "gel.OptionalFloat32",
+	reflect.TypeOf(&Float64Codec{}):      "gel.OptionalFloat64",
+	reflect.TypeOf(&BigIntCodec{}):       "gel.OptionalBigInt",
+	reflect.TypeOf(&objectDecoder{}):     "gel.Optional",
+	reflect.TypeOf(&StrCodec{}):          "gel.OptionalStr",
+	reflect.TypeOf(&tupleDecoder{}):      "gel.Optional",
+	reflect.TypeOf(&UUIDCodec{}):         "gel.OptionalUUID",
 }
 
 func buildObjectDecoder(

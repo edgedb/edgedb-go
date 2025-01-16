@@ -14,18 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb_test
+package gel_test
 
 import (
 	"context"
 	"testing"
 
-	edgedb "github.com/edgedb/edgedb-go"
+	gel "github.com/geldata/gel-go"
 )
 
 var (
 	ctx    context.Context
-	client *edgedb.Client
+	client *gel.Client
 )
 
 // [Link properties] are treated as fields in the linked to struct, and the @
@@ -34,11 +34,11 @@ var (
 // [Link properties]: https://www.edgedb.com/docs/guides/link_properties
 func Example_linkProperty() {
 	var result []struct {
-		Name    string `edgedb:"name"`
+		Name    string `gel:"name"`
 		Friends []struct {
-			Name     string                 `edgedb:"name"`
-			Strength edgedb.OptionalFloat64 `edgedb:"strength"`
-		} `edgedb:"friends"`
+			Name     string              `gel:"name"`
+			Strength gel.OptionalFloat64 `gel:"strength"`
+		} `gel:"friends"`
 	}
 
 	_ = client.Query(

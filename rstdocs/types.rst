@@ -95,7 +95,7 @@ from a `time.Duration <https://pkg.go.dev/time>`_ represented as nanoseconds.
 
     func ParseDuration(s string) (Duration, error)
 
-ParseDuration parses an EdgeDB duration string.
+ParseDuration parses an Gel duration string.
 
 
 
@@ -440,8 +440,8 @@ Optional is embedded in structs to make them optional. For example:
 .. code-block:: go
 
     type User struct {
-        edgedb.Optional
-        Name string `edgedb:"name"`
+        gel.Optional
+        Name string `gel:"name"`
     }
     
 

@@ -45,12 +45,12 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("internal/cmd/export: ")
 
-	edb, err := buildLookup("internal/client", "edgedb")
+	edb, err := buildLookup("internal/client", "gel")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	typ, err := buildLookup("internal/edgedbtypes", "edgedbtypes")
+	typ, err := buildLookup("internal/geltypes", "geltypes")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,10 +99,10 @@ func main() {
 	quicksort(exports[token.TYPE], func(e Export) string { return e.Name })
 	quicksort(exports[token.VAR], func(e Export) string { return e.Name })
 	err = t.Execute(&buf, map[string]any{
-		"PackageName": "edgedb",
+		"PackageName": "gel",
 		"Imports": []string{
-			`edgedb "github.com/edgedb/edgedb-go/internal/client"`,
-			`"github.com/edgedb/edgedb-go/internal/edgedbtypes"`,
+			`gel "github.com/geldata/gel-go/internal/client"`,
+			`"github.com/geldata/gel-go/internal/geltypes"`,
 		},
 		"Constants": exports[token.CONST],
 		"Types":     exports[token.TYPE],

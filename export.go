@@ -17,270 +17,270 @@
 // This file is auto generated. Do not edit!
 // run 'go generate ./...' to regenerate
 
-package edgedb
+package gel
 
 import (
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	gel "github.com/geldata/gel-go/internal/client"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 const (
 	// NetworkError indicates that the transaction was interupted
 	// by a network error.
-	NetworkError = edgedb.NetworkError
+	NetworkError = gel.NetworkError
 
 	// Serializable is the only isolation level
-	Serializable = edgedb.Serializable
+	Serializable = gel.Serializable
 
 	// TLSModeDefault makes security mode inferred from other options
-	TLSModeDefault = edgedb.TLSModeDefault
+	TLSModeDefault = gel.TLSModeDefault
 
 	// TLSModeInsecure results in no certificate verification whatsoever
-	TLSModeInsecure = edgedb.TLSModeInsecure
+	TLSModeInsecure = gel.TLSModeInsecure
 
 	// TLSModeNoHostVerification enables certificate verification
 	// against CAs, but hostname matching is not performed.
-	TLSModeNoHostVerification = edgedb.TLSModeNoHostVerification
+	TLSModeNoHostVerification = gel.TLSModeNoHostVerification
 
 	// TLSModeStrict enables full certificate and hostname verification.
-	TLSModeStrict = edgedb.TLSModeStrict
+	TLSModeStrict = gel.TLSModeStrict
 
 	// TxConflict indicates that the server could not complete a transaction
 	// because it encountered a deadlock or serialization error.
-	TxConflict = edgedb.TxConflict
+	TxConflict = gel.TxConflict
 )
 
 type (
 	// Client is a connection pool and is safe for concurrent use.
-	Client = edgedb.Client
+	Client = gel.Client
 
 	// DateDuration represents the elapsed time between two dates in a fuzzy human
 	// way.
-	DateDuration = edgedbtypes.DateDuration
+	DateDuration = geltypes.DateDuration
 
 	// Duration represents the elapsed time between two instants
 	// as an int64 microsecond count.
-	Duration = edgedbtypes.Duration
+	Duration = geltypes.Duration
 
-	// Error is the error type returned from edgedb.
-	Error = edgedb.Error
+	// Error is the error type returned from gel.
+	Error = gel.Error
 
-	// ErrorCategory values represent EdgeDB's error types.
-	ErrorCategory = edgedb.ErrorCategory
+	// ErrorCategory values represent Gel's error types.
+	ErrorCategory = gel.ErrorCategory
 
 	// ErrorTag is the argument type to Error.HasTag().
-	ErrorTag = edgedb.ErrorTag
+	ErrorTag = gel.ErrorTag
 
 	// Executor is a common interface between *Client and *Tx,
-	// that can run queries on an EdgeDB database.
-	Executor = edgedb.Executor
+	// that can run queries on an Gel database.
+	Executor = gel.Executor
 
 	// IsolationLevel documentation can be found here
 	// https://www.edgedb.com/docs/reference/edgeql/tx_start#parameters
-	IsolationLevel = edgedb.IsolationLevel
+	IsolationLevel = gel.IsolationLevel
 
 	// LocalDate is a date without a time zone.
 	// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_date
-	LocalDate = edgedbtypes.LocalDate
+	LocalDate = geltypes.LocalDate
 
 	// LocalDateTime is a date and time without timezone.
 	// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_datetime
-	LocalDateTime = edgedbtypes.LocalDateTime
+	LocalDateTime = geltypes.LocalDateTime
 
 	// LocalTime is a time without a time zone.
 	// https://www.edgedb.com/docs/stdlib/datetime#type::cal::local_time
-	LocalTime = edgedbtypes.LocalTime
+	LocalTime = geltypes.LocalTime
 
 	// Memory represents memory in bytes.
-	Memory = edgedbtypes.Memory
+	Memory = geltypes.Memory
 
 	// ModuleAlias is an alias name and module name pair.
-	ModuleAlias = edgedb.ModuleAlias
+	ModuleAlias = gel.ModuleAlias
 
 	// Optional represents a shape field that is not required.
 	// Optional is embedded in structs to make them optional. For example:
 	//
 	//	type User struct {
-	//	    edgedb.Optional
-	//	    Name string `edgedb:"name"`
+	//	    gel.Optional
+	//	    Name string `gel:"name"`
 	//	}
-	Optional = edgedbtypes.Optional
+	Optional = geltypes.Optional
 
 	// OptionalBigInt is an optional *big.Int. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalBigInt = edgedbtypes.OptionalBigInt
+	OptionalBigInt = geltypes.OptionalBigInt
 
 	// OptionalBool is an optional bool. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalBool = edgedbtypes.OptionalBool
+	OptionalBool = geltypes.OptionalBool
 
 	// OptionalBytes is an optional []byte. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalBytes = edgedbtypes.OptionalBytes
+	OptionalBytes = geltypes.OptionalBytes
 
 	// OptionalDateDuration is an optional DateDuration. Optional types
 	// must be used for out parameters when a shape field is not required.
-	OptionalDateDuration = edgedbtypes.OptionalDateDuration
+	OptionalDateDuration = geltypes.OptionalDateDuration
 
 	// OptionalDateTime is an optional time.Time.  Optional types must be used for
 	// out parameters when a shape field is not required.
-	OptionalDateTime = edgedbtypes.OptionalDateTime
+	OptionalDateTime = geltypes.OptionalDateTime
 
 	// OptionalDuration is an optional Duration. Optional types must be used for
 	// out parameters when a shape field is not required.
-	OptionalDuration = edgedbtypes.OptionalDuration
+	OptionalDuration = geltypes.OptionalDuration
 
 	// OptionalFloat32 is an optional float32. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalFloat32 = edgedbtypes.OptionalFloat32
+	OptionalFloat32 = geltypes.OptionalFloat32
 
 	// OptionalFloat64 is an optional float64. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalFloat64 = edgedbtypes.OptionalFloat64
+	OptionalFloat64 = geltypes.OptionalFloat64
 
 	// OptionalInt16 is an optional int16. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalInt16 = edgedbtypes.OptionalInt16
+	OptionalInt16 = geltypes.OptionalInt16
 
 	// OptionalInt32 is an optional int32. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalInt32 = edgedbtypes.OptionalInt32
+	OptionalInt32 = geltypes.OptionalInt32
 
 	// OptionalInt64 is an optional int64. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalInt64 = edgedbtypes.OptionalInt64
+	OptionalInt64 = geltypes.OptionalInt64
 
 	// OptionalLocalDate is an optional LocalDate. Optional types must be used for
 	// out parameters when a shape field is not required.
-	OptionalLocalDate = edgedbtypes.OptionalLocalDate
+	OptionalLocalDate = geltypes.OptionalLocalDate
 
 	// OptionalLocalDateTime is an optional LocalDateTime. Optional types must be
 	// used for out parameters when a shape field is not required.
-	OptionalLocalDateTime = edgedbtypes.OptionalLocalDateTime
+	OptionalLocalDateTime = geltypes.OptionalLocalDateTime
 
 	// OptionalLocalTime is an optional LocalTime. Optional types must be used for
 	// out parameters when a shape field is not required.
-	OptionalLocalTime = edgedbtypes.OptionalLocalTime
+	OptionalLocalTime = geltypes.OptionalLocalTime
 
 	// OptionalMemory is an optional Memory. Optional types must be used for
 	// out parameters when a shape field is not required.
-	OptionalMemory = edgedbtypes.OptionalMemory
+	OptionalMemory = geltypes.OptionalMemory
 
 	// OptionalRangeDateTime is an optional RangeDateTime. Optional
 	// types must be used for out parameters when a shape field is not required.
-	OptionalRangeDateTime = edgedbtypes.OptionalRangeDateTime
+	OptionalRangeDateTime = geltypes.OptionalRangeDateTime
 
 	// OptionalRangeFloat32 is an optional RangeFloat32. Optional
 	// types must be used for out parameters when a shape field is not required.
-	OptionalRangeFloat32 = edgedbtypes.OptionalRangeFloat32
+	OptionalRangeFloat32 = geltypes.OptionalRangeFloat32
 
 	// OptionalRangeFloat64 is an optional RangeFloat64. Optional
 	// types must be used for out parameters when a shape field is not required.
-	OptionalRangeFloat64 = edgedbtypes.OptionalRangeFloat64
+	OptionalRangeFloat64 = geltypes.OptionalRangeFloat64
 
 	// OptionalRangeInt32 is an optional RangeInt32. Optional types must be used
 	// for out parameters when a shape field is not required.
-	OptionalRangeInt32 = edgedbtypes.OptionalRangeInt32
+	OptionalRangeInt32 = geltypes.OptionalRangeInt32
 
 	// OptionalRangeInt64 is an optional RangeInt64. Optional
 	// types must be used for out parameters when a shape field is not required.
-	OptionalRangeInt64 = edgedbtypes.OptionalRangeInt64
+	OptionalRangeInt64 = geltypes.OptionalRangeInt64
 
 	// OptionalRangeLocalDate is an optional RangeLocalDate. Optional types must be
 	// used for out parameters when a shape field is not required.
-	OptionalRangeLocalDate = edgedbtypes.OptionalRangeLocalDate
+	OptionalRangeLocalDate = geltypes.OptionalRangeLocalDate
 
 	// OptionalRangeLocalDateTime is an optional RangeLocalDateTime. Optional
 	// types must be used for out parameters when a shape field is not required.
-	OptionalRangeLocalDateTime = edgedbtypes.OptionalRangeLocalDateTime
+	OptionalRangeLocalDateTime = geltypes.OptionalRangeLocalDateTime
 
 	// OptionalRelativeDuration is an optional RelativeDuration. Optional types
 	// must be used for out parameters when a shape field is not required.
-	OptionalRelativeDuration = edgedbtypes.OptionalRelativeDuration
+	OptionalRelativeDuration = geltypes.OptionalRelativeDuration
 
 	// OptionalStr is an optional string. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalStr = edgedbtypes.OptionalStr
+	OptionalStr = geltypes.OptionalStr
 
 	// OptionalUUID is an optional UUID. Optional types must be used for out
 	// parameters when a shape field is not required.
-	OptionalUUID = edgedbtypes.OptionalUUID
+	OptionalUUID = geltypes.OptionalUUID
 
-	// Options for connecting to an EdgeDB server
-	Options = edgedb.Options
+	// Options for connecting to a Gel server
+	Options = gel.Options
 
 	// RangeDateTime is an interval of time.Time values.
-	RangeDateTime = edgedbtypes.RangeDateTime
+	RangeDateTime = geltypes.RangeDateTime
 
 	// RangeFloat32 is an interval of float32 values.
-	RangeFloat32 = edgedbtypes.RangeFloat32
+	RangeFloat32 = geltypes.RangeFloat32
 
 	// RangeFloat64 is an interval of float64 values.
-	RangeFloat64 = edgedbtypes.RangeFloat64
+	RangeFloat64 = geltypes.RangeFloat64
 
 	// RangeInt32 is an interval of int32 values.
-	RangeInt32 = edgedbtypes.RangeInt32
+	RangeInt32 = geltypes.RangeInt32
 
 	// RangeInt64 is an interval of int64 values.
-	RangeInt64 = edgedbtypes.RangeInt64
+	RangeInt64 = geltypes.RangeInt64
 
 	// RangeLocalDate is an interval of LocalDate values.
-	RangeLocalDate = edgedbtypes.RangeLocalDate
+	RangeLocalDate = geltypes.RangeLocalDate
 
 	// RangeLocalDateTime is an interval of LocalDateTime values.
-	RangeLocalDateTime = edgedbtypes.RangeLocalDateTime
+	RangeLocalDateTime = geltypes.RangeLocalDateTime
 
 	// RelativeDuration represents the elapsed time between two instants in a fuzzy
 	// human way.
-	RelativeDuration = edgedbtypes.RelativeDuration
+	RelativeDuration = geltypes.RelativeDuration
 
 	// RetryBackoff returns the duration to wait after the nth attempt
 	// before making the next attempt when retrying a transaction.
-	RetryBackoff = edgedb.RetryBackoff
+	RetryBackoff = gel.RetryBackoff
 
 	// RetryCondition represents scenarios that can cause a transaction
 	// run in Tx() methods to be retried.
-	RetryCondition = edgedb.RetryCondition
+	RetryCondition = gel.RetryCondition
 
 	// RetryOptions configures how Tx() retries failed transactions.  Use
 	// NewRetryOptions to get a default RetryOptions value instead of creating one
 	// yourself.
-	RetryOptions = edgedb.RetryOptions
+	RetryOptions = gel.RetryOptions
 
 	// RetryRule determines how transactions should be retried when run in Tx()
 	// methods. See Client.Tx() for details.
-	RetryRule = edgedb.RetryRule
+	RetryRule = gel.RetryRule
 
-	// TLSOptions contains the parameters needed to configure TLS on EdgeDB
+	// TLSOptions contains the parameters needed to configure TLS on Gel
 	// server connections.
-	TLSOptions = edgedb.TLSOptions
+	TLSOptions = gel.TLSOptions
 
 	// TLSSecurityMode specifies how strict TLS validation is.
-	TLSSecurityMode = edgedb.TLSSecurityMode
+	TLSSecurityMode = gel.TLSSecurityMode
 
 	// Tx is a transaction. Use Client.Tx() to get a transaction.
-	Tx = edgedb.Tx
+	Tx = gel.Tx
 
 	// TxBlock is work to be done in a transaction.
-	TxBlock = edgedb.TxBlock
+	TxBlock = gel.TxBlock
 
 	// TxOptions configures how transactions behave.
-	TxOptions = edgedb.TxOptions
+	TxOptions = gel.TxOptions
 
 	// UUID is a universally unique identifier
 	// https://www.edgedb.com/docs/stdlib/uuid
-	UUID = edgedbtypes.UUID
+	UUID = geltypes.UUID
 
-	// WarningHandler takes a slice of edgedb.Error that represent warnings and
+	// WarningHandler takes a slice of gel.Error that represent warnings and
 	// optionally returns an error. This can be used to log warnings, increment
 	// metrics, promote warnings to errors by returning them etc.
-	WarningHandler = edgedb.WarningHandler
+	WarningHandler = gel.WarningHandler
 )
 
 var (
 	// CreateClient returns a new client. The client connects lazily. Call
 	// Client.EnsureConnected() to force a connection.
-	CreateClient = edgedb.CreateClient
+	CreateClient = gel.CreateClient
 
 	// CreateClientDSN returns a new client. See also CreateClient.
 	//
@@ -288,167 +288,167 @@ var (
 	// https://www.edgedb.com/docs/clients/connection
 	// or it specifies a single string in the following format:
 	//
-	//	edgedb://user:password@host:port/database?option=value.
+	//	gel://user:password@host:port/database?option=value.
 	//
 	// The following options are recognized: host, port, user, database, password.
-	CreateClientDSN = edgedb.CreateClientDSN
+	CreateClientDSN = gel.CreateClientDSN
 
 	// DurationFromNanoseconds creates a Duration represented as microseconds
 	// from a [time.Duration] represented as nanoseconds.
-	DurationFromNanoseconds = edgedbtypes.DurationFromNanoseconds
+	DurationFromNanoseconds = geltypes.DurationFromNanoseconds
 
-	// LogWarnings is an edgedb.WarningHandler that logs warnings.
-	LogWarnings = edgedb.LogWarnings
+	// LogWarnings is an gel.WarningHandler that logs warnings.
+	LogWarnings = gel.LogWarnings
 
 	// NewDateDuration returns a new DateDuration
-	NewDateDuration = edgedbtypes.NewDateDuration
+	NewDateDuration = geltypes.NewDateDuration
 
 	// NewLocalDate returns a new LocalDate
-	NewLocalDate = edgedbtypes.NewLocalDate
+	NewLocalDate = geltypes.NewLocalDate
 
 	// NewLocalDateTime returns a new LocalDateTime
-	NewLocalDateTime = edgedbtypes.NewLocalDateTime
+	NewLocalDateTime = geltypes.NewLocalDateTime
 
 	// NewLocalTime returns a new LocalTime
-	NewLocalTime = edgedbtypes.NewLocalTime
+	NewLocalTime = geltypes.NewLocalTime
 
 	// NewOptionalBigInt is a convenience function for creating an OptionalBigInt
 	// with its value set to v.
-	NewOptionalBigInt = edgedbtypes.NewOptionalBigInt
+	NewOptionalBigInt = geltypes.NewOptionalBigInt
 
 	// NewOptionalBool is a convenience function for creating an OptionalBool with
 	// its value set to v.
-	NewOptionalBool = edgedbtypes.NewOptionalBool
+	NewOptionalBool = geltypes.NewOptionalBool
 
 	// NewOptionalBytes is a convenience function for creating an OptionalBytes
 	// with its value set to v.
-	NewOptionalBytes = edgedbtypes.NewOptionalBytes
+	NewOptionalBytes = geltypes.NewOptionalBytes
 
 	// NewOptionalDateDuration is a convenience function for creating an
 	// OptionalDateDuration with its value set to v.
-	NewOptionalDateDuration = edgedbtypes.NewOptionalDateDuration
+	NewOptionalDateDuration = geltypes.NewOptionalDateDuration
 
 	// NewOptionalDateTime is a convenience function for creating an
 	// OptionalDateTime with its value set to v.
-	NewOptionalDateTime = edgedbtypes.NewOptionalDateTime
+	NewOptionalDateTime = geltypes.NewOptionalDateTime
 
 	// NewOptionalDuration is a convenience function for creating an
 	// OptionalDuration with its value set to v.
-	NewOptionalDuration = edgedbtypes.NewOptionalDuration
+	NewOptionalDuration = geltypes.NewOptionalDuration
 
 	// NewOptionalFloat32 is a convenience function for creating an OptionalFloat32
 	// with its value set to v.
-	NewOptionalFloat32 = edgedbtypes.NewOptionalFloat32
+	NewOptionalFloat32 = geltypes.NewOptionalFloat32
 
 	// NewOptionalFloat64 is a convenience function for creating an OptionalFloat64
 	// with its value set to v.
-	NewOptionalFloat64 = edgedbtypes.NewOptionalFloat64
+	NewOptionalFloat64 = geltypes.NewOptionalFloat64
 
 	// NewOptionalInt16 is a convenience function for creating an OptionalInt16
 	// with its value set to v.
-	NewOptionalInt16 = edgedbtypes.NewOptionalInt16
+	NewOptionalInt16 = geltypes.NewOptionalInt16
 
 	// NewOptionalInt32 is a convenience function for creating an OptionalInt32
 	// with its value set to v.
-	NewOptionalInt32 = edgedbtypes.NewOptionalInt32
+	NewOptionalInt32 = geltypes.NewOptionalInt32
 
 	// NewOptionalInt64 is a convenience function for creating an OptionalInt64
 	// with its value set to v.
-	NewOptionalInt64 = edgedbtypes.NewOptionalInt64
+	NewOptionalInt64 = geltypes.NewOptionalInt64
 
 	// NewOptionalLocalDate is a convenience function for creating an
 	// OptionalLocalDate with its value set to v.
-	NewOptionalLocalDate = edgedbtypes.NewOptionalLocalDate
+	NewOptionalLocalDate = geltypes.NewOptionalLocalDate
 
 	// NewOptionalLocalDateTime is a convenience function for creating an
 	// OptionalLocalDateTime with its value set to v.
-	NewOptionalLocalDateTime = edgedbtypes.NewOptionalLocalDateTime
+	NewOptionalLocalDateTime = geltypes.NewOptionalLocalDateTime
 
 	// NewOptionalLocalTime is a convenience function for creating an
 	// OptionalLocalTime with its value set to v.
-	NewOptionalLocalTime = edgedbtypes.NewOptionalLocalTime
+	NewOptionalLocalTime = geltypes.NewOptionalLocalTime
 
 	// NewOptionalMemory is a convenience function for creating an
 	// OptionalMemory with its value set to v.
-	NewOptionalMemory = edgedbtypes.NewOptionalMemory
+	NewOptionalMemory = geltypes.NewOptionalMemory
 
 	// NewOptionalRangeDateTime is a convenience function for creating an
 	// OptionalRangeDateTime with its value set to v.
-	NewOptionalRangeDateTime = edgedbtypes.NewOptionalRangeDateTime
+	NewOptionalRangeDateTime = geltypes.NewOptionalRangeDateTime
 
 	// NewOptionalRangeFloat32 is a convenience function for creating an
 	// OptionalRangeFloat32 with its value set to v.
-	NewOptionalRangeFloat32 = edgedbtypes.NewOptionalRangeFloat32
+	NewOptionalRangeFloat32 = geltypes.NewOptionalRangeFloat32
 
 	// NewOptionalRangeFloat64 is a convenience function for creating an
 	// OptionalRangeFloat64 with its value set to v.
-	NewOptionalRangeFloat64 = edgedbtypes.NewOptionalRangeFloat64
+	NewOptionalRangeFloat64 = geltypes.NewOptionalRangeFloat64
 
 	// NewOptionalRangeInt32 is a convenience function for creating an
 	// OptionalRangeInt32 with its value set to v.
-	NewOptionalRangeInt32 = edgedbtypes.NewOptionalRangeInt32
+	NewOptionalRangeInt32 = geltypes.NewOptionalRangeInt32
 
 	// NewOptionalRangeInt64 is a convenience function for creating an
 	// OptionalRangeInt64 with its value set to v.
-	NewOptionalRangeInt64 = edgedbtypes.NewOptionalRangeInt64
+	NewOptionalRangeInt64 = geltypes.NewOptionalRangeInt64
 
 	// NewOptionalRangeLocalDate is a convenience function for creating an
 	// OptionalRangeLocalDate with its value set to v.
-	NewOptionalRangeLocalDate = edgedbtypes.NewOptionalRangeLocalDate
+	NewOptionalRangeLocalDate = geltypes.NewOptionalRangeLocalDate
 
 	// NewOptionalRangeLocalDateTime is a convenience function for creating an
 	// OptionalRangeLocalDateTime with its value set to v.
-	NewOptionalRangeLocalDateTime = edgedbtypes.NewOptionalRangeLocalDateTime
+	NewOptionalRangeLocalDateTime = geltypes.NewOptionalRangeLocalDateTime
 
 	// NewOptionalRelativeDuration is a convenience function for creating an
 	// OptionalRelativeDuration with its value set to v.
-	NewOptionalRelativeDuration = edgedbtypes.NewOptionalRelativeDuration
+	NewOptionalRelativeDuration = geltypes.NewOptionalRelativeDuration
 
 	// NewOptionalStr is a convenience function for creating an OptionalStr with
 	// its value set to v.
-	NewOptionalStr = edgedbtypes.NewOptionalStr
+	NewOptionalStr = geltypes.NewOptionalStr
 
 	// NewOptionalUUID is a convenience function for creating an OptionalUUID with
 	// its value set to v.
-	NewOptionalUUID = edgedbtypes.NewOptionalUUID
+	NewOptionalUUID = geltypes.NewOptionalUUID
 
 	// NewRangeDateTime creates a new RangeDateTime value.
-	NewRangeDateTime = edgedbtypes.NewRangeDateTime
+	NewRangeDateTime = geltypes.NewRangeDateTime
 
 	// NewRangeFloat32 creates a new RangeFloat32 value.
-	NewRangeFloat32 = edgedbtypes.NewRangeFloat32
+	NewRangeFloat32 = geltypes.NewRangeFloat32
 
 	// NewRangeFloat64 creates a new RangeFloat64 value.
-	NewRangeFloat64 = edgedbtypes.NewRangeFloat64
+	NewRangeFloat64 = geltypes.NewRangeFloat64
 
 	// NewRangeInt32 creates a new RangeInt32 value.
-	NewRangeInt32 = edgedbtypes.NewRangeInt32
+	NewRangeInt32 = geltypes.NewRangeInt32
 
 	// NewRangeInt64 creates a new RangeInt64 value.
-	NewRangeInt64 = edgedbtypes.NewRangeInt64
+	NewRangeInt64 = geltypes.NewRangeInt64
 
 	// NewRangeLocalDate creates a new RangeLocalDate value.
-	NewRangeLocalDate = edgedbtypes.NewRangeLocalDate
+	NewRangeLocalDate = geltypes.NewRangeLocalDate
 
 	// NewRangeLocalDateTime creates a new RangeLocalDateTime value.
-	NewRangeLocalDateTime = edgedbtypes.NewRangeLocalDateTime
+	NewRangeLocalDateTime = geltypes.NewRangeLocalDateTime
 
 	// NewRelativeDuration returns a new RelativeDuration
-	NewRelativeDuration = edgedbtypes.NewRelativeDuration
+	NewRelativeDuration = geltypes.NewRelativeDuration
 
 	// NewRetryOptions returns the default retry options.
-	NewRetryOptions = edgedb.NewRetryOptions
+	NewRetryOptions = gel.NewRetryOptions
 
 	// NewRetryRule returns the default RetryRule value.
-	NewRetryRule = edgedb.NewRetryRule
+	NewRetryRule = gel.NewRetryRule
 
 	// NewTxOptions returns the default TxOptions value.
-	NewTxOptions = edgedb.NewTxOptions
+	NewTxOptions = gel.NewTxOptions
 
 	// ParseUUID parses s into a UUID or returns an error.
-	ParseUUID = edgedbtypes.ParseUUID
+	ParseUUID = geltypes.ParseUUID
 
-	// WarningsAsErrors is an edgedb.WarningHandler that returns warnings as
+	// WarningsAsErrors is an gel.WarningHandler that returns warnings as
 	// errors.
-	WarningsAsErrors = edgedb.WarningsAsErrors
+	WarningsAsErrors = gel.WarningsAsErrors
 )

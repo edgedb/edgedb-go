@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	types "github.com/geldata/gel-go/internal/geltypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +34,7 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 
 	err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
-			Val OptionalTuple `edgedb:"val"`
+			Val OptionalTuple `gel:"val"`
 		}
 		e := tx.Execute(ctx, `
 			CREATE TYPE Sample {
@@ -47,11 +47,11 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 		// that can later be run with a different out type.
 		return tx.QuerySingle(ctx, `SELECT Sample { val } LIMIT 1`, &result)
 	})
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 
 	err = client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
 		var result struct {
-			Val OptionalNamedTuple `edgedb:"val"`
+			Val OptionalNamedTuple `gel:"val"`
 		}
 
 		e := tx.Execute(ctx, `
@@ -65,14 +65,14 @@ func TestQueryCachingIncludesOutType(t *testing.T) {
 		// There should not be any errors complaining about the out type.
 		return tx.QuerySingle(ctx, `SELECT Sample { val } LIMIT 1`, &result)
 	})
-	assert.EqualError(t, err, "edgedb.NoDataError: zero results")
+	assert.EqualError(t, err, "gel.NoDataError: zero results")
 }
 
 func TestObjectWithoutID(t *testing.T) {
 	ctx := context.Background()
 
 	type Function struct {
-		Name string `edgedb:"name"`
+		Name string `gel:"name"`
 	}
 
 	var result Function
@@ -92,11 +92,11 @@ func TestWrongNumberOfArguments(t *testing.T) {
 	ctx := context.Background()
 	err := client.QuerySingle(ctx, `SELECT <str>$0`, &result)
 	assert.EqualError(t, err,
-		"edgedb.InvalidArgumentError: expected 1 arguments got 0")
+		"gel.InvalidArgumentError: expected 1 arguments got 0")
 }
 
 func TestConnRejectsTransactions(t *testing.T) {
-	expected := "edgedb.DisabledCapabilityError: " +
+	expected := "gel.DisabledCapabilityError: " +
 		"cannot execute transaction control commands.*"
 
 	ctx := context.Background()
@@ -123,7 +123,7 @@ func TestMissmatchedCardinality(t *testing.T) {
 	var result []int64
 	err := client.QuerySingle(ctx, "SELECT {1, 2, 3}", &result)
 
-	expected := "edgedb.ResultCardinalityMismatchError: " +
+	expected := "gel.ResultCardinalityMismatchError: " +
 		"the query has cardinality AT_LEAST_ONE " +
 		"which does not match the expected cardinality ONE"
 	assert.EqualError(t, err, expected)
@@ -147,9 +147,9 @@ func TestMissmatchedResultType(t *testing.T) {
 	ctx := context.Background()
 	err := client.QuerySingle(ctx, "SELECT (x := (y := (z := 7)))", &result)
 
-	expected := "edgedb.InvalidArgumentError: " +
+	expected := "gel.InvalidArgumentError: " +
 		"the \"out\" argument does not match query schema: " +
-		"expected edgedb.A.x.y.z to be int64 or edgedb.OptionalInt64 got int"
+		"expected gel.A.x.y.z to be int64 or gel.OptionalInt64 got int"
 	assert.EqualError(t, err, expected)
 }
 
@@ -164,7 +164,7 @@ func TestParseAllMessagesAfterError(t *testing.T) {
 	err := client.QuerySingle(ctx, "SELECT 1 / <str>$0", &number, int64(5))
 
 	// nolint:lll
-	expected := `edgedb.InvalidTypeError: operator '/' cannot be applied to operands of type 'std::int64' and 'std::str'
+	expected := `gel.InvalidTypeError: operator '/' cannot be applied to operands of type 'std::int64' and 'std::str'
 query:1:8
 
 SELECT 1 / <str>$0
@@ -173,7 +173,7 @@ SELECT 1 / <str>$0
 
 	// cause erroy during execute
 	err = client.QuerySingle(ctx, "SELECT 1 / 0", &number)
-	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
+	assert.EqualError(t, err, "gel.DivisionByZeroError: division by zero")
 
 	// cache query so that it is run optimistically next time
 	err = client.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(3))
@@ -181,12 +181,12 @@ SELECT 1 / <str>$0
 
 	// cause error during optimistic execute
 	err = client.QuerySingle(ctx, "SELECT 1 / <int64>$0", &number, int64(0))
-	assert.EqualError(t, err, "edgedb.DivisionByZeroError: division by zero")
+	assert.EqualError(t, err, "gel.DivisionByZeroError: division by zero")
 }
 
 func TestArgumentTypeMissmatch(t *testing.T) {
 	type Tuple struct {
-		first int16 `edgedb:"0"` // nolint:unused,structcheck
+		first int16 `gel:"0"` // nolint:unused,structcheck
 	}
 
 	var res Tuple
@@ -196,8 +196,8 @@ func TestArgumentTypeMissmatch(t *testing.T) {
 
 	require.NotNil(t, err)
 	assert.EqualError(t, err,
-		"edgedb.InvalidArgumentError: expected args[0] to be int16, "+
-			"edgedb.OptionalInt16 or Int16Marshaler got int")
+		"gel.InvalidArgumentError: expected args[0] to be int16, "+
+			"gel.OptionalInt16 or Int16Marshaler got int")
 }
 
 func TestNamedQueryArguments(t *testing.T) {
@@ -302,20 +302,20 @@ func TestQuerySingleZeroResults(t *testing.T) {
 func TestQuerySingleNestedSlice(t *testing.T) {
 	ctx := context.Background()
 	type IDField struct {
-		ID types.UUID `edgedb:"id"`
+		ID types.UUID `gel:"id"`
 	}
 	type NameField struct {
-		Name types.OptionalStr `edgedb:"name"`
+		Name types.OptionalStr `gel:"name"`
 	}
 	type UserModel struct {
-		IDField   `edgedb:"$inline"`
-		NameField `edgedb:"$inline"`
+		IDField   `gel:"$inline"`
+		NameField `gel:"$inline"`
 	}
 	type UsersField struct {
-		Users []UserModel `edgedb:"users"`
+		Users []UserModel `gel:"users"`
 	}
 	type ViewModel struct {
-		UsersField `edgedb:"$inline"`
+		UsersField `gel:"$inline"`
 	}
 	result := ViewModel{}
 	err := client.QuerySingle(
@@ -346,7 +346,7 @@ func TestError(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		`edgedb.EdgeQLSyntaxError: Unexpected 'malformed'
+		`gel.EdgeQLSyntaxError: Unexpected 'malformed'
 query:1:1
 
 malformed query;
@@ -379,7 +379,7 @@ func TestQueryTimesOut(t *testing.T) {
 func TestNilResultValue(t *testing.T) {
 	ctx := context.Background()
 	err := client.Query(ctx, "SELECT 1", nil)
-	assert.EqualError(t, err, "edgedb.InterfaceError: "+
+	assert.EqualError(t, err, "gel.InterfaceError: "+
 		"the \"out\" argument must be a pointer, got untyped nil")
 }
 
@@ -406,7 +406,7 @@ func TestClientRejectsSessionConfig(t *testing.T) {
 		t.Skip()
 	}
 
-	expected := "edgedb.DisabledCapabilityError: " +
+	expected := "gel.DisabledCapabilityError: " +
 		"cannot execute session configuration queries.*"
 
 	ctx := context.Background()
@@ -481,7 +481,7 @@ func TestInvalidWithConfig(t *testing.T) {
 
 	c := client.WithConfig(map[string]interface{}{"hello": "world"})
 	err = c.QuerySingle(ctx, "select 1", &result)
-	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+	assert.EqualError(t, err, "gel.BinaryProtocolError: "+
 		"invalid connection state: "+
 		"found unknown state value state.config.hello")
 
@@ -493,10 +493,10 @@ func TestInvalidWithConfig(t *testing.T) {
 		"query_execution_timeout": "this should be Duration not string",
 	})
 	err = c.QuerySingle(ctx, "select 1", &result)
-	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+	assert.EqualError(t, err, "gel.BinaryProtocolError: "+
 		"invalid connection state: "+
 		"expected state.config.query_execution_timeout to be "+
-		"edgedb.Duration, edgedb.OptionalDuration or DurationMarshaler "+
+		"gel.Duration, gel.OptionalDuration or DurationMarshaler "+
 		"got string")
 
 	err = client.QuerySingle(ctx, "select 1", &result)
@@ -556,7 +556,7 @@ func TestWithModuleAliases(t *testing.T) {
 		"SELECT <my_new_name_for_std::int64>1",
 		&result,
 	)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_new_name_for_std::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_new_name_for_std::int64>1\n"+
@@ -573,7 +573,7 @@ func TestWithModuleAliases(t *testing.T) {
 		"SELECT <my_new_name_for_std::int64>3",
 		&result,
 	)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_new_name_for_std::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_new_name_for_std::int64>3\n"+
@@ -581,7 +581,7 @@ func TestWithModuleAliases(t *testing.T) {
 
 	b := a.WithModuleAliases(ModuleAlias{"my_new_name_for_std", "math"})
 	err = b.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>4", &result)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_new_name_for_std::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_new_name_for_std::int64>4\n"+
@@ -596,7 +596,7 @@ func TestWithModuleAliases(t *testing.T) {
 		"SELECT <my_new_name_for_std::int64>6",
 		&result,
 	)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_new_name_for_std::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_new_name_for_std::int64>6\n"+
@@ -615,7 +615,7 @@ func TestInvalidWithModuleAliases(t *testing.T) {
 		"my_alias", "this_module_doesnt_exist"})
 
 	err := a.QuerySingle(ctx, "SELECT <my_alias::int64>1", &result)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_alias::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_alias::int64>1\n"+
@@ -634,7 +634,7 @@ func TestWithoutModuleAliases(t *testing.T) {
 	b := a.WithoutModuleAliases("my_new_name_for_std")
 
 	err := b.QuerySingle(ctx, "SELECT <my_new_name_for_std::int64>4", &result)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_new_name_for_std::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_new_name_for_std::int64>4\n"+
@@ -649,7 +649,7 @@ func TestWithoutModuleAliases(t *testing.T) {
 		"SELECT <my_new_name_for_std::int64>6",
 		&result,
 	)
-	assert.EqualError(t, err, "edgedb.InvalidReferenceError: "+
+	assert.EqualError(t, err, "gel.InvalidReferenceError: "+
 		"type 'my_new_name_for_std::int64' does not exist\n"+
 		"query:1:9\n\n"+
 		"SELECT <my_new_name_for_std::int64>6\n"+
@@ -1048,7 +1048,7 @@ func TestInvalidWithGlobals(t *testing.T) {
 	})
 
 	err := a.QuerySingle(ctx, "SELECT GLOBAL this", &result)
-	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+	assert.EqualError(t, err, "gel.BinaryProtocolError: "+
 		"invalid connection state: "+
 		"found unknown state value state.globals.default::this")
 
@@ -1057,10 +1057,10 @@ func TestInvalidWithGlobals(t *testing.T) {
 	})
 
 	err = b.QuerySingle(ctx, "SELECT GLOBAL global_str", &result)
-	assert.EqualError(t, err, "edgedb.BinaryProtocolError: "+
+	assert.EqualError(t, err, "gel.BinaryProtocolError: "+
 		"invalid connection state: "+
 		"expected state.globals.default::global_str to be "+
-		"string, edgedb.OptionalStr or StrMarshaler "+
+		"string, gel.OptionalStr or StrMarshaler "+
 		"got int")
 }
 
@@ -1105,14 +1105,14 @@ func TestWithConfigWrongServerVersion(t *testing.T) {
 		"default::global_str": "first",
 	})
 	err := a.QuerySingle(ctx, "SELECT 1", &result)
-	require.EqualError(t, err, "edgedb.InterfaceError: "+
+	require.EqualError(t, err, "gel.InterfaceError: "+
 		"client methods WithConfig, WithGlobals, and WithModuleAliases "+
 		"are not supported by the server. "+
 		"Upgrade your server to version 2.0 or greater to use these features.")
 
 	b := client.WithModuleAliases(ModuleAlias{"other_math", "math"})
 	err = b.QuerySingle(ctx, "SELECT 1", &result)
-	require.EqualError(t, err, "edgedb.InterfaceError: "+
+	require.EqualError(t, err, "gel.InterfaceError: "+
 		"client methods WithConfig, WithGlobals, and WithModuleAliases "+
 		"are not supported by the server. "+
 		"Upgrade your server to version 2.0 or greater to use these features.")
@@ -1121,7 +1121,7 @@ func TestWithConfigWrongServerVersion(t *testing.T) {
 		"query_execution_timeout": types.Duration(65_432_000),
 	})
 	err = c.QuerySingle(ctx, "SELECT 1", &result)
-	require.EqualError(t, err, "edgedb.InterfaceError: "+
+	require.EqualError(t, err, "gel.InterfaceError: "+
 		"client methods WithConfig, WithGlobals, and WithModuleAliases "+
 		"are not supported by the server. "+
 		"Upgrade your server to version 2.0 or greater to use these features.")

@@ -20,7 +20,7 @@
 // internal/cmd/export should ignore this file
 //go:build !export
 
-package edgedb
+package gel
 
 import "fmt"
 
@@ -142,7 +142,7 @@ func (e *internalServerError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InternalServerError: " + msg
+	return "gel.InternalServerError: " + msg
 }
 
 func (e *internalServerError) Unwrap() error { return e.err }
@@ -174,7 +174,7 @@ func (e *unsupportedFeatureError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnsupportedFeatureError: " + msg
+	return "gel.UnsupportedFeatureError: " + msg
 }
 
 func (e *unsupportedFeatureError) Unwrap() error { return e.err }
@@ -206,7 +206,7 @@ func (e *protocolError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ProtocolError: " + msg
+	return "gel.ProtocolError: " + msg
 }
 
 func (e *protocolError) Unwrap() error { return e.err }
@@ -238,7 +238,7 @@ func (e *binaryProtocolError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.BinaryProtocolError: " + msg
+	return "gel.BinaryProtocolError: " + msg
 }
 
 func (e *binaryProtocolError) Unwrap() error { return e.err }
@@ -274,7 +274,7 @@ func (e *unsupportedProtocolVersionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnsupportedProtocolVersionError: " + msg
+	return "gel.UnsupportedProtocolVersionError: " + msg
 }
 
 func (e *unsupportedProtocolVersionError) Unwrap() error { return e.err }
@@ -314,7 +314,7 @@ func (e *typeSpecNotFoundError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.TypeSpecNotFoundError: " + msg
+	return "gel.TypeSpecNotFoundError: " + msg
 }
 
 func (e *typeSpecNotFoundError) Unwrap() error { return e.err }
@@ -354,7 +354,7 @@ func (e *unexpectedMessageError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnexpectedMessageError: " + msg
+	return "gel.UnexpectedMessageError: " + msg
 }
 
 func (e *unexpectedMessageError) Unwrap() error { return e.err }
@@ -394,7 +394,7 @@ func (e *inputDataError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InputDataError: " + msg
+	return "gel.InputDataError: " + msg
 }
 
 func (e *inputDataError) Unwrap() error { return e.err }
@@ -430,7 +430,7 @@ func (e *parameterTypeMismatchError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ParameterTypeMismatchError: " + msg
+	return "gel.ParameterTypeMismatchError: " + msg
 }
 
 func (e *parameterTypeMismatchError) Unwrap() error { return e.err }
@@ -470,7 +470,7 @@ func (e *stateMismatchError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.StateMismatchError: " + msg
+	return "gel.StateMismatchError: " + msg
 }
 
 func (e *stateMismatchError) Unwrap() error { return e.err }
@@ -512,7 +512,7 @@ func (e *resultCardinalityMismatchError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ResultCardinalityMismatchError: " + msg
+	return "gel.ResultCardinalityMismatchError: " + msg
 }
 
 func (e *resultCardinalityMismatchError) Unwrap() error { return e.err }
@@ -548,7 +548,7 @@ func (e *capabilityError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.CapabilityError: " + msg
+	return "gel.CapabilityError: " + msg
 }
 
 func (e *capabilityError) Unwrap() error { return e.err }
@@ -584,7 +584,7 @@ func (e *unsupportedCapabilityError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnsupportedCapabilityError: " + msg
+	return "gel.UnsupportedCapabilityError: " + msg
 }
 
 func (e *unsupportedCapabilityError) Unwrap() error { return e.err }
@@ -624,7 +624,7 @@ func (e *disabledCapabilityError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DisabledCapabilityError: " + msg
+	return "gel.DisabledCapabilityError: " + msg
 }
 
 func (e *disabledCapabilityError) Unwrap() error { return e.err }
@@ -664,7 +664,7 @@ func (e *queryError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.QueryError: " + msg
+	return "gel.QueryError: " + msg
 }
 
 func (e *queryError) Unwrap() error { return e.err }
@@ -696,7 +696,7 @@ func (e *invalidSyntaxError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidSyntaxError: " + msg
+	return "gel.InvalidSyntaxError: " + msg
 }
 
 func (e *invalidSyntaxError) Unwrap() error { return e.err }
@@ -732,7 +732,7 @@ func (e *edgeQLSyntaxError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.EdgeQLSyntaxError: " + msg
+	return "gel.EdgeQLSyntaxError: " + msg
 }
 
 func (e *edgeQLSyntaxError) Unwrap() error { return e.err }
@@ -772,7 +772,7 @@ func (e *schemaSyntaxError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.SchemaSyntaxError: " + msg
+	return "gel.SchemaSyntaxError: " + msg
 }
 
 func (e *schemaSyntaxError) Unwrap() error { return e.err }
@@ -812,7 +812,7 @@ func (e *graphQLSyntaxError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.GraphQLSyntaxError: " + msg
+	return "gel.GraphQLSyntaxError: " + msg
 }
 
 func (e *graphQLSyntaxError) Unwrap() error { return e.err }
@@ -852,7 +852,7 @@ func (e *invalidTypeError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidTypeError: " + msg
+	return "gel.InvalidTypeError: " + msg
 }
 
 func (e *invalidTypeError) Unwrap() error { return e.err }
@@ -888,7 +888,7 @@ func (e *invalidTargetError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidTargetError: " + msg
+	return "gel.InvalidTargetError: " + msg
 }
 
 func (e *invalidTargetError) Unwrap() error { return e.err }
@@ -928,7 +928,7 @@ func (e *invalidLinkTargetError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidLinkTargetError: " + msg
+	return "gel.InvalidLinkTargetError: " + msg
 }
 
 func (e *invalidLinkTargetError) Unwrap() error { return e.err }
@@ -972,7 +972,7 @@ func (e *invalidPropertyTargetError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidPropertyTargetError: " + msg
+	return "gel.InvalidPropertyTargetError: " + msg
 }
 
 func (e *invalidPropertyTargetError) Unwrap() error { return e.err }
@@ -1016,7 +1016,7 @@ func (e *invalidReferenceError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidReferenceError: " + msg
+	return "gel.InvalidReferenceError: " + msg
 }
 
 func (e *invalidReferenceError) Unwrap() error { return e.err }
@@ -1052,7 +1052,7 @@ func (e *unknownModuleError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownModuleError: " + msg
+	return "gel.UnknownModuleError: " + msg
 }
 
 func (e *unknownModuleError) Unwrap() error { return e.err }
@@ -1092,7 +1092,7 @@ func (e *unknownLinkError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownLinkError: " + msg
+	return "gel.UnknownLinkError: " + msg
 }
 
 func (e *unknownLinkError) Unwrap() error { return e.err }
@@ -1132,7 +1132,7 @@ func (e *unknownPropertyError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownPropertyError: " + msg
+	return "gel.UnknownPropertyError: " + msg
 }
 
 func (e *unknownPropertyError) Unwrap() error { return e.err }
@@ -1172,7 +1172,7 @@ func (e *unknownUserError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownUserError: " + msg
+	return "gel.UnknownUserError: " + msg
 }
 
 func (e *unknownUserError) Unwrap() error { return e.err }
@@ -1212,7 +1212,7 @@ func (e *unknownDatabaseError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownDatabaseError: " + msg
+	return "gel.UnknownDatabaseError: " + msg
 }
 
 func (e *unknownDatabaseError) Unwrap() error { return e.err }
@@ -1252,7 +1252,7 @@ func (e *unknownParameterError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownParameterError: " + msg
+	return "gel.UnknownParameterError: " + msg
 }
 
 func (e *unknownParameterError) Unwrap() error { return e.err }
@@ -1292,7 +1292,7 @@ func (e *deprecatedScopingError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DeprecatedScopingError: " + msg
+	return "gel.DeprecatedScopingError: " + msg
 }
 
 func (e *deprecatedScopingError) Unwrap() error { return e.err }
@@ -1332,7 +1332,7 @@ func (e *schemaError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.SchemaError: " + msg
+	return "gel.SchemaError: " + msg
 }
 
 func (e *schemaError) Unwrap() error { return e.err }
@@ -1368,7 +1368,7 @@ func (e *schemaDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.SchemaDefinitionError: " + msg
+	return "gel.SchemaDefinitionError: " + msg
 }
 
 func (e *schemaDefinitionError) Unwrap() error { return e.err }
@@ -1404,7 +1404,7 @@ func (e *invalidDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidDefinitionError: " + msg
+	return "gel.InvalidDefinitionError: " + msg
 }
 
 func (e *invalidDefinitionError) Unwrap() error { return e.err }
@@ -1444,7 +1444,7 @@ func (e *invalidModuleDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidModuleDefinitionError: " + msg
+	return "gel.InvalidModuleDefinitionError: " + msg
 }
 
 func (e *invalidModuleDefinitionError) Unwrap() error { return e.err }
@@ -1488,7 +1488,7 @@ func (e *invalidLinkDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidLinkDefinitionError: " + msg
+	return "gel.InvalidLinkDefinitionError: " + msg
 }
 
 func (e *invalidLinkDefinitionError) Unwrap() error { return e.err }
@@ -1532,7 +1532,7 @@ func (e *invalidPropertyDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidPropertyDefinitionError: " + msg
+	return "gel.InvalidPropertyDefinitionError: " + msg
 }
 
 func (e *invalidPropertyDefinitionError) Unwrap() error { return e.err }
@@ -1576,7 +1576,7 @@ func (e *invalidUserDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidUserDefinitionError: " + msg
+	return "gel.InvalidUserDefinitionError: " + msg
 }
 
 func (e *invalidUserDefinitionError) Unwrap() error { return e.err }
@@ -1620,7 +1620,7 @@ func (e *invalidDatabaseDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidDatabaseDefinitionError: " + msg
+	return "gel.InvalidDatabaseDefinitionError: " + msg
 }
 
 func (e *invalidDatabaseDefinitionError) Unwrap() error { return e.err }
@@ -1664,7 +1664,7 @@ func (e *invalidOperatorDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidOperatorDefinitionError: " + msg
+	return "gel.InvalidOperatorDefinitionError: " + msg
 }
 
 func (e *invalidOperatorDefinitionError) Unwrap() error { return e.err }
@@ -1708,7 +1708,7 @@ func (e *invalidAliasDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidAliasDefinitionError: " + msg
+	return "gel.InvalidAliasDefinitionError: " + msg
 }
 
 func (e *invalidAliasDefinitionError) Unwrap() error { return e.err }
@@ -1752,7 +1752,7 @@ func (e *invalidFunctionDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidFunctionDefinitionError: " + msg
+	return "gel.InvalidFunctionDefinitionError: " + msg
 }
 
 func (e *invalidFunctionDefinitionError) Unwrap() error { return e.err }
@@ -1796,7 +1796,7 @@ func (e *invalidConstraintDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidConstraintDefinitionError: " + msg
+	return "gel.InvalidConstraintDefinitionError: " + msg
 }
 
 func (e *invalidConstraintDefinitionError) Unwrap() error { return e.err }
@@ -1840,7 +1840,7 @@ func (e *invalidCastDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidCastDefinitionError: " + msg
+	return "gel.InvalidCastDefinitionError: " + msg
 }
 
 func (e *invalidCastDefinitionError) Unwrap() error { return e.err }
@@ -1884,7 +1884,7 @@ func (e *duplicateDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateDefinitionError: " + msg
+	return "gel.DuplicateDefinitionError: " + msg
 }
 
 func (e *duplicateDefinitionError) Unwrap() error { return e.err }
@@ -1924,7 +1924,7 @@ func (e *duplicateModuleDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateModuleDefinitionError: " + msg
+	return "gel.DuplicateModuleDefinitionError: " + msg
 }
 
 func (e *duplicateModuleDefinitionError) Unwrap() error { return e.err }
@@ -1968,7 +1968,7 @@ func (e *duplicateLinkDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateLinkDefinitionError: " + msg
+	return "gel.DuplicateLinkDefinitionError: " + msg
 }
 
 func (e *duplicateLinkDefinitionError) Unwrap() error { return e.err }
@@ -2012,7 +2012,7 @@ func (e *duplicatePropertyDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicatePropertyDefinitionError: " + msg
+	return "gel.DuplicatePropertyDefinitionError: " + msg
 }
 
 func (e *duplicatePropertyDefinitionError) Unwrap() error { return e.err }
@@ -2056,7 +2056,7 @@ func (e *duplicateUserDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateUserDefinitionError: " + msg
+	return "gel.DuplicateUserDefinitionError: " + msg
 }
 
 func (e *duplicateUserDefinitionError) Unwrap() error { return e.err }
@@ -2100,7 +2100,7 @@ func (e *duplicateDatabaseDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateDatabaseDefinitionError: " + msg
+	return "gel.DuplicateDatabaseDefinitionError: " + msg
 }
 
 func (e *duplicateDatabaseDefinitionError) Unwrap() error { return e.err }
@@ -2144,7 +2144,7 @@ func (e *duplicateOperatorDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateOperatorDefinitionError: " + msg
+	return "gel.DuplicateOperatorDefinitionError: " + msg
 }
 
 func (e *duplicateOperatorDefinitionError) Unwrap() error { return e.err }
@@ -2188,7 +2188,7 @@ func (e *duplicateViewDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateViewDefinitionError: " + msg
+	return "gel.DuplicateViewDefinitionError: " + msg
 }
 
 func (e *duplicateViewDefinitionError) Unwrap() error { return e.err }
@@ -2232,7 +2232,7 @@ func (e *duplicateFunctionDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateFunctionDefinitionError: " + msg
+	return "gel.DuplicateFunctionDefinitionError: " + msg
 }
 
 func (e *duplicateFunctionDefinitionError) Unwrap() error { return e.err }
@@ -2276,7 +2276,7 @@ func (e *duplicateConstraintDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateConstraintDefinitionError: " + msg
+	return "gel.DuplicateConstraintDefinitionError: " + msg
 }
 
 func (e *duplicateConstraintDefinitionError) Unwrap() error { return e.err }
@@ -2320,7 +2320,7 @@ func (e *duplicateCastDefinitionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateCastDefinitionError: " + msg
+	return "gel.DuplicateCastDefinitionError: " + msg
 }
 
 func (e *duplicateCastDefinitionError) Unwrap() error { return e.err }
@@ -2364,7 +2364,7 @@ func (e *duplicateMigrationError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DuplicateMigrationError: " + msg
+	return "gel.DuplicateMigrationError: " + msg
 }
 
 func (e *duplicateMigrationError) Unwrap() error { return e.err }
@@ -2408,7 +2408,7 @@ func (e *sessionTimeoutError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.SessionTimeoutError: " + msg
+	return "gel.SessionTimeoutError: " + msg
 }
 
 func (e *sessionTimeoutError) Unwrap() error { return e.err }
@@ -2444,7 +2444,7 @@ func (e *idleSessionTimeoutError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.IdleSessionTimeoutError: " + msg
+	return "gel.IdleSessionTimeoutError: " + msg
 }
 
 func (e *idleSessionTimeoutError) Unwrap() error { return e.err }
@@ -2486,7 +2486,7 @@ func (e *queryTimeoutError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.QueryTimeoutError: " + msg
+	return "gel.QueryTimeoutError: " + msg
 }
 
 func (e *queryTimeoutError) Unwrap() error { return e.err }
@@ -2526,7 +2526,7 @@ func (e *transactionTimeoutError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.TransactionTimeoutError: " + msg
+	return "gel.TransactionTimeoutError: " + msg
 }
 
 func (e *transactionTimeoutError) Unwrap() error { return e.err }
@@ -2566,7 +2566,7 @@ func (e *idleTransactionTimeoutError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.IdleTransactionTimeoutError: " + msg
+	return "gel.IdleTransactionTimeoutError: " + msg
 }
 
 func (e *idleTransactionTimeoutError) Unwrap() error { return e.err }
@@ -2610,7 +2610,7 @@ func (e *executionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ExecutionError: " + msg
+	return "gel.ExecutionError: " + msg
 }
 
 func (e *executionError) Unwrap() error { return e.err }
@@ -2642,7 +2642,7 @@ func (e *invalidValueError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidValueError: " + msg
+	return "gel.InvalidValueError: " + msg
 }
 
 func (e *invalidValueError) Unwrap() error { return e.err }
@@ -2678,7 +2678,7 @@ func (e *divisionByZeroError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.DivisionByZeroError: " + msg
+	return "gel.DivisionByZeroError: " + msg
 }
 
 func (e *divisionByZeroError) Unwrap() error { return e.err }
@@ -2718,7 +2718,7 @@ func (e *numericOutOfRangeError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.NumericOutOfRangeError: " + msg
+	return "gel.NumericOutOfRangeError: " + msg
 }
 
 func (e *numericOutOfRangeError) Unwrap() error { return e.err }
@@ -2758,7 +2758,7 @@ func (e *accessPolicyError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.AccessPolicyError: " + msg
+	return "gel.AccessPolicyError: " + msg
 }
 
 func (e *accessPolicyError) Unwrap() error { return e.err }
@@ -2798,7 +2798,7 @@ func (e *queryAssertionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.QueryAssertionError: " + msg
+	return "gel.QueryAssertionError: " + msg
 }
 
 func (e *queryAssertionError) Unwrap() error { return e.err }
@@ -2838,7 +2838,7 @@ func (e *integrityError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.IntegrityError: " + msg
+	return "gel.IntegrityError: " + msg
 }
 
 func (e *integrityError) Unwrap() error { return e.err }
@@ -2874,7 +2874,7 @@ func (e *constraintViolationError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ConstraintViolationError: " + msg
+	return "gel.ConstraintViolationError: " + msg
 }
 
 func (e *constraintViolationError) Unwrap() error { return e.err }
@@ -2914,7 +2914,7 @@ func (e *cardinalityViolationError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.CardinalityViolationError: " + msg
+	return "gel.CardinalityViolationError: " + msg
 }
 
 func (e *cardinalityViolationError) Unwrap() error { return e.err }
@@ -2954,7 +2954,7 @@ func (e *missingRequiredError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.MissingRequiredError: " + msg
+	return "gel.MissingRequiredError: " + msg
 }
 
 func (e *missingRequiredError) Unwrap() error { return e.err }
@@ -2994,7 +2994,7 @@ func (e *transactionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.TransactionError: " + msg
+	return "gel.TransactionError: " + msg
 }
 
 func (e *transactionError) Unwrap() error { return e.err }
@@ -3030,7 +3030,7 @@ func (e *transactionConflictError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.TransactionConflictError: " + msg
+	return "gel.TransactionConflictError: " + msg
 }
 
 func (e *transactionConflictError) Unwrap() error { return e.err }
@@ -3072,7 +3072,7 @@ func (e *transactionSerializationError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.TransactionSerializationError: " + msg
+	return "gel.TransactionSerializationError: " + msg
 }
 
 func (e *transactionSerializationError) Unwrap() error { return e.err }
@@ -3118,7 +3118,7 @@ func (e *transactionDeadlockError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.TransactionDeadlockError: " + msg
+	return "gel.TransactionDeadlockError: " + msg
 }
 
 func (e *transactionDeadlockError) Unwrap() error { return e.err }
@@ -3164,7 +3164,7 @@ func (e *watchError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.WatchError: " + msg
+	return "gel.WatchError: " + msg
 }
 
 func (e *watchError) Unwrap() error { return e.err }
@@ -3200,7 +3200,7 @@ func (e *configurationError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ConfigurationError: " + msg
+	return "gel.ConfigurationError: " + msg
 }
 
 func (e *configurationError) Unwrap() error { return e.err }
@@ -3232,7 +3232,7 @@ func (e *accessError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.AccessError: " + msg
+	return "gel.AccessError: " + msg
 }
 
 func (e *accessError) Unwrap() error { return e.err }
@@ -3264,7 +3264,7 @@ func (e *authenticationError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.AuthenticationError: " + msg
+	return "gel.AuthenticationError: " + msg
 }
 
 func (e *authenticationError) Unwrap() error { return e.err }
@@ -3300,7 +3300,7 @@ func (e *availabilityError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.AvailabilityError: " + msg
+	return "gel.AvailabilityError: " + msg
 }
 
 func (e *availabilityError) Unwrap() error { return e.err }
@@ -3332,7 +3332,7 @@ func (e *backendUnavailableError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.BackendUnavailableError: " + msg
+	return "gel.BackendUnavailableError: " + msg
 }
 
 func (e *backendUnavailableError) Unwrap() error { return e.err }
@@ -3370,7 +3370,7 @@ func (e *serverOfflineError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ServerOfflineError: " + msg
+	return "gel.ServerOfflineError: " + msg
 }
 
 func (e *serverOfflineError) Unwrap() error { return e.err }
@@ -3410,7 +3410,7 @@ func (e *unknownTenantError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownTenantError: " + msg
+	return "gel.UnknownTenantError: " + msg
 }
 
 func (e *unknownTenantError) Unwrap() error { return e.err }
@@ -3450,7 +3450,7 @@ func (e *serverBlockedError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ServerBlockedError: " + msg
+	return "gel.ServerBlockedError: " + msg
 }
 
 func (e *serverBlockedError) Unwrap() error { return e.err }
@@ -3486,7 +3486,7 @@ func (e *backendError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.BackendError: " + msg
+	return "gel.BackendError: " + msg
 }
 
 func (e *backendError) Unwrap() error { return e.err }
@@ -3518,7 +3518,7 @@ func (e *unsupportedBackendFeatureError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnsupportedBackendFeatureError: " + msg
+	return "gel.UnsupportedBackendFeatureError: " + msg
 }
 
 func (e *unsupportedBackendFeatureError) Unwrap() error { return e.err }
@@ -3554,7 +3554,7 @@ func (e *clientError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ClientError: " + msg
+	return "gel.ClientError: " + msg
 }
 
 func (e *clientError) Unwrap() error { return e.err }
@@ -3586,7 +3586,7 @@ func (e *clientConnectionError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ClientConnectionError: " + msg
+	return "gel.ClientConnectionError: " + msg
 }
 
 func (e *clientConnectionError) Unwrap() error { return e.err }
@@ -3622,7 +3622,7 @@ func (e *clientConnectionFailedError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ClientConnectionFailedError: " + msg
+	return "gel.ClientConnectionFailedError: " + msg
 }
 
 func (e *clientConnectionFailedError) Unwrap() error { return e.err }
@@ -3662,7 +3662,7 @@ func (e *clientConnectionFailedTemporarilyError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ClientConnectionFailedTemporarilyError: " + msg
+	return "gel.ClientConnectionFailedTemporarilyError: " + msg
 }
 
 func (e *clientConnectionFailedTemporarilyError) Unwrap() error { return e.err }
@@ -3710,7 +3710,7 @@ func (e *clientConnectionTimeoutError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ClientConnectionTimeoutError: " + msg
+	return "gel.ClientConnectionTimeoutError: " + msg
 }
 
 func (e *clientConnectionTimeoutError) Unwrap() error { return e.err }
@@ -3754,7 +3754,7 @@ func (e *clientConnectionClosedError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.ClientConnectionClosedError: " + msg
+	return "gel.ClientConnectionClosedError: " + msg
 }
 
 func (e *clientConnectionClosedError) Unwrap() error { return e.err }
@@ -3798,7 +3798,7 @@ func (e *interfaceError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InterfaceError: " + msg
+	return "gel.InterfaceError: " + msg
 }
 
 func (e *interfaceError) Unwrap() error { return e.err }
@@ -3834,7 +3834,7 @@ func (e *queryArgumentError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.QueryArgumentError: " + msg
+	return "gel.QueryArgumentError: " + msg
 }
 
 func (e *queryArgumentError) Unwrap() error { return e.err }
@@ -3874,7 +3874,7 @@ func (e *missingArgumentError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.MissingArgumentError: " + msg
+	return "gel.MissingArgumentError: " + msg
 }
 
 func (e *missingArgumentError) Unwrap() error { return e.err }
@@ -3918,7 +3918,7 @@ func (e *unknownArgumentError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.UnknownArgumentError: " + msg
+	return "gel.UnknownArgumentError: " + msg
 }
 
 func (e *unknownArgumentError) Unwrap() error { return e.err }
@@ -3962,7 +3962,7 @@ func (e *invalidArgumentError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InvalidArgumentError: " + msg
+	return "gel.InvalidArgumentError: " + msg
 }
 
 func (e *invalidArgumentError) Unwrap() error { return e.err }
@@ -4006,7 +4006,7 @@ func (e *noDataError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.NoDataError: " + msg
+	return "gel.NoDataError: " + msg
 }
 
 func (e *noDataError) Unwrap() error { return e.err }
@@ -4042,7 +4042,7 @@ func (e *internalClientError) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.InternalClientError: " + msg
+	return "gel.InternalClientError: " + msg
 }
 
 func (e *internalClientError) Unwrap() error { return e.err }

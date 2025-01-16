@@ -19,8 +19,8 @@ package buff
 import (
 	"testing"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/soc"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/soc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

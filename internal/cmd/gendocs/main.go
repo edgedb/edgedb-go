@@ -76,7 +76,7 @@ func writeFile(filename string, content string) {
 }
 
 func renderTypesPage() []string {
-	dir, err := os.ReadDir("internal/edgedbtypes")
+	dir, err := os.ReadDir("internal/geltypes")
 	if err != nil {
 		panic(err)
 	}
@@ -88,12 +88,12 @@ func renderTypesPage() []string {
 		if !file.IsDir() {
 			files = append(
 				files, readAndParseFile(
-					fset, "internal/edgedbtypes/"+file.Name()))
+					fset, "internal/geltypes/"+file.Name()))
 		}
 	}
 
 	p, err := doc.NewFromFiles(
-		fset, files, "github.com/edgedb/edgedb-go/internal/edgedbtypes")
+		fset, files, "github.com/geldata/gel-go/internal/geltypes")
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +120,7 @@ func renderAPIPage(skipTypeNames []string) {
 		readAndParseFile(fset, "export.go"),
 	}
 
-	p, err := doc.NewFromFiles(fset, files, "github.com/edgedb/edgedb-go")
+	p, err := doc.NewFromFiles(fset, files, "github.com/geldata/gel-go")
 	if err != nil {
 		panic(err)
 	}
@@ -220,16 +220,16 @@ func renderIndexPage() {
 		readAndParseFile(fset, "doc_test.go"),
 	}
 
-	p, err := doc.NewFromFiles(fset, files, "github.com/edgedb/edgedb-go")
+	p, err := doc.NewFromFiles(fset, files, "github.com/geldata/gel-go")
 	if err != nil {
 		panic(err)
 	}
 
 	rst := `.. _edgedb-go-intro:
 
-================
-EdgeDB Go Driver
-================
+=============
+Gel Go Driver
+=============
 
 
 .. toctree::
@@ -281,7 +281,7 @@ func renderCodegenPage() {
 	}
 
 	p, err := doc.NewFromFiles(
-		fset, files, "github.com/edgedb/edgedb-go/cmd/edgeql-go")
+		fset, files, "github.com/geldata/gel-go/cmd/edgeql-go")
 	if err != nil {
 		panic(err)
 	}

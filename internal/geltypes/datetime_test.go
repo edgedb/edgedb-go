@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 import (
 	"encoding/json"
@@ -705,7 +705,7 @@ func TestParseInvalidDuration(t *testing.T) {
 			d, err := ParseDuration(s)
 			require.NotNil(t, err, "expected an error but got nil")
 			expected := fmt.Sprintf(
-				"could not parse edgedb.Duration from %q",
+				"could not parse gel.Duration from %q",
 				s)
 			require.True(
 				t,
@@ -1266,7 +1266,7 @@ func TestParseInvalidRelativeDuration(t *testing.T) {
 			err := d.UnmarshalText([]byte(s))
 			require.NotNil(t, err, "expected an error but got nil")
 			expected := fmt.Sprintf(
-				"could not parse edgedb.RelativeDuration from %q", s)
+				"could not parse gel.RelativeDuration from %q", s)
 			require.True(t,
 				strings.Contains(err.Error(), expected),
 				`The error message %q should contain the text %q`,
@@ -1566,7 +1566,7 @@ func TestDateDurationUnmarshalTextInvalid(t *testing.T) {
 			err := d.UnmarshalText([]byte(s))
 			require.NotNil(t, err, "expected an error but got nil")
 			expected := fmt.Sprintf(
-				"could not parse edgedb.DateDuration from %q", s)
+				"could not parse gel.DateDuration from %q", s)
 			require.True(t,
 				strings.Contains(err.Error(), expected),
 				`The error message %q should contain the text %q`,

@@ -14,14 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"runtime"
 
-	"github.com/edgedb/edgedb-go/internal"
-	"github.com/edgedb/edgedb-go/internal/cache"
-	"github.com/edgedb/edgedb-go/internal/snc"
+	"github.com/geldata/gel-go/internal"
+	"github.com/geldata/gel-go/internal/cache"
+	"github.com/geldata/gel-go/internal/snc"
 )
 
 var (

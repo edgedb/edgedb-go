@@ -24,7 +24,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/edgedb/edgedb-go/internal/errgen"
+	"github.com/geldata/gel-go/internal/errgen"
 )
 
 func printCategories(types []*errgen.Type) {
@@ -55,7 +55,7 @@ func (e *%[2]v) Error() string {
 		msg = e.err.Error()
 	}
 
-	return "edgedb.%[1]v: " + msg
+	return "gel.%[1]v: " + msg
 }
 
 func (e *%[2]v) Unwrap() error { return e.err }
@@ -183,7 +183,7 @@ func main() {
 `)
 
 	fmt.Println()
-	fmt.Println("package edgedb")
+	fmt.Println("package gel")
 	fmt.Println()
 	fmt.Print(`import "fmt"`)
 	printTags(tags)

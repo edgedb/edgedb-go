@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb_test
+package gel_test
 
 import (
 	"context"
@@ -22,19 +22,19 @@ import (
 	"log"
 	"time"
 
-	edgedb "github.com/edgedb/edgedb-go"
+	gel "github.com/geldata/gel-go"
 )
 
 type User struct {
-	ID   edgedb.UUID `edgedb:"id"`
-	Name string      `edgedb:"name"`
-	DOB  time.Time   `edgedb:"dob"`
+	ID   gel.UUID  `gel:"id"`
+	Name string    `gel:"name"`
+	DOB  time.Time `gel:"dob"`
 }
 
 func Example() {
-	opts := edgedb.Options{Concurrency: 4}
+	opts := gel.Options{Concurrency: 4}
 	ctx := context.Background()
-	db, err := edgedb.CreateClientDSN(ctx, "edgedb://edgedb@localhost/test", opts)
+	db, err := gel.CreateClientDSN(ctx, "gel://edgedb@localhost/test", opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func Example() {
 	}
 
 	// Insert a new user.
-	var inserted struct{ id edgedb.UUID }
+	var inserted struct{ id gel.UUID }
 	err = db.QuerySingle(ctx, `
 		INSERT User {
 			name := <str>$0,

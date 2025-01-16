@@ -26,10 +26,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/edgedb/edgedb-go/internal"
-	edgedb "github.com/edgedb/edgedb-go/internal/client"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal"
+	gel "github.com/geldata/gel-go/internal/client"
+	"github.com/geldata/gel-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 var (
@@ -59,13 +59,13 @@ type querySetup interface {
 		qryFile,
 		outFile string,
 		cfg *cmdConfig,
-		c *edgedb.Client,
+		c *gel.Client,
 	) (*queryConfig, error)
 }
 
 func newQuery(
 	ctx context.Context,
-	c *edgedb.Client,
+	c *gel.Client,
 	qryFile,
 	outFile string,
 	cfg *cmdConfig,
@@ -81,7 +81,7 @@ func newQuery(
 		log.Fatalf("error reading %q: %s", qryFile, err)
 	}
 
-	v, err := edgedb.ProtocolVersion(ctx, c)
+	v, err := gel.ProtocolVersion(ctx, c)
 	if err != nil {
 		log.Fatalf("error determining the protocol version: %s", err)
 	}
@@ -117,9 +117,9 @@ func (r *queryConfigV1) setup(
 	qryFile,
 	outFile string,
 	cmdCfg *cmdConfig,
-	c *edgedb.Client,
+	c *gel.Client,
 ) (*queryConfig, error) {
-	description, err := edgedb.Describe(ctx, c, cmd)
+	description, err := gel.Describe(ctx, c, cmd)
 
 	if err != nil {
 		return nil, fmt.Errorf("error introspecting query %q: %s", qryFile,
@@ -176,9 +176,9 @@ func (r *queryConfigV2) setup(
 	qryFile,
 	outFile string,
 	cmdCfg *cmdConfig,
-	c *edgedb.Client,
+	c *gel.Client,
 ) (*queryConfig, error) {
-	description, err := edgedb.DescribeV2(ctx, c, cmd)
+	description, err := gel.DescribeV2(ctx, c, cmd)
 
 	if err != nil {
 		return nil, fmt.Errorf("error introspecting query %q: %s", qryFile,
@@ -259,7 +259,7 @@ func typeName(qryFile string, cmdCfg *cmdConfig) string {
 }
 
 func signatureTypes(
-	description *edgedb.CommandDescription,
+	description *gel.CommandDescription,
 	cmdCfg *cmdConfig,
 ) (*goStruct, []string, error) {
 	types, imports, err := generateType(description.In, true, nil, cmdCfg)
@@ -271,7 +271,7 @@ func signatureTypes(
 }
 
 func signatureTypesV2(
-	description *edgedb.CommandDescriptionV2,
+	description *gel.CommandDescriptionV2,
 	cmdCfg *cmdConfig,
 ) (*goStruct, []string, error) {
 	types, imports, err := generateTypeV2(&description.In,
@@ -285,13 +285,13 @@ func signatureTypesV2(
 
 func resultTypes(
 	qryFile string,
-	description *edgedb.CommandDescription,
+	description *gel.CommandDescription,
 	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	outDesc := description.Out
 	var required bool
 	switch description.Card {
-	case edgedb.Many, edgedb.AtLeastOne:
+	case gel.Many, gel.AtLeastOne:
 		id, err := randomID()
 		if err != nil {
 			return nil, nil, err
@@ -305,7 +305,7 @@ func resultTypes(
 				Desc: description.Out,
 			}},
 		}
-	case edgedb.One:
+	case gel.One:
 		required = true
 	}
 
@@ -320,13 +320,13 @@ func resultTypes(
 
 func resultTypesV2(
 	qryFile string,
-	description *edgedb.CommandDescriptionV2,
+	description *gel.CommandDescriptionV2,
 	cmdCfg *cmdConfig,
 ) ([]goType, []string, error) {
 	outDesc := description.Out
 	var required bool
 	switch description.Card {
-	case edgedb.Many, edgedb.AtLeastOne:
+	case gel.Many, gel.AtLeastOne:
 		id, err := randomID()
 		if err != nil {
 			return nil, nil, err
@@ -340,7 +340,7 @@ func resultTypesV2(
 				Desc: description.Out,
 			}},
 		}
-	case edgedb.One:
+	case gel.One:
 		required = true
 	}
 
@@ -353,28 +353,28 @@ func resultTypesV2(
 	)
 }
 
-func randomID() (edgedbtypes.UUID, error) {
-	var id edgedbtypes.UUID
+func randomID() (geltypes.UUID, error) {
+	var id geltypes.UUID
 	_, err := rand.Read(id[:])
 	return id, err
 }
 
-func method(description *edgedb.CommandDescription) (string, error) {
+func method(description *gel.CommandDescription) (string, error) {
 	switch description.Card {
-	case edgedb.AtMostOne, edgedb.One:
+	case gel.AtMostOne, gel.One:
 		return "QuerySingle", nil
-	case edgedb.NoResult, edgedb.Many, edgedb.AtLeastOne:
+	case gel.NoResult, gel.Many, gel.AtLeastOne:
 		return "Query", nil
 	default:
 		return "", errors.New("unreachable 20135")
 	}
 }
 
-func methodV2(description *edgedb.CommandDescriptionV2) (string, error) {
+func methodV2(description *gel.CommandDescriptionV2) (string, error) {
 	switch description.Card {
-	case edgedb.AtMostOne, edgedb.One:
+	case gel.AtMostOne, gel.One:
 		return "QuerySingle", nil
-	case edgedb.NoResult, edgedb.Many, edgedb.AtLeastOne:
+	case gel.NoResult, gel.Many, gel.AtLeastOne:
 		return "Query", nil
 	default:
 		return "", errors.New("unreachable 20135")

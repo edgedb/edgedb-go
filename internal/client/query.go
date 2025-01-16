@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -23,12 +23,12 @@ import (
 	"fmt"
 	"reflect"
 
-	types "github.com/edgedb/edgedb-go/internal/edgedbtypes"
-	"github.com/edgedb/edgedb-go/internal/header"
-	"github.com/edgedb/edgedb-go/internal/introspect"
+	types "github.com/geldata/gel-go/internal/geltypes"
+	"github.com/geldata/gel-go/internal/header"
+	"github.com/geldata/gel-go/internal/introspect"
 )
 
-// WarningHandler takes a slice of edgedb.Error that represent warnings and
+// WarningHandler takes a slice of gel.Error that represent warnings and
 // optionally returns an error. This can be used to log warnings, increment
 // metrics, promote warnings to errors by returning them etc.
 type WarningHandler = func([]error) error

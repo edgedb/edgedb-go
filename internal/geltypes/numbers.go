@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedbtypes
+package geltypes
 
 import (
 	"encoding/json"
@@ -24,8 +24,8 @@ import (
 // Optional is embedded in structs to make them optional. For example:
 //
 //	type User struct {
-//	    edgedb.Optional
-//	    Name string `edgedb:"name"`
+//	    gel.Optional
+//	    Name string `gel:"name"`
 //	}
 type Optional struct {
 	isSet bool

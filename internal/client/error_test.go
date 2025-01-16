@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edgedb
+package gel
 
 import (
 	"context"
@@ -34,7 +34,7 @@ func TestSyntaxError(t *testing.T) {
 		{
 			1,
 			"SELECT 1 2 3",
-			`edgedb.EdgeQLSyntaxError: Unexpected '2'
+			`gel.EdgeQLSyntaxError: Unexpected '2'
 query:1:10
 
 SELECT 1 2 3
@@ -43,7 +43,7 @@ SELECT 1 2 3
 		{
 			2,
 			"SELECT 1 2 3",
-			`edgedb.EdgeQLSyntaxError: Unexpected '2'
+			`gel.EdgeQLSyntaxError: Unexpected '2'
 query:1:10
 
 SELECT 1 2 3
@@ -52,7 +52,7 @@ SELECT 1 2 3
 		{
 			1,
 			"SELECT (foo (((1 2) 3)) 4)",
-			`edgedb.EdgeQLSyntaxError: Unexpected token: <Token ICONST "2">
+			`gel.EdgeQLSyntaxError: Unexpected token: <Token ICONST "2">
 query:1:18
 
 SELECT (foo (((1 2) 3)) 4)
@@ -61,7 +61,7 @@ SELECT (foo (((1 2) 3)) 4)
 		{
 			2,
 			"SELECT (foo (((1 2) 3)) 4)",
-			`edgedb.EdgeQLSyntaxError: Missing ','
+			`gel.EdgeQLSyntaxError: Missing ','
 query:1:17
 
 SELECT (foo (((1 2) 3)) 4)
@@ -73,7 +73,7 @@ SELECT (foo (((1 2) 3)) 4)
 				foo
 				bar
 			} 2);`,
-			`edgedb.EdgeQLSyntaxError: Unexpected token: <Token IDENT "bar">
+			`gel.EdgeQLSyntaxError: Unexpected token: <Token IDENT "bar">
 query:3:5
 
     bar
@@ -85,7 +85,7 @@ query:3:5
 				foo
 				bar
 			} 2);`,
-			`edgedb.EdgeQLSyntaxError: Missing ','
+			`gel.EdgeQLSyntaxError: Missing ','
 query:2:1
 
     foo
@@ -112,7 +112,7 @@ func TestNewErrorFromCodeAs(t *testing.T) {
 	err := &duplicateCastDefinitionError{msg: msg}
 	require.NotNil(t, err)
 
-	assert.EqualError(t, err, "edgedb.DuplicateCastDefinitionError: "+msg)
+	assert.EqualError(t, err, "gel.DuplicateCastDefinitionError: "+msg)
 
 	var edbErr Error
 	require.True(t, errors.As(err, &edbErr))
@@ -131,18 +131,18 @@ func TestWrapAllAs(t *testing.T) {
 	require.NotNil(t, err)
 	assert.Equal(
 		t,
-		"edgedb.BinaryProtocolError: bad bits!; "+
-			"edgedb.InvalidValueError: guess again...",
+		"gel.BinaryProtocolError: bad bits!; "+
+			"gel.InvalidValueError: guess again...",
 		err.Error(),
 	)
 
 	var bin *binaryProtocolError
 	require.True(t, errors.As(err, &bin), "errors.As failed")
-	assert.Equal(t, "edgedb.BinaryProtocolError: bad bits!", bin.Error())
+	assert.Equal(t, "gel.BinaryProtocolError: bad bits!", bin.Error())
 
 	var val *invalidValueError
 	require.True(t, errors.As(err, &val))
-	assert.Equal(t, "edgedb.InvalidValueError: guess again...", val.Error())
+	assert.Equal(t, "gel.InvalidValueError: guess again...", val.Error())
 }
 
 func TestWrapAllIs(t *testing.T) {

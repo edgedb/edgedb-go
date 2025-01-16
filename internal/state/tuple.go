@@ -19,10 +19,10 @@ package state
 import (
 	"fmt"
 
-	"github.com/edgedb/edgedb-go/internal/buff"
-	"github.com/edgedb/edgedb-go/internal/codecs"
-	"github.com/edgedb/edgedb-go/internal/descriptor"
-	"github.com/edgedb/edgedb-go/internal/edgedbtypes"
+	"github.com/geldata/gel-go/internal/buff"
+	"github.com/geldata/gel-go/internal/codecs"
+	"github.com/geldata/gel-go/internal/descriptor"
+	"github.com/geldata/gel-go/internal/geltypes"
 )
 
 func buildTupleEncoder(
@@ -62,11 +62,11 @@ func buildTupleEncoderV2(
 }
 
 type tupleEncoder struct {
-	id     edgedbtypes.UUID
+	id     geltypes.UUID
 	fields []*encoderField
 }
 
-func (c *tupleEncoder) DescriptorID() edgedbtypes.UUID { return c.id }
+func (c *tupleEncoder) DescriptorID() geltypes.UUID { return c.id }
 
 func (c *tupleEncoder) Encode(
 	w *buff.Writer,

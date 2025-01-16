@@ -11,7 +11,7 @@ var {{.CMDVarName}} string
 // {{.QueryFile}}
 func {{.QueryName}}(
 	ctx context.Context, 
-	client *edgedb.Client,
+	client *gel.Client,
 	{{- range .SignatureArgs}}
 	{{.GoName}} {{.Type}},
 	{{- end}}
@@ -39,7 +39,7 @@ func {{.QueryName}}(
 // returning the results as json encoded bytes
 func {{.QueryName}}JSON(
 	ctx context.Context,
-	client *edgedb.Client,
+	client *gel.Client,
 	{{- range .SignatureArgs}}
 	{{.GoName}} {{.Type}},
 	{{- end}}
