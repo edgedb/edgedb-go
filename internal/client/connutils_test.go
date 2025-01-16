@@ -17,14 +17,17 @@
 package gel
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -425,6 +428,13 @@ var testcaseErrorMapping = map[string]string{
 	"invalid_secret_key": "Invalid secret key",
 }
 
+var testcaseWarningMapping = map[string]*regexp.Regexp{
+	"docker_tcp_port": regexp.MustCompile(
+		`ignoring (EDGEDB|GEL)_PORT in 'tcp:\/\/host:port' format`),
+	"gel_and_edgedb": regexp.MustCompile(
+		`Both GEL_\w+ and EDGEDB_\w+ are set. EDGEDB_\w+ will be ignored.`),
+}
+
 func getStr(t *testing.T, lookup map[string]interface{}, key string) string {
 	if lookup[key] == nil {
 		return ""
@@ -691,7 +701,33 @@ func TestConnectionParameterResolution(t *testing.T) {
 				)
 			}
 
+			var testlogs bytes.Buffer
+			log.SetOutput(&testlogs)
+			defer log.SetOutput(os.Stderr)
 			config, err := parseConnectDSNAndArgs(dsn, &options, paths)
+
+			if testcase["warnings"] != nil {
+				for _, warning := range testcase["warnings"].([]any) {
+					regex, ok := testcaseWarningMapping[warning.(string)]
+					if !ok {
+						assert.Truef(
+							t,
+							false,
+							"unexpected warning found "+
+								"in shared-client-testcases: %v",
+							warning,
+						)
+					} else {
+						assert.Truef(
+							t,
+							regex.Match(testlogs.Bytes()),
+							"no match for regex %q found in %q",
+							regex.String(),
+							testlogs.String(),
+						)
+					}
+				}
+			}
 
 			if testcase["error"] != nil {
 				errType := &configurationError{}

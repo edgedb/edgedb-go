@@ -741,13 +741,7 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		}
 	}
 
-	branchEnvVarName := "GEL_BRANCH"
-	branch, branchOk := os.LookupEnv(branchEnvVarName)
-	if !branchOk {
-		branchEnvVarName = "EDGEDB_BRANCH"
-		branch, branchOk = os.LookupEnv(branchEnvVarName)
-	}
-
+	branchEnvVarName, branch, branchOk := lookupGelOrEdgedbEnv("_BRANCH")
 	if branchOk {
 		if dbOk {
 			return false, fmt.Errorf(
@@ -765,37 +759,22 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 		}
 	}
 
-	if user, ok := os.LookupEnv("GEL_USER"); ok {
-		err := r.setUser(user, "GEL_USER environment variable")
-		if err != nil {
-			return false, err
-		}
-	} else if user, ok := os.LookupEnv("EDGEDB_USER"); ok {
-		err := r.setUser(user, "EDGEDB_USER environment variable")
+	if envvarname, user, ok := lookupGelOrEdgedbEnv("_USER"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		err := r.setUser(user, source)
 		if err != nil {
 			return false, err
 		}
 	}
 
-	if pwd, ok := os.LookupEnv("GEL_PASSWORD"); ok {
-		r.setPassword(pwd, "GEL_PASSWORD environment variable")
-	} else if pwd, ok := os.LookupEnv("EDGEDB_PASSWORD"); ok {
-		r.setPassword(pwd, "EDGEDB_PASSWORD environment variable")
+	if envvarname, pwd, ok := lookupGelOrEdgedbEnv("_PASSWORD"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		r.setPassword(pwd, source)
 	}
 
-	if wua, ok := os.LookupEnv("GEL_WAIT_UNTIL_AVAILABLE"); ok {
-		err := r.setWaitUntilAvailableStr(
-			wua,
-			"GEL_WAIT_UNTIL_AVAILABLE environment variable",
-		)
-		if err != nil {
-			return false, err
-		}
-	} else if wua, ok := os.LookupEnv("EDGEDB_WAIT_UNTIL_AVAILABLE"); ok {
-		err := r.setWaitUntilAvailableStr(
-			wua,
-			"EDGEDB_WAIT_UNTIL_AVAILABLE environment variable",
-		)
+	if name, wua, ok := lookupGelOrEdgedbEnv("_WAIT_UNTIL_AVAILABLE"); ok {
+		source := fmt.Sprintf("%s environment variable", name)
+		err := r.setWaitUntilAvailableStr(wua, source)
 		if err != nil {
 			return false, err
 		}
@@ -803,41 +782,24 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 
 	var tlsCaSources []string
 
-	if caString, ok := os.LookupEnv("GEL_TLS_CA"); ok {
-		r.setTLSCAData([]byte(caString), "GEL_TLS_CA environment variable")
-		tlsCaSources = append(tlsCaSources, "GEL_TLS_CA")
-	} else if caString, ok := os.LookupEnv("EDGEDB_TLS_CA"); ok {
-		r.setTLSCAData([]byte(caString), "EDGEDB_TLS_CA environment variable")
-		tlsCaSources = append(tlsCaSources, "EDGEDB_TLS_CA")
+	if envvarname, caString, ok := lookupGelOrEdgedbEnv("_TLS_CA"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		r.setTLSCAData([]byte(caString), source)
+		tlsCaSources = append(tlsCaSources, envvarname)
 	}
 
-	if file, ok := os.LookupEnv("GEL_TLS_CA_FILE"); ok {
-		e := r.setTLSCAFile(file, "GEL_TLS_CA_FILE environment variable")
-		tlsCaSources = append(tlsCaSources, "GEL_TLS_CA_FILE")
-		if e != nil {
-			return false, e
-		}
-	} else if file, ok := os.LookupEnv("EDGEDB_TLS_CA_FILE"); ok {
-		e := r.setTLSCAFile(file, "EDGEDB_TLS_CA_FILE environment variable")
-		tlsCaSources = append(tlsCaSources, "EDGEDB_TLS_CA_FILE")
+	if envvarname, file, ok := lookupGelOrEdgedbEnv("_TLS_CA_FILE"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		e := r.setTLSCAFile(file, source)
+		tlsCaSources = append(tlsCaSources, envvarname)
 		if e != nil {
 			return false, e
 		}
 	}
 
-	if val, ok := os.LookupEnv("GEL_TLS_SERVER_NAME"); ok {
-		e := r.setTLSServerName(
-			val,
-			"GEL_TLS_SERVER_NAME environment variable",
-		)
-		if e != nil {
-			return false, e
-		}
-	} else if val, ok := os.LookupEnv("EDGEDB_TLS_SERVER_NAME"); ok {
-		e := r.setTLSServerName(
-			val,
-			"EDGEDB_TLS_SERVER_NAME environment variable",
-		)
+	if envvarname, val, ok := lookupGelOrEdgedbEnv("_TLS_SERVER_NAME"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		e := r.setTLSServerName(val, source)
 		if e != nil {
 			return false, e
 		}
@@ -849,70 +811,39 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			englishList(tlsCaSources, "and"))
 	}
 
-	if verify, ok := os.LookupEnv("GEL_CLIENT_TLS_SECURITY"); ok {
-		source := "GEL_CLIENT_TLS_SECURITY environment variable"
-		if e := r.setTLSSecurity(verify, source); e != nil {
-			return false, e
-		}
-	} else if verify, ok := os.LookupEnv("EDGEDB_CLIENT_TLS_SECURITY"); ok {
-		source := "EDGEDB_CLIENT_TLS_SECURITY environment variable"
+	if name, verify, ok := lookupGelOrEdgedbEnv("_CLIENT_TLS_SECURITY"); ok {
+		source := fmt.Sprintf("%s environment variable", name)
 		if e := r.setTLSSecurity(verify, source); e != nil {
 			return false, e
 		}
 	}
 
 	var names []string
-	dsnEnvVarName := "GEL_DSN"
-	dsn, dsnOk := os.LookupEnv(dsnEnvVarName)
-	if !dsnOk {
-		dsnEnvVarName = "EDGEDB_DSN"
-		dsn, dsnOk = os.LookupEnv(dsnEnvVarName)
-	}
+	dsnEnvVarName, dsn, dsnOk := lookupGelOrEdgedbEnv("_DSN")
 	if dsnOk {
 		names = append(names, dsnEnvVarName)
 	}
-	instanceEnvVarName := "GEL_INSTANCE"
-	instance, instanceOk := os.LookupEnv(instanceEnvVarName)
-	if !instanceOk {
-		instanceEnvVarName = "EDGEDB_INSTANCE"
-		instance, instanceOk = os.LookupEnv(instanceEnvVarName)
-	}
+	instanceEnvVarName, instance, instanceOk :=
+		lookupGelOrEdgedbEnv("_INSTANCE")
 	if instanceOk {
 		names = append(names, instanceEnvVarName)
-		err := r.setInstance(
-			instance,
-			fmt.Sprintf("%s environment variable", instanceEnvVarName),
-		)
+		source := fmt.Sprintf("%s environment variable", instanceEnvVarName)
+		err := r.setInstance(instance, source)
 		if err != nil {
 			return false, err
 		}
 	}
-	credentialsEnvVarName := "GEL_CREDENTIALS_FILE"
-	credentials, credsOk := os.LookupEnv(credentialsEnvVarName)
-	if !credsOk {
-		credentialsEnvVarName = "EDGEDB_CREDENTIALS_FILE"
-		credentials, credsOk = os.LookupEnv(credentialsEnvVarName)
-	}
+	credentialsEnvVarName, credentials, credsOk :=
+		lookupGelOrEdgedbEnv("_CREDENTIALS_FILE")
 	if credsOk {
 		names = append(names, credentialsEnvVarName)
 	}
 
-	hostEnvVarName := "GEL_HOST"
-	host, hostOk := os.LookupEnv(hostEnvVarName)
-	if !hostOk {
-		hostEnvVarName = "EDGEDB_HOST"
-		host, hostOk = os.LookupEnv(hostEnvVarName)
-	}
-
+	hostEnvVarName, host, hostOk := lookupGelOrEdgedbEnv("_HOST")
 	if hostOk {
 		names = append(names, hostEnvVarName)
 	}
-	portEnvVarName := "GEL_PORT"
-	port, portOk := os.LookupEnv(portEnvVarName)
-	if !portOk {
-		portEnvVarName = "EDGEDB_PORT"
-		port, portOk = os.LookupEnv(portEnvVarName)
-	}
+	portEnvVarName, port, portOk := lookupGelOrEdgedbEnv("_PORT")
 	if portOk && strings.HasPrefix(port, "tcp://") {
 		// EDGEDB_PORT is set by 'docker --link' so ignore and warn
 		log.Printf(
@@ -932,25 +863,14 @@ func (r *configResolver) resolveEnvVars(paths *cfgPaths) (bool, error) {
 			englishList(names, "and"))
 	}
 
-	if profile, ok := os.LookupEnv("GEL_CLOUD_PROFILE"); ok {
-		r.setProfile(profile, "GEL_CLOUD_PROFILE environment variable")
-	} else if profile, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
-		r.setProfile(profile, "EDGEDB_CLOUD_PROFILE environment variable")
+	if envvarname, profile, ok := lookupGelOrEdgedbEnv("_CLOUD_PROFILE"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		r.setProfile(profile, source)
 	}
 
-	if secretKey, ok := os.LookupEnv("GEL_SECRET_KEY"); ok {
-		e := r.setSecretKey(
-			secretKey,
-			"GEL_SECRET_KEY environment variable",
-		)
-		if e != nil {
-			return false, e
-		}
-	} else if key, ok := os.LookupEnv("EDGEDB_SECRET_KEY"); ok {
-		e := r.setSecretKey(
-			key,
-			"EDGEDB_SECRET_KEY environment variable",
-		)
+	if envvarname, secretKey, ok := lookupGelOrEdgedbEnv("_SECRET_KEY"); ok {
+		source := fmt.Sprintf("%s environment variable", envvarname)
+		e := r.setSecretKey(secretKey, source)
 		if e != nil {
 			return false, e
 		}
@@ -1047,6 +967,28 @@ func (r *configResolver) resolveTOML(paths *cfgPaths) error {
 	)
 }
 
+func lookupGelOrEdgedbEnv(name string) (string, string, bool) {
+	gelName := fmt.Sprintf("GEL%s", name)
+	edbName := fmt.Sprintf("EDGEDB%s", name)
+	gelVal, gelOk := os.LookupEnv(gelName)
+	edbVal, edbOk := os.LookupEnv(edbName)
+
+	if gelOk && edbOk {
+		log.Printf(
+			"Both %s and %s are set. %s will be ignored.\n",
+			gelName, edbName, edbName,
+		)
+	}
+
+	if gelOk {
+		return gelName, gelVal, true
+	} else if edbOk {
+		return edbName, edbVal, true
+	}
+
+	return "", "", false
+}
+
 func (r *configResolver) config(opts *Options) (*connConfig, error) {
 	host := "localhost"
 	if r.host.val != nil {
@@ -1095,18 +1037,15 @@ func (r *configResolver) config(opts *Options) (*connConfig, error) {
 		secretKey = r.secretKey.val.(string)
 	}
 
-	clientSecurityVarName := "GEL_CLIENT_SECURITY"
-	security, ok, err := getEnvVarSetting(clientSecurityVarName, "default",
-		"default", "insecure_dev_mode", "strict")
+	clientSecurityVarName, security, err := getEnvVarSetting(
+		"_CLIENT_SECURITY",
+		"default",
+		"default",
+		"insecure_dev_mode",
+		"strict",
+	)
 	if err != nil {
 		return nil, err
-	} else if !ok {
-		clientSecurityVarName = "EDGEDB_CLIENT_SECURITY"
-		security, _, err = getEnvVarSetting(clientSecurityVarName, "default",
-			"default", "insecure_dev_mode", "strict")
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	switch security {
@@ -1164,21 +1103,21 @@ func getEnvVarSetting(
 	name,
 	defalt string,
 	values ...string,
-) (string, bool, error) {
-	value, ok := os.LookupEnv(name)
+) (string, string, error) {
+	envvarname, value, ok := lookupGelOrEdgedbEnv(name)
 	if !ok || value == "default" || value == "" {
-		return defalt, false, nil
+		return envvarname, defalt, nil
 	}
 
 	for _, v := range values {
 		if value == v {
-			return value, true, nil
+			return envvarname, value, nil
 		}
 	}
 
-	return "", true, fmt.Errorf(
+	return "", "", fmt.Errorf(
 		"environment variable %v should be one of %v, got: %q",
-		name, englishList(append(values, "default"), "or"), value)
+		envvarname, englishList(append(values, "default"), "or"), value)
 }
 
 func englishList(items []string, conjunction string) string {
@@ -1680,11 +1619,8 @@ func (r *configResolver) parseCloudInstanceNameIntoConfig(
 		if r.profile.val != nil {
 			profile = r.profile.val.(string)
 		} else {
-			if p, ok := os.LookupEnv("GEL_CLOUD_PROFILE"); ok {
-				r.setProfile(p, "GEL_CLOUD_PROFILE environment variable")
-				profile = r.profile.val.(string)
-			} else if p, ok := os.LookupEnv("EDGEDB_CLOUD_PROFILE"); ok {
-				r.setProfile(p, "EDGEDB_CLOUD_PROFILE environment variable")
+			if name, p, ok := lookupGelOrEdgedbEnv("_CLOUD_PROFILE"); ok {
+				r.setProfile(p, fmt.Sprintf("%s environment variable", name))
 				profile = r.profile.val.(string)
 			}
 		}
