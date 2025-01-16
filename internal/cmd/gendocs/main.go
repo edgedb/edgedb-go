@@ -227,9 +227,9 @@ func renderIndexPage() {
 
 	rst := `.. _edgedb-go-intro:
 
-================
+=============
 Gel Go Driver
-================
+=============
 
 
 .. toctree::
