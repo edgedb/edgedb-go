@@ -60,6 +60,7 @@ const (
 	UnknownUserError                       ErrorCategory = "errors::UnknownUserError"
 	UnknownDatabaseError                   ErrorCategory = "errors::UnknownDatabaseError"
 	UnknownParameterError                  ErrorCategory = "errors::UnknownParameterError"
+	DeprecatedScopingError                 ErrorCategory = "errors::DeprecatedScopingError"
 	SchemaError                            ErrorCategory = "errors::SchemaError"
 	SchemaDefinitionError                  ErrorCategory = "errors::SchemaDefinitionError"
 	InvalidDefinitionError                 ErrorCategory = "errors::InvalidDefinitionError"
@@ -110,6 +111,9 @@ const (
 	AuthenticationError                    ErrorCategory = "errors::AuthenticationError"
 	AvailabilityError                      ErrorCategory = "errors::AvailabilityError"
 	BackendUnavailableError                ErrorCategory = "errors::BackendUnavailableError"
+	ServerOfflineError                     ErrorCategory = "errors::ServerOfflineError"
+	UnknownTenantError                     ErrorCategory = "errors::UnknownTenantError"
+	ServerBlockedError                     ErrorCategory = "errors::ServerBlockedError"
 	BackendError                           ErrorCategory = "errors::BackendError"
 	UnsupportedBackendFeatureError         ErrorCategory = "errors::UnsupportedBackendFeatureError"
 	ClientError                            ErrorCategory = "errors::ClientError"
@@ -1271,6 +1275,46 @@ func (e *unknownParameterError) isEdgeDBInvalidReferenceError() {}
 func (e *unknownParameterError) isEdgeDBQueryError() {}
 
 func (e *unknownParameterError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
+type deprecatedScopingError struct {
+	msg string
+	err error
+}
+
+func (e *deprecatedScopingError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "gel.DeprecatedScopingError: " + msg
+}
+
+func (e *deprecatedScopingError) Unwrap() error { return e.err }
+
+func (e *deprecatedScopingError) Category(c ErrorCategory) bool {
+	switch c {
+	case DeprecatedScopingError:
+		return true
+	case InvalidReferenceError:
+		return true
+	case QueryError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *deprecatedScopingError) isEdgeDBInvalidReferenceError() {}
+
+func (e *deprecatedScopingError) isEdgeDBQueryError() {}
+
+func (e *deprecatedScopingError) HasTag(tag ErrorTag) bool {
 	switch tag {
 	default:
 		return false
@@ -3315,6 +3359,122 @@ func (e *backendUnavailableError) HasTag(tag ErrorTag) bool {
 	}
 }
 
+type serverOfflineError struct {
+	msg string
+	err error
+}
+
+func (e *serverOfflineError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "gel.ServerOfflineError: " + msg
+}
+
+func (e *serverOfflineError) Unwrap() error { return e.err }
+
+func (e *serverOfflineError) Category(c ErrorCategory) bool {
+	switch c {
+	case ServerOfflineError:
+		return true
+	case AvailabilityError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *serverOfflineError) isEdgeDBAvailabilityError() {}
+
+func (e *serverOfflineError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldReconnect:
+		return true
+	case ShouldRetry:
+		return true
+	default:
+		return false
+	}
+}
+
+type unknownTenantError struct {
+	msg string
+	err error
+}
+
+func (e *unknownTenantError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "gel.UnknownTenantError: " + msg
+}
+
+func (e *unknownTenantError) Unwrap() error { return e.err }
+
+func (e *unknownTenantError) Category(c ErrorCategory) bool {
+	switch c {
+	case UnknownTenantError:
+		return true
+	case AvailabilityError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *unknownTenantError) isEdgeDBAvailabilityError() {}
+
+func (e *unknownTenantError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	case ShouldReconnect:
+		return true
+	case ShouldRetry:
+		return true
+	default:
+		return false
+	}
+}
+
+type serverBlockedError struct {
+	msg string
+	err error
+}
+
+func (e *serverBlockedError) Error() string {
+	msg := e.msg
+	if e.err != nil {
+		msg = e.err.Error()
+	}
+
+	return "gel.ServerBlockedError: " + msg
+}
+
+func (e *serverBlockedError) Unwrap() error { return e.err }
+
+func (e *serverBlockedError) Category(c ErrorCategory) bool {
+	switch c {
+	case ServerBlockedError:
+		return true
+	case AvailabilityError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *serverBlockedError) isEdgeDBAvailabilityError() {}
+
+func (e *serverBlockedError) HasTag(tag ErrorTag) bool {
+	switch tag {
+	default:
+		return false
+	}
+}
+
 type backendError struct {
 	msg string
 	err error
@@ -3969,6 +4129,8 @@ func errorFromCode(code uint32, msg string) error {
 		return &unknownDatabaseError{msg: msg}
 	case 0x04_03_00_06:
 		return &unknownParameterError{msg: msg}
+	case 0x04_03_00_07:
+		return &deprecatedScopingError{msg: msg}
 	case 0x04_04_00_00:
 		return &schemaError{msg: msg}
 	case 0x04_05_00_00:
@@ -4069,6 +4231,12 @@ func errorFromCode(code uint32, msg string) error {
 		return &availabilityError{msg: msg}
 	case 0x08_00_00_01:
 		return &backendUnavailableError{msg: msg}
+	case 0x08_00_00_02:
+		return &serverOfflineError{msg: msg}
+	case 0x08_00_00_03:
+		return &unknownTenantError{msg: msg}
+	case 0x08_00_00_04:
+		return &serverBlockedError{msg: msg}
 	case 0x09_00_00_00:
 		return &backendError{msg: msg}
 	case 0x09_00_01_00:

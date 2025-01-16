@@ -44,6 +44,7 @@ func (c *protocolConnection) fallThrough(r *buff.Reader) error {
 		name := r.PopString()
 		switch name {
 		case "pgaddr":
+		case "pgdsn":
 			r.PopBytes() // discard
 		case "suggested_pool_concurrency":
 			i, err := strconv.Atoi(r.PopString())
@@ -111,6 +112,7 @@ func (c *protocolConnection) fallThrough2pX(r *buff.Reader) error {
 		name := r.PopString()
 		switch name {
 		case "pgaddr":
+		case "pgdsn":
 			r.PopBytes() // discard
 		case "suggested_pool_concurrency":
 			i, err := strconv.Atoi(r.PopString())

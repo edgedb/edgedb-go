@@ -312,6 +312,12 @@ Set EDGEDB_DEBUG_SERVER=1 to see server debug logs.
 `)
 	}
 
+	if os.Getenv("CI") == "" && os.Getenv("EDGEDB_SERVER_BIN") == "" {
+		cmd.Env = append(os.Environ(),
+			"__EDGEDB_DEVMODE=1",
+		)
+	}
+
 	err = cmd.Start()
 	if err != nil {
 		fatal(err)

@@ -69,6 +69,8 @@ type Options struct {
 	// If not specified, the value is resolved from any compound
 	// argument/option, then from EDGEDB_DATABASE, then any compound
 	// environment variable, then project credentials.
+	//
+	// Deprecated: Database has been replaced by Branch
 	Database string
 
 	// Branch is the name of the branch to use.

@@ -335,7 +335,7 @@ func BuildDecoderV2(
 	switch desc.Type {
 	case descriptor.Set:
 		return buildSetDecoderV2(desc, typ, path)
-	case descriptor.Object:
+	case descriptor.Object, descriptor.SQLRecord:
 		return buildObjectDecoderV2(desc, typ, path)
 	case descriptor.BaseScalar, descriptor.Enum, descriptor.Scalar:
 		return buildScalarDecoderV2(desc, typ, path)

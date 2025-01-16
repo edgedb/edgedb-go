@@ -52,6 +52,7 @@ const (
 	UnknownUserError                       = gel.UnknownUserError
 	UnknownDatabaseError                   = gel.UnknownDatabaseError
 	UnknownParameterError                  = gel.UnknownParameterError
+	DeprecatedScopingError                 = gel.DeprecatedScopingError
 	SchemaError                            = gel.SchemaError
 	SchemaDefinitionError                  = gel.SchemaDefinitionError
 	InvalidDefinitionError                 = gel.InvalidDefinitionError
@@ -102,6 +103,9 @@ const (
 	AuthenticationError                    = gel.AuthenticationError
 	AvailabilityError                      = gel.AvailabilityError
 	BackendUnavailableError                = gel.BackendUnavailableError
+	ServerOfflineError                     = gel.ServerOfflineError
+	UnknownTenantError                     = gel.UnknownTenantError
+	ServerBlockedError                     = gel.ServerBlockedError
 	BackendError                           = gel.BackendError
 	UnsupportedBackendFeatureError         = gel.UnsupportedBackendFeatureError
 	ClientError                            = gel.ClientError

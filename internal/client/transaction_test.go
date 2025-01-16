@@ -208,3 +208,79 @@ func TestWithConfigInTx(t *testing.T) {
 	})
 	assert.EqualError(t, err, "rollback")
 }
+
+func TestSQLTx(t *testing.T) {
+	ctx := context.Background()
+
+	var version int64
+	err := client.QuerySingle(ctx, "SELECT sys::get_version().major", &version)
+	assert.NoError(t, err)
+
+	rollback := errors.New("rollback")
+
+	if version >= 6 {
+		typename := "ExecuteSQL_01"
+		query := fmt.Sprintf("select %s.prop1 limit 1", typename)
+
+		err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
+			if e := tx.Execute(ctx, fmt.Sprintf(`
+	 		  CREATE TYPE %s {
+	 			  CREATE REQUIRED PROPERTY prop1 -> std::str;
+	 		  };
+			`, typename)); e != nil {
+				return e
+			}
+
+			if e := tx.ExecuteSQL(ctx, fmt.Sprintf(`
+			  INSERT INTO "%s" (prop1) VALUES (123);
+			`, typename)); e != nil {
+				return e
+			}
+
+			var res string
+			if e := tx.QuerySingle(ctx, query, &res); e != nil {
+				return e
+			}
+			assert.Equal(t, "123", res)
+
+			if e := tx.ExecuteSQL(ctx, fmt.Sprintf(`
+				UPDATE "%s" SET prop1 = '345';
+			`, typename)); e != nil {
+				return e
+			}
+
+			var res2 string
+			if e := tx.QuerySingle(ctx, query, &res2); e != nil {
+				return e
+			}
+			assert.Equal(t, "345", res2)
+
+			var updateRes []struct {
+				Prop1 string `edgedb:"prop1"`
+			}
+			if e := tx.QuerySQL(ctx, fmt.Sprintf(`
+		    UPDATE "%s" SET prop1 = '567' RETURNING prop1;
+		  `, typename), &updateRes); e != nil {
+				return e
+			}
+			assert.Equal(t, "567", updateRes[0].Prop1)
+
+			return rollback
+		})
+		assert.Equal(t, rollback, err)
+	} else {
+		err := client.Tx(ctx, func(ctx context.Context, tx *Tx) error {
+			if e := tx.ExecuteSQL(ctx, "SELECT 1"); e != nil {
+				return e
+			}
+
+			return rollback
+		})
+		assert.EqualError(
+			t, err,
+			"edgedb.UnsupportedFeatureError: "+
+				"the server does not support SQL queries, "+
+				"upgrade to 6.0 or newer",
+		)
+	}
+}
