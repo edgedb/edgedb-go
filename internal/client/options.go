@@ -531,3 +531,31 @@ func (p Client) WithWarningHandler( // nolint:gocritic
 	p.warningHandler = warningHandler
 	return &p
 }
+
+// QueryOptions are config options that affect query behaviour.
+type QueryOptions struct {
+	ReadOnly      bool
+	ImplicitLimit uint64
+}
+
+// WithQueryOptions sets module name aliases for the returned client.
+func (p Client) WithQueryOptions( // nolint:gocritic
+	readOnly *bool,
+	implicitLimit *uint64,
+) *Client {
+	opts := QueryOptions{}
+
+	if readOnly != nil {
+		opts.ReadOnly = *readOnly
+	} else {
+		opts.ReadOnly = p.queryOpts.ReadOnly
+	}
+	if implicitLimit != nil {
+		opts.ImplicitLimit = *implicitLimit
+	} else {
+		opts.ImplicitLimit = p.queryOpts.ImplicitLimit
+	}
+
+	p.queryOpts = opts
+	return &p
+}

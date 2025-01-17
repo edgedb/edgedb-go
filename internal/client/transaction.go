@@ -78,6 +78,7 @@ type Tx struct {
 	*txState
 	options        TxOptions
 	state          map[string]interface{}
+	queryOpts      QueryOptions
 	warningHandler WarningHandler
 }
 
@@ -92,6 +93,7 @@ func (t *Tx) execute(
 		nil,
 		txCapabilities,
 		t.state,
+		t.queryOpts,
 		nil,
 		false,
 		t.warningHandler,
@@ -171,6 +173,7 @@ func (t *Tx) Execute(
 		args,
 		t.capabilities1pX(),
 		t.state,
+		t.queryOpts,
 		nil,
 		true,
 		t.warningHandler,
@@ -197,6 +200,7 @@ func (t *Tx) Query(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -219,6 +223,7 @@ func (t *Tx) QuerySingle(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -238,6 +243,7 @@ func (t *Tx) QueryJSON(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -259,6 +265,7 @@ func (t *Tx) QuerySingleJSON(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }
@@ -275,6 +282,7 @@ func (t *Tx) ExecuteSQL(
 		args,
 		t.capabilities1pX(),
 		t.state,
+		t.queryOpts,
 		nil,
 		true,
 		t.warningHandler,
@@ -301,6 +309,7 @@ func (t *Tx) QuerySQL(
 		out,
 		args,
 		t.state,
+		t.queryOpts,
 		t.warningHandler,
 	)
 }

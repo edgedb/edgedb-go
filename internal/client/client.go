@@ -57,7 +57,8 @@ type Client struct {
 
 	cfg *connConfig
 	cacheCollection
-	state map[string]interface{}
+	state     map[string]interface{}
+	queryOpts QueryOptions
 
 	warningHandler WarningHandler
 }
@@ -332,6 +333,7 @@ func (p *Client) Execute(
 		args,
 		conn.capabilities1pX(),
 		copyState(p.state),
+		p.queryOpts,
 		nil,
 		true,
 		p.warningHandler,
@@ -357,7 +359,10 @@ func (p *Client) Query(
 	}
 
 	err = runQuery(
-		ctx, conn, "Query", cmd, out, args, p.state, p.warningHandler)
+		ctx, conn, "Query",
+		cmd, out, args,
+		p.state, p.queryOpts, p.warningHandler,
+	)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -384,6 +389,7 @@ func (p *Client) QuerySingle(
 		out,
 		args,
 		p.state,
+		p.queryOpts,
 		p.warningHandler,
 	)
 	return firstError(err, p.release(conn, err))
@@ -409,6 +415,7 @@ func (p *Client) QueryJSON(
 		out,
 		args,
 		p.state,
+		p.queryOpts,
 		p.warningHandler,
 	)
 	return firstError(err, p.release(conn, err))
@@ -436,6 +443,7 @@ func (p *Client) QuerySingleJSON(
 		out,
 		args,
 		p.state,
+		p.queryOpts,
 		p.warningHandler,
 	)
 	return firstError(err, p.release(conn, err))
@@ -454,7 +462,10 @@ func (p *Client) QuerySQL(
 	}
 
 	err = runQuery(
-		ctx, conn, "QuerySQL", cmd, out, args, p.state, p.warningHandler)
+		ctx, conn, "QuerySQL",
+		cmd, out, args,
+		p.state, p.queryOpts, p.warningHandler,
+	)
 	return firstError(err, p.release(conn, err))
 }
 
@@ -475,6 +486,7 @@ func (p *Client) ExecuteSQL(
 		args,
 		conn.capabilities1pX(),
 		copyState(p.state),
+		p.queryOpts,
 		nil,
 		true,
 		p.warningHandler,
@@ -507,6 +519,6 @@ func (p *Client) Tx(ctx context.Context, action TxBlock) error {
 		return err
 	}
 
-	err = conn.tx(ctx, action, p.state, p.warningHandler)
+	err = conn.tx(ctx, action, p.state, p.queryOpts, p.warningHandler)
 	return firstError(err, p.release(conn, err))
 }
